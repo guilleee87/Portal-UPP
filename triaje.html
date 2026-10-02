@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Prioridad de Atención - Triaje Hospitalario | UPP</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏥</text></svg>">
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- ENCABEZADO PRINCIPAL / METADATOS ACADÉMICOS -->
+    <header class="app-header">
+      <div class="header-top">
+        <a href="index.html" class="academic-badge" style="text-decoration: none; color: #ffffff; background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); cursor: pointer;">
+          ⬅ Volver al Portal de Proyectos
+        </a>
+        <span class="academic-badge">
+          🎓 UPP • Pensamiento Algorítmico • Ciclo II
+        </span>
+        <div id="serverStatusBadge" class="server-badge offline">
+          <span class="status-dot"></span>
+          <span id="serverStatusText">Modo Autónomo (Navegador)</span>
+        </div>
+      </div>
+      <div class="header-title-area">
+        <h1>🏥 Sistema de Prioridad de Atención — Caso 6</h1>
+        <p>
+          Simulador clínico interactivo de triaje de emergencias con restricción de recursos (disponibilidad para 1 sola cama).
+          Implementa el algoritmo de registro, evaluación de datos críticos (SpO2 y antecedentes), clasificación de urgencia (Decisión 1) y asignación con desempate horario (Decisión 2).
+        </p>
+      </div>
+    </header>
+
+    <!-- BARRA DE CASOS PREDEFINIDOS / PRUEBAS RÁPIDAS -->
+    <section class="presets-card">
+      <div class="presets-label">
+        <span>🧪 Casos de Estudio y Pruebas:</span>
+      </div>
+      <div class="presets-buttons">
+        <button type="button" class="preset-btn highlight" data-preset="caso6">
+          ⭐ Caso 6 Oficial (Demo)
+        </button>
+        <button type="button" class="preset-btn" data-preset="empateCritico">
+          ⚖️ Empate Crítico (P1 vs P1)
+        </button>
+        <button type="button" class="preset-btn" data-preset="empateModerado">
+          ⏱️ Empate Moderado (P3 vs P3)
+        </button>
+        <button type="button" class="preset-btn" data-preset="umbralSpo2">
+          🎯 Sensibilidad SpO2 (91% vs 92%)
+        </button>
+        <button type="button" class="preset-btn" data-preset="factorAntecedente">
+          🧬 Impacto de Antecedentes
+        </button>
+        <button type="button" class="preset-btn" data-preset="spo2Invalido" style="color: #b91c1c; border-color: #fca5a5;">
+          ⚠️ Probar SpO2 Inválido (120%)
+        </button>
+        <button type="button" class="preset-btn" id="btnLimpiarDesdeCero" style="background: #e0f2fe; border: 1.5px solid #0284c7; color: #0369a1; font-weight: 700;">
+          ✨ Ingresar Datos desde Cero
+        </button>
+      </div>
+    </section>
+
+    <!-- BANNER DE ALERTA GLOBAL (Aparece cuando hay errores de validación) -->
+    <div id="bannerAlerta" class="banner-alerta-error" style="display: none;">
+      <span style="font-size: 1.3rem;">⛔</span>
+      <span id="bannerAlertaTexto">Error de validación en los datos ingresados.</span>
+    </div>
+
+    <!-- FORMULARIO DE ENTRADA: PACIENTE A Y PACIENTE B -->
+    <main class="patients-grid">
+      
+      <!-- TARJETA PACIENTE A -->
+      <article class="patient-card patient-a" id="card_paciente_a">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="patient-pill">PACIENTE A</span>
+            <span id="title_nombre_a">Px A</span>
+          </div>
+          <div id="badge_live_a" class="live-badge badge-moderado">
+            <span class="status-dot"></span> P3 - Moderado
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="nombre_a">Nombre / Identificador:</label>
+          <input type="text" id="nombre_a" class="input-control" value="Px A" placeholder="Ej. Px A">
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <label for="hora_a">Hora de Llegada (HH:MM):</label>
+            <span class="form-hint">Criterio de desempate</span>
+          </div>
+          <input type="text" id="hora_a" class="input-control" value="07:15" placeholder="HH:MM (24h)">
+          <div id="error_hora_a" class="input-error-msg" style="display: none;"></div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <label for="spo2_num_a">Saturación de Oxígeno (SpO2):</label>
+            <span class="form-hint">Dato Crítico 1 (Rango: 0 a 100 %)</span>
+          </div>
+          <div class="input-with-unit">
+            <input type="number" id="spo2_num_a" class="input-control" value="99" placeholder="Ingrese SpO2 (ej. 99)" step="any">
+            <span class="input-unit">%</span>
+          </div>
+          <div id="error_spo2_a" class="input-error-msg" style="display: none;"></div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <span>Antecedentes Relevantes:</span>
+            <span class="form-hint">Dato Crítico 2</span>
+          </div>
+          <label class="switch-container">
+            <div class="switch-label-area">
+              <span class="switch-title">Registra antecedentes de riesgo</span>
+              <span class="switch-subtitle">Enfermedades cardíacas, respiratorias o crónicas</span>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="ant_a">
+              <span class="toggle-slider"></span>
+            </div>
+          </label>
+        </div>
+      </article>
+
+      <!-- TARJETA PACIENTE B -->
+      <article class="patient-card patient-b" id="card_paciente_b">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="patient-pill">PACIENTE B</span>
+            <span id="title_nombre_b">Px B</span>
+          </div>
+          <div id="badge_live_b" class="live-badge badge-critico">
+            <span class="status-dot"></span> P1 - Crítico
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="nombre_b">Nombre / Identificador:</label>
+          <input type="text" id="nombre_b" class="input-control" value="Px B" placeholder="Ej. Px B">
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <label for="hora_b">Hora de Llegada (HH:MM):</label>
+            <span class="form-hint">Criterio de desempate</span>
+          </div>
+          <input type="text" id="hora_b" class="input-control" value="07:19" placeholder="HH:MM (24h)">
+          <div id="error_hora_b" class="input-error-msg" style="display: none;"></div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <label for="spo2_num_b">Saturación de Oxígeno (SpO2):</label>
+            <span class="form-hint">Dato Crítico 1 (Rango: 0 a 100 %)</span>
+          </div>
+          <div class="input-with-unit">
+            <input type="number" id="spo2_num_b" class="input-control" value="91" placeholder="Ingrese SpO2 (ej. 91)" step="any">
+            <span class="input-unit">%</span>
+          </div>
+          <div id="error_spo2_b" class="input-error-msg" style="display: none;"></div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <span>Antecedentes Relevantes:</span>
+            <span class="form-hint">Dato Crítico 2</span>
+          </div>
+          <label class="switch-container">
+            <div class="switch-label-area">
+              <span class="switch-title">Registra antecedentes de riesgo</span>
+              <span class="switch-subtitle">Enfermedades cardíacas, respiratorias o crónicas</span>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="ant_b" checked>
+              <span class="toggle-slider"></span>
+            </div>
+          </label>
+        </div>
+      </article>
+
+    </main>
+
+    <!-- BARRA DE ACCIONES Y CONTROLES -->
+    <section class="main-actions-card">
+      <div class="actions-left">
+        <button type="button" id="btnEvaluar" class="btn-primary">
+          <span>⚡ Evaluar Triage y Asignar Cama</span>
+        </button>
+        <button type="button" id="btnLimpiarAccion" class="btn-secondary">
+          <span>🔄 Limpiar / Datos desde Cero</span>
+        </button>
+        <button type="button" id="btnReporte" class="btn-secondary">
+          <span>📄 Generar Reporte Clínico Oficial</span>
+        </button>
+      </div>
+
+      <div class="mode-toggle-group">
+        <button type="button" id="modeAnimado" class="mode-option active">
+          🎬 Modo Animado (Paso a Paso)
+        </button>
+        <button type="button" id="modeInstantaneo" class="mode-option">
+          ⚡ Modo Instantáneo
+        </button>
+      </div>
+    </section>
+
+    <!-- PIPELINE VISUAL DEL ALGORITMO (DIAGRAMA DE FLUJO) -->
+    <section class="pipeline-section">
+      <div class="section-title-bar">
+        <h3 class="section-title">
+          <span>📊 Pipeline del Algoritmo (Diagrama de Flujo en Vivo)</span>
+        </h3>
+        <span style="font-size: 0.85rem; color: var(--text-muted);">
+          Traza visual de ejecución en tiempo real
+        </span>
+      </div>
+
+      <div class="pipeline-steps">
+        <div class="pipeline-step" id="step_1">
+          <div class="step-num">1</div>
+          <div class="step-title">Registro</div>
+          <div class="step-desc">Ingreso y emisión de tickets con hora de llegada</div>
+          <div class="step-detail-badge" id="step_detail_1">En espera</div>
+        </div>
+
+        <div class="pipeline-step" id="step_2">
+          <div class="step-num">2</div>
+          <div class="step-title">Triage Clínico</div>
+          <div class="step-desc">Evaluación de SpO2 y antecedentes clínicos</div>
+          <div class="step-detail-badge" id="step_detail_2">En espera</div>
+        </div>
+
+        <div class="pipeline-step" id="step_3">
+          <div class="step-num">3</div>
+          <div class="step-title">Decisión 1</div>
+          <div class="step-desc">Clasificación: Prioridad 1 (Crítico) vs 3 (Moderado)</div>
+          <div class="step-detail-badge" id="step_detail_3">En espera</div>
+        </div>
+
+        <div class="pipeline-step" id="step_4">
+          <div class="step-num">4</div>
+          <div class="step-title">Decisión 2</div>
+          <div class="step-desc">Asignación de cama y desempate por hora</div>
+          <div class="step-detail-badge" id="step_detail_4">En espera</div>
+        </div>
+
+        <div class="pipeline-step" id="step_5">
+          <div class="step-num">5</div>
+          <div class="step-title">Destino Médico</div>
+          <div class="step-desc">Derivación a especialidad médica correspondiente</div>
+          <div class="step-detail-badge" id="step_detail_5">En espera</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTADOS DE LA EVALUACIÓN -->
+    <section class="results-container" id="seccionResultados">
+      
+      <!-- TARJETA GANADORA: CAMA ASIGNADA -->
+      <div class="winner-card">
+        <div class="winner-badge-top">
+          <span>🚨 DISPONIBILIDAD INMEDIATA ASIGNADA</span>
+        </div>
+        <div class="winner-name" id="winnerName">Px B</div>
+        <div class="winner-specs">
+          <span class="winner-spec-item" id="winnerPriorityBadge">Prioridad 1 (Crítico)</span>
+          <span class="winner-spec-item" id="winnerHora">Hora: 07:19</span>
+          <span class="winner-spec-item" id="winnerSpo2">SpO2: 91%</span>
+          <span class="winner-spec-item" id="winnerEspecialidad">Destino: Cardiología / Trauma Shock</span>
+        </div>
+        <div class="winner-rationale" id="winnerRationale">
+          Mayor urgencia clínica: Px B tiene Prioridad 1 (Crítico) debido a SpO2 &lt; 92% y antecedentes relevantes, prevaleciendo sobre Prioridad 3 (Moderado) de Px A.
+        </div>
+      </div>
+
+      <!-- TARJETA EN ESPERA -->
+      <div class="waiting-card">
+        <div>
+          <div class="waiting-badge-top">
+            <span>⏳ DERIVACIÓN A ESPERA</span>
+          </div>
+          <div class="waiting-name" id="waitingName">Px A</div>
+          <div class="waiting-info" id="waitingHora">Llegada: 07:15 | SpO2: 99%</div>
+          <p id="waitingPriority" style="font-weight: 700; color: #b45309; margin-bottom: 8px;">
+            Prioridad 3 (Moderado)
+          </p>
+        </div>
+        <div class="waiting-box" id="waitingDestino">
+          Derivado a sala de espera y monitoreo continuo para reevaluación clínica en Medicina General.
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TABLA COMPARATIVA FORMAL DE VARIABLES -->
+    <section class="comparison-card">
+      <h3 class="section-title" style="margin-bottom: 8px;">
+        <span>📋 Cuadro Comparativo Formal de Decisiones</span>
+      </h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+        Matriz de variables del modelo de datos según el análisis del caso de estudio
+      </p>
+
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Parámetro Clínico</th>
+            <th>Paciente A</th>
+            <th>Paciente B</th>
+            <th>Regla Algorítmica Aplicada</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Nombre / Identificador</strong></td>
+            <td id="compNombreA">Px A</td>
+            <td id="compNombreB">Px B</td>
+            <td>Identificación en sistema de admisión</td>
+          </tr>
+          <tr>
+            <td><strong>Hora de Llegada</strong></td>
+            <td id="compHoraA">07:15</td>
+            <td id="compHoraB">07:19</td>
+            <td>Criterio de desempate en igualdad de prioridad</td>
+          </tr>
+          <tr>
+            <td><strong>SpO2 (%)</strong></td>
+            <td id="compSpo2A">99%</td>
+            <td id="compSpo2B">91%</td>
+            <td>Regla 1: Rango [0-100]. Hipoxemia crítica si &lt; 92%</td>
+          </tr>
+          <tr>
+            <td><strong>Antecedentes Relevantes</strong></td>
+            <td id="compAntA">No</td>
+            <td id="compAntB">Sí</td>
+            <td>Factor de riesgo determinante en Decisión 1</td>
+          </tr>
+          <tr>
+            <td><strong>Prioridad Resultante</strong></td>
+            <td id="compPrioA"><strong>Prioridad 3</strong> (Moderado)</td>
+            <td id="compPrioB"><strong>Prioridad 1</strong> (Crítico)</td>
+            <td>Decisión 1: P1 si SpO2 &lt; 92% o Antecedentes; sino P3</td>
+          </tr>
+          <tr>
+            <td><strong>Resolución de Cama</strong></td>
+            <td id="compDestA" style="color: #b45309; font-weight: 600;">Espera / Reevaluación</td>
+            <td id="compDestB" style="color: #059669; font-weight: 700;">CAMA ASIGNADA (Inmediata)</td>
+            <td>Decisión 2: Asignación a paciente con menor valor de prioridad</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+  </div>
+
+  <!-- MODAL DE REPORTE CLÍNICO IMPRIMIBLE -->
+  <div class="modal-overlay" id="modalReporte">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">📄 Reporte Clínico Oficial de Triaje</h3>
+        <button type="button" class="modal-close" id="btnCloseModal">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBodyContent">
+        <!-- Generado dinámicamente -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="cerrarModalReporte()">Cerrar</button>
+        <button type="button" class="btn-primary" id="btnImprimir">🖨️ Imprimir / Guardar como PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

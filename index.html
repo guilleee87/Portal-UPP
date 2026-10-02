@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Académico — Universidad Politécnica del Perú</title>
+  <link rel="stylesheet" href="landing.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+</head>
+<body>
+
+  <!-- BARRA DE NAVEGACIÓN SUPERIOR CON MENÚ EN LA ESQUINA SUPERIOR IZQUIERDA -->
+  <header class="tech-navbar">
+    <div class="nav-inner">
+      
+      <!-- ESQUINA SUPERIOR IZQUIERDA: MENÚ DESPLEGABLE -->
+      <div class="dropdown-wrapper">
+        <button type="button" class="dropdown-trigger-btn" id="dropdownTrigger" aria-expanded="false" aria-haspopup="true">
+          <div class="menu-bars">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <span>Módulos</span>
+          <span class="dropdown-arrow">▼</span>
+        </button>
+
+        <!-- MENÚ FLOTANTE DESPLEGABLE -->
+        <nav class="dropdown-menu" id="dropdownMenu" aria-label="Menú principal de proyectos">
+          <div class="menu-section-title">Módulos de Evaluación</div>
+          
+          <!-- PRIMER ITEM REQUERIDO: LLEVA A LA WEB DE TRIAJE -->
+          <a href="triaje.html" class="menu-item featured-item">
+            <span>Trabajo Caso 6 - Triaje</span>
+            <span class="menu-badge">Abrir</span>
+          </a>
+
+          <div class="menu-separator"></div>
+          <div class="menu-section-title">Navegación</div>
+          <a href="#proyectos" class="menu-item">
+            <span>Proyectos</span>
+          </a>
+          <a href="#autores" class="menu-item">
+            <span>Autores</span>
+          </a>
+          <a href="#institucion" class="menu-item">
+            <span>Institución</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- CENTRO: IDENTIFICACIÓN INSTITUCIONAL -->
+      <a href="index.html" class="nav-brand-title">
+        <span>Universidad Politécnica del Perú</span>
+      </a>
+
+      <!-- DERECHA: INSIGNIA DE FACULTAD -->
+      <span class="upp-pill">Ciencias de la Salud — Enfermería</span>
+
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-tag">
+        <span class="hero-tag-dot"></span>
+        <span>UNIVERSIDAD POLITÉCNICA DEL PERÚ</span>
+      </div>
+      <h1 class="hero-title">
+        Centro de Sistemas y Modelos Computacionales
+      </h1>
+      <p class="hero-desc">
+        Plataforma académica y tecnológica orientada al desarrollo, análisis y simulación de sistemas aplicados en Ciencias de la Salud.
+      </p>
+      <div class="hero-actions">
+        <a href="#proyectos" class="btn-tech-white">
+          <span>Ver Proyectos</span>
+          <span>↓</span>
+        </a>
+        <a href="#autores" class="btn-tech-ghost">
+          <span>Autores</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CUERPO PRINCIPAL -->
+  <main class="main-wrapper">
+
+    <!-- SECCIÓN: PROYECTOS (SOLO MÓDULOS ACTIVOS) -->
+    <section id="proyectos">
+      <div class="section-header">
+        <span class="section-caption">Plataforma Modular</span>
+        <h2 class="section-title">Proyectos</h2>
+      </div>
+
+      <!-- ÚNICO MÓDULO ACTIVO -->
+      <article class="project-card-single">
+        <div class="project-card-top">
+          <span class="project-status-active">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span>
+            Módulo Activo
+          </span>
+          <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">MOD-01</span>
+        </div>
+        <h3 class="project-card-title">Módulo de Simulación y Toma de Decisiones</h3>
+        <p class="project-card-desc">
+          Sistema computacional desarrollado para el modelado estructurado de información y la evaluación algorítmica de reglas bajo condiciones críticas. Disponible para su ejecución e interacción mediante la opción correspondiente en el menú desplegable superior izquierdo.
+        </p>
+        <div class="project-access-hint">
+          <span>Acceso disponible en el menú superior izquierdo</span>
+          <span style="color: var(--accent-tech); font-weight: 700;">↗</span>
+        </div>
+      </article>
+    </section>
+
+    <!-- SECCIÓN: AUTORES (SOLO NOMBRE Y DESARROLLADOR) -->
+    <section id="autores">
+      <div class="section-header">
+        <span class="section-caption">Equipo</span>
+        <h2 class="section-title">Autores</h2>
+      </div>
+
+      <div class="authors-grid">
+        
+        <!-- AUTOR 1 -->
+        <article class="author-card-clean">
+          <h3 class="author-name">Luis Guillermo Vásquez Valdivieso</h3>
+          <p class="author-role-only">Desarrollador</p>
+        </article>
+
+        <!-- AUTOR 2 -->
+        <article class="author-card-clean">
+          <h3 class="author-name">Rodrigo Alonso Añazgo Farro</h3>
+          <p class="author-role-only">Desarrollador</p>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- SECCIÓN: INSTITUCIÓN -->
+    <section id="institucion">
+      <div class="section-header">
+        <span class="section-caption">Marco Académico</span>
+        <h2 class="section-title">Institución</h2>
+      </div>
+
+      <div class="institution-card">
+        <div class="institution-grid">
+          <div class="institution-box">
+            <div class="inst-label">Institución Educativa</div>
+            <div class="inst-value">Universidad Politécnica del Perú (UPP)</div>
+          </div>
+          <div class="institution-box">
+            <div class="inst-label">Facultad y Carrera</div>
+            <div class="inst-value">Facultad de Ciencias de la Salud — Enfermería</div>
+          </div>
+          <div class="institution-box">
+            <div class="inst-label">Nivel Académico</div>
+            <div class="inst-value">Educación Superior Universitaria</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="tech-footer">
+    <div class="footer-inner">
+      <div>
+        <strong>Universidad Politécnica del Perú</strong> — Facultad de Ciencias de la Salud — Enfermería
+      </div>
+      <div>
+        <span>Luis Guillermo Vásquez Valdivieso & Rodrigo Alonso Añazgo Farro</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="landing.js"></script>
+</body>
+</html>
