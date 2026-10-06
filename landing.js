@@ -42,3 +42,39 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 });
+// Registra el Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+
+// Escucha el evento de instalación y muestra el botón
+let eventoInstalacion = null;
+const btnInstalar = document.getElementById("btnInstalarApp");
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  eventoInstalacion = e;
+  if (btnInstalar) {
+    btnInstalar.style.display = "inline-flex";
+  }
+});
+
+if (btnInstalar) {
+  btnInstalar.addEventListener("click", async () => {
+    if (!eventoInstalacion) {
+      alert("En iPhone: Toca el botón Compartir de Safari y selecciona 'Agregar a inicio'.");
+      return;
+    }
+    // Abre la ventana emergente oficial de confirmación
+    eventoInstalacion.prompt();
+    const { outcome } = await eventoInstalacion.userChoice;
+    if (outcome === "accepted") {
+      btnInstalar.style.display = "none";
+    }
+    eventoInstalacion = null;
+  });
+}
+
+window.addEventListener("appinstalled", () => {
+  if (btnInstalar) btnInstalar.style.display = "none";
+});
