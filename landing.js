@@ -44,37 +44,35 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 // Registra el Service Worker
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js');
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-// Escucha el evento de instalación y muestra el botón
-let eventoInstalacion = null;
+let promptInstalacion = null;
 const btnInstalar = document.getElementById("btnInstalarApp");
 
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
-  eventoInstalacion = e;
-  if (btnInstalar) {
-    btnInstalar.style.display = "inline-flex";
-  }
+  promptInstalacion = e;
 });
 
 if (btnInstalar) {
   btnInstalar.addEventListener("click", async () => {
-    if (!eventoInstalacion) {
-      alert("En iPhone: Toca el botón Compartir de Safari y selecciona 'Agregar a inicio'.");
-      return;
+    // Si el navegador es Android / Chrome y capturó el evento
+    if (promptInstalacion) {
+      promptInstalacion.prompt();
+      const { outcome } = await promptInstalacion.userChoice;
+      if (outcome === "accepted") {
+        btnInstalar.innerHTML = "<span>✅ App Instalada</span>";
+      }
+      promptInstalacion = null;
+    } else {
+      // Si entra desde iPhone o el navegador requiere añadir a inicio manualmente
+      const esIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+      if (esIOS) {
+        alert("Para instalar en tu iPhone:\n1. Toca el botón Compartir (cuadrado con flecha ⎋ abajo).\n2. Selecciona 'Agregar a inicio' (Add to Home Screen).");
+      } else {
+        alert("Para instalar esta aplicación:\nToca el menú de 3 puntos (⋮) de tu navegador arriba a la derecha y selecciona 'Instalar aplicación' o 'Agregar a la pantalla principal'.");
+      }
     }
-    // Abre la ventana emergente oficial de confirmación
-    eventoInstalacion.prompt();
-    const { outcome } = await eventoInstalacion.userChoice;
-    if (outcome === "accepted") {
-      btnInstalar.style.display = "none";
-    }
-    eventoInstalacion = null;
   });
 }
-
-window.addEventListener("appinstalled", () => {
-  if (btnInstalar) btnInstalar.style.display = "none";
-});
