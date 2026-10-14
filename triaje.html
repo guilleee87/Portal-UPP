@@ -28,8 +28,10 @@
       <div class="header-title-area">
         <h1>🏥 Sistema de Prioridad de Atención — Caso 6</h1>
         <p>
-          Simulador clínico interactivo de triaje de emergencias con restricción de recursos (disponibilidad para 1 sola cama).
-          Implementa el algoritmo de registro, evaluación de datos críticos (SpO2 y antecedentes), clasificación de urgencia (Decisión 1) y asignación con desempate horario (Decisión 2).
+          Simulador clínico y administrativo de triaje en urgencias con restricción de recursos (1 sola cama disponible).
+          Estructurado en 3 módulos: <strong>Enfermería 1</strong> (Detección automática de ID y gestión de Historia Clínica),
+          <strong>Enfermería 2</strong> (Emisión automática de Ticket según orden cronológico de llegada y cobertura de Seguro), y
+          <strong>Triage Clínico</strong> (Decisiones 1 y 2 con Alerta Roja y Alerta Ámbar).
         </p>
       </div>
     </header>
@@ -43,6 +45,15 @@
         <button type="button" class="preset-btn highlight" data-preset="caso6">
           ⭐ Caso 6 Oficial (Demo)
         </button>
+        <button type="button" class="preset-btn" data-preset="dniRegistrado">
+          🪪 Pacientes BD (10203040 vs 70809010)
+        </button>
+        <button type="button" class="preset-btn" data-preset="pacienteNuevo">
+          🆕 Paciente Nuevo (DNI no en BD)
+        </button>
+        <button type="button" class="preset-btn" data-preset="pacienteNN">
+          🚑 Paciente NN (HC Temporal)
+        </button>
         <button type="button" class="preset-btn" data-preset="empateCritico">
           ⚖️ Empate Crítico (P1 vs P1)
         </button>
@@ -51,9 +62,6 @@
         </button>
         <button type="button" class="preset-btn" data-preset="umbralSpo2">
           🎯 Sensibilidad SpO2 (91% vs 92%)
-        </button>
-        <button type="button" class="preset-btn" data-preset="factorAntecedente">
-          🧬 Impacto de Antecedentes
         </button>
         <button type="button" class="preset-btn" data-preset="spo2Invalido" style="color: #b91c1c; border-color: #fca5a5;">
           ⚠️ Probar SpO2 Inválido (120%)
@@ -64,7 +72,7 @@
       </div>
     </section>
 
-    <!-- BANNER DE ALERTA GLOBAL (Aparece cuando hay errores de validación) -->
+    <!-- BANNER DE ALERTA GLOBAL -->
     <div id="bannerAlerta" class="banner-alerta-error" style="display: none;">
       <span style="font-size: 1.3rem;">⛔</span>
       <span id="bannerAlertaTexto">Error de validación en los datos ingresados.</span>
@@ -85,48 +93,107 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="nombre_a">Nombre / Identificador:</label>
-          <input type="text" id="nombre_a" class="input-control" value="Px A" placeholder="Ej. Px A">
-        </div>
+        <!-- MÓDULO 1: ENFERMERÍA 1 (REGISTRO Y BD DE HISTORIAS CLÍNICAS) -->
+        <div class="module-block">
+          <div class="module-header-tag">
+            <span class="module-tag-title">
+              <span class="mod-num">1</span> Enfermería 1: Registro e Identidad
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b;">Búsqueda automática en BD</span>
+          </div>
 
-        <div class="form-group">
-          <div class="form-label">
-            <label for="hora_a">Hora de Llegada (HH:MM):</label>
-            <span class="form-hint">Criterio de desempate</span>
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label class="form-label" for="nombre_a">Identificador (DNI 8 dígitos, Nombre Completo o NN):</label>
+            <input type="text" id="nombre_a" class="input-control" value="Px A" placeholder="Ej. 10203040, Carlos Mendoza Rojas o NN">
+            <div id="error_ident_a" class="input-error-msg" style="display: none;"></div>
           </div>
-          <input type="text" id="hora_a" class="input-control" value="07:15" placeholder="HH:MM (24h)">
-          <div id="error_hora_a" class="input-error-msg" style="display: none;"></div>
-        </div>
 
-        <div class="form-group">
-          <div class="form-label">
-            <label for="spo2_num_a">Saturación de Oxígeno (SpO2):</label>
-            <span class="form-hint">Dato Crítico 1 (Rango: 0 a 100 %)</span>
-          </div>
-          <div class="input-with-unit">
-            <input type="number" id="spo2_num_a" class="input-control" value="99" placeholder="Ingrese SpO2 (ej. 99)" step="any">
-            <span class="input-unit">%</span>
-          </div>
-          <div id="error_spo2_a" class="input-error-msg" style="display: none;"></div>
-        </div>
-
-        <div class="form-group">
-          <div class="form-label">
-            <span>Antecedentes Relevantes:</span>
-            <span class="form-hint">Dato Crítico 2</span>
-          </div>
-          <label class="switch-container">
-            <div class="switch-label-area">
-              <span class="switch-title">Registra antecedentes de riesgo</span>
-              <span class="switch-subtitle">Enfermedades cardíacas, respiratorias o crónicas</span>
+          <!-- Cuadro en tiempo real del estado de la HC -->
+          <div class="hc-box" id="hc_box_a">
+            <div class="hc-box-row">
+              <span>Estado en BD: <span id="badge_estado_a" class="badge-status badge-status-si">Si</span></span>
+              <span>Nro. HC: <span id="val_hc_a" class="hc-code-pill">HC-2025-089</span></span>
             </div>
-            <div class="toggle-switch">
-              <input type="checkbox" id="ant_a">
-              <span class="toggle-slider"></span>
+            <div class="hc-box-row">
+              <span id="val_accion_a" style="color: #64748b; font-size: 0.75rem;">Encontrado en BD (HC-2025-089 recuperada)</span>
             </div>
-          </label>
+          </div>
         </div>
+
+        <!-- MÓDULO 2: ENFERMERÍA 2 (ATENCIÓN ADMINISTRATIVA Y TICKET) -->
+        <div class="module-block">
+          <div class="module-header-tag">
+            <span class="module-tag-title">
+              <span class="mod-num">2</span> Enfermería 2: Admisión Administrativa
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b;">Turno por hora de llegada</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="hora_a">Hora de Llegada (HH:MM):</label>
+              <input type="text" id="hora_a" class="input-control" value="07:15" placeholder="HH:MM (24h)">
+              <div id="error_hora_a" class="input-error-msg" style="display: none;"></div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Ticket Emitido (Auto):</label>
+              <div style="margin-top: 4px;">
+                <span class="ticket-display" id="badge_ticket_a">🎫 Turno: T-01</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 4px;">
+            <label class="form-label" for="seguro_a">Cobertura / Seguro Administrativo:</label>
+            <select id="seguro_a" class="input-control">
+              <option value="Asegurado" selected>Asegurado</option>
+              <option value="No asegurado (Particular)">No asegurado (Particular)</option>
+              <option value="SIS">SIS (Seguro Integral)</option>
+              <option value="EsSalud">EsSalud</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- MÓDULO 3: TRIAGE CLÍNICO -->
+        <div class="module-block" style="margin-bottom: 0;">
+          <div class="module-header-tag">
+            <span class="module-tag-title">
+              <span class="mod-num">3</span> Triage Clínico: Datos Críticos
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b;">Decisión 1: SpO2 y Riesgo</span>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              <label for="spo2_num_a">Saturación SpO2 (%):</label>
+              <span class="form-hint">Dato Crítico 1 (Rango: 0 a 100 %)</span>
+            </div>
+            <div class="input-with-unit">
+              <input type="number" id="spo2_num_a" class="input-control" value="99" placeholder="Ej. 99" step="any">
+              <span class="input-unit">%</span>
+            </div>
+            <div id="error_spo2_a" class="input-error-msg" style="display: none;"></div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <div class="form-label">
+              <span>Antecedentes Relevantes:</span>
+              <span class="form-hint">Dato Crítico 2</span>
+            </div>
+            <label class="switch-container">
+              <div class="switch-label-area">
+                <span class="switch-title">Registra antecedentes de riesgo</span>
+                <span class="switch-subtitle">Enfermedades cardíacas, respiratorias o crónicas</span>
+              </div>
+              <div class="toggle-switch">
+                <input type="checkbox" id="ant_a">
+                <span class="toggle-slider"></span>
+              </div>
+            </label>
+          </div>
+        </div>
+
       </article>
 
       <!-- TARJETA PACIENTE B -->
@@ -141,48 +208,107 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="nombre_b">Nombre / Identificador:</label>
-          <input type="text" id="nombre_b" class="input-control" value="Px B" placeholder="Ej. Px B">
-        </div>
+        <!-- MÓDULO 1: ENFERMERÍA 1 (REGISTRO Y BD DE HISTORIAS CLÍNICAS) -->
+        <div class="module-block">
+          <div class="module-header-tag">
+            <span class="module-tag-title">
+              <span class="mod-num">1</span> Enfermería 1: Registro e Identidad
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b;">Búsqueda automática en BD</span>
+          </div>
 
-        <div class="form-group">
-          <div class="form-label">
-            <label for="hora_b">Hora de Llegada (HH:MM):</label>
-            <span class="form-hint">Criterio de desempate</span>
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label class="form-label" for="nombre_b">Identificador (DNI 8 dígitos, Nombre Completo o NN):</label>
+            <input type="text" id="nombre_b" class="input-control" value="Px B" placeholder="Ej. 70809010, Maria Torres Silva o NN">
+            <div id="error_ident_b" class="input-error-msg" style="display: none;"></div>
           </div>
-          <input type="text" id="hora_b" class="input-control" value="07:19" placeholder="HH:MM (24h)">
-          <div id="error_hora_b" class="input-error-msg" style="display: none;"></div>
-        </div>
 
-        <div class="form-group">
-          <div class="form-label">
-            <label for="spo2_num_b">Saturación de Oxígeno (SpO2):</label>
-            <span class="form-hint">Dato Crítico 1 (Rango: 0 a 100 %)</span>
-          </div>
-          <div class="input-with-unit">
-            <input type="number" id="spo2_num_b" class="input-control" value="91" placeholder="Ingrese SpO2 (ej. 91)" step="any">
-            <span class="input-unit">%</span>
-          </div>
-          <div id="error_spo2_b" class="input-error-msg" style="display: none;"></div>
-        </div>
-
-        <div class="form-group">
-          <div class="form-label">
-            <span>Antecedentes Relevantes:</span>
-            <span class="form-hint">Dato Crítico 2</span>
-          </div>
-          <label class="switch-container">
-            <div class="switch-label-area">
-              <span class="switch-title">Registra antecedentes de riesgo</span>
-              <span class="switch-subtitle">Enfermedades cardíacas, respiratorias o crónicas</span>
+          <!-- Cuadro en tiempo real del estado de la HC -->
+          <div class="hc-box" id="hc_box_b">
+            <div class="hc-box-row">
+              <span>Estado en BD: <span id="badge_estado_b" class="badge-status badge-status-si">Si</span></span>
+              <span>Nro. HC: <span id="val_hc_b" class="hc-code-pill">HC-2026-142</span></span>
             </div>
-            <div class="toggle-switch">
-              <input type="checkbox" id="ant_b" checked>
-              <span class="toggle-slider"></span>
+            <div class="hc-box-row">
+              <span id="val_accion_b" style="color: #64748b; font-size: 0.75rem;">Encontrado en BD (HC-2026-142 recuperada)</span>
             </div>
-          </label>
+          </div>
         </div>
+
+        <!-- MÓDULO 2: ENFERMERÍA 2 (ATENCIÓN ADMINISTRATIVA Y TICKET) -->
+        <div class="module-block">
+          <div class="module-header-tag">
+            <span class="module-tag-title">
+              <span class="mod-num">2</span> Enfermería 2: Admisión Administrativa
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b;">Turno por hora de llegada</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="hora_b">Hora de Llegada (HH:MM):</label>
+              <input type="text" id="hora_b" class="input-control" value="07:19" placeholder="HH:MM (24h)">
+              <div id="error_hora_b" class="input-error-msg" style="display: none;"></div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Ticket Emitido (Auto):</label>
+              <div style="margin-top: 4px;">
+                <span class="ticket-display" id="badge_ticket_b">🎫 Turno: T-02</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 4px;">
+            <label class="form-label" for="seguro_b">Cobertura / Seguro Administrativo:</label>
+            <select id="seguro_b" class="input-control">
+              <option value="Asegurado" selected>Asegurado</option>
+              <option value="No asegurado (Particular)">No asegurado (Particular)</option>
+              <option value="SIS">SIS (Seguro Integral)</option>
+              <option value="EsSalud">EsSalud</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- MÓDULO 3: TRIAGE CLÍNICO -->
+        <div class="module-block" style="margin-bottom: 0;">
+          <div class="module-header-tag">
+            <span class="module-tag-title">
+              <span class="mod-num">3</span> Triage Clínico: Datos Críticos
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b;">Decisión 1: SpO2 y Riesgo</span>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              <label for="spo2_num_b">Saturación SpO2 (%):</label>
+              <span class="form-hint">Dato Crítico 1 (Rango: 0 a 100 %)</span>
+            </div>
+            <div class="input-with-unit">
+              <input type="number" id="spo2_num_b" class="input-control" value="91" placeholder="Ej. 91" step="any">
+              <span class="input-unit">%</span>
+            </div>
+            <div id="error_spo2_b" class="input-error-msg" style="display: none;"></div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <div class="form-label">
+              <span>Antecedentes Relevantes:</span>
+              <span class="form-hint">Dato Crítico 2</span>
+            </div>
+            <label class="switch-container">
+              <div class="switch-label-area">
+                <span class="switch-title">Registra antecedentes de riesgo</span>
+                <span class="switch-subtitle">Enfermedades cardíacas, respiratorias o crónicas</span>
+              </div>
+              <div class="toggle-switch">
+                <input type="checkbox" id="ant_b" checked>
+                <span class="toggle-slider"></span>
+              </div>
+            </label>
+          </div>
+        </div>
+
       </article>
 
     </main>
@@ -211,11 +337,11 @@
       </div>
     </section>
 
-    <!-- PIPELINE VISUAL DEL ALGORITMO (DIAGRAMA DE FLUJO) -->
+    <!-- PIPELINE VISUAL DEL ALGORITMO (5 PASOS) -->
     <section class="pipeline-section">
       <div class="section-title-bar">
         <h3 class="section-title">
-          <span>📊 Pipeline del Algoritmo (Diagrama de Flujo en Vivo)</span>
+          <span>📊 Pipeline del Algoritmo (Flujo de Decisión en Vivo)</span>
         </h3>
         <span style="font-size: 0.85rem; color: var(--text-muted);">
           Traza visual de ejecución en tiempo real
@@ -225,75 +351,82 @@
       <div class="pipeline-steps">
         <div class="pipeline-step" id="step_1">
           <div class="step-num">1</div>
-          <div class="step-title">Registro</div>
-          <div class="step-desc">Ingreso y emisión de tickets con hora de llegada</div>
+          <div class="step-title">Enfermería 1</div>
+          <div class="step-desc">Detección de ID, búsqueda en BD y gestión de HC</div>
           <div class="step-detail-badge" id="step_detail_1">En espera</div>
         </div>
 
         <div class="pipeline-step" id="step_2">
           <div class="step-num">2</div>
-          <div class="step-title">Triage Clínico</div>
-          <div class="step-desc">Evaluación de SpO2 y antecedentes clínicos</div>
+          <div class="step-title">Enfermería 2</div>
+          <div class="step-desc">Ticket por orden de llegada y cobertura de seguro</div>
           <div class="step-detail-badge" id="step_detail_2">En espera</div>
         </div>
 
         <div class="pipeline-step" id="step_3">
           <div class="step-num">3</div>
-          <div class="step-title">Decisión 1</div>
-          <div class="step-desc">Clasificación: Prioridad 1 (Crítico) vs 3 (Moderado)</div>
+          <div class="step-title">Triage Clínico</div>
+          <div class="step-desc">Evaluación de SpO2 y antecedentes de riesgo</div>
           <div class="step-detail-badge" id="step_detail_3">En espera</div>
         </div>
 
         <div class="pipeline-step" id="step_4">
           <div class="step-num">4</div>
-          <div class="step-title">Decisión 2</div>
-          <div class="step-desc">Asignación de cama y desempate por hora</div>
+          <div class="step-title">Decisión 1</div>
+          <div class="step-desc">Clasificación: Prioridad 1 (Crítico) vs 3 (Moderado)</div>
           <div class="step-detail-badge" id="step_detail_4">En espera</div>
         </div>
 
         <div class="pipeline-step" id="step_5">
           <div class="step-num">5</div>
-          <div class="step-title">Destino Médico</div>
-          <div class="step-desc">Derivación a especialidad médica correspondiente</div>
+          <div class="step-title">Decisión 2 & Destino</div>
+          <div class="step-desc">Asignación de cama: Alerta Roja vs Alerta Ámbar</div>
           <div class="step-detail-badge" id="step_detail_5">En espera</div>
         </div>
       </div>
     </section>
 
-    <!-- RESULTADOS DE LA EVALUACIÓN -->
+    <!-- RESULTADOS DE LA EVALUACIÓN (ALERTA ROJA Y ALERTA ÁMBAR) -->
     <section class="results-container" id="seccionResultados">
       
-      <!-- TARJETA GANADORA: CAMA ASIGNADA -->
-      <div class="winner-card">
+      <!-- TARJETA GANADORA: ALERTA ROJA: CAMA ASIGNADA -->
+      <div class="winner-card" id="winnerCard">
         <div class="winner-badge-top">
-          <span>🚨 DISPONIBILIDAD INMEDIATA ASIGNADA</span>
+          <span>🚨 [!] ALERTA ROJA: CAMA ASIGNADA</span>
         </div>
         <div class="winner-name" id="winnerName">Px B</div>
         <div class="winner-specs">
-          <span class="winner-spec-item" id="winnerPriorityBadge">Prioridad 1 (Crítico)</span>
-          <span class="winner-spec-item" id="winnerHora">Hora: 07:19</span>
-          <span class="winner-spec-item" id="winnerSpo2">SpO2: 91%</span>
-          <span class="winner-spec-item" id="winnerEspecialidad">Destino: Cardiología / Trauma Shock</span>
+          <span class="winner-spec-item" id="winnerPriorityBadge">PRIORIDAD 1 (CRÍTICO)</span>
+          <span class="winner-spec-item" id="winnerHcBadge">HC: HC-2026-142</span>
+          <span class="winner-spec-item" id="winnerTicketHora">Ticket: T-02 | Llegada: 07:19</span>
+          <span class="winner-spec-item" id="winnerSeguro">Seguro: Asegurado</span>
+          <span class="winner-spec-item" id="winnerSpo2">SpO2: 91% | Antecedentes: Sí</span>
+          <span class="winner-spec-item" id="winnerEspecialidad">Especialidad: Cardiología / Trauma Shock</span>
         </div>
         <div class="winner-rationale" id="winnerRationale">
-          Mayor urgencia clínica: Px B tiene Prioridad 1 (Crítico) debido a SpO2 &lt; 92% y antecedentes relevantes, prevaleciendo sobre Prioridad 3 (Moderado) de Px A.
+          Mayor severidad clínica: Prioridad 1 vs Prioridad 3 (independiente del orden de llegada).
         </div>
       </div>
 
-      <!-- TARJETA EN ESPERA -->
-      <div class="waiting-card">
+      <!-- TARJETA EN ESPERA: ALERTA ÁMBAR: PACIENTE EN ESPERA -->
+      <div class="waiting-card" id="waitingCard">
         <div>
           <div class="waiting-badge-top">
-            <span>⏳ DERIVACIÓN A ESPERA</span>
+            <span>⚠️ [!] ALERTA ÁMBAR: PACIENTE EN ESPERA</span>
           </div>
           <div class="waiting-name" id="waitingName">Px A</div>
-          <div class="waiting-info" id="waitingHora">Llegada: 07:15 | SpO2: 99%</div>
-          <p id="waitingPriority" style="font-weight: 700; color: #b45309; margin-bottom: 8px;">
-            Prioridad 3 (Moderado)
+          <div class="waiting-info" id="waitingSpecs">
+            HC: HC-2025-089 | Ticket: T-01 | Llegada: 07:15 | Seguro: Asegurado
+          </div>
+          <p id="waitingPriority" style="font-weight: 800; color: #b45309; margin-bottom: 8px;">
+            PRIORIDAD 3 (MODERADO)
           </p>
+          <div id="waitingDatosCriticos" style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px;">
+            SpO2: 99% | Antecedentes: No
+          </div>
         </div>
         <div class="waiting-box" id="waitingDestino">
-          Derivado a sala de espera y monitoreo continuo para reevaluación clínica en Medicina General.
+          Derivación: Sala de Espera Regular (Medicina General) con monitoreo preventivo.
         </div>
       </div>
 
@@ -302,16 +435,16 @@
     <!-- TABLA COMPARATIVA FORMAL DE VARIABLES -->
     <section class="comparison-card">
       <h3 class="section-title" style="margin-bottom: 8px;">
-        <span>📋 Cuadro Comparativo Formal de Decisiones</span>
+        <span>📋 Cuadro Comparativo Formal de Decisiones (3 Módulos)</span>
       </h3>
       <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
-        Matriz de variables del modelo de datos según el análisis del caso de estudio
+        Matriz integral de variables: Enfermería 1 (ID y HC), Enfermería 2 (Ticket y Seguro) y Triage Clínico
       </p>
 
       <table class="comparison-table">
         <thead>
           <tr>
-            <th>Parámetro Clínico</th>
+            <th>Módulo / Variable</th>
             <th>Paciente A</th>
             <th>Paciente B</th>
             <th>Regla Algorítmica Aplicada</th>
@@ -319,10 +452,28 @@
         </thead>
         <tbody>
           <tr>
-            <td><strong>Nombre / Identificador</strong></td>
+            <td><strong>Identificador (ID)</strong></td>
             <td id="compNombreA">Px A</td>
             <td id="compNombreB">Px B</td>
-            <td>Identificación en sistema de admisión</td>
+            <td>DNI (8 dígitos), Nombre Completo o código de emergencia</td>
+          </tr>
+          <tr>
+            <td><strong>Estado en BD</strong></td>
+            <td id="compEstadoA">Si</td>
+            <td id="compEstadoB">Si</td>
+            <td>"Si" (registrado), "No" (creación nueva HC) o "Por confirmar" (NN/parcial)</td>
+          </tr>
+          <tr>
+            <td><strong>Historia Clínica (HC)</strong></td>
+            <td id="compHcA">HC-2025-089</td>
+            <td id="compHcB">HC-2026-142</td>
+            <td>Recuperada de BD, creada (HC-NUEVA) o de emergencia (HC-TEMP-EMG)</td>
+          </tr>
+          <tr>
+            <td><strong>Turno / Ticket Asignado</strong></td>
+            <td id="compTicketA">T-01</td>
+            <td id="compTicketB">T-02</td>
+            <td>Asignación automática cronológica por hora de llegada (T-01 al primero)</td>
           </tr>
           <tr>
             <td><strong>Hora de Llegada</strong></td>
@@ -331,28 +482,40 @@
             <td>Criterio de desempate en igualdad de prioridad</td>
           </tr>
           <tr>
+            <td><strong>Seguro / Cobertura</strong></td>
+            <td id="compSeguroA">Asegurado</td>
+            <td id="compSeguroB">Asegurado</td>
+            <td>Asegurado, Particular, SIS, EsSalud (admisión administrativa)</td>
+          </tr>
+          <tr>
             <td><strong>SpO2 (%)</strong></td>
             <td id="compSpo2A">99%</td>
             <td id="compSpo2B">91%</td>
-            <td>Regla 1: Rango [0-100]. Hipoxemia crítica si &lt; 92%</td>
+            <td>Regla SpO2: Rango [0-100]. Hipoxemia crítica si &lt; 92%</td>
           </tr>
           <tr>
             <td><strong>Antecedentes Relevantes</strong></td>
             <td id="compAntA">No</td>
             <td id="compAntB">Sí</td>
-            <td>Factor de riesgo determinante en Decisión 1</td>
+            <td>Factor determinante de riesgo en Decisión 1</td>
           </tr>
           <tr>
-            <td><strong>Prioridad Resultante</strong></td>
+            <td><strong>Decisión 1: Prioridad</strong></td>
             <td id="compPrioA"><strong>Prioridad 3</strong> (Moderado)</td>
             <td id="compPrioB"><strong>Prioridad 1</strong> (Crítico)</td>
-            <td>Decisión 1: P1 si SpO2 &lt; 92% o Antecedentes; sino P3</td>
+            <td>P1 si SpO2 &lt; 92% o Antecedentes; de lo contrario P3</td>
           </tr>
           <tr>
-            <td><strong>Resolución de Cama</strong></td>
-            <td id="compDestA" style="color: #b45309; font-weight: 600;">Espera / Reevaluación</td>
-            <td id="compDestB" style="color: #059669; font-weight: 700;">CAMA ASIGNADA (Inmediata)</td>
-            <td>Decisión 2: Asignación a paciente con menor valor de prioridad</td>
+            <td><strong>Decisión 2: Asignación</strong></td>
+            <td id="compDestA" style="color: #b45309; font-weight: 700;">ALERTA ÁMBAR (En Espera)</td>
+            <td id="compDestB" style="color: #be123c; font-weight: 800;">ALERTA ROJA: CAMA ASIGNADA</td>
+            <td>Prioridad 1 prevalece sobre P3. En empate, desempata hora (Ticket T-01)</td>
+          </tr>
+          <tr>
+            <td><strong>Destino / Especialidad</strong></td>
+            <td id="compEspA">Sala de Espera Regular (Medicina General)</td>
+            <td id="compEspB">Cardiología / Unidad de Trauma Shock</td>
+            <td>Derivación médica según prioridad de atención</td>
           </tr>
         </tbody>
       </table>
@@ -364,7 +527,7 @@
   <div class="modal-overlay" id="modalReporte">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">📄 Reporte Clínico Oficial de Triaje</h3>
+        <h3 class="modal-title">📄 Reporte Clínico y Administrativo Oficial</h3>
         <button type="button" class="modal-close" id="btnCloseModal">&times;</button>
       </div>
       <div class="modal-body" id="modalBodyContent">
