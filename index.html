@@ -3,17 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portal Académico — Universidad Politécnica del Perú</title>
+  <title>Portal Clínico & Algoritmos Hospitalarios — Universidad Politécnica del Perú</title>
   <link rel="stylesheet" href="landing.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏥</text></svg>">
 </head>
 <body>
 
-  <!-- BARRA DE NAVEGACIÓN SUPERIOR CON MENÚ EN LA ESQUINA SUPERIOR IZQUIERDA -->
+  <!-- ========================================================================
+       BARRA DE NAVEGACIÓN CON TELEMETRÍA EN VIVO Y BRANDING UPP
+       ======================================================================== -->
   <header class="tech-navbar">
     <div class="nav-inner">
       
-      <!-- ESQUINA SUPERIOR IZQUIERDA: MENÚ DESPLEGABLE -->
+      <!-- ESQUINA IZQUIERDA: MENÚ DE MÓDULOS -->
       <div class="dropdown-wrapper">
         <button type="button" class="dropdown-trigger-btn" id="dropdownTrigger" aria-expanded="false" aria-haspopup="true">
           <div class="menu-bars">
@@ -21,144 +23,445 @@
             <span></span>
             <span></span>
           </div>
-          <span>Módulos</span>
+          <span>Módulos HIS</span>
           <span class="dropdown-arrow">▼</span>
         </button>
 
         <!-- MENÚ FLOTANTE DESPLEGABLE -->
         <nav class="dropdown-menu" id="dropdownMenu" aria-label="Menú principal de proyectos">
-          <div class="menu-section-title">Módulos de Evaluación</div>
+          <div class="menu-section-title">Sistemas Principales</div>
           
-          <!-- PRIMER ITEM REQUERIDO: LLEVA A LA WEB DE TRIAJE -->
-          <a href="triaje.html" class="menu-item featured-item">
-            <span>Trabajo Caso 6 - Triaje</span>
-            <span class="menu-badge">Abrir</span>
+          <!-- ITEM 1: SIMULADOR HIS COMPLETO (8 MÓDULOS) -->
+          <a href="triaje_full.html" class="menu-item featured-full">
+            <span>🏥 Simulador HIS Completo (8 Fases)</span>
+            <span class="menu-badge badge-emerald">Cloud</span>
+          </a>
+
+          <!-- ITEM 2: CASO PILOTO OFICIAL (3 MÓDULOS) -->
+          <a href="triaje.html" class="menu-item featured-caso6" style="margin-top:4px;">
+            <span>⭐ Caso 6 Oficial — Algoritmo Triaje</span>
+            <span class="menu-badge badge-cyan">Demo</span>
           </a>
 
           <div class="menu-separator"></div>
-          <div class="menu-section-title">Navegación</div>
-          <a href="#proyectos" class="menu-item">
-            <span>Proyectos</span>
+          <div class="menu-section-title">Navegación Rápida</div>
+          <a href="#sistemas" class="menu-item">
+            <span>Portales de Simulación</span>
+          </a>
+          <a href="#telemetria" class="menu-item">
+            <span>Telemetría en Vivo</span>
+          </a>
+          <a href="#herramientas" class="menu-item">
+            <span>Herramientas Clínicas</span>
           </a>
           <a href="#autores" class="menu-item">
-            <span>Autores</span>
+            <span>Desarrolladores</span>
           </a>
           <a href="#institucion" class="menu-item">
-            <span>Institución</span>
+            <span>Marco Institucional</span>
           </a>
         </nav>
       </div>
 
-      <!-- CENTRO: IDENTIFICACIÓN INSTITUCIONAL -->
-      <a href="index.html" class="nav-brand-title">
-        <span>Universidad Politécnica del Perú</span>
+      <!-- CENTRO: BRANDING INSTITUCIONAL UPP -->
+      <a href="index.html" class="nav-brand-group">
+        <div class="brand-icon-shield">🏛️</div>
+        <div class="brand-text-col">
+          <span class="nav-brand-title">Universidad Politécnica del Perú</span>
+          <span class="nav-brand-sub">HOSPITAL INFORMATION SYSTEM · CLOUD V2.0</span>
+        </div>
       </a>
 
-      <!-- DERECHA: INSIGNIA DE FACULTAD -->
-      <span class="upp-pill">Ciencias de la Salud — Enfermería</span>
+      <!-- DERECHA: TELEMETRÍA EN VIVO & RELOJ UTC-5 -->
+      <div class="nav-telemetry-cluster">
+        <div class="telemetry-pill">
+          <span class="telemetry-pulse-dot" id="supabaseDot"></span>
+          <span id="supabasePillText">Conectando Supabase...</span>
+        </div>
+        <div class="clock-pill" id="liveNavClock">--:--:-- (UTC-5)</div>
+        <span class="upp-pill">FCS — Enfermería</span>
+      </div>
 
     </div>
   </header>
 
-  <!-- HERO SECTION -->
+  <!-- ========================================================================
+       HERO COMMAND CENTER (PORTAL TECNOLÓGICO Y ACCESO INMEDIATO)
+       ======================================================================== -->
   <section class="hero-section">
     <div class="hero-content">
       <div class="hero-tag">
-        <span class="hero-tag-dot"></span>
-        <span>UNIVERSIDAD POLITÉCNICA DEL PERÚ</span>
+        <span class="hero-tag-icon">⚡</span>
+        <span>PLATAFORMA DE INTELIGENCIA CLÍNICA & GESTIÓN HOSPITALARIA · NIVEL III-1</span>
       </div>
+      
       <h1 class="hero-title">
-        Centro de Sistemas y Modelos Computacionales
+        Centro de Comando y <span class="hero-title-highlight">Simulación Hospitalaria</span>
       </h1>
+      
       <p class="hero-desc">
-        Plataforma académica y tecnológica orientada al desarrollo, análisis y simulación de sistemas aplicados en Ciencias de la Salud.
+        Arquitectura computacional orientada a la toma de decisiones críticas en servicios de Emergencia: priorización algorítmica automatizada bajo normativa MINSA NTS N° 042, interoperabilidad con aseguradoras (SUSALUD, EPS, SIS) y gestión integral de flujo de pacientes con sincronización en tiempo real.
       </p>
+      
       <div class="hero-actions">
-        <a href="#proyectos" class="btn-tech-white">
-          <span>Ver Proyectos</span>
-          <span>↓</span>
+        <!-- BOTÓN PRINCIPAL 1: SIMULADOR HIS COMPLETO -->
+        <a href="triaje_full.html" class="btn-launch-primary">
+          <span>🏥 Iniciar Simulador HIS Completo (8 Fases)</span>
+          <span>→</span>
         </a>
-        <a href="#autores" class="btn-tech-ghost">
-          <span>Autores</span>
+
+        <!-- BOTÓN PRINCIPAL 2: CASO 6 OFICIAL -->
+        <a href="triaje.html" class="btn-launch-secondary">
+          <span>⭐ Ejecutar Caso 6 Oficial (Algoritmo)</span>
+          <span>↗</span>
         </a>
+
+        <!-- BOTÓN INTERACTIVO: CONSULTA RÁPIDA DE HC -->
+        <button type="button" class="btn-launch-ghost" id="btnOpenHcSearch">
+          <span>🔍 Consultar Historias Clínicas</span>
+        </button>
       </div>
+
+      <!-- STRIP DE TELEMETRÍA EN TIEMPO REAL (4 KPI WIDGETS) -->
+      <div class="telemetry-grid" id="telemetria">
+        
+        <!-- WIDGET 1: ESTADO SUPABASE -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">Base de Datos Cloud</span>
+            <span class="kpi-icon">☁️</span>
+          </div>
+          <div class="kpi-value">
+            <span id="kpiLatency">-- ms</span>
+          </div>
+          <div class="kpi-subtext">
+            <span class="status-active-tag">● Supabase Online</span>
+          </div>
+        </div>
+
+        <!-- WIDGET 2: HISTORIAS CLÍNICAS REGISTRADAS -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">Historias Clínicas</span>
+            <span class="kpi-icon">📋</span>
+          </div>
+          <div class="kpi-value" id="kpiHcCount">
+            7+ Reg.
+          </div>
+          <div class="kpi-subtext">
+            Sincronización bidireccional
+          </div>
+        </div>
+
+        <!-- WIDGET 3: MOTOR DE DECISIÓN CLÍNICA -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">Inferencia Algorítmica</span>
+            <span class="kpi-icon">⚡</span>
+          </div>
+          <div class="kpi-value">
+            &lt; 1.2 ms
+          </div>
+          <div class="kpi-subtext">
+            Evaluación P1 a P5 inmediata
+          </div>
+        </div>
+
+        <!-- WIDGET 4: MARCO NORMATIVO -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">Normativa Médica</span>
+            <span class="kpi-icon">⚖️</span>
+          </div>
+          <div class="kpi-value" style="font-size: 1.1rem; color: #38bdf8;">
+            NTS N° 042
+          </div>
+          <div class="kpi-subtext">
+            Ley de Emergencia N° 27604
+          </div>
+        </div>
+
+      </div>
+
     </div>
   </section>
 
-  <!-- CUERPO PRINCIPAL -->
+  <!-- ========================================================================
+       CUERPO PRINCIPAL — PORTALES DE SIMULACIÓN Y HERRAMIENTAS
+       ======================================================================== -->
   <main class="main-wrapper">
 
-    <!-- SECCIÓN: PROYECTOS (SOLO MÓDULOS ACTIVOS) -->
-    <section id="proyectos">
+    <!-- SECCIÓN: SISTEMAS ACTIVOS (LOS 2 GRANDES PORTALES OPERATIVOS) -->
+    <section id="sistemas">
       <div class="section-header">
-        <span class="section-caption">Plataforma Modular</span>
-        <h2 class="section-title">Proyectos</h2>
+        <div>
+          <span class="section-caption">Centro de Ejecución de Módulos</span>
+          <h2 class="section-title">Portales de Simulación Activos</h2>
+        </div>
+        <p class="section-desc">
+          Seleccione la plataforma de evaluación deseada para interactuar con los modelos algorítmicos y el flujo operativo hospitalario en vivo.
+        </p>
       </div>
 
-      <!-- ÚNICO MÓDULO ACTIVO -->
-      <article class="project-card-single">
-        <div class="project-card-top">
-          <span class="project-status-active">
-            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span>
-            Módulo Activo
-          </span>
-          <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">MOD-01</span>
-        </div>
-        <h3 class="project-card-title">Módulo de Simulación y Toma de Decisiones</h3>
-        <p class="project-card-desc">
-          Sistema computacional desarrollado para el modelado estructurado de información y la evaluación algorítmica de reglas bajo condiciones críticas. Disponible para su ejecución e interacción mediante la opción correspondiente en el menú desplegable superior izquierdo.
-        </p>
-        <div class="project-access-hint">
-          <span>Acceso disponible en el menú superior izquierdo</span>
-          <span style="color: var(--accent-tech); font-weight: 700;">↗</span>
-        </div>
-      </article>
+      <div class="systems-grid">
+
+        <!-- ====================================================================
+             PORTAL 1: SIMULADOR HIS HOSPITALARIO COMPLETO (8 FASES NIVEL III-1)
+             ==================================================================== -->
+        <article class="system-portal-card system-card-full">
+          <div>
+            <div class="portal-card-header">
+              <span class="portal-badge portal-badge-full">
+                <span>●</span> Sistema Completo Nivel III-1
+              </span>
+              <span class="portal-code-tag">MOD-HIS-08</span>
+            </div>
+
+            <h3 class="portal-title">Simulador HIS Hospitalario Integral (8 Fases)</h3>
+            
+            <p class="portal-desc">
+              Flujo hospitalario de alta complejidad interconectado en tiempo real: Admisión y protocolo de urgencia vital NN (Ley N° 27604), acreditación SUSALUD, triaje clínico P1-P5 con impresión de brazalete, gestión dinámica de camas, prescripción de apoyo al diagnóstico (40+ pruebas), farmacia con coaseguro (10% EPS / S/. 0 SIS), egreso/SINADEF y liquidación financiera.
+            </p>
+
+            <!-- PIPELINE DE FASES VISUAL -->
+            <div class="pipeline-steps-wrap">
+              <div class="pipeline-title">
+                <span>Flujo de 8 Módulos Interconectados</span>
+                <span style="color: var(--accent-emerald);">● Sincronizado</span>
+              </div>
+              <div class="pipeline-flow">
+                <span class="pipeline-node">1. Admisión/NN</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-node">2. SUSALUD</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-node">3. Triaje P1-P5</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-node">4. Camas</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-node">5. Apoyo Dx</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-node">6. Farmacia</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-node">7. Ruta/Alta</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-node">8. Facturación</span>
+              </div>
+            </div>
+
+            <!-- CHIPS DE CARACTERÍSTICAS -->
+            <div class="portal-features-list">
+              <span class="feature-pill"><span>✓</span> Búsqueda Predictiva DNI / Nombres</span>
+              <span class="feature-pill"><span>✓</span> Impresión de Historia Clínica Oficial</span>
+              <span class="feature-pill"><span>✓</span> Pulseras Código Color MINSA</span>
+              <span class="feature-pill"><span>✓</span> 40+ Exámenes Dx & 37 Fármacos</span>
+              <span class="feature-pill"><span>✓</span> Regla Coaseguro 10% & Pago Cero</span>
+              <span class="feature-pill"><span>✓</span> Base de Datos Supabase Cloud</span>
+            </div>
+          </div>
+
+          <div class="portal-action-row">
+            <a href="triaje_full.html" class="btn-card-launch btn-card-emerald">
+              <span>🏥 Abrir Simulador HIS Completo (8 Fases)</span>
+              <span>→</span>
+            </a>
+          </div>
+        </article>
+
+        <!-- ====================================================================
+             PORTAL 2: CASO 6 OFICIAL (ALGORITMO COMPARATIVO DE TRIAJE)
+             ==================================================================== -->
+        <article class="system-portal-card system-card-caso6">
+          <div>
+            <div class="portal-card-header">
+              <span class="portal-badge portal-badge-caso6">
+                <span>⭐</span> Caso 6 Oficial Evaluación
+              </span>
+              <span class="portal-code-tag">MOD-CASO-06</span>
+            </div>
+
+            <h3 class="portal-title">Caso 6 Oficial: Algoritmo de Prioridad & Dilema de Camas</h3>
+            
+            <p class="portal-desc">
+              Modelo matemático y algorítmico desarrollado para resolver el dilema bioético de saturación de recursos críticos: evaluación simultánea del Paciente A frente al Paciente B, ponderación estricta de gravedad biológica vs orden de llegada cronológico, y asignación automatizada entre 10 áreas hospitalarias especializadas.
+            </p>
+
+            <!-- PIPELINE COMPARATIVO -->
+            <div class="pipeline-steps-wrap">
+              <div class="pipeline-title">
+                <span>Algoritmo de Prioridad Comparativo</span>
+                <span style="color: var(--accent-cyan);">● Reglas Clínicas</span>
+              </div>
+              <div class="pipeline-flow">
+                <span class="pipeline-node">Admisión Paciente A</span>
+                <span class="pipeline-arrow">+</span>
+                <span class="pipeline-node">Admisión Paciente B</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-node">Comparador Gravedad</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-node">Desempate Hora</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-node">10 Destinos</span>
+              </div>
+            </div>
+
+            <!-- CHIPS DE CARACTERÍSTICAS -->
+            <div class="portal-features-list">
+              <span class="feature-pill"><span>✓</span> Comparador Biológico Paciente A vs B</span>
+              <span class="feature-pill"><span>✓</span> 10 Destinos Hospitalarios Críticos</span>
+              <span class="feature-pill"><span>✓</span> Desempate de Recursos Escasos</span>
+              <span class="feature-pill"><span>✓</span> Validación Paramétrica de Signos</span>
+              <span class="feature-pill"><span>✓</span> Reporte Clínico Estandarizado</span>
+            </div>
+          </div>
+
+          <div class="portal-action-row">
+            <a href="triaje.html" class="btn-card-launch btn-card-cyan">
+              <span>⚡ Ejecutar Caso 6 Oficial (Algoritmo)</span>
+              <span>→</span>
+            </a>
+          </div>
+        </article>
+
+      </div>
     </section>
 
-    <!-- SECCIÓN: AUTORES (SOLO NOMBRE Y DESARROLLADOR) -->
+    <!-- ========================================================================
+       SECCIÓN: HERRAMIENTAS & TELEMETRÍA CLÍNICA RÁPIDA
+       ======================================================================== -->
+    <section id="herramientas">
+      <div class="section-header">
+        <div>
+          <span class="section-caption">Acceso Inmediato</span>
+          <h2 class="section-title">Herramientas Clínicas Integradas</h2>
+        </div>
+      </div>
+
+      <div class="tools-grid">
+        
+        <!-- CARD HERRAMIENTA 1: BUSCADOR HISTORIAS CLÍNICAS -->
+        <article class="tool-card" id="btnOpenHcSearch2" onclick="document.getElementById('modalHcSearch').classList.add('show')">
+          <div class="tool-icon-box">🔍</div>
+          <h3 class="tool-title">Consulta de Historias Clínicas</h3>
+          <p class="tool-desc">
+            Búsqueda predictiva conectada a la base de datos Supabase en la nube. Localice pacientes por DNI, nombres o apellidos y visualice su expediente completo.
+          </p>
+          <div class="tool-action-link">
+            <span>Consultar Catálogo Cloud</span>
+            <span>↗</span>
+          </div>
+        </article>
+
+        <!-- CARD HERRAMIENTA 2: MATRIZ MINSA -->
+        <article class="tool-card" id="btnOpenMinsaMatrix">
+          <div class="tool-icon-box">📊</div>
+          <h3 class="tool-title">Matriz de Prioridades MINSA I-V</h3>
+          <p class="tool-desc">
+            Clasificación estandarizada según la Norma Técnica de Salud NTS N° 042: tiempos de respuesta clínica, signos cardinales y criterios de admisión inmediata.
+          </p>
+          <div class="tool-action-link">
+            <span>Ver Escala de Tiempos</span>
+            <span>↗</span>
+          </div>
+        </article>
+
+        <!-- CARD HERRAMIENTA 3: PROTOCOLO LEY 27604 -->
+        <article class="tool-card" onclick="alert('Protocolo Ley N° 27604: Toda persona en situación de emergencia vital o parto tiene derecho incondicional a ser atendida en cualquier establecimiento de salud del país, público o privado, sin condicionamiento de pago previo ni documento de identidad.')">
+          <div class="tool-icon-box">⚖️</div>
+          <h3 class="tool-title">Protocolo Paciente NN & Ley 27604</h3>
+          <p class="tool-desc">
+            Amparo constitucional y legal para atención incondicional de emergencias médicas de riesgo vital, sin requerir documento de identidad previo ni condicionar pagos.
+          </p>
+          <div class="tool-action-link">
+            <span>Ver Protocolo de Atención</span>
+            <span>↗</span>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================
+       SECCIÓN: AUTORES (DESARROLLADORES ESTRICTOS)
+       ======================================================================== -->
     <section id="autores">
       <div class="section-header">
-        <span class="section-caption">Equipo</span>
-        <h2 class="section-title">Autores</h2>
+        <div>
+          <span class="section-caption">Equipo de Ingeniería y Desarrollo</span>
+          <h2 class="section-title">Autores</h2>
+        </div>
       </div>
 
       <div class="authors-grid">
         
-        <!-- AUTOR 1 -->
-        <article class="author-card-clean">
-          <h3 class="author-name">Luis Guillermo Vásquez Valdivieso</h3>
-          <p class="author-role-only">Desarrollador</p>
+        <!-- AUTOR 1: LUIS GUILLERMO VÁSQUEZ VALDIVIESO -->
+        <article class="author-card-tech">
+          <div class="author-header-group">
+            <div class="author-avatar-tech">LV</div>
+            <div>
+              <h3 class="author-name">Luis Guillermo Vásquez Valdivieso</h3>
+              <p class="author-role-only">Desarrollador</p>
+            </div>
+          </div>
+          <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6;">
+            Diseño e implementación de arquitectura frontend, integración de servicios Cloud con Supabase PostgREST, lógica algorítmica de priorización de triaje y motor de coaseguro hospitalario.
+          </p>
+          <div class="author-badges-list">
+            <span class="author-pill">Algoritmos de Triaje</span>
+            <span class="author-pill">Cloud Integration</span>
+            <span class="author-pill">Arquitectura HIS</span>
+          </div>
         </article>
 
-        <!-- AUTOR 2 -->
-        <article class="author-card-clean">
-          <h3 class="author-name">Rodrigo Alonso Añazgo Farro</h3>
-          <p class="author-role-only">Desarrollador</p>
+        <!-- AUTOR 2: RODRIGO ALONSO AÑAZGO FARRO -->
+        <article class="author-card-tech">
+          <div class="author-header-group">
+            <div class="author-avatar-tech">RA</div>
+            <div>
+              <h3 class="author-name">Rodrigo Alonso Añazgo Farro</h3>
+              <p class="author-role-only">Desarrollador</p>
+            </div>
+          </div>
+          <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6;">
+            Modelado computacional del flujo de pacientes de alta complejidad, reglas clínicas de apoyo al diagnóstico, gestión dinámica de camas hospitalarias y protocolos de acreditación SUSALUD.
+          </p>
+          <div class="author-badges-list">
+            <span class="author-pill">Modelado de Procesos</span>
+            <span class="author-pill">Gestión de Camas</span>
+            <span class="author-pill">Flujo Clínico Nivel III-1</span>
+          </div>
         </article>
 
       </div>
     </section>
 
-    <!-- SECCIÓN: INSTITUCIÓN -->
+    <!-- ========================================================================
+       SECCIÓN: INSTITUCIÓN Y MARCO ACADÉMICO
+       ======================================================================== -->
     <section id="institucion">
       <div class="section-header">
-        <span class="section-caption">Marco Académico</span>
-        <h2 class="section-title">Institución</h2>
+        <div>
+          <span class="section-caption">Filiación Académica</span>
+          <h2 class="section-title">Institución</h2>
+        </div>
       </div>
 
       <div class="institution-card">
         <div class="institution-grid">
           <div class="institution-box">
-            <div class="inst-label">Institución Educativa</div>
+            <div class="inst-label">Institución Universitaria</div>
             <div class="inst-value">Universidad Politécnica del Perú (UPP)</div>
           </div>
           <div class="institution-box">
             <div class="inst-label">Facultad y Carrera</div>
-            <div class="inst-value">Facultad de Ciencias de la Salud — Enfermería</div>
+            <div class="inst-value">Ciencias de la Salud — Enfermería</div>
           </div>
           <div class="institution-box">
-            <div class="inst-label">Nivel Académico</div>
-            <div class="inst-value">Educación Superior Universitaria</div>
+            <div class="inst-label">Asignatura Académica</div>
+            <div class="inst-value">Pensamiento Algorítmico — Ciclo II</div>
+          </div>
+          <div class="institution-box">
+            <div class="inst-label">Infraestructura y Despliegue</div>
+            <div class="inst-value">Vercel Edge & Supabase Cloud</div>
           </div>
         </div>
       </div>
@@ -166,14 +469,87 @@
 
   </main>
 
-  <!-- FOOTER -->
+  <!-- ========================================================================
+       MODAL: BUSCADOR RÁPIDO DE HISTORIAS CLÍNICAS (SUPABASE CLOUD)
+       ======================================================================== -->
+  <div class="tech-modal-overlay" id="modalHcSearch">
+    <div class="tech-modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span style="font-size: 1.4rem;">🔍</span>
+          <div>
+            <div class="modal-title">Buscador Rápido de Historias Clínicas</div>
+            <div style="font-size: 0.72rem; color: var(--accent-sky); font-family: var(--font-mono);">
+              Sincronizado en tiempo real con Supabase Cloud PostgREST
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-modal-close" id="btnCloseHcSearch">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="search-input-box">
+          <span style="font-size: 1.1rem; color: var(--text-muted);">🔎</span>
+          <input type="text" id="inputSearchModal" placeholder="Ingrese DNI, historia clínica, apellidos o nombres..." autocomplete="off">
+        </div>
+        <div class="search-results-list" id="modalSearchResults">
+          <!-- Resultados dinámicos inyectados por JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL: MATRIZ DE PRIORIDADES MINSA (NTS N° 042)
+       ======================================================================== -->
+  <div class="tech-modal-overlay" id="modalMinsaMatrix">
+    <div class="tech-modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span style="font-size: 1.4rem;">📊</span>
+          <div>
+            <div class="modal-title">Matriz de Priorización de Emergencias MINSA</div>
+            <div style="font-size: 0.72rem; color: var(--accent-sky); font-family: var(--font-mono);">
+              Norma Técnica de Salud NTS N° 042-MINSA / DGSP-V.01
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-modal-close" id="btnCloseMinsaMatrix">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="minsa-priority-tabs">
+          <button type="button" class="minsa-tab-btn active" data-p="1">Prioridad I (0 min)</button>
+          <button type="button" class="minsa-tab-btn" data-p="2">Prioridad II (&lt;10 min)</button>
+          <button type="button" class="minsa-tab-btn" data-p="3">Prioridad III (&lt;30 min)</button>
+          <button type="button" class="minsa-tab-btn" data-p="4">Prioridad IV (&lt;60 min)</button>
+          <button type="button" class="minsa-tab-btn" data-p="5">Prioridad V (&lt;120 min)</button>
+        </div>
+        <div class="minsa-content-box" id="minsaTabContent">
+          <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <strong style="font-size: 1.1rem; color: #ffffff;">Prioridad I — Resucitación (Rojo)</strong>
+            <span style="font-family: var(--font-mono); font-size: 0.78rem; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 10px; border-radius: 4px;">⏱️ Atención Inmediata (0 minutos)</span>
+          </div>
+          <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px;">
+            <strong style="color: #cbd5e1;">Criterios Clínicos:</strong> Paro cardiorrespiratorio, politraumatismo severo, shock hipovolémico o séptico, insuficiencia respiratoria aguda catastrófica, coma profundo (Glasgow &lt; 8), hemorragia exanguinante.
+          </div>
+          <div style="font-size: 0.88rem; color: var(--accent-emerald);">
+            <strong style="color: #cbd5e1;">Área Destino:</strong> Unidad de Shock Trauma / Reanimación Inmediata.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       FOOTER TECNOLÓGICO INSTITUCIONAL
+       ======================================================================== -->
   <footer class="tech-footer">
     <div class="footer-inner">
       <div>
-        <strong>Universidad Politécnica del Perú</strong> — Facultad de Ciencias de la Salud — Enfermería
+        <strong>Universidad Politécnica del Perú</strong> — Facultad de Ciencias de la Salud — Escuela Profesional de Enfermería
       </div>
-      <div>
-        <span>Luis Guillermo Vásquez Valdivieso & Rodrigo Alonso Añazgo Farro</span>
+      <div class="footer-tech-meta">
+        <span class="footer-badge-deploy">▲ Vercel Production</span>
+        <span>Autores: Luis Guillermo Vásquez Valdivieso & Rodrigo Alonso Añazgo Farro (Desarrolladores)</span>
       </div>
     </div>
   </footer>
