@@ -343,12 +343,14 @@ function seleccionarPacienteDeBusqueda(pacienteEncoded) {
 async function abrirModalConsultaHC() {
   const modal = document.getElementById("modal_consulta_hc");
   if (!modal) return;
-  modal.style.display = "flex";
+  modal.classList.add("open");
+  modal.classList.add("show");
+  modal.style.setProperty("display", "flex", "important");
 
   const inputModal = document.getElementById("modal_search_hc_input");
   if (inputModal) {
     inputModal.value = "";
-    inputModal.focus();
+    setTimeout(() => inputModal.focus(), 80);
   }
 
   cargarTablaCatalogoHC("");
@@ -356,7 +358,11 @@ async function abrirModalConsultaHC() {
 
 function cerrarModalConsultaHC() {
   const modal = document.getElementById("modal_consulta_hc");
-  if (modal) modal.style.display = "none";
+  if (modal) {
+    modal.classList.remove("open");
+    modal.classList.remove("show");
+    modal.style.setProperty("display", "none", "important");
+  }
 }
 
 async function cargarTablaCatalogoHC(filtro = "") {
@@ -475,32 +481,40 @@ function ingresarPacienteNN() {
   const horaActual = `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
   const turnoTemp = `T-NN-${String(contadorHcTemp - 1).padStart(2, "0")}`;
 
-  const pacienteNN = {
-    identificador: "NN PACIENTE DESCONOCIDO",
-    nombre_completo: `NN DESCONOCIDO (${nroHcTemp})`,
-    historia_clinica: nroHcTemp,
-    tipo_seguro: "Por calificar (Ley 27604)",
-    estado_bd: "Por confirmar",
-    ticket: turnoTemp,
-    hora_llegada: horaActual
-  };
+  STATE.esNN = true;
+  STATE.identificador = "PACIENTE NO IDENTIFICADO (NN)";
+  STATE.historiaClinica = nroHcTemp;
+  STATE.nombreReniec = `PACIENTE NO IDENTIFICADO (NN)`;
+  STATE.estadoRegistrado = "Por confirmar (NN)";
+  STATE.accionHc = `Identidad no confirmada → Se abre ${nroHcTemp} (Notificación emitida a PNP y Servicio Social - Ley N° 27604)`;
+  STATE.alertaPnpSs = true;
+  STATE.turno = turnoTemp;
+  STATE.horaLlegada = horaActual;
+  STATE.fechaNacimiento = "";
+  STATE.edad = null;
+  STATE.alergias = "Desconocidas (Paciente NN)";
+  STATE.tipoSeguro = "Seguro por confirmar";
 
+  // 1. Llenar / Limpiar celdas en Módulo 1 (fecha de nacimiento, edad y alergias en blanco)
   const inputIdent = document.getElementById("ident_full");
-  if (inputIdent) inputIdent.value = pacienteNN.identificador;
+  if (inputIdent) inputIdent.value = "PACIENTE NO IDENTIFICADO (NN)";
 
   const inputHora = document.getElementById("hora_full");
   if (inputHora) inputHora.value = horaActual;
 
-  STATE.identificador = pacienteNN.identificador;
-  STATE.historiaClinica = nroHcTemp;
-  STATE.nombreReniec = pacienteNN.nombre_completo;
-  STATE.estadoRegistrado = "Por confirmar";
-  STATE.accionHc = `Identidad no confirmada → Se abre ${nroHcTemp} (Notificación emitida a PNP y Servicio Social)`;
-  STATE.alertaPnpSs = true;
-  STATE.turno = turnoTemp;
-  STATE.horaLlegada = horaActual;
+  const elFechaNac = document.getElementById("fecha_nac_full");
+  if (elFechaNac) elFechaNac.value = "";
 
-  // Actualizar indicadores
+  const elEdad = document.getElementById("edad_full");
+  if (elEdad) elEdad.value = "";
+
+  const elAlergias = document.getElementById("alergias_full");
+  if (elAlergias) elAlergias.value = "";
+
+  const elSexo = document.getElementById("sexo_full");
+  if (elSexo) elSexo.value = "Desconocido";
+
+  // Indicadores de Módulo 1
   const badgeEl = document.getElementById("hc_badge_estado");
   if (badgeEl) {
     badgeEl.textContent = "Por confirmar (NN)";
@@ -517,29 +531,61 @@ function ingresarPacienteNN() {
   const alertaNn = document.getElementById("alerta_nn");
   if (alertaNn) alertaNn.classList.add("visible");
 
+  // 2. Módulo 2 (Paso 2): Marcar automáticamente como "Seguro por confirmar"
+  const seguroConsolidado = document.getElementById("seguro_consolidado");
+  if (seguroConsolidado) {
+    seguroConsolidado.textContent = "Seguro por confirmar (Paciente NN — Ley N° 27604)";
+  }
+  const resSusalud = document.getElementById("resultado_susalud");
+  if (resSusalud) {
+    resSusalud.innerHTML = `
+      <div style="background:#fff7ed;border:1.5px solid #fb923c;border-radius:8px;padding:12px;margin-top:8px;">
+        <strong style="color:#c2410c;">⚠️ Seguro por confirmar</strong>
+        <span class="seguro-badge seguro-badge-soat">Ley N° 27604</span>
+        <div style="font-size:0.75rem;color:#9a3412;margin-top:4px;">
+          Paciente no identificado en admisión. Atención médica y de soporte vital garantizada sin condicionamiento de seguro previo ni pago. Regularización posterior a la estabilización clínica.
+        </div>
+      </div>
+    `;
+  }
+
+  // Telemetría de cabecera
   const telHc = document.getElementById("telemetry_hc_val");
   if (telHc) telHc.textContent = nroHcTemp;
   const telId = document.getElementById("telemetry_ident_val");
-  if (telId) telId.textContent = "NN DESCONOCIDO";
+  if (telId) telId.textContent = "PACIENTE NN";
+  const telSeg = document.getElementById("telemetry_seguro_val");
+  if (telSeg) telSeg.textContent = "Por confirmar";
 
-  // Registrar en memoria y sincronizar con base de datos
-  BASE_DATOS_HC[pacienteNN.identificador.toLowerCase()] = nroHcTemp;
+  // Registrar en base de datos local y sincronizar con Supabase
+  BASE_DATOS_HC["paciente no identificado (nn)"] = nroHcTemp;
   try {
-    persistirBaseDatosLocal(pacienteNN.identificador, nroHcTemp, pacienteNN.nombre_completo);
+    persistirBaseDatosLocal("PACIENTE NO IDENTIFICADO (NN)", nroHcTemp, `NN DESCONOCIDO (${nroHcTemp})`);
+    sincronizarConSupabase("NN", nroHcTemp, "PACIENTE NO IDENTIFICADO (NN)", "Seguro por confirmar", turnoTemp, "Por evaluar");
   } catch (e) {}
+
+  actualizarFactura();
+
+  // Enfocar en Módulo 1 y permitir continuar el flujo paso a paso
+  irAModulo(1);
 
   alert(`🚨 ADMISIÓN DE PACIENTE NN REGISTRADA CON ÉXITO\n\n` +
         `• Historia Clínica Temporal: ${nroHcTemp}\n` +
         `• Ticket de Atención: ${turnoTemp}\n` +
-        `• Alerta PNP/Servicio Social: Activa\n\n` +
-        `Por mandato de la Ley N° 27604 de Emergencia, el sistema lo deriva inmediatamente a Triaje Clínico (Módulo 3) para salvaguardar su vida.`);
-  
-  irAModulo(3);
+        `• Fecha de Nacimiento, Edad y Alergias: En blanco (condición NN permitida).\n` +
+        `• Paso 2 (Seguro): Marcado automáticamente como "Seguro por confirmar".\n` +
+        `• Protocolo de emergencia vital activado bajo amparo de la Ley N° 27604.`);
 }
 
-// ---------------------------------------------------------------------------
-// VISUALIZACIÓN DETALLADA E IMPRESIÓN DE HISTORIAS CLÍNICAS DESDE CATÁLOGO
-// ---------------------------------------------------------------------------
+function cerrarModalVisualizarHC() {
+  const modal = document.getElementById("modal_visualizar_hc");
+  if (modal) {
+    modal.classList.remove("open");
+    modal.classList.remove("show");
+    modal.style.setProperty("display", "none", "important");
+  }
+}
+
 function visualizarHistoriaClinica(pacienteEncoded) {
   let p;
   try {
@@ -620,7 +666,7 @@ function visualizarHistoriaClinica(pacienteEncoded) {
     };
   }
 
-  modal.style.display = "flex";
+  modal.classList.add("open"); modal.classList.add("show"); modal.style.setProperty("display", "flex", "important");
 }
 
 function imprimirFichaHistoriaClinica(pacienteEncoded) {
@@ -1901,32 +1947,79 @@ function calcularTicket() {
 }
 
 function imprimirAlertaNN() {
+  const ahora = new Date();
+  const nroOficio = `OF-PNP-${ahora.getFullYear()}-${String(contadorHcTemp || 1).padStart(3, "0")}`;
   const html = `
-    <html><head><title>Alerta Identidad NN</title></head><body style="font-family:Arial;padding:40px;max-width:600px;margin:auto;">
-    <h2 style="color:#c2410c;">⚠️ ALERTA — PACIENTE SIN IDENTIFICACIÓN (NN)</h2>
-    <hr>
-    <p><strong>Historia Clínica Temporal:</strong> ${STATE.historiaClinica}</p>
-    <p><strong>Hora de Ingreso:</strong> ${STATE.horaLlegada || new Date().toLocaleTimeString()}</p>
-    <p><strong>Modalidad de Llegada:</strong> ${STATE.modalidadIngreso}</p>
-    <p><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
-    <hr>
-    <p>Se solicita a <strong>Servicio Social</strong> y <strong>Policía Nacional del Perú (PNP)</strong> la identificación posterior del paciente.</p>
-    <p>Favor comunicar al Departamento de Emergencias con el número de HC: <strong>${STATE.historiaClinica}</strong></p>
-    <br><br>
-    <p>_______________________________</p>
-    <p>Enfermera de Turno</p>
-    <p>Servicio de Emergencias — Hospital Regional UPP</p>
-    </body></html>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Oficio Policial PNP — Paciente NN ${STATE.historiaClinica || "HC-TEMP"}</title>
+      <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 35px; max-width: 720px; margin: auto; color: #0f172a; line-height: 1.5; font-size: 13px; }
+        .hdr { text-align: center; border-bottom: 3px double #0f172a; padding-bottom: 12px; margin-bottom: 16px; }
+        .badge-pnp { background: #0f172a; color: #ffffff; padding: 4px 12px; font-weight: 800; font-size: 0.85rem; border-radius: 4px; display: inline-block; margin-bottom: 6px; }
+        .title-oficio { font-size: 1.15rem; font-weight: 900; margin: 8px 0; color: #b91c1c; text-transform: uppercase; }
+        .data-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        .data-table td { padding: 7px 10px; border: 1px solid #cbd5e1; }
+        .data-table td.lbl { background: #f8fafc; font-weight: 700; width: 35%; color: #334155; }
+        .legal-box { background: #fff7ed; border: 1.5px solid #fb923c; padding: 12px; border-radius: 6px; font-size: 0.82rem; color: #9a3412; margin: 16px 0; }
+        .signatures { display: flex; justify-content: space-between; margin-top: 50px; text-align: center; }
+        .sig-line { width: 200px; border-top: 1px solid #000; padding-top: 5px; font-size: 0.8rem; }
+      </style>
+    </head>
+    <body>
+      <div class="hdr">
+        <div class="badge-pnp">POLICÍA NACIONAL DEL PERÚ · SISTEMA HOSPITALARIO DE EMERGENCIAS</div>
+        <div style="font-size: 0.8rem; color: #64748b; font-weight: 700;">HOSPITAL REGIONAL DOCENTE UPP — DEPARTAMENTO DE EMERGENCIA Y CUIDADOS CRÍTICOS</div>
+        <div class="title-oficio">🚨 NOTIFICACIÓN POLICIAL INMEDIATA — INGRESO DE PERSONA INDOCUMENTADA (PACIENTE NN)</div>
+        <div style="font-weight: 700; font-size: 0.85rem;">OFICIO N° ${nroOficio} / EMG-UPP</div>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <strong>AL :</strong> COMISARIO PNP DE LA JURISDICCIÓN / DIVISIÓN DE IDENTIFICACIÓN DACTILOSCÓPICA (AFIS)<br>
+        <strong>DE :</strong> JEFE DE GUARDIA Y ENFERMERÍA DE EMERGENCIAS — HOSPITAL REGIONAL UPP<br>
+        <strong>ASUNTO :</strong> Ingreso de persona indocumentada / Solicitud urgente de pesquisa dactiloscópica.<br>
+        <strong>FECHA :</strong> ${ahora.toLocaleDateString()} &nbsp;|&nbsp; <strong>HORA :</strong> ${STATE.horaLlegada || ahora.toLocaleTimeString()}
+      </div>
+
+      <table class="data-table">
+        <tr><td class="lbl">Historia Clínica Temporal:</td><td><strong style="color:#0284c7; font-size:1rem;">${STATE.historiaClinica || "HC-TEMP-EMG-001"}</strong></td></tr>
+        <tr><td class="lbl">Ticket de Urgencia:</td><td><strong>${STATE.turno || 'T-NN-01'}</strong></td></tr>
+        <tr><td class="lbl">Condición de Identidad:</td><td><strong style="color:#b91c1c;">NO IDENTIFICADO (NN)</strong></td></tr>
+        <tr><td class="lbl">Modalidad de Ingreso:</td><td>${STATE.modalidadIngreso || 'Ambulancia SAMU / Patrullero PNP / Transeúntes'}</td></tr>
+        <tr><td class="lbl">Prioridad Clínica Evaluada:</td><td>${STATE.prioridad ? `Prioridad ${STATE.prioridad} (${PRIORIDADES[STATE.prioridad].nombre})` : 'En evaluación clínica de triaje'}</td></tr>
+        <tr><td class="lbl">Cama / Área Asignada:</td><td>${STATE.camaAsignada || 'Tópico de Emergencia / Shock Trauma'}</td></tr>
+        <tr><td class="lbl">Servicio Social:</td><td>Notificación formal emitida simultáneamente</td></tr>
+      </table>
+
+      <div class="legal-box">
+        <strong>⚖️ MARCO LEGAL Y AMPARO DE ATENCIÓN DE EMERGENCIA:</strong><br>
+        De conformidad con la <strong>Ley N° 27604</strong> y el <strong>Art. 3 de la Ley General de Salud N° 26842</strong>, toda persona en situación de emergencia médica tiene derecho a recibir atención médica y soporte vital incondicional en cualquier establecimiento de salud del territorio nacional, sin exigir pago previo ni documento de identidad.<br><br>
+        Se requiere la concurrencia de peritos dactiloscópicos de la <strong>Policía Nacional del Perú</strong> para la toma de huellas dactilares (cotejo biométrico AFIS-RENIEC) a fin de individualizar al paciente y comunicar de forma urgente a sus familiares.
+      </div>
+
+      <div class="signatures">
+        <div class="sig-line">
+          <strong>Enfermera de Triaje / Admisión</strong><br>
+          Hospital Regional Docente UPP
+        </div>
+        <div class="sig-line">
+          <strong>Médico Jefe de Guardia</strong><br>
+          Servicio de Emergencias Nivel III-1
+        </div>
+        <div class="sig-line">
+          <strong>Recepción PNP</strong><br>
+          Firma, Postfirma y CIP
+        </div>
+      </div>
+    </body>
+    </html>
   `;
   const w = window.open("", "_blank");
-  w.document.write(html);
-  w.document.close();
-  w.print();
+  if (w) { w.document.write(html); w.document.close(); }
 }
 
-// ---------------------------------------------------------------------------
-// 9. MÓDULO 2 — SEGUROS
-// ---------------------------------------------------------------------------
 function activarTabSeguro(tab, btn, syncSelector = true) {
   document.querySelectorAll(".seguro-pane").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".seguro-tab").forEach(b => b.classList.remove("active"));
@@ -3163,10 +3256,6 @@ function actualizarFactura() {
   if (leyBanner) leyBanner.style.display = liq.esEmergencia ? "block" : "none";
 }
 
-  // Ley 27604 banner
-  if (leyBanner) leyBanner.style.display = liq.esEmergencia ? "block" : "none";
-}
-
 function generarFacturaPDF() {
   const validacion = validarSignosVitalesEnVivo();
   if (!validacion.esValido) {
@@ -3444,7 +3533,12 @@ function evaluarPacienteCompleto() {
   }
   // Recalcular liquidación de seguro según prioridad (Emergencia P1/P2 vs Urgencia P3/P4/P5)
   actualizarFactura();
-  alert(`✅ Evaluación completada con éxito.\nPrioridad asignada: P-${STATE.prioridad} (${STATE.prioridad ? PRIORIDADES[STATE.prioridad].nombre : "—"})`);
+  alert(`✅ Evaluación de Triaje completada con éxito.\n\n• Prioridad Asignada: P-${STATE.prioridad} (${STATE.prioridad ? PRIORIDADES[STATE.prioridad].nombre : "—"})\n\n🏷️ La Pulsera / Brazalete de Identificación y Prioridad con código de color y alergias ya está lista para imprimir.`);
+  setTimeout(() => {
+    if (confirm(`🏷️ ¿Desea imprimir ahora la Pulsera / Brazalete Hospitalario con código de color MINSA y advertencia de alergias?`)) {
+      imprimirBrazalete();
+    }
+  }, 150);
 }
 
 // ---------------------------------------------------------------------------
@@ -3674,7 +3768,7 @@ function mostrarModalRegistroExitoso(ep) {
     </div>
   `;
 
-  modal.style.display = "flex";
+  modal.classList.add("open"); modal.classList.add("show"); modal.style.setProperty("display", "flex", "important");
 }
 
 
@@ -3801,6 +3895,11 @@ function irAModulo(num) {
   }
 
   // 2. Abrir el módulo correspondiente en el Drawer Operativo
+    // Garantizar renderizado de componentes dinámicos
+  if (num === 4) try { renderizarStockCamas(); } catch(e){}
+  if (num === 5) try { renderizarLaboratorio(); } catch(e){}
+  if (num === 6) try { renderizarFarmacia(); } catch(e){}
+
   const targetBody = document.getElementById(`body_mod${num}`);
   const targetArrow = document.getElementById(`arrow_mod${num}`);
   if (targetBody) {
