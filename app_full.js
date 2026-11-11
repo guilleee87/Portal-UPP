@@ -17,10 +17,12 @@
  * ==============================================================================
  */
 
+
 // ---------------------------------------------------------------------------
 // 1. CONFIGURACIÓN Y TOKEN DE APISPERU (RENIEC)
 // ---------------------------------------------------------------------------
 const DEFAULT_APISPERU_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6Imd1aWxsZXJtb3ZzdmxAZ21haWwuY29tIiwianRpIjoiZGE3MjEyOTliNTY0ODJjNyJ9.Bz4MHxTs72gLqGKlIuaIZ25NJmwtGx1ZqnkQU8YOorw";
+
 
 // ---------------------------------------------------------------------------
 // 2. BASE DE DATOS SIMULADA (IDÉNTICA a triage_prioridad.py — NO MODIFICAR)
@@ -34,6 +36,7 @@ const BASE_DATOS_HC = {
   "maria torres silva": "HC-2024-890",
 };
 
+
 // Cargar base de datos persistente desde localStorage
 try {
   const bdLocal = localStorage.getItem("UPP_BASE_DATOS_HC");
@@ -42,8 +45,10 @@ try {
   }
 } catch (e) {}
 
+
 let contadorHcNueva = parseInt(localStorage.getItem("UPP_CONTADOR_HC") || "1", 10);
 let contadorHcTemp = 1;
+
 
 // ---------------------------------------------------------------------------
 // CONFIGURACIÓN OFICIAL SUPABASE (CLOUD DATABASE)
@@ -52,6 +57,7 @@ const SUPABASE_CONFIG = {
   url: "https://fvgogdgxfmxupyegeuzp.supabase.co",
   key: "sb_publishable_mFaj4X5VLMkI3hkBZvA9Zw_TeeNFbFm"
 };
+
 
 async function sincronizarConSupabase(identificador, nroHc, nombre = "", seguro = "", ticket = "", prioridad = "") {
   if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.key) return null;
@@ -117,6 +123,7 @@ async function sincronizarConSupabase(identificador, nroHc, nombre = "", seguro 
   return null;
 }
 
+
 function persistirBaseDatosLocal(clave, nroHc, nombre = "") {
   BASE_DATOS_HC[clave] = nroHc;
   try {
@@ -124,10 +131,12 @@ function persistirBaseDatosLocal(clave, nroHc, nombre = "") {
     localStorage.setItem("UPP_CONTADOR_HC", String(contadorHcNueva));
   } catch (e) {}
 
+
   // 1. Sincronizar con base de datos SQLite local en disco
   try {
     fetch(`/api/hc?identificador=${encodeURIComponent(clave)}&nombre=${encodeURIComponent(nombre || clave)}`).catch(() => {});
   } catch (e) {}
+
 
   // 2. Sincronizar en vivo con la nube de Supabase
   try {
@@ -135,9 +144,347 @@ function persistirBaseDatosLocal(clave, nroHc, nombre = "") {
   } catch (e) {}
 }
 
+
+// ---------------------------------------------------------------------------
+// GESTIÓN MAESTRA DE PACIENTES Y EXPEDIENTES EPISÓDICOS HISTÓRICOS (MINSA/UPP)
+// ---------------------------------------------------------------------------
+const STORAGE_KEY_PACIENTES_MASTER = "UPP_PACIENTES_MASTER_V2";
+const STORAGE_KEY_HISTORIAL_EPISODIOS = "UPP_HISTORIAL_EPISODIOS_V2";
+
+
+// Semilla inicial de pacientes con datos clínicos permanentes y antecedentes de alergias
+const PACIENTES_MASTER_SEED = {
+  "10203040": {
+    identificador: "10203040",
+    historia_clinica: "HC-2024-510",
+    nombre_completo: "Carlos Mendoza Rojas",
+    fecha_nacimiento: "1988-06-15",
+    edad: 38,
+    sexo: "M",
+    tipo_seguro: "EsSalud",
+    alergias: "Alérgico a Penicilina (Anafilaxia previa severa) y Sulfas",
+    antecedentes: "Hipertensión Arterial, Asma bronquial leve",
+    episodios: [
+      {
+        folio: "FOLIO-20261102-1402",
+        fecha: "02/11/2026",
+        hora: "14:35",
+        fecha_hora: "02/11/2026, 14:35:10",
+        identificador: "10203040",
+        historia_clinica: "HC-2024-510",
+        nombre_completo: "Carlos Mendoza Rojas",
+        edad: 38,
+        sexo: "M",
+        alergias: "Alérgico a Penicilina (Anafilaxia previa severa) y Sulfas",
+        tipo_seguro: "EsSalud",
+        ticket: "T-03",
+        motivo_consulta: "Disnea y sibilancias respiratorias de inicio agudo",
+        prioridad: "P-II (EMERGENCIA)",
+        color_prioridad: "#ea580c",
+        destino_clinico: "Tópico de Emergencia / Nebulización",
+        signos_vitales: {
+          spo2: "91", fc: "108", fr: "26", pas: "135", pad: "85", temp: "36.7", glucosa: "112", glasgow: "15", dolor: "3"
+        },
+        cama_asignada: "Cama 02 - Observación",
+        examenes_realizados: [{ descripcion: "Gases Arteriales (AGA)", costo: 45 }, { descripcion: "Radiografía de Tórax AP", costo: 60 }],
+        medicamentos_despachados: [{ descripcion: "Salbutamol solución para nebulizar", costo: 15 }, { descripcion: "Hidrocortisona 100mg EV", costo: 25 }],
+        total_facturado: 0.00,
+        cobertura_info: "100% Cubierto por EsSalud (Ley N° 27604 - Pago Cero)",
+        estado_salida: "Alta con indicación de tratamiento ambulatorio",
+        firmante: "Lic. R. Añazgo Farro (CEP 84729) / Dr. L. Vásquez Valdivieso (CMP 62910)"
+      }
+    ]
+  },
+  "70809010": {
+    identificador: "70809010",
+    historia_clinica: "HC-2025-332",
+    nombre_completo: "Maria Torres Silva",
+    fecha_nacimiento: "1994-09-22",
+    edad: 32,
+    sexo: "F",
+    tipo_seguro: "SIS Gratuito",
+    alergias: "Alérgica a AINEs (Ibuprofeno, Ketorolaco — Angioedema)",
+    antecedentes: "Migraña episódica, Gastritis superficial",
+    episodios: [
+      {
+        folio: "FOLIO-20261105-0918",
+        fecha: "05/11/2026",
+        hora: "09:18",
+        fecha_hora: "05/11/2026, 09:18:24",
+        identificador: "70809010",
+        historia_clinica: "HC-2025-332",
+        nombre_completo: "Maria Torres Silva",
+        edad: 32,
+        sexo: "F",
+        alergias: "Alérgica a AINEs (Ibuprofeno, Ketorolaco — Angioedema)",
+        tipo_seguro: "SIS Gratuito",
+        ticket: "T-04",
+        motivo_consulta: "Cefalea holocraneana pulsátil EVA 8/10 con náuseas y fotofobia",
+        prioridad: "P-III (URGENCIA MENOR)",
+        color_prioridad: "#ca8a04",
+        destino_clinico: "Consultorio de Urgencias Médicas",
+        signos_vitales: {
+          spo2: "98", fc: "82", fr: "18", pas: "115", pad: "75", temp: "36.5", glucosa: "96", glasgow: "15", dolor: "8"
+        },
+        cama_asignada: "Cama 05 - Observación Mujeres",
+        examenes_realizados: [{ descripcion: "Hemograma Automatizado", costo: 30 }],
+        medicamentos_despachados: [{ descripcion: "Paracetamol 1g EV (Evitar AINEs por alergia)", costo: 18 }, { descripcion: "Dimenhidrinato 50mg EV", costo: 12 }],
+        total_facturado: 0.00,
+        cobertura_info: "100% Cubierto por SIS Gratuito (FUA Acreditado - Pago Cero)",
+        estado_salida: "Alta con remisión sintomática completa",
+        firmante: "Lic. L. Vásquez Valdivieso (CEP 78314) / Méd. Urgenciólogo"
+      }
+    ]
+  }
+};
+
+
+function normalizarClavePaciente(val) {
+  return String(val || "").trim().toLowerCase().replace(/[\s\.\-]/g, "");
+}
+
+
+function cargarPacientesMaster() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PACIENTES_MASTER);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch (e) {}
+  guardarPacientesMaster(PACIENTES_MASTER_SEED);
+  return { ...PACIENTES_MASTER_SEED };
+}
+
+
+function guardarPacientesMaster(map) {
+  try {
+    localStorage.setItem(STORAGE_KEY_PACIENTES_MASTER, JSON.stringify(map));
+  } catch (e) {}
+}
+
+
+function obtenerPacienteMaster(identificador, nroHc = "", nombre = "") {
+  const master = cargarPacientesMaster();
+  const cId = normalizarClavePaciente(identificador);
+  const cHc = normalizarClavePaciente(nroHc);
+  const cNom = normalizarClavePaciente(nombre);
+
+
+  for (const [k, p] of Object.entries(master)) {
+    const pkId = normalizarClavePaciente(p.identificador);
+    const pkHc = normalizarClavePaciente(p.historia_clinica);
+    const pkNom = normalizarClavePaciente(p.nombre_completo);
+
+
+    if ((cId && pkId === cId) || (cHc && pkHc === cHc) || (cNom && pkNom === cNom)) {
+      return p;
+    }
+  }
+  return null;
+}
+
+
+function obtenerOInicializarPacienteMaster(identificador, nroHc, nombre = "", tipoSeguro = "") {
+  let p = obtenerPacienteMaster(identificador, nroHc, nombre);
+  const master = cargarPacientesMaster();
+  const cleanId = String(identificador || "").trim();
+
+
+  if (!p) {
+    p = {
+      identificador: cleanId || "TEMP",
+      historia_clinica: nroHc || `HC-${new Date().getFullYear()}-${Math.floor(100+Math.random()*900)}`,
+      nombre_completo: nombre || cleanId.toUpperCase(),
+      fecha_nacimiento: "",
+      edad: null,
+      sexo: "M",
+      tipo_seguro: tipoSeguro || "EsSalud",
+      alergias: "Niega alergias medicamentosas conocidas (NKDA)",
+      antecedentes: "Sin antecedentes patológicos relevantes declarados",
+      episodios: []
+    };
+    master[cleanId || p.historia_clinica] = p;
+    guardarPacientesMaster(master);
+  } else {
+    let mod = false;
+    if (nroHc && (!p.historia_clinica || p.historia_clinica === "—")) { p.historia_clinica = nroHc; mod = true; }
+    if (nombre && (!p.nombre_completo || p.nombre_completo === p.identificador)) { p.nombre_completo = nombre; mod = true; }
+    if (tipoSeguro && !p.tipo_seguro) { p.tipo_seguro = tipoSeguro; mod = true; }
+    if (mod) {
+      master[p.identificador || p.historia_clinica] = p;
+      guardarPacientesMaster(master);
+    }
+  }
+  return p;
+}
+
+
+function actualizarAlergiasEnMaster(identificador, nroHc, alergias) {
+  if (!alergias || !identificador) return;
+  const master = cargarPacientesMaster();
+  const cId = normalizarClavePaciente(identificador);
+  const cHc = normalizarClavePaciente(nroHc);
+
+
+  for (const [k, p] of Object.entries(master)) {
+    const pkId = normalizarClavePaciente(p.identificador);
+    const pkHc = normalizarClavePaciente(p.historia_clinica);
+    if ((cId && pkId === cId) || (cHc && pkHc === cHc)) {
+      p.alergias = alergias;
+      master[k] = p;
+      guardarPacientesMaster(master);
+      return;
+    }
+  }
+}
+
+
+function actualizarAlergiasEnTiempoReal(val) {
+  const cleanVal = String(val || "").trim();
+  STATE.alergias = cleanVal;
+  actualizarIndicadorVisualAlergias(cleanVal);
+  if (STATE.identificador && STATE.historiaClinica) {
+    actualizarAlergiasEnMaster(STATE.identificador, STATE.historiaClinica, cleanVal);
+  }
+}
+
+
+function actualizarIndicadorVisualAlergias(val) {
+  const tag = document.getElementById("alergias_alerta_tag");
+  const banner = document.getElementById("alergias_alerta_banner");
+  const input = document.getElementById("alergias_full");
+
+
+  const str = String(val || "").trim();
+  const esAlergico = str && !str.toLowerCase().includes("niega") && !str.toLowerCase().includes("ninguna") && !str.toLowerCase().includes("desconocida");
+
+
+  if (tag) tag.style.display = esAlergico ? "inline-block" : "none";
+  if (banner) {
+    if (esAlergico) {
+      banner.innerHTML = `⚠️ <strong>ALERTA ASISTENCIAL:</strong> Paciente con alergia crítica a <strong>"${str}"</strong>. Prohibido prescribir medicamentos derivados o de reactividad cruzada.`;
+      banner.style.display = "block";
+    } else {
+      banner.style.display = "none";
+    }
+  }
+  if (input) {
+    if (esAlergico) {
+      input.style.borderColor = "#ef4444";
+      input.style.backgroundColor = "#fff1f2";
+      input.style.color = "#991b1b";
+      input.style.fontWeight = "700";
+    } else {
+      input.style.borderColor = "";
+      input.style.backgroundColor = "";
+      input.style.color = "";
+      input.style.fontWeight = "";
+    }
+  }
+}
+
+
+function limpiarCamposParaNuevaAtencion() {
+  const elMotivo = document.getElementById("motivo_full");
+  if (elMotivo) elMotivo.value = "";
+  STATE.motivoConsulta = "";
+
+
+  ["spo2_full","fc_full","pas_full","pad_full","fr_full","temp_full","glucosa_full","glasgow_full"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const elEva = document.getElementById("eva_full");
+  if (elEva) elEva.value = "0";
+  const elEvaRange = document.getElementById("eva_range");
+  if (elEvaRange) elEvaRange.value = "0";
+  const elEvaLabel = document.getElementById("eva_label");
+  if (elEvaLabel) elEvaLabel.textContent = "Sin dolor";
+
+
+  STATE.prioridad = null;
+  STATE.colorPrioridad = null;
+  const elPrioridadDisplay = document.getElementById("prioridad_display");
+  if (elPrioridadDisplay) elPrioridadDisplay.classList.remove("visible");
+
+
+  STATE.camaAsignada = null;
+  const elCamaDisplay = document.getElementById("camaAsignadaDisplay");
+  if (elCamaDisplay) elCamaDisplay.style.display = "none";
+  document.querySelectorAll(".cama-slot-btn").forEach(btn => btn.classList.remove("selected"));
+
+
+  STATE.items_factura = [];
+  actualizarFactura();
+
+
+  const elFirma = document.getElementById("firma_consentimiento");
+  if (elFirma) elFirma.value = "";
+  const elFirmaTs = document.getElementById("firma_timestamp");
+  if (elFirmaTs) elFirmaTs.textContent = "";
+  const elSalida = document.getElementById("salida_display");
+  if (elSalida) elSalida.style.display = "none";
+
+
+  const ahora = new Date();
+  const horaStr = `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
+  const elHora = document.getElementById("hora_full");
+  if (elHora) elHora.value = horaStr;
+  STATE.horaLlegada = horaStr;
+}
+
+
+function obtenerEpisodiosDePaciente(identificador, nroHc) {
+  const cId = normalizarClavePaciente(identificador);
+  const cHc = normalizarClavePaciente(nroHc);
+
+
+  let episodios = [];
+
+
+  try {
+    const rawGlobal = localStorage.getItem(STORAGE_KEY_HISTORIAL_EPISODIOS) || localStorage.getItem("UPP_HISTORIAL_EPISODIOS") || "[]";
+    const parsedGlobal = JSON.parse(rawGlobal);
+    if (Array.isArray(parsedGlobal)) {
+      parsedGlobal.forEach(ep => {
+        const epId = normalizarClavePaciente(ep.identificador);
+        const epHc = normalizarClavePaciente(ep.historia_clinica);
+        if ((cId && (epId.includes(cId) || cId.includes(epId))) || (cHc && epHc === cHc) || (cId && ep.nombre_completo && normalizarClavePaciente(ep.nombre_completo).includes(cId))) {
+          episodios.push(ep);
+        }
+      });
+    }
+  } catch (e) {}
+
+
+  const master = obtenerPacienteMaster(identificador, nroHc);
+  if (master && Array.isArray(master.episodios)) {
+    master.episodios.forEach(ep => {
+      if (!episodios.some(x => x.folio && ep.folio && x.folio === ep.folio)) {
+        episodios.push(ep);
+      }
+    });
+  }
+
+
+  episodios.sort((a, b) => {
+    const fA = a.fecha_hora ? new Date(a.fecha_hora).getTime() : 0;
+    const fB = b.fecha_hora ? new Date(b.fecha_hora).getTime() : 0;
+    return fB - fA;
+  });
+
+
+  return episodios;
+}
+
+
+
+
 // ---------------------------------------------------------------------------
 // 2. CLASIFICACIÓN DE IDENTIDAD (igual que triage_prioridad.py)
 // ---------------------------------------------------------------------------
+
 
 // ---------------------------------------------------------------------------
 // MOTOR DE BÚSQUEDA Y CONSULTA DE HISTORIAS CLÍNICAS (DNI / APELLIDOS / NOMBRES)
@@ -145,11 +492,14 @@ function persistirBaseDatosLocal(clave, nroHc, nombre = "") {
 let busquedaCoincidenciasTimer = null;
 let catalogoHcCache = [];
 
+
 async function buscarCoincidenciasHC(termino) {
   const cleanTerm = String(termino || "").trim();
   if (cleanTerm.length < 2) return [];
 
+
   let resultados = [];
+
 
   // 1. Consultar en la nube de Supabase (PostgREST ILIKE)
   if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.key) {
@@ -170,6 +520,7 @@ async function buscarCoincidenciasHC(termino) {
     }
   }
 
+
   // 2. Si no hubo resultados en la nube o falló la red, consultar SQLite local
   if (resultados.length === 0) {
     try {
@@ -182,6 +533,7 @@ async function buscarCoincidenciasHC(termino) {
       }
     } catch (e) {}
   }
+
 
   // 3. Fallback de emergencia a la memoria del navegador (BASE_DATOS_HC)
   if (resultados.length === 0) {
@@ -200,20 +552,25 @@ async function buscarCoincidenciasHC(termino) {
     }
   }
 
+
   return resultados;
 }
+
 
 async function ejecutarBusquedaCoincidenciasEnVivo(termino) {
   const dropdown = document.getElementById("hc_sugerencias_dropdown");
   if (!dropdown) return;
 
+
   const resultados = await buscarCoincidenciasHC(termino);
+
 
   if (!resultados || resultados.length === 0) {
     dropdown.style.display = "none";
     dropdown.innerHTML = "";
     return;
   }
+
 
   let html = `
     <div class="hc-sugerencias-header">
@@ -222,12 +579,14 @@ async function ejecutarBusquedaCoincidenciasEnVivo(termino) {
     </div>
   `;
 
+
   resultados.forEach(p => {
     const ident = p.identificador || "—";
     const nom = p.nombre_completo || ident;
     const hc = p.historia_clinica || "—";
     const seg = p.tipo_seguro || "Sin seguro";
     const pJson = encodeURIComponent(JSON.stringify(p));
+
 
     html += `
       <div class="hc-sugerencia-item" onclick="seleccionarPacienteDeBusqueda('${pJson}')">
@@ -246,9 +605,11 @@ async function ejecutarBusquedaCoincidenciasEnVivo(termino) {
     `;
   });
 
+
   dropdown.innerHTML = html;
   dropdown.style.display = "block";
 }
+
 
 function cerrarSugerenciasHC() {
   const dropdown = document.getElementById("hc_sugerencias_dropdown");
@@ -256,6 +617,7 @@ function cerrarSugerenciasHC() {
     dropdown.style.display = "none";
   }
 }
+
 
 function seleccionarPacienteDeBusqueda(pacienteEncoded) {
   let paciente;
@@ -265,28 +627,49 @@ function seleccionarPacienteDeBusqueda(pacienteEncoded) {
     paciente = pacienteEncoded;
   }
   if (!paciente) return;
-
   cerrarSugerenciasHC();
   cerrarModalConsultaHC();
-
+  cerrarModalVisualizarHC();
   const ident = paciente.identificador || "";
   const nom = paciente.nombre_completo || ident;
   const hc = paciente.historia_clinica || "";
-  const seguro = paciente.tipo_seguro || "EsSalud";
-
-  // Cargar en el input principal
+  // Recuperar registro maestro permanente que conserva ALERGIAS y demografía indeleble
+  const master = obtenerOInicializarPacienteMaster(ident, hc, nom, paciente.tipo_seguro);
+  const seguro = master.tipo_seguro || paciente.tipo_seguro || "EsSalud";
+  const alergias = master.alergias || paciente.alergias || "Niega alergias medicamentosas conocidas";
+  // 1. Cargar en el input principal de Módulo 1
   const inputIdent = document.getElementById("ident_full");
   if (inputIdent) inputIdent.value = ident;
-
-  // Actualizar STATE
+  // Actualizar STATE con datos del paciente
   STATE.identificador = `${nom} (ID ${ident})`;
   STATE.historiaClinica = hc;
   STATE.nombreReniec = nom;
   STATE.estadoRegistrado = "Si";
-  STATE.accionHc = `Seleccionado desde BD: ${nom} (${hc})`;
+  STATE.accionHc = `Paciente autenticado: ${nom} -> HC ${hc} recuperada de BD`;
   STATE.alertaPnpSs = false;
-
-  // Actualizar indicadores visuales de HC
+  STATE.edad = master.edad || STATE.edad;
+  STATE.sexo = master.sexo || "M";
+  STATE.alergias = alergias;
+  // Datos demográficos
+  if (master.fecha_nacimiento) {
+    const elFecha = document.getElementById("fecha_nac_full");
+    if (elFecha) elFecha.value = master.fecha_nacimiento;
+  }
+  if (master.edad) {
+    const elEdad = document.getElementById("edad_full");
+    if (elEdad) elEdad.value = master.edad;
+  }
+  if (master.sexo) {
+    const elSexo = document.getElementById("sexo_full");
+    if (elSexo) elSexo.value = master.sexo;
+  }
+  // ⚠️ PRESERVAR Y CARGAR ALERGIAS PERMANENTES EN EL FORMULARIO
+  const elAlergias = document.getElementById("alergias_full");
+  if (elAlergias) {
+    elAlergias.value = alergias;
+    actualizarIndicadorVisualAlergias(alergias);
+  }
+  // Indicadores visuales de Módulo 1
   const badgeEl = document.getElementById("hc_badge_estado");
   if (badgeEl) {
     badgeEl.textContent = "Si (En BD)";
@@ -295,48 +678,45 @@ function seleccionarPacienteDeBusqueda(pacienteEncoded) {
   const codeEl = document.getElementById("hc_code_display");
   if (codeEl) codeEl.textContent = hc;
   const accEl = document.getElementById("hc_accion_display");
-  if (accEl) accEl.textContent = `Paciente autenticado: ${nom} -> HC ${hc} recuperada de BD`;
-
-  // Ocultar alerta NN
+  if (accEl) accEl.textContent = `HC ${hc} activa · Alergias: ${alergias}`;
   const alertaNn = document.getElementById("alerta_nn");
   if (alertaNn) alertaNn.classList.remove("visible");
-
-  // Mostrar panel de RENIEC con datos
+  // Panel RENIEC / Base de Datos
   const panelReniec = document.getElementById("apisperu_panel");
   if (panelReniec) {
+    const esAlergico = alergias && !alergias.toLowerCase().includes("niega") && !alergias.toLowerCase().includes("ninguna");
     panelReniec.innerHTML = `
-      <div class="apisperu-title">✅ Paciente Seleccionado desde Base de Datos</div>
+      <div class="apisperu-title">✅ Paciente Seleccionado desde Base de Datos Hospitalaria</div>
       <div class="apisperu-result" style="font-size:1.1rem;font-weight:800;color:#166534;">${nom}</div>
-      <div style="font-size:0.8rem;color:#475569;margin-top:4px;">
-        <strong>DNI/ID:</strong> ${ident} | <strong>Historia Clínica:</strong> ${hc} | <strong>Seguro Registrado:</strong> ${seguro}
+      <div style="font-size:0.82rem;color:#334155;margin-top:6px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px;background:#ffffff;padding:10px 12px;border-radius:8px;border:1.5px solid #bbf7d0;">
+        <div><strong>DNI/ID:</strong> ${ident}</div>
+        <div><strong>Historia Clínica:</strong> <span class="hc-pill-tag">${hc}</span></div>
+        <div><strong>Seguro Registrado:</strong> <span class="hc-pill-seguro">${seguro}</span></div>
+        <div style="grid-column: 1 / -1; ${esAlergico ? "background:#fee2e2;border:1px solid #ef4444;color:#991b1b;padding:6px 10px;border-radius:6px;font-weight:800;" : "color:#166534;"}">
+          ${esAlergico ? `⚠️ ALERGIA REGISTRADA EN HC: ${alergias}` : `✓ Condición Alergias: ${alergias}`}
+        </div>
       </div>
     `;
     panelReniec.classList.add("visible");
   }
-
-  // Asignar seguro correspondiente si existe
+  // Asignar seguro en Módulo 2
   if (seguro) {
     actualizarSeguroConsolidado(seguro);
     STATE.tipoSeguro = seguro;
-    if (seguro.toLowerCase().includes("essalud")) {
-      activarTabSeguro("essalud", document.querySelectorAll(".seguro-tab")[1]);
-    } else if (seguro.toLowerCase().includes("sis")) {
-      activarTabSeguro("sis", document.querySelectorAll(".seguro-tab")[0]);
-    } else if (seguro.toLowerCase().includes("soat")) {
-      activarTabSeguro("soat", document.querySelectorAll(".seguro-tab")[2]);
-    } else if (seguro.toLowerCase().includes("eps")) {
-      activarTabSeguro("eps", document.querySelectorAll(".seguro-tab")[3]);
-    }
+    const segLow = seguro.toLowerCase();
+    if (segLow.includes("essalud")) activarTabSeguro("essalud", document.querySelectorAll(".seguro-tab")[1]);
+    else if (segLow.includes("sis")) activarTabSeguro("sis", document.querySelectorAll(".seguro-tab")[0]);
+    else if (segLow.includes("soat")) activarTabSeguro("soat", document.querySelectorAll(".seguro-tab")[2]);
+    else if (segLow.includes("eps")) activarTabSeguro("eps", document.querySelectorAll(".seguro-tab")[3]);
   }
-
-  // Asignar ticket y hora actual
+  // 🏥 INICIAR NUEVO ENCUENTRO DE EMERGENCIA (LIMPIAR SIGNOS VITALES, MOTIVO Y FACTURA ANTERIOR)
+  limpiarCamposParaNuevaAtencion();
+  // Asignar nuevo ticket y hora actual de llegada
   calcularTicket();
-
   // Guardar en sesión local
   BASE_DATOS_HC[ident.toLowerCase()] = hc;
   BASE_DATOS_HC[nom.toLowerCase()] = hc;
 }
-
 // ---------------------------------------------------------------------------
 // MODAL DE CATÁLOGO COMPLETO DE HISTORIAS CLÍNICAS
 // ---------------------------------------------------------------------------
@@ -347,14 +727,17 @@ async function abrirModalConsultaHC() {
   modal.classList.add("show");
   modal.style.setProperty("display", "flex", "important");
 
+
   const inputModal = document.getElementById("modal_search_hc_input");
   if (inputModal) {
     inputModal.value = "";
     setTimeout(() => inputModal.focus(), 80);
   }
 
+
   cargarTablaCatalogoHC("");
 }
+
 
 function cerrarModalConsultaHC() {
   const modal = document.getElementById("modal_consulta_hc");
@@ -365,15 +748,13 @@ function cerrarModalConsultaHC() {
   }
 }
 
+
 async function cargarTablaCatalogoHC(filtro = "") {
   const tbody = document.getElementById("modal_hc_table_body");
   const countEl = document.getElementById("modal_hc_total_count");
   if (!tbody) return;
-
-  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:18px;color:#64748b;">⏳ Cargando registros desde Supabase y base local...</td></tr>`;
-
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:18px;color:#64748b;">⏳ Cargando registros desde Supabase Cloud y catálogo local...</td></tr>`;
   let registros = [];
-
   // 1. Obtener de Supabase
   if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.key) {
     try {
@@ -393,7 +774,6 @@ async function cargarTablaCatalogoHC(filtro = "") {
       }
     } catch (e) {}
   }
-
   // 2. Si no hay Supabase, pedir al servidor Python SQLite
   if (registros.length === 0) {
     try {
@@ -406,30 +786,39 @@ async function cargarTablaCatalogoHC(filtro = "") {
       }
     } catch (e) {}
   }
-
-  // 3. Fallback memoria
+  // 3. Fallback con base de datos local y master seed
   if (registros.length === 0) {
+    const master = cargarPacientesMaster();
     const fLow = filtro.toLowerCase();
-    registros = Object.entries(BASE_DATOS_HC)
-      .filter(([k, v]) => !filtro || k.includes(fLow) || v.toLowerCase().includes(fLow))
-      .map(([k, v], idx) => ({
+    registros = Object.values(master)
+      .filter(p => !filtro || p.identificador.toLowerCase().includes(fLow) || p.nombre_completo.toLowerCase().includes(fLow) || p.historia_clinica.toLowerCase().includes(fLow))
+      .map((p, idx) => ({
         id: idx + 1,
-        identificador: k,
-        nombre_completo: k.toUpperCase(),
-        historia_clinica: v,
-        tipo_seguro: "Asegurado",
+        identificador: p.identificador,
+        nombre_completo: p.nombre_completo,
+        historia_clinica: p.historia_clinica,
+        tipo_seguro: p.tipo_seguro,
+        alergias: p.alergias,
         ticket: `T-0${idx + 1}`
       }));
   }
-
+  // Enriquecer cada registro con datos del master (alergias y conteo de episodios)
+  registros.forEach(r => {
+    const masterP = obtenerPacienteMaster(r.identificador, r.historia_clinica, r.nombre_completo);
+    if (masterP) {
+      if (!r.alergias && masterP.alergias) r.alergias = masterP.alergias;
+      r.total_episodios = Array.isArray(masterP.episodios) ? masterP.episodios.length : 0;
+    } else {
+      const eps = obtenerEpisodiosDePaciente(r.identificador, r.historia_clinica);
+      r.total_episodios = eps.length;
+    }
+  });
   catalogoHcCache = registros;
   if (countEl) countEl.textContent = `${registros.length} registros`;
-
   if (registros.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;">No se encontraron coincidencias para "${filtro}".</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#94a3b8;">No se encontraron coincidencias para "${filtro}".</td></tr>`;
     return;
   }
-
   let htmlRows = "";
   registros.forEach((r, idx) => {
     const ident = r.identificador || "—";
@@ -437,12 +826,20 @@ async function cargarTablaCatalogoHC(filtro = "") {
     const hc = r.historia_clinica || "—";
     const seg = r.tipo_seguro || "Sin seguro";
     const tck = r.ticket || "—";
+    const alergias = r.alergias || "Niega alergias";
+    const esAlergico = alergias && !alergias.toLowerCase().includes("niega") && !alergias.toLowerCase().includes("ninguna");
+    const totalEps = r.total_episodios || 0;
     const pJson = encodeURIComponent(JSON.stringify(r));
-
     htmlRows += `
       <tr>
         <td style="font-weight:700;color:#64748b;">${idx + 1}</td>
-        <td><strong style="color:#0f172a;">${nom}</strong></td>
+        <td>
+          <strong style="color:#0f172a;">${nom}</strong>
+          ${esAlergico ? `<span style="display:inline-block;margin-left:6px;font-size:0.7rem;font-weight:800;background:#fee2e2;color:#b91c1c;padding:1px 6px;border-radius:4px;border:1px solid #ef4444;" title="${alergias}">⚠️ Alérgico</span>` : ""}
+          <div style="font-size:0.73rem;color:#64748b;margin-top:2px;">
+            <span>📋 ${totalEps} atención${totalEps === 1 ? "" : "es"} registrada${totalEps === 1 ? "" : "s"}</span>
+          </div>
+        </td>
         <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#0284c7;">${ident}</code></td>
         <td><span class="hc-pill-tag">${hc}</span></td>
         <td><span class="hc-pill-seguro">${seg}</span></td>
@@ -450,15 +847,15 @@ async function cargarTablaCatalogoHC(filtro = "") {
         <td style="white-space:nowrap; text-align:center;">
           <div style="display:flex; gap:6px; justify-content:center;">
             <button type="button" class="btn-full-primary" style="padding:5px 10px;font-size:0.75rem;background:#16a34a;border:none;border-radius:6px;cursor:pointer;"
-              title="Cargar al simulador de triaje" onclick="seleccionarPacienteDeBusqueda('${pJson}')">
+              title="Cargar paciente para nueva atención" onclick="seleccionarPacienteDeBusqueda('${pJson}')">
               ✓ Cargar
             </button>
             <button type="button" class="btn-full-secondary" style="padding:5px 10px;font-size:0.75rem;background:#f8fafc;border:1.5px solid #0284c7;color:#0284c7;border-radius:6px;cursor:pointer;"
-              title="Visualizar expediente completo" onclick="visualizarHistoriaClinica('${pJson}')">
+              title="Visualizar expediente e historial clínico completo" onclick="visualizarHistoriaClinica('${pJson}')">
               👁️ Ver
             </button>
             <button type="button" class="btn-full-secondary" style="padding:5px 10px;font-size:0.75rem;background:#ffffff;border:1.5px solid #475569;color:#334155;border-radius:6px;cursor:pointer;"
-              title="Imprimir ficha oficial de historia clínica" onclick="imprimirFichaHistoriaClinica('${pJson}')">
+              title="Imprimir ficha oficial de historia clínica con historial" onclick="imprimirFichaHistoriaClinica('${pJson}')">
               🖨️ Imprimir
             </button>
           </div>
@@ -466,11 +863,8 @@ async function cargarTablaCatalogoHC(filtro = "") {
       </tr>
     `;
   });
-
   tbody.innerHTML = htmlRows;
 }
-
-
 // ---------------------------------------------------------------------------
 // PROTOCOLO DE INGRESO DE PACIENTES NN (IDENTIDAD NO CONFIRMADA)
 // ---------------------------------------------------------------------------
@@ -480,6 +874,7 @@ function ingresarPacienteNN() {
   const ahora = new Date();
   const horaActual = `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
   const turnoTemp = `T-NN-${String(contadorHcTemp - 1).padStart(2, "0")}`;
+
 
   STATE.esNN = true;
   STATE.identificador = "PACIENTE NO IDENTIFICADO (NN)";
@@ -495,24 +890,31 @@ function ingresarPacienteNN() {
   STATE.alergias = "Desconocidas (Paciente NN)";
   STATE.tipoSeguro = "Seguro por confirmar";
 
+
   // 1. Llenar / Limpiar celdas en Módulo 1 (fecha de nacimiento, edad y alergias en blanco)
   const inputIdent = document.getElementById("ident_full");
   if (inputIdent) inputIdent.value = "PACIENTE NO IDENTIFICADO (NN)";
 
+
   const inputHora = document.getElementById("hora_full");
   if (inputHora) inputHora.value = horaActual;
+
 
   const elFechaNac = document.getElementById("fecha_nac_full");
   if (elFechaNac) elFechaNac.value = "";
 
+
   const elEdad = document.getElementById("edad_full");
   if (elEdad) elEdad.value = "";
+
 
   const elAlergias = document.getElementById("alergias_full");
   if (elAlergias) elAlergias.value = "";
 
+
   const elSexo = document.getElementById("sexo_full");
   if (elSexo) elSexo.value = "Desconocido";
+
 
   // Indicadores de Módulo 1
   const badgeEl = document.getElementById("hc_badge_estado");
@@ -525,11 +927,14 @@ function ingresarPacienteNN() {
   const accEl = document.getElementById("hc_accion_display");
   if (accEl) accEl.textContent = STATE.accionHc;
 
+
   const ticketDisplay = document.getElementById("ticket_display");
   if (ticketDisplay) ticketDisplay.textContent = `🎫 Ticket asignado: ${turnoTemp} (hora: ${horaActual})`;
 
+
   const alertaNn = document.getElementById("alerta_nn");
   if (alertaNn) alertaNn.classList.add("visible");
+
 
   // 2. Módulo 2 (Paso 2): Marcar automáticamente como "Seguro por confirmar"
   const seguroConsolidado = document.getElementById("seguro_consolidado");
@@ -549,6 +954,7 @@ function ingresarPacienteNN() {
     `;
   }
 
+
   // Telemetría de cabecera
   const telHc = document.getElementById("telemetry_hc_val");
   if (telHc) telHc.textContent = nroHcTemp;
@@ -557,6 +963,7 @@ function ingresarPacienteNN() {
   const telSeg = document.getElementById("telemetry_seguro_val");
   if (telSeg) telSeg.textContent = "Por confirmar";
 
+
   // Registrar en base de datos local y sincronizar con Supabase
   BASE_DATOS_HC["paciente no identificado (nn)"] = nroHcTemp;
   try {
@@ -564,10 +971,13 @@ function ingresarPacienteNN() {
     sincronizarConSupabase("NN", nroHcTemp, "PACIENTE NO IDENTIFICADO (NN)", "Seguro por confirmar", turnoTemp, "Por evaluar");
   } catch (e) {}
 
+
   actualizarFactura();
+
 
   // Enfocar en Módulo 1 y permitir continuar el flujo paso a paso
   irAModulo(1);
+
 
   alert(`🚨 ADMISIÓN DE PACIENTE NN REGISTRADA CON ÉXITO\n\n` +
         `• Historia Clínica Temporal: ${nroHcTemp}\n` +
@@ -576,6 +986,7 @@ function ingresarPacienteNN() {
         `• Paso 2 (Seguro): Marcado automáticamente como "Seguro por confirmar".\n` +
         `• Protocolo de emergencia vital activado bajo amparo de la Ley N° 27604.`);
 }
+
 
 function cerrarModalVisualizarHC() {
   const modal = document.getElementById("modal_visualizar_hc");
@@ -586,6 +997,7 @@ function cerrarModalVisualizarHC() {
   }
 }
 
+
 function visualizarHistoriaClinica(pacienteEncoded) {
   let p;
   try {
@@ -594,81 +1006,156 @@ function visualizarHistoriaClinica(pacienteEncoded) {
     p = pacienteEncoded;
   }
   if (!p) return;
-
   const modal = document.getElementById("modal_visualizar_hc");
   const body = document.getElementById("modal_visualizar_hc_body");
   if (!modal || !body) return;
-
   const ident = p.identificador || "—";
   const nom = p.nombre_completo || ident;
   const hc = p.historia_clinica || "—";
-  const seg = p.tipo_seguro || "EsSalud / SIS / Particular";
-  const tck = p.ticket || "T-01";
-  const prio = p.prioridad || "Evaluada en Triaje Clínico";
-  const fecha = p.fecha_registro ? new Date(p.fecha_registro).toLocaleString() : new Date().toLocaleDateString();
-
+  // Recuperar registro maestro permanente que conserva ALERGIAS y todos los episodios
+  const master = obtenerOInicializarPacienteMaster(ident, hc, nom, p.tipo_seguro);
+  const seguro = master.tipo_seguro || p.tipo_seguro || "EsSalud / SIS / Particular";
+  const alergias = master.alergias || p.alergias || "Niega alergias medicamentosas conocidas";
+  const episodios = obtenerEpisodiosDePaciente(ident, hc);
+  const esAlergico = alergias && !alergias.toLowerCase().includes("niega") && !alergias.toLowerCase().includes("ninguna");
+  let htmlEpisodios = "";
+  if (episodios.length === 0) {
+    htmlEpisodios = `
+      <div style="background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:10px;padding:24px;text-align:center;color:#64748b;">
+        <div style="font-size:2rem;margin-bottom:6px;">📂</div>
+        <strong style="color:#1e293b;font-size:0.95rem;">Expediente Clínico Aperturado — Sin Atenciones Previas Archivadas</strong>
+        <p style="font-size:0.8rem;margin:6px 0 0;color:#64748b;">
+          El paciente cuenta con Historia Clínica <strong>${hc}</strong> pero aún no registra episodios cerrados en el sistema.<br>
+          Haga clic en <strong>"Cargar Paciente para Nueva Atención"</strong> para iniciar la primera evaluación de triaje.
+        </p>
+      </div>
+    `;
+  } else {
+    episodios.forEach((ep, idx) => {
+      const sv = ep.signos_vitales || {};
+      const pa = sv.pa || (sv.pas && sv.pad ? `${sv.pas}/${sv.pad}` : "—");
+      const prioColor = ep.color_prioridad || "#0284c7";
+      const totalPagar = ep.liquidacion?.totalPaciente !== undefined ? `S/. ${ep.liquidacion.totalPaciente.toFixed(2)}` : (ep.total_facturado !== undefined ? `S/. ${Number(ep.total_facturado).toFixed(2)}` : "S/. 0.00");
+      const cobBadge = ep.cobertura_info || (totalPagar === "S/. 0.00" ? "Pago Cero (Cubierto al 100%)" : "Con copago/deducible");
+      const exms = Array.isArray(ep.examenes_realizados) && ep.examenes_realizados.length > 0
+        ? ep.examenes_realizados.map(e => e.descripcion || e).join(", ")
+        : "Ninguno ordenado";
+      const meds = Array.isArray(ep.medicamentos_despachados) && ep.medicamentos_despachados.length > 0
+        ? ep.medicamentos_despachados.map(m => m.descripcion || m).join(", ")
+        : "Ninguno prescrito";
+      htmlEpisodios += `
+        <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-left:5px solid ${prioColor};border-radius:10px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:0.75rem;font-weight:900;background:#0f172a;color:#ffffff;padding:3px 8px;border-radius:4px;">
+                ATENCIÓN N° ${episodios.length - idx}
+              </span>
+              <span style="font-size:0.85rem;font-weight:800;color:#0f172a;">📅 ${ep.fecha || "—"} · ⏱️ ${ep.hora || "—"}</span>
+              <code style="font-size:0.75rem;background:#f1f5f9;color:#64748b;padding:2px 6px;border-radius:4px;">${ep.folio || "FOLIO"}</code>
+            </div>
+            <div>
+              <span style="background:${prioColor};color:#ffffff;font-size:0.76rem;font-weight:900;padding:4px 10px;border-radius:12px;letter-spacing:0.4px;">
+                🚦 ${ep.prioridad || "PRIORIDAD DE TRIAJE"}
+              </span>
+            </div>
+          </div>
+          <div style="font-size:0.85rem;margin-bottom:8px;color:#0f172a;">
+            <strong>Motivo de Consulta / Anamnesis:</strong> <span style="color:#334155;">${ep.motivo_consulta || "Atención de emergencia / triaje"}</span>
+          </div>
+          <!-- Signos Vitales del Episodio -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;background:#f8fafc;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.78rem;margin-bottom:8px;">
+            <div><span style="color:#64748b;font-weight:700;">SpO2:</span> <strong>${sv.spo2 || "—"}%</strong></div>
+            <div><span style="color:#64748b;font-weight:700;">FC:</span> <strong>${sv.fc || "—"} lpm</strong></div>
+            <div><span style="color:#64748b;font-weight:700;">PA:</span> <strong>${pa}</strong></div>
+            <div><span style="color:#64748b;font-weight:700;">FR:</span> <strong>${sv.fr || "—"} rpm</strong></div>
+            <div><span style="color:#64748b;font-weight:700;">T°:</span> <strong>${sv.temp || "—"}°C</strong></div>
+            <div><span style="color:#64748b;font-weight:700;">Dolor EVA:</span> <strong>${sv.dolor || "0"}/10</strong></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;font-size:0.8rem;color:#475569;">
+            <div>🏥 <strong>Cama / Destino:</strong> ${ep.cama_asignada || ep.destino_clinico || "Observación"}</div>
+            <div>🔬 <strong>Apoyo Diagnóstico:</strong> ${exms}</div>
+            <div>💊 <strong>Farmacia:</strong> ${meds}</div>
+            <div>💰 <strong>Facturación:</strong> <span style="font-weight:800;color:${totalPagar === "S/. 0.00" ? "#16a34a" : "#0284c7"};">${totalPagar}</span> (${cobBadge})</div>
+            <div style="grid-column: 1 / -1;border-top:1px dashed #e2e8f0;padding-top:4px;margin-top:2px;font-size:0.75rem;color:#64748b;display:flex;justify-content:space-between;">
+              <span><strong>Estado al Egreso:</strong> ${ep.estado_salida || "En observación"}</span>
+              <span><strong>Responsable:</strong> ${ep.firmante || "Lic. Enfermería de Turno"}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  }
   body.innerHTML = `
-    <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:18px;margin-bottom:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0284c7;padding-bottom:10px;margin-bottom:12px;">
+    <!-- ENCABEZADO DE EXPEDIENTE -->
+    <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:16px 20px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;border-bottom:2px solid #0284c7;padding-bottom:10px;margin-bottom:12px;">
         <div>
-          <span style="font-size:0.75rem;font-weight:800;color:#0284c7;text-transform:uppercase;letter-spacing:1px;">EXPEDIENTE DE HISTORIA CLÍNICA</span>
-          <h2 style="margin:2px 0 0;font-size:1.3rem;font-weight:900;color:#0f172a;">${nom}</h2>
+          <span style="font-size:0.72rem;font-weight:800;color:#0284c7;text-transform:uppercase;letter-spacing:1px;">
+            EXPEDIENTE CLÍNICO DE ADMISIÓN Y TRIAJE — FCS UPP
+          </span>
+          <h2 style="margin:2px 0 0;font-size:1.35rem;font-weight:900;color:#0f172a;">${nom}</h2>
         </div>
         <div style="text-align:right;">
           <span class="hc-pill-tag" style="font-size:1.05rem;padding:6px 14px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;">${hc}</span>
-          <div style="font-size:0.75rem;color:#64748b;margin-top:4px;">Folio Registrado en BD</div>
+          <div style="font-size:0.75rem;color:#64748b;margin-top:4px;">N° Historia Clínica Oficial</div>
         </div>
       </div>
-
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;font-size:0.84rem;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;font-size:0.83rem;">
         <div><strong>DNI / Identificador:</strong> <code style="background:#ffffff;padding:2px 6px;border-radius:4px;border:1px solid #e2e8f0;">${ident}</code></div>
-        <div><strong>Seguro Acreditado:</strong> <span class="hc-pill-seguro">${seg}</span></div>
-        <div><strong>Fecha de Alta/Registro:</strong> ${fecha}</div>
-        <div><strong>Ticket Asignado:</strong> <strong>${tck}</strong></div>
-        <div><strong>Prioridad Clínica:</strong> <span style="font-weight:800;color:#0284c7;">${prio}</span></div>
-        <div><strong>Estado en Base de Datos:</strong> <span class="badge-estado badge-si">Autenticado / Activo</span></div>
+        <div><strong>Seguro Registrado:</strong> <span class="hc-pill-seguro">${seguro}</span></div>
+        <div><strong>Edad / Sexo:</strong> ${master.edad ? `${master.edad} años` : "—"} (${master.sexo === "F" ? "Femenino" : "Masculino"})</div>
+        <div><strong>Total Atenciones:</strong> <strong style="color:#0284c7;">${episodios.length} episodio(s) registrados</strong></div>
+        <div><strong>Estado en BD:</strong> <span class="badge-estado badge-si">Autenticado / Activo</span></div>
       </div>
     </div>
-
-    <!-- ANTECEDENTES Y RESUMEN ASISTENCIAL -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
-      <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;font-size:0.82rem;">
-        <h4 style="margin:0 0 6px;font-size:0.85rem;color:#1e293b;">📋 Antecedentes Médicos Registrados:</h4>
-        <ul style="margin:0;padding-left:18px;color:#475569;line-height:1.5;">
-          <li>Sin antecedentes de alergia severa a contraste.</li>
-          <li>Cobertura médica validada en plataforma SUSALUD/PIDE.</li>
-          <li>Historia Clínica digital disponible para interconsulta médica.</li>
-        </ul>
+    <!-- ⚠️ SECCIÓN CRÍTICA DE ALERGIAS (DATO PERMANENTE EN HC) -->
+    <div style="background:${esAlergico ? "#fee2e2" : "#f0fdf4"};border:2px solid ${esAlergico ? "#ef4444" : "#86efac"};border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.3rem;">${esAlergico ? "⚠️" : "🛡️"}</span>
+        <h4 style="margin:0;font-size:0.92rem;font-weight:900;color:${esAlergico ? "#991b1b" : "#166534"};text-transform:uppercase;letter-spacing:0.5px;">
+          ${esAlergico ? "ALERGIAS MEDICAMENTOSAS REGISTRADAS — ALERTA MÉDICA PERMANENTE" : "CONDICIÓN DE ALERGIAS MEDICAMENTOSAS"}
+        </h4>
       </div>
-
-      <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;font-size:0.82rem;">
-        <h4 style="margin:0 0 6px;font-size:0.85rem;color:#1e293b;">🛡️ Protocolo y Derechos del Paciente:</h4>
-        <div style="color:#475569;line-height:1.5;">
-          Amparado por la <strong>Ley N° 27604</strong> y la <strong>Ley General de Salud N° 26842</strong>. Confidencialidad protegida según Ley N° 29733 de Protección de Datos Personales.
-        </div>
+      <div style="font-size:1.05rem;font-weight:900;color:${esAlergico ? "#7f1d1d" : "#14532d"};margin-top:6px;padding-left:28px;">
+        ${alergias}
+      </div>
+      <div style="font-size:0.75rem;color:${esAlergico ? "#991b1b" : "#166534"};margin-top:4px;padding-left:28px;">
+        ${esAlergico
+          ? "* Este dato clínico pertenece permanentemente a la Historia Clínica del paciente y nunca se borra al abrir nuevas atenciones."
+          : "✓ El paciente niega alergias conocidas. Se puede prescribir según criterio clínico."}
+      </div>
+    </div>
+    <!-- HISTORIAL CRONOLÓGICO ACUMULATIVO DE ATENCIONES -->
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h4 style="margin:0;font-size:0.95rem;font-weight:800;color:#0f172a;display:flex;align-items:gap:6px;">
+          <span>📋</span> Histórico Cronológico de Atenciones de Emergencia (${episodios.length} episodio${episodios.length === 1 ? "" : "s"})
+        </h4>
+        <span style="font-size:0.75rem;color:#64748b;font-style:italic;">Cronología clínica acumulativa</span>
+      </div>
+      <div style="max-height:360px;overflow-y:auto;padding-right:4px;">
+        ${htmlEpisodios}
       </div>
     </div>
   `;
-
-  // Botón para cargar en el modal
+  // Asignar eventos de botones del modal
   const btnCargar = document.getElementById("btn_modal_cargar_paciente");
   if (btnCargar) {
     btnCargar.onclick = () => {
-      document.getElementById("modal_visualizar_hc").style.display = "none";
+      cerrarModalVisualizarHC();
       seleccionarPacienteDeBusqueda(pacienteEncoded);
     };
   }
-
   const btnImprimir = document.getElementById("btn_modal_imprimir_hc");
   if (btnImprimir) {
     btnImprimir.onclick = () => {
       imprimirFichaHistoriaClinica(pacienteEncoded);
     };
   }
-
-  modal.classList.add("open"); modal.classList.add("show"); modal.style.setProperty("display", "flex", "important");
+  modal.classList.add("open");
+  modal.classList.add("show");
+  modal.style.setProperty("display", "flex", "important");
 }
-
 function imprimirFichaHistoriaClinica(pacienteEncoded) {
   let p;
   try {
@@ -677,87 +1164,125 @@ function imprimirFichaHistoriaClinica(pacienteEncoded) {
     p = pacienteEncoded;
   }
   if (!p) return;
-
   const ident = p.identificador || "—";
   const nom = p.nombre_completo || ident;
   const hc = p.historia_clinica || "—";
-  const seg = p.tipo_seguro || "EsSalud / SIS / Particular";
-  const tck = p.ticket || "T-01";
-  const fecha = p.fecha_registro ? new Date(p.fecha_registro).toLocaleString() : new Date().toLocaleString();
-
+  const master = obtenerOInicializarPacienteMaster(ident, hc, nom, p.tipo_seguro);
+  const seguro = master.tipo_seguro || p.tipo_seguro || "EsSalud / SIS / Particular";
+  const alergias = master.alergias || p.alergias || "Niega alergias medicamentosas conocidas";
+  const episodios = obtenerEpisodiosDePaciente(ident, hc);
+  const esAlergico = alergias && !alergias.toLowerCase().includes("niega") && !alergias.toLowerCase().includes("ninguna");
+  let filasHtml = "";
+  if (episodios.length === 0) {
+    filasHtml = `<tr><td colspan="7" style="text-align:center;padding:16px;color:#64748b;">Expediente sin atenciones de emergencia previas registradas.</td></tr>`;
+  } else {
+    episodios.forEach((ep, i) => {
+      const sv = ep.signos_vitales || {};
+      const pa = sv.pa || (sv.pas && sv.pad ? `${sv.pas}/${sv.pad}` : "—");
+      const vitalsStr = `SpO2 ${sv.spo2 || "—"}% | FC ${sv.fc || "—"} | PA ${pa} | T° ${sv.temp || "—"}°C`;
+      const pagoStr = ep.liquidacion?.totalPaciente !== undefined ? `S/. ${ep.liquidacion.totalPaciente.toFixed(2)}` : "S/. 0.00";
+      filasHtml += `
+        <tr>
+          <td style="font-weight:700;">#${episodios.length - i}<br><code style="font-size:10px;">${ep.folio || ""}</code></td>
+          <td>${ep.fecha || "—"}<br><span style="font-size:10px;color:#64748b;">${ep.hora || ""}</span></td>
+          <td style="font-weight:800;color:#0284c7;">${ep.prioridad || "—"}</td>
+          <td>${ep.motivo_consulta || "Triaje de Emergencia"}</td>
+          <td style="font-size:11px;">${vitalsStr}</td>
+          <td>${ep.cama_asignada || "Observación"}</td>
+          <td style="font-weight:800;">${pagoStr}<br><span style="font-size:10px;color:#16a34a;">${ep.tipo_seguro || seguro}</span></td>
+        </tr>
+      `;
+    });
+  }
   const printHtml = `
-    <html><head><title>Historia Clínica — ${hc}</title><style>
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; padding: 35px; max-width: 800px; margin: auto; color: #0f172a; line-height: 1.5; font-size: 13px; }
-      .header-hc { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #0284c7; padding-bottom: 14px; margin-bottom: 20px; }
-      .inst-info h2 { margin: 0; font-size: 1.25rem; color: #0f172a; font-weight: 900; }
-      .inst-info p { margin: 2px 0 0; font-size: 0.8rem; color: #64748b; font-weight: 600; }
-      .hc-badge { border: 2px solid #0284c7; background: #e0f2fe; color: #0369a1; padding: 6px 16px; border-radius: 8px; font-size: 1.15rem; font-weight: 900; text-align: center; font-family: monospace; }
-      .section-box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
-      .section-title { font-size: 0.85rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 10px; }
-      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-      .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-      .field label { font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 2px; }
-      .field span { font-size: 0.9rem; font-weight: 700; color: #0f172a; }
-      .firma-box { margin-top: 50px; display: flex; justify-content: space-around; text-align: center; }
-      .firma-line { border-top: 1px solid #0f172a; width: 220px; padding-top: 6px; font-size: 0.78rem; font-weight: 700; }
+    <html><head><title>Expediente de Historia Clínica — ${hc}</title><style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; padding: 30px; max-width: 900px; margin: auto; color: #0f172a; line-height: 1.45; font-size: 12px; }
+      .header-hc { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #0284c7; padding-bottom: 12px; margin-bottom: 16px; }
+      .inst-info h2 { margin: 0; font-size: 1.2rem; color: #0f172a; font-weight: 900; }
+      .inst-info p { margin: 2px 0 0; font-size: 0.78rem; color: #64748b; font-weight: 600; }
+      .hc-badge { border: 2px solid #0284c7; background: #e0f2fe; color: #0369a1; padding: 6px 14px; border-radius: 8px; font-size: 1.1rem; font-weight: 900; text-align: center; font-family: monospace; }
+      .section-box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-bottom: 14px; }
+      .section-title { font-size: 0.82rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 8px; }
+      .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+      .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+      .field label { font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 2px; }
+      .field span { font-size: 0.88rem; font-weight: 700; color: #0f172a; }
+      .alergia-alert { background: ${esAlergico ? "#fee2e2" : "#f0fdf4"}; border: 2px solid ${esAlergico ? "#ef4444" : "#86efac"}; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 11px; }
+      th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; font-weight: 800; color: #334155; }
+      .firma-box { margin-top: 40px; display: flex; justify-content: space-around; text-align: center; }
+      .firma-line { border-top: 1px solid #0f172a; width: 220px; padding-top: 6px; font-size: 0.75rem; font-weight: 700; }
     </style></head>
     <body>
       <div class="header-hc">
         <div class="inst-info">
           <h2>UNIVERSIDAD POLITÉCNICA DEL PERÚ — FCS</h2>
           <p>Departamento de Emergencia y Cuidados Críticos · Hospital Docente UPP</p>
-          <p style="color:#0284c7;font-weight:700;">EXPEDIENTE CLÍNICO DE ADMISIÓN HOSPITALARIA</p>
+          <p style="color:#0284c7;font-weight:700;">EXPEDIENTE DE HISTORIA CLÍNICA INTEGRAL (CON HISTORIAL EPISÓDICO)</p>
         </div>
         <div>
           <div class="hc-badge">${hc}</div>
-          <div style="font-size:0.75rem;text-align:center;color:#64748b;margin-top:4px;">N° REGISTRO HIS</div>
+          <div style="font-size:0.72rem;text-align:center;color:#64748b;margin-top:3px;">FOLIO HIS OFICIAL</div>
         </div>
       </div>
-
       <div class="section-box">
         <div class="section-title">I. Filiación y Datos de Identificación</div>
-        <div class="grid-3">
+        <div class="grid-4">
           <div class="field"><label>Apellidos y Nombres</label><span>${nom}</span></div>
           <div class="field"><label>Documento de Identidad</label><span>DNI ${ident}</span></div>
-          <div class="field"><label>Ticket de Turno</label><span>${tck}</span></div>
-          <div class="field"><label>Régimen de Aseguramiento</label><span>${seg}</span></div>
-          <div class="field"><label>Fecha y Hora de Admisión</label><span>${fecha}</span></div>
-          <div class="field"><label>Procedencia / Establecimiento</label><span>Servicio de Urgencias UPP</span></div>
+          <div class="field"><label>Edad / Sexo</label><span>${master.edad ? `${master.edad} años` : "—"} (${master.sexo || "M"})</span></div>
+          <div class="field"><label>Régimen de Aseguramiento</label><span>${seguro}</span></div>
         </div>
       </div>
-
+      <div class="alergia-alert">
+        <div style="font-size:0.8rem;font-weight:900;color:${esAlergico ? "#991b1b" : "#166534"};text-transform:uppercase;">
+          ${esAlergico ? "⚠️ ALERGIAS MEDICAMENTOSAS REGISTRADAS (ALERTA MÉDICA PERMANENTE)" : "✓ ALERGIAS MEDICAMENTOSAS REGISTRADAS"}
+        </div>
+        <div style="font-size:1rem;font-weight:900;color:${esAlergico ? "#7f1d1d" : "#14532d"};margin-top:3px;">
+          ${alergias}
+        </div>
+      </div>
       <div class="section-box">
-        <div class="section-title">II. Anamnesis y Evaluación Inicial de Triaje</div>
-        <div class="grid-2">
-          <div class="field"><label>Motivo de Ingreso</label><span>Atención de emergencia médica / Evaluación de signos vitales</span></div>
-          <div class="field"><label>Prioridad Asignada</label><span style="color:#dc2626;">${p.prioridad || "Prioridad I / II / III (Evaluación Dinámica)"}</span></div>
-        </div>
+        <div class="section-title">II. Registro Histórico y Cronológico de Atenciones de Emergencia (${episodios.length} episodio${episodios.length === 1 ? "" : "s"})</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:75px;">Episodio</th>
+              <th style="width:85px;">Fecha / Hora</th>
+              <th style="width:90px;">Prioridad</th>
+              <th>Motivo de Consulta</th>
+              <th>Signos Vitales</th>
+              <th>Cama / Destino</th>
+              <th style="width:95px;">Liquidación</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filasHtml}
+          </tbody>
+        </table>
       </div>
-
       <div class="section-box">
         <div class="section-title">III. Marco Legal y Derechos Asistenciales</div>
-        <p style="font-size:0.78rem;color:#475569;margin:0;">
-          Atención brindada en estricto cumplimiento de la <strong>Ley N° 27604</strong> (Atención médica de emergencia sin condicionamiento a pago ni acreditación previa). Paciente clasificado en el Sistema de Triaje Fisiológico según Resolución Ministerial N° 292-2006/MINSA.
+        <p style="font-size:0.74rem;color:#475569;margin:0;">
+          Atención brindada en estricto cumplimiento de la <strong>Ley N° 27604</strong> (Atención de Emergencia sin condicionamiento previo) y Ley N° 26842 (Ley General de Salud). La confidencialidad y preservación del histórico clínico se rige bajo la Ley N° 29733 de Protección de Datos Personales.
         </p>
       </div>
-
       <div class="firma-box">
         <div>
-          <div class="firma-line">Lic. Enfermería de Admisión / Triaje<br>Colegio de Enfermeros del Perú</div>
+          <div class="firma-line">Lic. Enfermería de Turno / Triaje<br>Colegio de Enfermeros del Perú</div>
         </div>
         <div>
-          <div class="firma-line">Médico Emergentólogo de Turno<br>Colegio Médico del Perú</div>
+          <div class="firma-line">Médico Emergentólogo / Asistencial<br>Colegio Médico del Perú</div>
         </div>
       </div>
     </body></html>
   `;
-
   const w = window.open("", "_blank");
   w.document.write(printHtml);
   w.document.close();
   w.print();
 }
-
 function clasificarYBuscarEnBD(identificador) {
   const limpio = String(identificador || "").trim().replace(/\s+/g, " ");
   const clave = limpio.toLowerCase();
@@ -768,7 +1293,9 @@ function clasificarYBuscarEnBD(identificador) {
   const esNn = palabras[0].toLowerCase() === "nn";
   const esNombreCompleto = (palabras.length >= 2 && soloLetras && !esNn);
 
+
   let estado, nroHc, accion;
+
 
   if (esDni || esNombreCompleto || esCasoDemo) {
     if (clave in BASE_DATOS_HC) {
@@ -789,8 +1316,10 @@ function clasificarYBuscarEnBD(identificador) {
     accion = `Identidad parcial/NN → Se abre ${nroHc}`;
   }
 
+
   return { estado, nroHc, accion, esDni };
 }
+
 
 // ---------------------------------------------------------------------------
 // 3. ESTADO GLOBAL DEL SIMULADOR
@@ -808,12 +1337,14 @@ const STATE = {
   horaLlegada: null,
   turno: null,
 
+
   // Módulo 2
   tipoSeguro: null,
   validacionManual: null,
   numerFua: null,
   acreditadoEsSalud: null,
   porcentajeCopago: null,
+
 
   // Módulo 3
   spo2: null, fc: null, pasSistolica: null, paDiastolica: null,
@@ -823,11 +1354,14 @@ const STATE = {
   prioridad: null, // número romano: "I", "II", "III", "IV", "V"
   colorPrioridad: null,
 
+
   // Módulo 4
   camaAsignada: null,
 
+
   // Factura
   items_factura: [],
+
 
   // Módulo 7
   rutaActual: 0,
@@ -835,9 +1369,11 @@ const STATE = {
   firmante: null,
   firmaTiempo: null,
 
+
   // Timestamps por módulo
   ts: {},
 };
+
 
 // ---------------------------------------------------------------------------
 // 4. DATOS DE CATÁLOGO
@@ -851,6 +1387,7 @@ const LABORATORIO = [
   { nombre: "Perfil de Coagulación (TP, INR, TTPa, Fibrinógeno)", costo: 48, cat: "Laboratorio" },
   { nombre: "Dímero D Cuantitativo (Sospecha TEP / TVP / CID)", costo: 65, cat: "Laboratorio" },
   
+
   // Bioquímica y Función Renal / Hepática
   { nombre: "Glucemia Sérica Rápida / Hemoglucotest", costo: 15, cat: "Laboratorio" },
   { nombre: "Perfil Renal (Urea y Creatinina Sérica)", costo: 28, cat: "Laboratorio" },
@@ -858,12 +1395,14 @@ const LABORATORIO = [
   { nombre: "Amilasa y Lipasa Sérica (Descarte Pancreatitis Aguda)", costo: 55, cat: "Laboratorio" },
   { nombre: "Electrolitos Séricos (Sodio, Potasio, Cloro, Calcio Iónico)", costo: 40, cat: "Laboratorio" },
   
+
   // Marcadores Críticos y Emergencia Cardiovascular
   { nombre: "Troponina I Ultrasensible (Infarto Agudo de Miocardio)", costo: 85, cat: "Laboratorio" },
   { nombre: "Troponina T Cuantitativa / CK-MB Masa", costo: 90, cat: "Laboratorio" },
   { nombre: "Gases Arteriales (AGA) + Lactato Sérico", costo: 60, cat: "Laboratorio" },
   { nombre: "Procalcitonina Cuantitativa (Marcador de Sepsis / Shock)", costo: 110, cat: "Laboratorio" },
   { nombre: "Proteína C Reactiva (PCR) Ultrasensible", costo: 40, cat: "Laboratorio" },
+
 
   // Orina, Microbiología y Toxicología
   { nombre: "Examen Completo de Orina (EGO) con Sedimento", costo: 15, cat: "Laboratorio" },
@@ -875,6 +1414,7 @@ const LABORATORIO = [
   { nombre: "Prueba Rápida Dengue NS1 / IgM / IgG", costo: 45, cat: "Laboratorio" }
 ];
 
+
 const IMAGENES = [
   // Radiología Digital de Emergencia
   { nombre: "Rx Tórax AP y Lateral (Bipedestación / Portátil)", costo: 55, cat: "Imágenes" },
@@ -883,6 +1423,7 @@ const IMAGENES = [
   { nombre: "Rx Pelvis y Cadera AP (Politraumatismo)", costo: 60, cat: "Imágenes" },
   { nombre: "Rx Extremidades (Huesos Largos / Articulación)", costo: 50, cat: "Imágenes" },
   
+
   // Ultrasonografía y Ecocardiografía
   { nombre: "Ecografía FAST (Trauma / Detección Líquido Libre)", costo: 110, cat: "Imágenes" },
   { nombre: "Ecografía Abdominal Completa y Vías Biliares", costo: 120, cat: "Imágenes" },
@@ -890,6 +1431,7 @@ const IMAGENES = [
   { nombre: "Ecografía Gineco-Obstétrica Transvaginal de Urgencia", costo: 125, cat: "Imágenes" },
   { nombre: "Ecografía Doppler Vascular (Descarte TVP Miembros Inf.)", costo: 160, cat: "Imágenes" },
   { nombre: "Ecocardiograma Transtorácico de Emergencia", costo: 190, cat: "Imágenes" },
+
 
   // Tomografía y Resonancia de Urgencia
   { nombre: "TAC Cerebral Sin Contraste (Descarte ACV / TEC Agudo)", costo: 350, cat: "Imágenes" },
@@ -900,6 +1442,7 @@ const IMAGENES = [
   { nombre: "Electrocardiograma (ECG) 12 Derivaciones con Informe", costo: 35, cat: "Imágenes" },
   { nombre: "Resonancia Magnética (RMN) Cerebral de Urgencia", costo: 680, cat: "Imágenes" }
 ];
+
 
 const SANGRE = [
   { nombre: "Grupo Sanguíneo y Factor Rh", costo: 20, cat: "Banco de Sangre" },
@@ -914,6 +1457,7 @@ const SANGRE = [
   { nombre: "Rastreo de Anticuerpos Irregulares (Coombs Indirecto)", costo: 60, cat: "Banco de Sangre" }
 ];
 
+
 const FARMACIA = [
   // Soluciones Parenterales y Reanimación Hídrica
   { nombre: "Cloruro de Sodio 0.9% (Suero Fisiológico) 1000ml EV", costo: 12, cat: "Farmacia" },
@@ -921,6 +1465,7 @@ const FARMACIA = [
   { nombre: "Dextrosa al 5% 1000ml / Dextrosa 33% Ampollas EV", costo: 14, cat: "Farmacia" },
   { nombre: "Manitol al 20% Frasco 500ml EV (Edema Cerebral)", costo: 35, cat: "Farmacia" },
   { nombre: "Bicarbonato de Sodio 8.4% Ampolla 20ml EV", costo: 18, cat: "Farmacia" },
+
 
   // Fármacos Cardiovasculares, Reanimación y Soporte Vital
   { nombre: "Adrenalina (Epinefrina) 1mg/1ml Ampolla EV/SC", costo: 25, cat: "Farmacia" },
@@ -931,6 +1476,7 @@ const FARMACIA = [
   { nombre: "Furosemida 20mg/2ml Ampolla EV (Diurético de Asa)", costo: 12, cat: "Farmacia" },
   { nombre: "Captopril 25mg Tableta Sublingual", costo: 5, cat: "Farmacia" },
 
+
   // Analgésicos, Antiinflamatorios y Antipiréticos
   { nombre: "Paracetamol (Acetaminofén) 1g Frasco Solución EV", costo: 18, cat: "Farmacia" },
   { nombre: "Metamizol Sódico (Dipirona) 2g/5ml Ampolla EV", costo: 10, cat: "Farmacia" },
@@ -940,12 +1486,14 @@ const FARMACIA = [
   { nombre: "Fentanilo 0.1mg/2ml Ampolla EV (Analgésico Mayor)", costo: 28, cat: "Farmacia" },
   { nombre: "Morfina Clorhidrato 10mg/1ml Ampolla EV/SC", costo: 30, cat: "Farmacia" },
 
+
   // Gastrointestinales y Antieméticos
   { nombre: "Omeprazol 40mg Frasco Ampolla EV", costo: 18, cat: "Farmacia" },
   { nombre: "Ranitidina 50mg/2ml Ampolla EV", costo: 8, cat: "Farmacia" },
   { nombre: "Ondansetrón 8mg/4ml Ampolla EV (Antiemético Potente)", costo: 18, cat: "Farmacia" },
   { nombre: "Metoclopramida 10mg/2ml Ampolla EV", costo: 8, cat: "Farmacia" },
   { nombre: "Hioscina Butilbromuro 20mg Ampolla EV", costo: 12, cat: "Farmacia" },
+
 
   // Respiratorios, Broncodilatadores y Corticoides
   { nombre: "Salbutamol 5mg/ml Solución para Nebulización", costo: 16, cat: "Farmacia" },
@@ -954,11 +1502,13 @@ const FARMACIA = [
   { nombre: "Metilprednisolona 500mg Frasco Ampolla EV", costo: 60, cat: "Farmacia" },
   { nombre: "Dexametasona 4mg / 8mg Ampolla EV", costo: 10, cat: "Farmacia" },
 
+
   // Anticonvulsivantes y Sedación
   { nombre: "Diazepam 10mg/2ml Ampolla EV (Anticonvulsivante)", costo: 12, cat: "Farmacia" },
   { nombre: "Midazolam 5mg/5ml Ampolla EV (Sedación Rápida)", costo: 20, cat: "Farmacia" },
   { nombre: "Fenitoína Sódica 250mg/5ml Ampolla EV", costo: 22, cat: "Farmacia" },
   { nombre: "Haloperidol 5mg/1ml Ampolla IM/EV", costo: 15, cat: "Farmacia" },
+
 
   // Antibióticos Críticos de Emergencia
   { nombre: "Ceftriaxona 1g / 2g Frasco Ampolla EV", costo: 28, cat: "Farmacia" },
@@ -968,6 +1518,7 @@ const FARMACIA = [
   { nombre: "Metronidazol 500mg/100ml Frasco Infusión EV", costo: 18, cat: "Farmacia" }
 ];
 
+
 // Stock de camas inicial
 const STOCK_CAMAS = {
   "Trauma Shock": { total: 1, disponible: 1, codigo: "TRAUMA", color: "#dc2626" },
@@ -975,6 +1526,7 @@ const STOCK_CAMAS = {
   "Observación": { total: 5, disponible: 5, codigo: "OBS", color: "#ca8a04" },
   "UCI": { total: 2, disponible: 2, codigo: "UCI", color: "#2563eb" },
 };
+
 
 // Ruta clínica según prioridad
 const RUTAS = {
@@ -985,6 +1537,7 @@ const RUTAS = {
   "V": ["🚶 Puerta", "🔵 Consulta Administrativa", "📋 Derivación programada", "🏠 Salida"],
 };
 
+
 // Definición de prioridades
 const PRIORIDADES = {
   "I": { nombre: "EMERGENCIA VITAL", color: "I", hex: "#dc2626", destino: "Trauma Shock / Reanimación", clase: "pnum-I" },
@@ -993,6 +1546,7 @@ const PRIORIDADES = {
   "IV": { nombre: "URGENCIA LEVE", color: "IV", hex: "#16a34a", destino: "Tópico Rápido", clase: "pnum-IV" },
   "V": { nombre: "NO URGENTE", color: "V", hex: "#2563eb", destino: "Consulta Administrativa / Derivación", clase: "pnum-V" },
 };
+
 
 // ---------------------------------------------------------------------------
 // 5. INICIALIZACIÓN
@@ -1008,6 +1562,7 @@ document.addEventListener("DOMContentLoaded", () => {
   refrescarCaptchaSeguro(); // Generar el código CAPTCHA inicial para acreditación
 });
 
+
 // ---------------------------------------------------------------------------
 // 6. SELECTOR DE MODO
 // ---------------------------------------------------------------------------
@@ -1016,6 +1571,7 @@ function activarModo(modo) {
   document.getElementById("sectionModoSimulador").style.display = "none";
   document.getElementById("btnModoPiloto").classList.remove("active");
   document.getElementById("btnModoSimulador").classList.remove("active");
+
 
   if (modo === "piloto") {
     document.getElementById("sectionModoPiloto").style.display = "block";
@@ -1026,6 +1582,7 @@ function activarModo(modo) {
   }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
+
 
 // ---------------------------------------------------------------------------
 // 7. MÓDULOS COLAPSABLES
@@ -1040,6 +1597,7 @@ function toggleModule(id) {
   if (arrow) arrow.classList.toggle("open", !isOpen);
 }
 
+
 // ---------------------------------------------------------------------------
 // 8. MÓDULO 1 — ENFERMERÍA 1
 // ---------------------------------------------------------------------------
@@ -1050,11 +1608,14 @@ function selectModalidad(btn) {
   registrarTimestamp("M1_modalidad");
 }
 
+
 let reniecDebounceTimer = null;
+
 
 function procesarIdentificadorFull() {
   const val = document.getElementById("ident_full").value.trim();
   STATE.identificador = val;
+
 
   if (val.length < 2) {
     document.getElementById("hc_badge_estado").textContent = "Por confirmar";
@@ -1066,22 +1627,56 @@ function procesarIdentificadorFull() {
     return;
   }
 
+
   const { estado, nroHc, accion, esDni } = clasificarYBuscarEnBD(val);
   STATE.estadoRegistrado = estado;
   STATE.historiaClinica = nroHc;
   STATE.accionHc = accion;
   STATE.alertaPnpSs = (estado === "Por confirmar");
 
+
   const badgeEl = document.getElementById("hc_badge_estado");
   if (estado === "Si") { badgeEl.textContent = "Si (En BD)"; badgeEl.className = "badge-estado badge-si"; }
   else if (estado === "No") { badgeEl.textContent = "No (Nuevo)"; badgeEl.className = "badge-estado badge-no"; }
   else { badgeEl.textContent = "Por confirmar"; badgeEl.className = "badge-estado badge-conf"; }
 
+
   document.getElementById("hc_code_display").textContent = nroHc;
   document.getElementById("hc_accion_display").textContent = accion;
 
+  // Si existe en BD, autocompletar alergias y demografía permanente
+  if (estado === "Si") {
+    const masterP = obtenerPacienteMaster(val, nroHc);
+    if (masterP) {
+      if (masterP.alergias) {
+        STATE.alergias = masterP.alergias;
+        const elAlergias = document.getElementById("alergias_full");
+        if (elAlergias) {
+          elAlergias.value = masterP.alergias;
+          actualizarIndicadorVisualAlergias(masterP.alergias);
+        }
+      }
+      if (masterP.edad) {
+        STATE.edad = masterP.edad;
+        const elEdad = document.getElementById("edad_full");
+        if (elEdad) elEdad.value = masterP.edad;
+      }
+      if (masterP.sexo) {
+        STATE.sexo = masterP.sexo;
+        const elSexo = document.getElementById("sexo_full");
+        if (elSexo) elSexo.value = masterP.sexo;
+      }
+      if (masterP.fecha_nacimiento) {
+        const elFecha = document.getElementById("fecha_nac_full");
+        if (elFecha) elFecha.value = masterP.fecha_nacimiento;
+      }
+    }
+  }
+
+
   // Alerta NN
   document.getElementById("alerta_nn").classList.toggle("visible", STATE.alertaPnpSs);
+
 
   // Búsqueda en vivo de coincidencias parciales (DNI, Nombres o Apellidos)
   clearTimeout(busquedaCoincidenciasTimer);
@@ -1093,6 +1688,7 @@ function procesarIdentificadorFull() {
     cerrarSugerenciasHC();
   }
 
+
   // Auto-consulta a RENIEC si se ingresaron 8 dígitos exactos
   const dniLimpio = val.replace(/[\s\.\-]/g, "");
   if (/^\d{8}$/.test(dniLimpio)) {
@@ -1103,9 +1699,11 @@ function procesarIdentificadorFull() {
     }, 500);
   }
 
+
   registrarTimestamp("M1_identidad");
   calcularTicket();
 }
+
 
 // APISPERU / RENIEC
 function cargarToken() {
@@ -1118,16 +1716,19 @@ function cargarToken() {
   if (inputEl) inputEl.value = t;
 }
 
+
 function guardarToken() {
   const inputEl = document.getElementById("apiToken");
   const t = inputEl ? inputEl.value.trim() : "";
   localStorage.setItem("apisperu_token", t || DEFAULT_APISPERU_TOKEN);
 }
 
+
 async function consultarReniec() {
   const rawInput = document.getElementById("ident_full") ? document.getElementById("ident_full").value.trim() : "";
   const token = (document.getElementById("apiToken") ? document.getElementById("apiToken").value.trim() : "") || DEFAULT_APISPERU_TOKEN;
   const panel = document.getElementById("apisperu_panel");
+
 
   if (!rawInput) {
     if (panel) {
@@ -1136,6 +1737,7 @@ async function consultarReniec() {
     }
     return;
   }
+
 
   // Extraer 8 dígitos continuos (permite espacios o guiones accidentales)
   const dniMatch = rawInput.replace(/[\s\.\-]/g, "").match(/\d{8}/);
@@ -1147,12 +1749,15 @@ async function consultarReniec() {
     return;
   }
 
+
   const ident = dniMatch[0];
+
 
   if (panel) {
     panel.innerHTML = `<div class="apisperu-title">⏳ Consultando RENIEC en tiempo real para DNI ${ident}...</div>`;
     panel.classList.add("visible");
   }
+
 
   try {
     const url = `https://dniruc.apisperu.com/api/v1/dni/${ident}?token=${token}`;
@@ -1161,14 +1766,17 @@ async function consultarReniec() {
     const res = await fetch(url, { signal: controller.signal });
     clearTimeout(timeout);
 
+
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+
 
     if (data && (data.nombres || (data.data && data.data.nombres))) {
       const payload = data.data || data;
       const primerNombre = (payload.nombres || "").split(" ")[0].toUpperCase();
       const nombreCompleto = `${payload.nombres} ${payload.apellidoPaterno} ${payload.apellidoMaterno}`.trim();
       
+
       // Auto-detección inteligente de sexo biológico a partir del nombre
       const nombresFemeninos = ["MARIA", "ANA", "CARMEN", "ROSA", "LUZ", "ISABEL", "GLORIA", "HERMELINDA", "ALFONSINA", "TERESA", "JULIA", "ELENA", "PATRICIA", "SILVIA", "DIANA", "CLAUDIA", "PAOLA", "ANDREA", "CAROLINA", "RUTH", "LIDIA", "MIRIAM", "VERONICA", "BEATRIZ", "MONICA"];
       let sexoDetectado = "M";
@@ -1176,14 +1784,17 @@ async function consultarReniec() {
         sexoDetectado = "F";
       }
       
+
       // Actualizar estado del paciente
       STATE.nombreReniec = nombreCompleto;
       STATE.identificador = `${nombreCompleto} (DNI ${ident})`;
       STATE.sexo = sexoDetectado;
 
+
       // Autollenar campos en el cuadro de Datos Clínicos y Demográficos (100% EDITABLES)
       const elSexo = document.getElementById("sexo_full");
       if (elSexo) elSexo.value = sexoDetectado;
+
 
       // Si la API retorna fecha (o si ya el usuario digitó una), calcular edad real
       if (payload.fechaNacimiento || payload.fecha_nacimiento) {
@@ -1194,6 +1805,7 @@ async function consultarReniec() {
           calcularEdadDesdeFecha();
         }
       }
+
 
       // Despliegue de ficha oficial con lo que RENIEC realmente provee por ley
       panel.innerHTML = `
@@ -1212,17 +1824,32 @@ async function consultarReniec() {
         </div>
       `;
 
+
+      // Recuperar alergias del expediente si ya está en el registro maestro
+      const masterReniec = obtenerPacienteMaster(ident, STATE.historiaClinica, nombreCompleto);
+      if (masterReniec && masterReniec.alergias) {
+        STATE.alergias = masterReniec.alergias;
+        const elAlergias = document.getElementById("alergias_full");
+        if (elAlergias) {
+          elAlergias.value = masterReniec.alergias;
+          actualizarIndicadorVisualAlergias(masterReniec.alergias);
+        }
+      }
+
       // Asociar a Base de Datos en sesión
       BASE_DATOS_HC[ident] = STATE.historiaClinica;
       BASE_DATOS_HC[nombreCompleto.toLowerCase()] = STATE.historiaClinica;
       
+
       document.getElementById("hc_accion_display").textContent = `DNI ${ident} autenticado en RENIEC -> ${STATE.historiaClinica} (${nombreCompleto})`;
+
 
       // El seguro queda pendiente hasta que el usuario resuelva el CAPTCHA en el Módulo 2
       actualizarSeguroConsolidado("Sin consultar (Pendiente de Acreditación con CAPTCHA)");
       STATE.tipoSeguro = null;
       const boxPideInit = document.getElementById("pide_acreditacion_box");
       if (boxPideInit) boxPideInit.style.display = "none";
+
 
       // Preservar la fluidez de entrada sin robar el foco del usuario
       const elFechaNacFocus = document.getElementById("fecha_nac_full");
@@ -1247,19 +1874,23 @@ async function consultarReniec() {
   }
 }
 
+
 function calcularEdadDesdeFecha() {
   const inputFecha = document.getElementById("fecha_nac_full");
   const inputEdad = document.getElementById("edad_full");
   if (!inputFecha || !inputFecha.value) return;
+
 
   const hoy = new Date();
   const cumpleanos = new Date(inputFecha.value);
   let edad = hoy.getFullYear() - cumpleanos.getFullYear();
   const m = hoy.getMonth() - cumpleanos.getMonth();
 
+
   if (m < 0 || (m === 0 && hoy.getDate() < cumpleanos.getDate())) {
     edad--;
   }
+
 
   if (edad >= 0 && edad <= 125) {
     if (inputEdad) inputEdad.value = edad;
@@ -1267,16 +1898,19 @@ function calcularEdadDesdeFecha() {
   }
 }
 
+
 function sincronizarEdad() {
   const inputEdad = document.getElementById("edad_full");
   if (!inputEdad) return;
   STATE.edad = parseInt(inputEdad.value, 10) || null;
 }
 
+
 // ---------------------------------------------------------------------------
 // MOTOR DE VALIDACIÓN CAPTCHA Y CONSULTA DE SEGUROS (SUSALUD / SIS / ESSALUD)
 // ---------------------------------------------------------------------------
 let captchaSesionActual = null;
+
 
 function generarCodigoCaptchaLocal(longitud = 5) {
   const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -1287,12 +1921,14 @@ function generarCodigoCaptchaLocal(longitud = 5) {
   return res;
 }
 
+
 async function refrescarCaptchaSeguro() {
   const canvas = document.getElementById("captcha_canvas_seguro");
   const inputCaptcha = document.getElementById("captcha_input_seguro");
   const msgBox = document.getElementById("captcha_seguro_msg");
   if (inputCaptcha) inputCaptcha.value = "";
   if (msgBox) { msgBox.style.display = "none"; msgBox.innerHTML = ""; }
+
 
   try {
     const res = await fetch("/api/seguro/captcha");
@@ -1308,11 +1944,13 @@ async function refrescarCaptchaSeguro() {
     // Si no hay servidor Python activo, fallback al motor local autónomo
   }
 
+
   // Generador local
   const codigoLocal = generarCodigoCaptchaLocal();
   captchaSesionActual = { token: "local", codigo: codigoLocal };
   renderizarCaptchaCanvas(codigoLocal);
 }
+
 
 function renderizarCaptchaCanvas(codigo) {
   const canvas = document.getElementById("captcha_canvas_seguro");
@@ -1321,12 +1959,14 @@ function renderizarCaptchaCanvas(codigo) {
   const width = canvas.width;
   const height = canvas.height;
 
+
   // Fondo degradado
   const grad = ctx.createLinearGradient(0, 0, width, height);
   grad.addColorStop(0, "#f8fafc");
   grad.addColorStop(1, "#e2e8f0");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
+
 
   // Líneas de interferencia anti-bot
   const coloresLineas = ["#38bdf8", "#94a3b8", "#f43f5e", "#10b981"];
@@ -1343,16 +1983,19 @@ function renderizarCaptchaCanvas(codigo) {
     ctx.stroke();
   }
 
+
   // Puntos de ruido
   ctx.fillStyle = "#64748b";
   for (let i = 0; i < 35; i++) {
     ctx.fillRect(Math.random() * width, Math.random() * height, 1.5, 1.5);
   }
 
+
   // Dibujar caracteres con distorsión y rotación
   const numChars = codigo.length;
   const charSpacing = width / (numChars + 1);
   const coloresTexto = ["#0f172a", "#1e293b", "#0369a1", "#047857", "#b91c1c"];
+
 
   for (let i = 0; i < numChars; i++) {
     const ch = codigo[i];
@@ -1360,6 +2003,7 @@ function renderizarCaptchaCanvas(codigo) {
     const x = (i + 1) * charSpacing;
     const y = height / 2 + (Math.random() * 4 - 2);
     const rot = (Math.random() - 0.5) * 0.4; // rotación entre -11° y +11°
+
 
     ctx.translate(x, y);
     ctx.rotate(rot);
@@ -1371,6 +2015,7 @@ function renderizarCaptchaCanvas(codigo) {
     ctx.restore();
   }
 }
+
 
 function mostrarMensajeCaptcha(texto, tipo = "error") {
   const msgBox = document.getElementById("captcha_seguro_msg");
@@ -1385,6 +2030,7 @@ function mostrarMensajeCaptcha(texto, tipo = "error") {
   }
 }
 
+
 async function ejecutarConsultaSeguroConCaptcha() {
   const inputCaptcha = document.getElementById("captcha_input_seguro");
   const elIdent = document.getElementById("ident_full");
@@ -1392,11 +2038,13 @@ async function ejecutarConsultaSeguroConCaptcha() {
   const elEntidad = document.getElementById("entidad_consulta_seguro");
   const entidad = (elEntidad ? elEntidad.value : "auto").toLowerCase();
 
+
   if (!ident) {
     mostrarMensajeCaptcha("Ingrese primero un identificador o DNI en el Módulo 1.", "error");
     if (elIdent) elIdent.focus();
     return;
   }
+
 
   const codigoIngresado = (inputCaptcha ? inputCaptcha.value.trim().toUpperCase() : "");
   if (!codigoIngresado) {
@@ -1404,6 +2052,7 @@ async function ejecutarConsultaSeguroConCaptcha() {
     if (inputCaptcha) inputCaptcha.focus();
     return;
   }
+
 
   // 1. Si hay sesión activa con el servidor Python
   if (captchaSesionActual && captchaSesionActual.token !== "local") {
@@ -1431,6 +2080,7 @@ async function ejecutarConsultaSeguroConCaptcha() {
         return;
       }
 
+
       mostrarMensajeCaptcha(`✅ CAPTCHA Validado con éxito — Consulta Acreditada en ${data.tipo_seguro || "SUSALUD"}`, "success");
       procesarResultadoAcreditacion(data, ident);
       return;
@@ -1439,12 +2089,14 @@ async function ejecutarConsultaSeguroConCaptcha() {
     }
   }
 
+
   // 2. Validación en Modo Local Autónomo
   if (!captchaSesionActual || codigoIngresado !== captchaSesionActual.codigo.toUpperCase()) {
     mostrarMensajeCaptcha(`El código '${codigoIngresado}' no coincide con la imagen. Intente con el nuevo código generado.`, "error");
     refrescarCaptchaSeguro();
     return;
   }
+
 
   // Helper local para resolver centro de salud por prefijo DNI
   const resolverCentroLocal = (numDni) => {
@@ -1486,6 +2138,7 @@ async function ejecutarConsultaSeguroConCaptcha() {
     };
   };
 
+
   // Helper local para autogenerado oficial EsSalud
   const calcularAutogenLocal = (numDni, nombre, fecNac, sexo) => {
     let aa = "70", mm = "05", dd = "15";
@@ -1510,6 +2163,7 @@ async function ejecutarConsultaSeguroConCaptcha() {
     return `${aa}${mm}${dd}${sCod}${c1}${c2}${c3}${c4}${sufijo}`;
   };
 
+
   // Helper local determinístico persistente para asignación de seguro
   const obtenerSeguroDeterministicoLocal = (dni, identTexto = "") => {
     const dniLimpio = String(dni || "").replace(/\D/g, "");
@@ -1518,6 +2172,7 @@ async function ejecutarConsultaSeguroConCaptcha() {
       const guardado = localStorage.getItem(clave);
       if (guardado) return guardado;
     } catch (e) {}
+
 
     // Casos clínicos de prueba oficiales
     if (dniLimpio === "10203040" || identTexto.includes("px a") || identTexto.includes("mendoza")) {
@@ -1532,6 +2187,7 @@ async function ejecutarConsultaSeguroConCaptcha() {
       try { localStorage.setItem(clave, "soat"); } catch (e) {}
       return "soat";
     }
+
 
     // Hash matemático determinístico del DNI
     let h = 0;
@@ -1552,9 +2208,11 @@ async function ejecutarConsultaSeguroConCaptcha() {
       tipo = "particular"; // 4% Particular
     }
 
+
     try { localStorage.setItem(clave, tipo); } catch (e) {}
     return tipo;
   };
+
 
   // Resolver acreditación según entidad seleccionada e identidad
   const identLimpio = ident.toLowerCase();
@@ -1564,22 +2222,27 @@ async function ejecutarConsultaSeguroConCaptcha() {
   const sexoVal = document.getElementById("sexo_full") ? document.getElementById("sexo_full").value : (STATE.sexo || "M");
   const nombrePac = STATE.nombreReniec || "HERMELINDA ANTONIO VILLANUEVA";
 
+
   const centroLocal = resolverCentroLocal(numDni);
   const autogenLocal = calcularAutogenLocal(numDni, nombrePac, fNacVal, sexoVal);
   const fuaLocal = `${centroLocal.renaes}-2026-00${numDni.slice(-6)}`;
 
+
   let resultado = {};
+
 
   let tipoResuelto = entidad;
   if (!tipoResuelto || tipoResuelto === "auto") {
     tipoResuelto = obtenerSeguroDeterministicoLocal(numDni, identLimpio);
   }
 
+
   const esEsSalud = (tipoResuelto === "essalud");
   const esSis = (tipoResuelto === "sis");
   const esSoat = (tipoResuelto === "soat");
   const esEps = (tipoResuelto === "eps");
   const esParticular = (tipoResuelto === "particular");
+
 
   if (esEsSalud) {
     resultado = {
@@ -1644,9 +2307,11 @@ async function ejecutarConsultaSeguroConCaptcha() {
     };
   }
 
+
   mostrarMensajeCaptcha(`✅ CAPTCHA Validado con éxito — Consulta Acreditada en ${resultado.tipo_seguro}`, "success");
   procesarResultadoAcreditacion(resultado, ident);
 }
+
 
 function procesarResultadoAcreditacion(datos, ident) {
   const box = document.getElementById("pide_acreditacion_box");
@@ -1655,9 +2320,11 @@ function procesarResultadoAcreditacion(datos, ident) {
   const badgeEstado = document.getElementById("pide_badge_estado");
   const bannerAuto = document.getElementById("banner_autollenado_seguro");
 
+
   if (!box || !grid) return;
   box.style.display = "block";
   if (bannerAuto) bannerAuto.style.display = "block";
+
 
   // Función auxiliar para resaltar inputs autollenados con borde y fondo verde de validación
   const marcarAutollenado = (el) => {
@@ -1666,6 +2333,7 @@ function procesarResultadoAcreditacion(datos, ident) {
     el.style.backgroundColor = "#f0fdf4";
   };
 
+
   if (datos.tipo_seguro === "EsSalud") {
     STATE.tipoSeguro = "EsSalud";
     STATE.acreditadoEsSalud = true;
@@ -1673,8 +2341,10 @@ function procesarResultadoAcreditacion(datos, ident) {
     badgeEstado.textContent = "ACREDITADO ACTIVO";
     badgeEstado.style.background = "#10b981";
 
+
     const centroMostrar = datos.centro_adscrito || "Hospital Nacional Guillermo Almenara Irigoyen";
     const autogenMostrar = datos.autogenerado || "9505150AVNH010";
+
 
     grid.innerHTML = `
       <div><strong>Asegurado:</strong> ${datos.plan || "Titular Regular"}</div>
@@ -1685,12 +2355,14 @@ function procesarResultadoAcreditacion(datos, ident) {
       <div><strong>Copago:</strong> ${datos.copago || "S/. 0.00"}</div>
     `;
 
+
     // 1. AUTOLLENAR AUTOMÁTICAMENTE TODAS LAS CELDAS DE ABAJO
     const elEstadoEsSalud = document.getElementById("estado_essalud");
     const elIpressEsSalud = document.getElementById("ipress_essalud");
     const elResEsSalud = document.getElementById("resultado_essalud");
     const elResSusalud = document.getElementById("res_susalud");
     const elDivSusalud = document.getElementById("resultado_susalud");
+
 
     if (elEstadoEsSalud) {
       elEstadoEsSalud.value = "Acreditado Activo";
@@ -1717,10 +2389,12 @@ function procesarResultadoAcreditacion(datos, ident) {
       `;
     }
 
+
     actualizarSeguroConsolidado(`EsSalud — Acreditado Activo (${datos.ipress || centroMostrar})`);
     activarTabSeguro("essalud", document.querySelectorAll(".seguro-tab")[2]);
     return;
   }
+
 
   if (datos.tipo_seguro === "SIS") {
     STATE.tipoSeguro = "SIS";
@@ -1730,7 +2404,9 @@ function procesarResultadoAcreditacion(datos, ident) {
     badgeEstado.textContent = "AFILIADO ACTIVO";
     badgeEstado.style.background = "#10b981";
 
+
     const centroMostrar = datos.centro_adscrito || "C.S. San Fernando (RENAES 00000412)";
+
 
     grid.innerHTML = `
       <div><strong>Plan de Cobertura:</strong> ${datos.plan || "SIS Gratuito"}</div>
@@ -1740,12 +2416,14 @@ function procesarResultadoAcreditacion(datos, ident) {
       <div><strong style="color:#6ee7b7;">Copago:</strong> ${datos.copago || "S/. 0.00 (Exoneración 100%)"}</div>
     `;
 
+
     // 1. AUTOLLENAR AUTOMÁTICAMENTE TODAS LAS CELDAS DE ABAJO
     const elEstadoSis = document.getElementById("estado_sis");
     const elFuaSis = document.getElementById("fua_sis");
     const elResSis = document.getElementById("resultado_sis");
     const elResSusalud = document.getElementById("res_susalud");
     const elDivSusalud = document.getElementById("resultado_susalud");
+
 
     if (elEstadoSis) {
       elEstadoSis.value = "Activo-Gratuito";
@@ -1771,10 +2449,12 @@ function procesarResultadoAcreditacion(datos, ident) {
       `;
     }
 
+
     actualizarSeguroConsolidado(`SIS Gratuito — ${numFua} (${centroMostrar})`);
     activarTabSeguro("sis", document.querySelectorAll(".seguro-tab")[1]);
     return;
   }
+
 
   if (datos.tipo_seguro === "SOAT") {
     STATE.tipoSeguro = "SOAT";
@@ -1782,8 +2462,10 @@ function procesarResultadoAcreditacion(datos, ident) {
     badgeEstado.textContent = "PÓLIZA ACTIVA (5 UIT)";
     badgeEstado.style.background = "#10b981";
 
+
     const placaMostrar = datos.placa || "B1C-458";
     const aseguradoraMostrar = datos.aseguradora || "La Positiva";
+
 
     grid.innerHTML = `
       <div><strong>Aseguradora:</strong> ${aseguradoraMostrar}</div>
@@ -1793,12 +2475,14 @@ function procesarResultadoAcreditacion(datos, ident) {
       <div><strong style="color:#6ee7b7;">Copago:</strong> S/. 0.00 hasta agotar cobertura legal</div>
     `;
 
+
     // AUTOLLENAR CELDAS SOAT
     const elPlaca = document.getElementById("placa_soat");
     const elAseg = document.getElementById("aseg_soat");
     const elResSoat = document.getElementById("resultado_soat");
     const elResSusalud = document.getElementById("res_susalud");
     const elDivSusalud = document.getElementById("resultado_susalud");
+
 
     if (elPlaca) {
       elPlaca.value = placaMostrar;
@@ -1825,10 +2509,12 @@ function procesarResultadoAcreditacion(datos, ident) {
       `;
     }
 
+
     actualizarSeguroConsolidado(`SOAT — ${aseguradoraMostrar} | Placa ${placaMostrar}`);
     activarTabSeguro("soat", document.querySelectorAll(".seguro-tab")[3]);
     return;
   }
+
 
   if (datos.tipo_seguro === "EPS") {
     STATE.tipoSeguro = "EPS";
@@ -1838,6 +2524,7 @@ function procesarResultadoAcreditacion(datos, ident) {
     badgeEstado.textContent = "PÓLIZA PRIVADA ACTIVA";
     badgeEstado.style.background = "#10b981";
 
+
     grid.innerHTML = `
       <div><strong>Aseguradora EPS:</strong> ${datos.plan || "Pacífico Salud / Plan Familiar"}</div>
       <div><strong>Copago Paciente:</strong> <span style="font-family:monospace;font-weight:800;color:#38bdf8;">${copagoPct}% deducible</span></div>
@@ -1845,12 +2532,14 @@ function procesarResultadoAcreditacion(datos, ident) {
       <div><strong style="color:#6ee7b7;">Red de Clínicas:</strong> Convenio Integral Hospitalario</div>
     `;
 
+
     // AUTOLLENAR CELDAS EPS
     const elTipoEps = document.getElementById("tipo_eps");
     const elCopago = document.getElementById("pct_copago");
     const elResEps = document.getElementById("resultado_eps");
     const elResSusalud = document.getElementById("res_susalud");
     const elDivSusalud = document.getElementById("resultado_susalud");
+
 
     if (elTipoEps) {
       elTipoEps.value = "EPS";
@@ -1877,16 +2566,19 @@ function procesarResultadoAcreditacion(datos, ident) {
       `;
     }
 
+
     actualizarSeguroConsolidado(`EPS Privada — Pacífico Salud (Copago ${copagoPct}%)`);
     activarTabSeguro("eps", document.querySelectorAll(".seguro-tab")[4]);
     return;
   }
+
 
   // PACIENTE PARTICULAR / SIN SEGURO
   STATE.tipoSeguro = "No asegurado (Particular)";
   titulo.textContent = "CONSULTA PIDE-SUSALUD — NO FIGURA AFILIACIÓN PÚBLICA";
   badgeEstado.textContent = "SIN SEGURO ACTIVO (PARTICULAR)";
   badgeEstado.style.background = "#ef4444";
+
 
   grid.innerHTML = `
     <div><strong>Estado de Afiliación:</strong> <span style="color:#f87171;font-weight:700;">No figura en padrón activo de SIS ni EsSalud</span></div>
@@ -1896,11 +2588,13 @@ function procesarResultadoAcreditacion(datos, ident) {
     <div><strong>Acción Administrativa:</strong> Derivar a Asistencia Social para evaluación socioeconómica o trámite SIS</div>
   `;
 
+
   // AUTOLLENAR CELDAS PARTICULAR
   const elTipoEps = document.getElementById("tipo_eps");
   const elResEps = document.getElementById("resultado_eps");
   const elResSusalud = document.getElementById("res_susalud");
   const elDivSusalud = document.getElementById("resultado_susalud");
+
 
   if (elTipoEps) {
     elTipoEps.value = "Particular";
@@ -1923,9 +2617,11 @@ function procesarResultadoAcreditacion(datos, ident) {
     `;
   }
 
+
   actualizarSeguroConsolidado("No asegurado (Particular / Sin seguro activo)");
   activarTabSeguro("eps", document.querySelectorAll(".seguro-tab")[4]);
 }
+
 
 function calcularTicket() {
   const inputHora = document.getElementById("hora_full");
@@ -1945,6 +2641,7 @@ function calcularTicket() {
   }
   registrarTimestamp("M1_hora");
 }
+
 
 function imprimirAlertaNN() {
   const ahora = new Date();
@@ -1976,12 +2673,14 @@ function imprimirAlertaNN() {
         <div style="font-weight: 700; font-size: 0.85rem;">OFICIO N° ${nroOficio} / EMG-UPP</div>
       </div>
 
+
       <div style="margin-bottom: 12px;">
         <strong>AL :</strong> COMISARIO PNP DE LA JURISDICCIÓN / DIVISIÓN DE IDENTIFICACIÓN DACTILOSCÓPICA (AFIS)<br>
         <strong>DE :</strong> JEFE DE GUARDIA Y ENFERMERÍA DE EMERGENCIAS — HOSPITAL REGIONAL UPP<br>
         <strong>ASUNTO :</strong> Ingreso de persona indocumentada / Solicitud urgente de pesquisa dactiloscópica.<br>
         <strong>FECHA :</strong> ${ahora.toLocaleDateString()} &nbsp;|&nbsp; <strong>HORA :</strong> ${STATE.horaLlegada || ahora.toLocaleTimeString()}
       </div>
+
 
       <table class="data-table">
         <tr><td class="lbl">Historia Clínica Temporal:</td><td><strong style="color:#0284c7; font-size:1rem;">${STATE.historiaClinica || "HC-TEMP-EMG-001"}</strong></td></tr>
@@ -1993,11 +2692,13 @@ function imprimirAlertaNN() {
         <tr><td class="lbl">Servicio Social:</td><td>Notificación formal emitida simultáneamente</td></tr>
       </table>
 
+
       <div class="legal-box">
         <strong>⚖️ MARCO LEGAL Y AMPARO DE ATENCIÓN DE EMERGENCIA:</strong><br>
         De conformidad con la <strong>Ley N° 27604</strong> y el <strong>Art. 3 de la Ley General de Salud N° 26842</strong>, toda persona en situación de emergencia médica tiene derecho a recibir atención médica y soporte vital incondicional en cualquier establecimiento de salud del territorio nacional, sin exigir pago previo ni documento de identidad.<br><br>
         Se requiere la concurrencia de peritos dactiloscópicos de la <strong>Policía Nacional del Perú</strong> para la toma de huellas dactilares (cotejo biométrico AFIS-RENIEC) a fin de individualizar al paciente y comunicar de forma urgente a sus familiares.
       </div>
+
 
       <div class="signatures">
         <div class="sig-line">
@@ -2020,12 +2721,14 @@ function imprimirAlertaNN() {
   if (w) { w.document.write(html); w.document.close(); }
 }
 
+
 function activarTabSeguro(tab, btn, syncSelector = true) {
   document.querySelectorAll(".seguro-pane").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".seguro-tab").forEach(b => b.classList.remove("active"));
   const pane = document.getElementById(`pane_${tab}`);
   if (pane) pane.classList.add("active");
   if (btn) btn.classList.add("active");
+
 
   if (syncSelector) {
     const sel = document.getElementById("entidad_consulta_seguro");
@@ -2039,6 +2742,7 @@ function activarTabSeguro(tab, btn, syncSelector = true) {
   }
 }
 
+
 function sincronizarTabSeguroConSelector(val) {
   const tabs = document.querySelectorAll(".seguro-tab");
   if (val === "essalud" && tabs[2]) activarTabSeguro("essalud", tabs[2], false);
@@ -2047,6 +2751,7 @@ function sincronizarTabSeguroConSelector(val) {
   else if ((val === "eps" || val === "particular") && tabs[4]) activarTabSeguro("eps", tabs[4], false);
   else if (tabs[0]) activarTabSeguro("susalud", tabs[0], false);
 }
+
 
 function registrarSeguroManual(tipo) {
   const val = document.getElementById(`res_${tipo}`).value;
@@ -2060,6 +2765,7 @@ function registrarSeguroManual(tipo) {
   registrarTimestamp("M2_seguro");
 }
 
+
 function registrarSIS() {
   const val = document.getElementById("estado_sis").value;
   if (!val) return;
@@ -2071,9 +2777,11 @@ function registrarSIS() {
   registrarTimestamp("M2_sis");
 }
 
+
 function actualizarFUA() {
   STATE.numerFua = document.getElementById("fua_sis").value.trim();
 }
+
 
 function registrarEsSalud() {
   const val = document.getElementById("estado_essalud").value;
@@ -2086,6 +2794,7 @@ function registrarEsSalud() {
   actualizarSeguroConsolidado("EsSalud — " + val);
   registrarTimestamp("M2_essalud");
 }
+
 
 function validarSOAT() {
   const placa = document.getElementById("placa_soat").value.trim();
@@ -2106,10 +2815,12 @@ function validarSOAT() {
   registrarTimestamp("M2_soat");
 }
 
+
 function toggleCopago() {
   const tipo = document.getElementById("tipo_eps").value;
   document.getElementById("copago_field").style.display = tipo === "EPS" ? "flex" : "none";
 }
+
 
 function registrarEPS() {
   const tipo = document.getElementById("tipo_eps").value;
@@ -2127,14 +2838,17 @@ function registrarEPS() {
   registrarTimestamp("M2_eps");
 }
 
+
 function actualizarSeguroConsolidado(texto) {
   document.getElementById("seguro_consolidado").textContent = texto;
   registrarFacturaItem("Verificación administrativa de seguro", 0, "Administrativo");
 }
 
+
 // ---------------------------------------------------------------------------
 // 10. MÓDULO 3 — TRIAJE CLÍNICO (5 PRIORIDADES Y RANGOS BIOLÓGICOS ESTRICTOS)
 // ---------------------------------------------------------------------------
+
 
 // RANGOS BIOLÓGICOS Y LÍMITES FISIOLÓGICOS COMPATIBLES CON LA VIDA
 const RANGOS_BIOLOGICOS = {
@@ -2221,6 +2935,7 @@ const RANGOS_BIOLOGICOS = {
   }
 };
 
+
 /**
  * Valida en tiempo real que ningún signo vital sobrepase los rangos biológicos.
  * Si algún valor está fuera de límites, lo resalta en rojo y bloquea el flujo.
@@ -2229,13 +2944,16 @@ function validarSignosVitalesEnVivo() {
   const errores = [];
   let primerElementoInvalido = null;
 
+
   // 1. Validar cada parámetro individual
   for (const [clave, def] of Object.entries(RANGOS_BIOLOGICOS)) {
     const el = document.getElementById(def.elId);
     const card = document.getElementById(def.cardId);
     const errBox = document.getElementById(def.errId);
 
+
     if (!el) continue;
+
 
     const raw = String(el.value || "").trim();
     if (raw === "") {
@@ -2246,7 +2964,9 @@ function validarSignosVitalesEnVivo() {
       continue;
     }
 
+
     const val = parseFloat(raw.replace(",", "."));
+
 
     if (isNaN(val)) {
       const msg = `${def.nombre}: Valor inválido (ingrese un número).`;
@@ -2256,6 +2976,7 @@ function validarSignosVitalesEnVivo() {
       continue;
     }
 
+
     if (val < def.min || val > def.max) {
       const msg = `${def.nombre} = ${val} ${def.unidad} fuera de rango biológico (${def.min} a ${def.max} ${def.unidad}).`;
       marcarCampoError(el, card, errBox, msg);
@@ -2264,17 +2985,20 @@ function validarSignosVitalesEnVivo() {
       continue;
     }
 
+
     // Parámetro correcto
     el.classList.remove("is-invalid");
     if (card) card.classList.remove("has-error");
     if (errBox) { errBox.style.display = "none"; errBox.innerHTML = ""; }
   }
 
+
   // 2. Validación cruzada de Presión Arterial: PAD < PAS
   const elPas = document.getElementById("pas_full");
   const elPad = document.getElementById("pad_full");
   const cardPad = document.getElementById("card_pad");
   const errPad = document.getElementById("error_pad_full");
+
 
   if (elPas && elPad && elPas.value.trim() !== "" && elPad.value.trim() !== "") {
     const pas = parseFloat(elPas.value.trim().replace(",", "."));
@@ -2289,12 +3013,15 @@ function validarSignosVitalesEnVivo() {
     }
   }
 
+
   // 3. Actualizar UI de banner superior y botón de evaluación
   const banner = document.getElementById("banner_error_vitales");
   const bannerDetalles = document.getElementById("banner_error_vitales_detalles");
   const btnEval = document.getElementById("btn_evaluar_full");
 
+
   const esValido = (errores.length === 0);
+
 
   if (!esValido) {
     if (banner) {
@@ -2316,8 +3043,10 @@ function validarSignosVitalesEnVivo() {
     }
   }
 
+
   return { esValido, errores, primerCampoInvalido: primerElementoInvalido };
 }
+
 
 function marcarCampoError(el, card, errBox, mensaje) {
   if (el) el.classList.add("is-invalid");
@@ -2328,6 +3057,7 @@ function marcarCampoError(el, card, errBox, mensaje) {
   }
 }
 
+
 function mostrarErrorBiologicoEnPrioridad(errores) {
   const pd = document.getElementById("prioridad_display");
   if (!pd) return;
@@ -2336,15 +3066,19 @@ function mostrarErrorBiologicoEnPrioridad(errores) {
   pd.style.borderColor = "#ef4444";
   pd.style.borderWidth = "3px";
 
+
   document.getElementById("prio_numero").textContent = "❌";
   document.getElementById("prio_numero").className = "prioridad-numero";
   document.getElementById("prio_numero").style.color = "#dc2626";
 
+
   document.getElementById("prio_color_name").textContent = "PARÁMETRO INVÁLIDO";
   document.getElementById("prio_color_name").style.color = "#dc2626";
 
+
   document.getElementById("prio_tipo").textContent = "⛔ ERROR DE VALIDACIÓN BIOLÓGICA";
   document.getElementById("prio_tipo").style.color = "#dc2626";
+
 
   document.getElementById("prio_desc").innerHTML = `
     <strong>El flujo de triaje está bloqueado preventivamente por seguridad clínica.</strong><br>
@@ -2357,15 +3091,19 @@ function mostrarErrorBiologicoEnPrioridad(errores) {
     </span>
   `;
 
+
   document.getElementById("prio_destino").textContent = "⛔ FLUJO HOSPITALARIO DETENIDO";
   document.getElementById("prio_destino").style.color = "#dc2626";
+
 
   const ley = document.getElementById("ley27604_banner");
   if (ley) ley.classList.remove("visible");
 
+
   STATE.prioridad = null;
   STATE.colorPrioridad = "Inválido";
 }
+
 
 function cargarPresetVitales(tipo) {
   if (tipo === "normal") {
@@ -2412,6 +3150,7 @@ function cargarPresetVitales(tipo) {
   recalcularPrioridad();
 }
 
+
 function syncEva(val, fromNum = false) {
   document.getElementById("eva_range").value = val;
   document.getElementById("eva_full").value = val;
@@ -2422,6 +3161,7 @@ function syncEva(val, fromNum = false) {
   recalcularPrioridad();
 }
 
+
 function recalcularPrioridad() {
   // 1. Validar estrictamente los signos vitales antes de cualquier cálculo clínico
   const validacion = validarSignosVitalesEnVivo();
@@ -2429,6 +3169,7 @@ function recalcularPrioridad() {
     mostrarErrorBiologicoEnPrioridad(validacion.errores);
     return;
   }
+
 
   // Leer valores
   const spo2 = parseFloat(document.getElementById("spo2_full").value) || null;
@@ -2442,11 +3183,13 @@ function recalcularPrioridad() {
   const eva = parseInt(document.getElementById("eva_full").value) || 0;
   const motivo = document.getElementById("motivo_full").value.toLowerCase();
 
+
   const antCardio = document.getElementById("ant_cardio").checked;
   const antResp = document.getElementById("ant_resp").checked;
   const antDiab = document.getElementById("ant_diab").checked;
   const antNeuro = document.getElementById("ant_neuro").checked;
   const antecedentes = antCardio || antResp || antDiab || antNeuro;
+
 
   STATE.spo2 = spo2; STATE.fc = fc; STATE.pasSistolica = pas;
   STATE.paDiastolica = pad; STATE.fr = fr; STATE.temperatura = temp;
@@ -2454,10 +3197,13 @@ function recalcularPrioridad() {
   STATE.antecedentes = antecedentes;
   STATE.motivoConsulta = document.getElementById("motivo_full").value;
 
+
   // Determinar prioridad (I → V en orden)
   let prio = null;
 
+
   const tieneDatos = spo2 !== null || fc !== null || pas !== null || glasgow !== null;
+
 
   if (tieneDatos || antecedentes) {
     // PRIORIDAD I — ROJO (Emergencia Vital)
@@ -2473,6 +3219,7 @@ function recalcularPrioridad() {
     );
     if (esCritico) { prio = "I"; }
 
+
     // PRIORIDAD II — NARANJA (Urgencia Mayor)
     if (!prio) {
       const esUrgente = (
@@ -2486,6 +3233,7 @@ function recalcularPrioridad() {
       if (esUrgente) { prio = "II"; }
     }
 
+
     // PRIORIDAD III — AMARILLO (Urgencia Menor / Compatible con Caso 6)
     if (!prio) {
       const esModerado = (
@@ -2497,6 +3245,7 @@ function recalcularPrioridad() {
       if (esModerado) { prio = "III"; }
     }
 
+
     // PRIORIDAD IV — VERDE (Urgencia Leve)
     if (!prio) {
       const esLeve = (
@@ -2507,19 +3256,24 @@ function recalcularPrioridad() {
     }
   }
 
+
   // Si no hay datos suficientes → PRIORIDAD V
   if (!prio) { prio = tieneDatos ? "IV" : "V"; }
+
 
   // Si hay datos básicos (spo2 y antecedentes) pero no hay más → mantener lógica base P1/P3
   if (!tieneDatos && antecedentes) { prio = "I"; }
 
+
   STATE.prioridad = prio;
   STATE.colorPrioridad = PRIORIDADES[prio].nombre;
+
 
   mostrarPrioridad(prio);
   renderizarRutaClinica(prio);
   registrarTimestamp("M3_triage");
 }
+
 
 function mostrarPrioridad(prio) {
   const pd = document.getElementById("prioridad_display");
@@ -2528,6 +3282,7 @@ function mostrarPrioridad(prio) {
   pd.style.background = "";
   pd.style.borderColor = "";
   pd.style.borderWidth = "";
+
 
   document.getElementById("prio_numero").textContent = prio;
   document.getElementById("prio_numero").className = `prioridad-numero ${def.clase}`;
@@ -2539,16 +3294,20 @@ function mostrarPrioridad(prio) {
   document.getElementById("prio_destino").textContent = `Destino: ${def.destino}`;
   document.getElementById("prio_destino").style.color = def.hex;
 
+
   // Ley 27604
   const ley = document.getElementById("ley27604_banner");
   ley.classList.toggle("visible", prio === "I" || prio === "II");
 
+
   // Actualizar pipeline asistencial de 8 módulos y monitor dinámico de áreas
   actualizarPipelineFull(prio);
+
 
   // Cargar costos de triage
   registrarFacturaItem("Atención de Triaje Clínico", 30, "Triaje");
 }
+
 
 function actualizarPipelineFull(prio) {
   // 1. Actualizar insignias de los 8 pasos
@@ -2564,6 +3323,7 @@ function actualizarPipelineFull(prio) {
     }
   }
 
+
   const elB2 = document.getElementById("full_badge_2");
   const elS2 = document.getElementById("full_step_2");
   if (elB2 && elS2) {
@@ -2576,12 +3336,14 @@ function actualizarPipelineFull(prio) {
     }
   }
 
+
   const elB3 = document.getElementById("full_badge_3");
   const elS3 = document.getElementById("full_step_3");
   if (elB3 && elS3) {
     elB3.textContent = `✓ P-${prio}`;
     elS3.className = "pipeline-step completed";
   }
+
 
   const elB4 = document.getElementById("full_badge_4");
   const elS4 = document.getElementById("full_step_4");
@@ -2590,6 +3352,7 @@ function actualizarPipelineFull(prio) {
     elS4.className = "pipeline-step active";
   }
 
+
   const elB5 = document.getElementById("full_badge_5");
   const elS5 = document.getElementById("full_step_5");
   if (elB5 && elS5) {
@@ -2597,22 +3360,28 @@ function actualizarPipelineFull(prio) {
     elS5.className = "pipeline-step active";
   }
 
+
   // 2. Actualizar monitor dinámico de áreas y ramificación
   const tituloRamif = document.getElementById("full_ramificacion_titulo");
   const badgeLegal = document.getElementById("full_regla_financiera_badge");
   const chipsContainer = document.getElementById("full_areas_chips");
 
+
   if (!tituloRamif || !badgeLegal || !chipsContainer) return;
 
+
   const esCritico = (prio === "I" || prio === "II");
+
 
   if (esCritico) {
     tituloRamif.textContent = `🚨 RUTA CRÍTICA ACTIVA (Prioridad ${prio} — Emergencia Vital)`;
     tituloRamif.style.color = "#dc2626";
 
+
     badgeLegal.textContent = "⚖️ Ley N° 27604: Gratuidad y Atención Inmediata sin Pago Previo";
     badgeLegal.style.background = "#fee2e2";
     badgeLegal.style.color = "#991b1b";
+
 
     chipsContainer.innerHTML = `
       <span class="hospital-area-chip" style="background:#fff1f2; border:1.5px solid #f43f5e; color:#9f1239; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.8rem;">
@@ -2635,9 +3404,11 @@ function actualizarPipelineFull(prio) {
     tituloRamif.textContent = `🟡 RUTA MODERADA ACTIVA (Prioridad ${prio} — Observación y Ambulatoria)`;
     tituloRamif.style.color = "#d97706";
 
+
     badgeLegal.textContent = "💳 Cobertura SIS/EsSalud o Verificación de Copago en Caja";
     badgeLegal.style.background = "#fef3c7";
     badgeLegal.style.color = "#b45309";
+
 
     chipsContainer.innerHTML = `
       <span class="hospital-area-chip" style="background:#fffbeb; border:1.5px solid #f59e0b; color:#b45309; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.8rem;">
@@ -2659,6 +3430,7 @@ function actualizarPipelineFull(prio) {
   }
 }
 
+
 function obtenerDescripcionPrioridad(prio) {
   const desc = {
     "I": "Riesgo inmediato de vida. Atención inmediata sin demora. SpO2 crítica, colapso hemodinámico, Glasgow alterado o arritmia fatal.",
@@ -2670,6 +3442,7 @@ function obtenerDescripcionPrioridad(prio) {
   return desc[prio] || "";
 }
 
+
 // ---------------------------------------------------------------------------
 // 11. MÓDULO 4 — CAMAS
 // ---------------------------------------------------------------------------
@@ -2678,14 +3451,17 @@ function renderizarStockCamas() {
   const mini = document.getElementById("stockMini");
   if (!grid && !mini) return;
 
+
   let htmlGrid = "";
   let htmlMini = "<div style='display:flex;flex-direction:column;gap:6px;'>";
+
 
   for (const [nombre, s] of Object.entries(STOCK_CAMAS)) {
     const dispo = s.disponible;
     const total = s.total;
     const pct = (dispo / total) * 100;
     const cls = dispo === 0 ? "cama-ocupada" : "cama-disponible";
+
 
     htmlGrid += `
       <div class="cama-slot ${cls}">
@@ -2695,6 +3471,7 @@ function renderizarStockCamas() {
       </div>
     `;
 
+
     htmlMini += `
       <div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:4px 0;border-bottom:1px solid #f1f5f9;">
         <span style="color:#374151;">${nombre}</span>
@@ -2703,10 +3480,12 @@ function renderizarStockCamas() {
     `;
   }
 
+
   htmlMini += "</div>";
   if (grid) grid.innerHTML = htmlGrid;
   if (mini) mini.innerHTML = htmlMini;
 }
+
 
 function asignarCama() {
   const validacion = validarSignosVitalesEnVivo();
@@ -2719,28 +3498,34 @@ function asignarCama() {
     return;
   }
 
+
   const mapPrioACama = { "I": "Trauma Shock", "II": "Tópico Crítico", "III": "Observación", "IV": "Observación", "V": "Observación" };
   const tipoCama = mapPrioACama[STATE.prioridad];
   const stock = STOCK_CAMAS[tipoCama];
+
 
   if (stock.disponible === 0) {
     activarREFCON(tipoCama);
     return;
   }
 
+
   stock.disponible--;
   const num = stock.total - stock.disponible;
   STATE.camaAsignada = `${stock.codigo}-${String(num).padStart(2, "0")}`;
 
+
   const display = document.getElementById("camaAsignadaDisplay");
   document.getElementById("camaAsignadaCodigo").textContent = `${STATE.camaAsignada} (${tipoCama})`;
   display.style.display = "block";
+
 
   registrarFacturaItem(`Cama: ${tipoCama}`, tipoCama === "UCI" ? 500 : (tipoCama === "Trauma Shock" ? 300 : 150), "Hospitalización");
   renderizarStockCamas();
   registrarTimestamp("M4_cama");
   avanzarRuta(1);
 }
+
 
 function liberarCama() {
   if (!STATE.camaAsignada) { alert("No hay cama asignada actualmente."); return; }
@@ -2751,6 +3536,7 @@ function liberarCama() {
   document.getElementById("camaAsignadaDisplay").style.display = "none";
   renderizarStockCamas();
 }
+
 
 function activarREFCON(tipoCama = "desconocido") {
   const datos = `
@@ -2767,6 +3553,7 @@ function activarREFCON(tipoCama = "desconocido") {
   document.getElementById("refconModal").classList.add("open");
   registrarTimestamp("M4_refcon");
 }
+
 
 function imprimirHojaREFCON() {
   const contenido = document.getElementById("refcon_datos").innerHTML;
@@ -2785,6 +3572,7 @@ function imprimirHojaREFCON() {
   w.print();
 }
 
+
 // ---------------------------------------------------------------------------
 // 12. MÓDULO 5 — LABORATORIO
 // ---------------------------------------------------------------------------
@@ -2793,6 +3581,7 @@ function renderizarLaboratorio() {
   renderCatalogo("imagenGrid", IMAGENES);
   renderCatalogo("sangreGrid", SANGRE);
 }
+
 
 function renderCatalogo(gridId, items) {
   const grid = document.getElementById(gridId);
@@ -2805,6 +3594,8 @@ function renderCatalogo(gridId, items) {
     </label>
   `).join("");
 }
+
+
 
 
 // ---------------------------------------------------------------------------
@@ -2820,12 +3611,15 @@ function filtrarCatalogoApoyoDx(query) {
   ajustarVisibilidadEncabezadosApoyoDx();
 }
 
+
 function filtrarCategoriaApoyoDx(cat, btn) {
   document.querySelectorAll("#busqueda_apoyo_dx_chips button").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
 
+
   const input = document.getElementById("busqueda_apoyo_dx");
   if (input) input.value = "";
+
 
   const secLab = document.getElementById("seccion_lab_title");
   const gridLab = document.getElementById("labGrid");
@@ -2834,7 +3628,9 @@ function filtrarCategoriaApoyoDx(cat, btn) {
   const secSang = document.getElementById("seccion_sangre_title");
   const gridSang = document.getElementById("sangreGrid");
 
+
   document.querySelectorAll("#labGrid label, #imagenGrid label, #sangreGrid label").forEach(l => l.style.display = "flex");
+
 
   if (cat === "lab") {
     if (secLab) secLab.style.display = "block";
@@ -2867,6 +3663,7 @@ function filtrarCategoriaApoyoDx(cat, btn) {
   }
 }
 
+
 function filtrarTextoApoyoDx(texto, btn) {
   document.querySelectorAll("#busqueda_apoyo_dx_chips button").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
@@ -2876,12 +3673,14 @@ function filtrarTextoApoyoDx(texto, btn) {
   filtrarCatalogoApoyoDx(texto);
 }
 
+
 function limpiarFiltroApoyoDx() {
   const input = document.getElementById("busqueda_apoyo_dx");
   if (input) input.value = "";
   filtrarCategoriaApoyoDx("todos", document.querySelector("#busqueda_apoyo_dx_chips button"));
   filtrarCatalogoApoyoDx("");
 }
+
 
 function ajustarVisibilidadEncabezadosApoyoDx() {
   ["lab", "imagen", "sangre"].forEach(id => {
@@ -2895,6 +3694,7 @@ function ajustarVisibilidadEncabezadosApoyoDx() {
   });
 }
 
+
 function filtrarCatalogoFarmacia(query) {
   const q = String(query || "").trim().toLowerCase();
   const labels = document.querySelectorAll("#farmaciaGrid label");
@@ -2904,6 +3704,7 @@ function filtrarCatalogoFarmacia(query) {
   });
 }
 
+
 function filtrarTextoFarmacia(texto, btn) {
   document.querySelectorAll("#busqueda_farmacia_chips button").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
@@ -2912,11 +3713,13 @@ function filtrarTextoFarmacia(texto, btn) {
   filtrarCatalogoFarmacia(texto);
 }
 
+
 function limpiarFiltroFarmacia() {
   const input = document.getElementById("busqueda_farmacia");
   if (input) input.value = "";
   filtrarTextoFarmacia("", document.querySelector("#busqueda_farmacia_chips button"));
 }
+
 
 function confirmarLaboratorio() {
   const checks = document.querySelectorAll("#labGrid input:checked, #imagenGrid input:checked, #sangreGrid input:checked");
@@ -2929,12 +3732,14 @@ function confirmarLaboratorio() {
   avanzarRuta(2);
 }
 
+
 // ---------------------------------------------------------------------------
 // 13. MÓDULO 6 — FARMACIA
 // ---------------------------------------------------------------------------
 function renderizarFarmacia() {
   renderCatalogo("farmaciaGrid", FARMACIA);
 }
+
 
 function agregarMedAdicional() {
   const nombre = document.getElementById("med_adicional").value.trim();
@@ -2945,6 +3750,7 @@ function agregarMedAdicional() {
   document.getElementById("med_costo").value = "";
 }
 
+
 // ---------------------------------------------------------------------------
 // 14. MÓDULO 7 — RUTA CLÍNICA Y SALIDA
 // ---------------------------------------------------------------------------
@@ -2952,6 +3758,7 @@ function renderizarRutaClinica(prio) {
   const container = document.getElementById("rutaSteps");
   if (!container) return;
   const ruta = RUTAS[prio] || RUTAS["III"];
+
 
   let html = "";
   ruta.forEach((step, i) => {
@@ -2969,13 +3776,16 @@ function renderizarRutaClinica(prio) {
     }
   });
 
+
   container.innerHTML = html;
 }
+
 
 function avanzarRuta(pasos = 1) {
   STATE.rutaActual += pasos;
   if (STATE.prioridad) renderizarRutaClinica(STATE.prioridad);
 }
+
 
 function registrarFirma() {
   const firma = document.getElementById("firma_consentimiento").value.trim();
@@ -2987,10 +3797,12 @@ function registrarFirma() {
   registrarTimestamp("M7_consentimiento");
 }
 
+
 function registrarSalida(tipo) {
   STATE.estadoSalida = tipo;
   const display = document.getElementById("salida_display");
   display.style.display = "block";
+
 
   const colores = {
     "Alta Médica": { bg: "#f0fdf4", border: "#22c55e", color: "#15803d" },
@@ -3004,10 +3816,12 @@ function registrarSalida(tipo) {
   display.style.color = c.color;
   display.style.borderRadius = "10px";
 
+
   display.innerHTML = `
     <strong>Estado de salida registrado:</strong> ${tipo}<br>
     <span style="font-size:0.78rem;">${new Date().toLocaleString()}</span>
   `;
+
 
   if (tipo === "Deceso — SINADEF") {
     display.innerHTML += `
@@ -3019,9 +3833,11 @@ function registrarSalida(tipo) {
     `;
   }
 
+
   registrarTimestamp("M7_salida");
   avanzarRuta(1);
 }
+
 
 // ---------------------------------------------------------------------------
 // 15. FACTURA ACUMULATIVA
@@ -3030,6 +3846,7 @@ function registrarFacturaItem(servicio, costo, categoria = "General") {
   // Evitar duplicados exactos
   const ya = STATE.items_factura.find(i => i.servicio === servicio);
   if (ya) return;
+
 
   STATE.items_factura.push({
     servicio,
@@ -3040,6 +3857,7 @@ function registrarFacturaItem(servicio, costo, categoria = "General") {
   });
   actualizarFactura();
 }
+
 
 // ---------------------------------------------------------------------------
 // 15. LIQUIDACIÓN Y FACTURACIÓN HOSPITALARIA CON REGLAS DE COBERTURA
@@ -3052,15 +3870,18 @@ function calcularLiquidacionSeguro() {
                        seguro.includes("mapfre") || seguro.includes("positiva") || seguro.includes("clinica");
   const esParticular = !esPublico && !esEpsPrivado;
 
+
   // Clasificación médica: Emergencia (P-I o P-II) vs Urgencia (P-III, P-IV, P-V)
   const esEmergencia = (STATE.prioridad === "I" || STATE.prioridad === "II");
   const esUrgencia = !esEmergencia; // P-III, IV, V o pendiente
+
 
   const totalBruto = STATE.items_factura.reduce((s, i) => s + (parseFloat(i.costo) || 0), 0);
   const subtotalFarmacia = STATE.items_factura
     .filter(i => (i.categoria || "").toLowerCase().includes("farmacia"))
     .reduce((s, i) => s + (parseFloat(i.costo) || 0), 0);
   const subtotalServicios = Math.max(0, totalBruto - subtotalFarmacia);
+
 
   let lugarAtencion = "Hospital Regional Docente UPP (Red Asistencial Pública / MINSA / EsSalud)";
   let coberturaSeguro = 0;
@@ -3069,6 +3890,7 @@ function calcularLiquidacionSeguro() {
   let totalPaciente = 0;
   let motivoLiquidacion = "";
   let etiquetaRegimen = "";
+
 
   if (esPublico) {
     // REGLA 1: EsSalud o SIS -> EL COBRO ES 0 EN TODO (medicina, cama, laboratorio, imágenes, etc.)
@@ -3110,6 +3932,7 @@ function calcularLiquidacionSeguro() {
     motivoLiquidacion = "PACIENTE PARTICULAR / SIN SEGURO. No cuenta con cobertura aseguradora activa. El paciente asume el 100% de todo lo facturado (consulta, cama, exámenes de diagnóstico y medicamentos).";
   }
 
+
   return {
     lugarAtencion,
     totalBruto,
@@ -3129,6 +3952,7 @@ function calcularLiquidacionSeguro() {
   };
 }
 
+
 function confirmarFarmacia() {
   const checks = document.querySelectorAll("#farmaciaGrid input:checked");
   if (checks.length === 0) {
@@ -3147,6 +3971,7 @@ function confirmarFarmacia() {
   avanzarRuta(1);
 }
 
+
 function actualizarFactura() {
   const container = document.getElementById("factura_items");
   const totalEl = document.getElementById("factura_total_num");
@@ -3154,7 +3979,9 @@ function actualizarFactura() {
   const leyBanner = document.getElementById("factura_ley27604");
   if (!container) return;
 
+
   const liq = calcularLiquidacionSeguro();
+
 
   // Actualizar indicador mini en la cabecera superior
   if (miniEl) {
@@ -3164,6 +3991,7 @@ function actualizarFactura() {
       miniEl.innerHTML = `<span style="color:#38bdf8;font-weight:900;">S/. ${liq.totalPaciente.toFixed(2)}</span>`;
     }
   }
+
 
   if (STATE.items_factura.length === 0) {
     container.innerHTML = `
@@ -3178,12 +4006,14 @@ function actualizarFactura() {
     return;
   }
 
+
   let htmlItems = `
     <div style="padding:6px 10px;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;margin-bottom:8px;font-size:0.75rem;">
       <div style="font-weight:800;color:#166534;">🏥 ${liq.lugarAtencion}</div>
       <div style="color:#15803d;font-weight:600;margin-top:2px;">Régimen: ${liq.etiquetaRegimen}</div>
     </div>
   `;
+
 
   STATE.items_factura.forEach(item => {
     htmlItems += `
@@ -3194,6 +4024,7 @@ function actualizarFactura() {
     `;
   });
 
+
   // Desglose de liquidación financiera
   htmlItems += `
     <div style="margin-top:10px;padding-top:8px;border-top:1.5px solid #cbd5e1;font-size:0.78rem;">
@@ -3202,6 +4033,7 @@ function actualizarFactura() {
         <span style="font-weight:700;">S/. ${liq.totalBruto.toFixed(2)}</span>
       </div>
   `;
+
 
   if (liq.esPublico) {
     htmlItems += `
@@ -3235,6 +4067,7 @@ function actualizarFactura() {
     }
   }
 
+
   htmlItems += `
       <div style="margin-top:6px;padding:8px 10px;background:${liq.totalPaciente === 0 ? "#dcfce7" : "#fef3c7"};border-radius:6px;font-size:0.74rem;line-height:1.45;color:${liq.totalPaciente === 0 ? "#14532d" : "#78350f"};">
         ℹ️ ${liq.motivoLiquidacion}
@@ -3242,7 +4075,9 @@ function actualizarFactura() {
     </div>
   `;
 
+
   container.innerHTML = htmlItems;
+
 
   if (totalEl) {
     if (liq.totalPaciente === 0) {
@@ -3252,9 +4087,11 @@ function actualizarFactura() {
     }
   }
 
+
   // Ley 27604 banner
   if (leyBanner) leyBanner.style.display = liq.esEmergencia ? "block" : "none";
 }
+
 
 function generarFacturaPDF() {
   const validacion = validarSignosVitalesEnVivo();
@@ -3271,6 +4108,7 @@ function generarFacturaPDF() {
       <td style="text-align:right;">${i.costo === 0 ? "—" : `S/. ${i.costo.toFixed(2)}`}</td>
     </tr>
   `).join("");
+
 
   const html = `
     <html><head><title>Factura Oficial — ${STATE.historiaClinica || "HIS"}</title><style>
@@ -3303,6 +4141,7 @@ function generarFacturaPDF() {
         <tbody>${filas || '<tr><td colspan="3" style="text-align:center;">Sin servicios cargados</td></tr>'}</tbody>
       </table>
       
+
       <div class="liq-box">
         <div class="liq-row"><span>Subtotal Facturado (Bruto):</span><strong>S/. ${liq.totalBruto.toFixed(2)}</strong></div>
         ${liq.esPublico ? `<div class="liq-row" style="color:#16a34a;"><span>Cobertura Seguro Estatal (100% de todo):</span><strong>- S/. ${liq.coberturaSeguro.toFixed(2)}</strong></div>` : ''}
@@ -3318,6 +4157,7 @@ function generarFacturaPDF() {
         </div>
       </div>
 
+
       <br><br>
       <div style="display:flex;justify-content:space-between;margin-top:30px;">
         <div style="text-align:center;">_______________________<br><small>Firma del Paciente / Responsable</small></div>
@@ -3329,6 +4169,7 @@ function generarFacturaPDF() {
   if (w) { w.document.write(html); w.document.close(); }
 }
 
+
 function generarReporteAuditoria() {
   const validacion = validarSignosVitalesEnVivo();
   if (!validacion.esValido) {
@@ -3339,6 +4180,7 @@ function generarReporteAuditoria() {
   const total = STATE.items_factura.reduce((s, i) => s + i.costo, 0);
   const liq = calcularLiquidacionSeguro();
 
+
   const html = `
     <div style="font-family:Arial;font-size:0.88rem;line-height:1.6;">
       <h3 style="color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;margin-bottom:16px;">
@@ -3346,6 +4188,7 @@ function generarReporteAuditoria() {
       </h3>
       <p style="font-size:0.78rem;color:#64748b;">Universidad Politécnica del Perú (UPP) — Facultad de Ciencias de la Salud — Enfermería<br>
       Emisión: ${fecha}</p>
+
 
       <div style="margin:16px 0;">
         <h4 style="font-size:0.85rem;font-weight:800;border-bottom:1px solid #f1f5f9;padding-bottom:4px;margin-bottom:8px;">
@@ -3362,6 +4205,7 @@ function generarReporteAuditoria() {
         ${STATE.alertaPnpSs ? `<div style="color:#c2410c;font-weight:700;margin-top:6px;">⚠️ Alerta NN emitida a PNP / Servicio Social</div>` : ""}
       </div>
 
+
       <div style="margin:16px 0;">
         <h4 style="font-size:0.85rem;font-weight:800;border-bottom:1px solid #f1f5f9;padding-bottom:4px;margin-bottom:8px;">
           2. MÓDULO 2 — Cobertura y Seguro
@@ -3369,6 +4213,7 @@ function generarReporteAuditoria() {
         <div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#64748b;">Tipo de seguro</span><span style="font-weight:600;">${STATE.tipoSeguro || "Sin registrar"}</span></div>
         ${STATE.numerFua ? `<div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#64748b;">N° FUA (SIS)</span><span style="font-weight:600;">${STATE.numerFua}</span></div>` : ""}
       </div>
+
 
       <div style="margin:16px 0;">
         <h4 style="font-size:0.85rem;font-weight:800;border-bottom:1px solid #f1f5f9;padding-bottom:4px;margin-bottom:8px;">
@@ -3393,6 +4238,7 @@ function generarReporteAuditoria() {
         <div style="margin-top:6px;"><span style="color:#64748b;">Motivo:</span> <strong>${STATE.motivoConsulta || "—"}</strong></div>
       </div>
 
+
       <div style="margin:16px 0;">
         <h4 style="font-size:0.85rem;font-weight:800;border-bottom:1px solid #f1f5f9;padding-bottom:4px;margin-bottom:8px;">
           4. MÓDULOS 4–7 — Hospitalización y Salida
@@ -3401,6 +4247,7 @@ function generarReporteAuditoria() {
         <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f8fafc;"><span style="color:#64748b;">Firmante consentimiento</span><span style="font-weight:600;">${STATE.firmante || "—"}</span></div>
         <div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#64748b;">Estado de salida</span><span style="font-weight:600;">${STATE.estadoSalida || "Sin registrar"}</span></div>
       </div>
+
 
       <div style="margin:16px 0;">
         <h4 style="font-size:0.85rem;font-weight:800;border-bottom:1px solid #f1f5f9;padding-bottom:4px;margin-bottom:8px;">
@@ -3450,6 +4297,7 @@ function generarReporteAuditoria() {
         }
       </div>
 
+
       <div style="margin-top:24px;display:flex;justify-content:space-between;border-top:2px solid #e2e8f0;padding-top:16px;">
         <div style="text-align:center;">
           <p style="margin-bottom:30px;border-bottom:1px solid #374151;padding-bottom:4px;"></p>
@@ -3465,10 +4313,12 @@ function generarReporteAuditoria() {
     </div>
   `;
 
+
   document.getElementById("modalAuditoriaBody").innerHTML = html;
   document.getElementById("modalAuditoria").classList.add("open");
   document.getElementById("auditReportContent").innerHTML = `<p style="color:#15803d;font-size:0.85rem;">✅ Reporte generado. Presiona "Reporte de Auditoría" para verlo nuevamente.</p>`;
 }
+
 
 // ---------------------------------------------------------------------------
 // 17. EVALUACIÓN COMPLETA
@@ -3481,6 +4331,7 @@ function evaluarPacienteCompleto() {
   if (elSexo && elSexo.value) STATE.sexo = elSexo.value;
   const elFechaNac = document.getElementById("fecha_nac_full");
   if (elFechaNac && elFechaNac.value) STATE.fechaNacimiento = elFechaNac.value;
+
 
   // Validación estricta de rangos biológicos
   const validacion = validarSignosVitalesEnVivo();
@@ -3500,20 +4351,25 @@ function evaluarPacienteCompleto() {
     return; // BLOQUEO TOTAL DEL FLUJO HOSPITALARIO
   }
 
+
   // Forzar recálculo
   recalcularPrioridad();
+
 
   if (!STATE.prioridad) {
     alert("⚠️ No se pudo determinar la prioridad. Ingrese al menos un signo vital o motivo de consulta válido.");
     return;
   }
 
+
   // Timestamps
   registrarTimestamp("evaluacion_completa");
+
 
   // Scroll al resultado
   const pd = document.getElementById("prioridad_display");
   if (pd) pd.scrollIntoView({ behavior: "smooth", block: "center" });
+
 
   // Abrir módulos relevantes
   ["mod3", "mod4"].forEach(id => {
@@ -3524,6 +4380,7 @@ function evaluarPacienteCompleto() {
       if (arrow) arrow.classList.add("open");
     }
   });
+
 
   // Sincronizar prioridad evaluada con Supabase y SQLite
   if (STATE.identificador) {
@@ -3541,6 +4398,7 @@ function evaluarPacienteCompleto() {
   }, 150);
 }
 
+
 // ---------------------------------------------------------------------------
 // 18. IMPRIMIR BRAZALETE
 // ---------------------------------------------------------------------------
@@ -3556,8 +4414,10 @@ function imprimirBrazalete() {
     "V": "AZUL (NO URGENTE)" 
   };
 
+
   const alergiasInput = document.getElementById("alergias_full")?.value?.trim() || STATE.alergias || "";
   const tieneAlergias = alergiasInput && !alergiasInput.toLowerCase().includes("niega") && !alergiasInput.toLowerCase().includes("ninguna");
+
 
   const spo2Val = document.getElementById("spo2_full")?.value || "—";
   const fcVal = document.getElementById("fc_full")?.value || "—";
@@ -3565,7 +4425,9 @@ function imprimirBrazalete() {
     ? `${document.getElementById("pas_full").value}/${document.getElementById("pad_full").value}` 
     : "—";
 
+
   const liq = calcularLiquidacionSeguro();
+
 
   const html = `
     <html><head><title>Brazalete Hospitalario — ${STATE.historiaClinica || "HC"}</title><style>
@@ -3587,17 +4449,21 @@ function imprimirBrazalete() {
       <div class="brazalete">
         <div class="inst-title">PULSERA DE ATENCIÓN Y PRIORIDAD · EMERGENCIA</div>
         
+
         ${tienePrio 
           ? `<div class="prio-num">P-${STATE.prioridad}</div><div class="prio-label">${nombres[STATE.prioridad] || ""}</div>` 
           : `<div style="padding:10px 0;"><span style="background:#e0f2fe;color:#0369a1;padding:6px 14px;border-radius:9999px;font-weight:800;font-size:0.85rem;">ADMISIÓN &amp; IDENTIFICACIÓN</span></div>`}
         
+
         <div class="paciente-nombre">${STATE.nombreReniec || STATE.identificador || "PACIENTE POR IDENTIFICAR"}</div>
         <div class="hc-tag">${STATE.historiaClinica || "HC-PROVISIONAL"}</div>
+
 
         <!-- ALERGIAS -->
         <div class="alergia-box ${tieneAlergias ? "alergia-danger" : "alergia-ok"}">
           ${tieneAlergias ? `⚠️ ALERGIA: ${alergiasInput.toUpperCase()}` : `✓ ALERGIAS: NIEGA / NINGUNA REPORTADA`}
         </div>
+
 
         <!-- DATOS CLÍNICOS A CONSIDERAR -->
         <div class="consideraciones-box">
@@ -3607,10 +4473,12 @@ function imprimirBrazalete() {
           • <strong>Establecimiento:</strong> ${liq.lugarAtencion}
         </div>
 
+
         <div class="meta-info">
           <div><strong>Ticket:</strong> ${STATE.turno || "T-01"} | <strong>Hora:</strong> ${STATE.horaLlegada || new Date().toLocaleTimeString()}</div>
           <div><strong>Régimen:</strong> ${liq.etiquetaRegimen} | <strong>Modalidad:</strong> ${STATE.modalidadIngreso || "A pie"}</div>
         </div>
+
 
         <div class="barcode-fake"></div>
         <div style="font-size:0.66rem;color:#94a3b8;margin-top:4px;">BRAZALETE MÉDICO OFICIAL IDENTIFICADO EN HIS HOSPITALARIO</div>
@@ -3618,11 +4486,13 @@ function imprimirBrazalete() {
     </body></html>
   `;
 
+
   const w = window.open("", "_blank");
   w.document.write(html);
   w.document.close();
   w.print();
 }
+
 
 // ---------------------------------------------------------------------------
 // 17. GRABACIÓN COMPLETA Y VINCULACIÓN A HISTORIA CLÍNICA
@@ -3633,26 +4503,29 @@ async function grabarAtencionCompleta() {
     irAModulo(1);
     return;
   }
-
   const fechaActual = new Date();
   const folioAtencion = `FOLIO-${fechaActual.getFullYear()}${(fechaActual.getMonth()+1).toString().padStart(2,"0")}${fechaActual.getDate().toString().padStart(2,"0")}-${Math.floor(1000 + Math.random()*9000)}`;
   const liq = calcularLiquidacionSeguro();
-
+  const alergiasActuales = document.getElementById("alergias_full")?.value?.trim() || STATE.alergias || "Niega alergias medicamentosas conocidas";
   const episodioCompleto = {
     folio: folioAtencion,
+    fecha: fechaActual.toLocaleDateString(),
+    hora: fechaActual.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     fecha_hora: fechaActual.toLocaleString(),
     identificador: STATE.identificador,
     historia_clinica: STATE.historiaClinica,
     nombre_completo: STATE.nombreReniec || STATE.identificador,
-    edad: STATE.edad,
-    sexo: STATE.sexo,
-    alergias: document.getElementById("alergias_full")?.value?.trim() || STATE.alergias || "Ninguna reportada",
+    edad: STATE.edad || document.getElementById("edad_full")?.value || null,
+    sexo: STATE.sexo || document.getElementById("sexo_full")?.value || "M",
+    alergias: alergiasActuales,
     tipo_seguro: STATE.tipoSeguro || "Particular",
     lugar_atencion: liq.lugarAtencion,
     modalidad_ingreso: STATE.modalidadIngreso || "A pie",
     ticket: STATE.turno || "T-01",
     hora_llegada: STATE.horaLlegada || fechaActual.toLocaleTimeString(),
+    motivo_consulta: document.getElementById("motivo_full")?.value?.trim() || STATE.motivoConsulta || "Evaluación clínica de emergencia",
     prioridad: STATE.prioridad ? `P-${STATE.prioridad} (${PRIORIDADES[STATE.prioridad]?.nombre})` : "Por evaluar",
+    color_prioridad: STATE.prioridad ? ({"I":"#dc2626","II":"#ea580c","III":"#ca8a04","IV":"#16a34a","V":"#2563eb"}[STATE.prioridad] || "#0284c7") : "#0284c7",
     destino_clinico: STATE.prioridad ? PRIORIDADES[STATE.prioridad]?.destino : "Por asignar",
     signos_vitales: {
       spo2: document.getElementById("spo2_full")?.value || "—",
@@ -3660,26 +4533,67 @@ async function grabarAtencionCompleta() {
       fr: document.getElementById("fr_full")?.value || "—",
       pas: document.getElementById("pas_full")?.value || "—",
       pad: document.getElementById("pad_full")?.value || "—",
+      pa: (document.getElementById("pas_full") && document.getElementById("pad_full")) ? `${document.getElementById("pas_full").value}/${document.getElementById("pad_full").value}` : "—",
       temp: document.getElementById("temp_full")?.value || "—",
+      glucosa: document.getElementById("glucosa_full")?.value || "—",
       glasgow: document.getElementById("glasgow_full")?.value || "—",
-      dolor: document.getElementById("eva_full")?.value || "—"
+      dolor: document.getElementById("eva_full")?.value || "0"
     },
     cama_asignada: STATE.camaAsignada || "Observación Adultos",
     examenes_realizados: STATE.items_factura.filter(i => i.categoria !== "Farmacia"),
     medicamentos_despachados: STATE.items_factura.filter(i => i.categoria === "Farmacia"),
+    total_facturado: liq.totalPaciente,
+    cobertura_info: liq.totalPaciente === 0 ? `Cubierto 100% por ${STATE.tipoSeguro || "Seguro"} (Pago Cero)` : `Copago paciente: S/. ${liq.totalPaciente.toFixed(2)}`,
     estado_salida: STATE.estadoSalida || "En observación hospitalaria",
     firmante: STATE.firmante || "Lic. Enfermería de Turno — UPP",
     liquidacion: liq
   };
-
-  // 1. Guardar en memoria local (Historial de Episodios UPP)
+  // 1. Guardar en memoria local global (Historial de Episodios UPP)
   try {
-    const historial = JSON.parse(localStorage.getItem("UPP_HISTORIAL_EPISODIOS") || "[]");
+    const rawH = localStorage.getItem(STORAGE_KEY_HISTORIAL_EPISODIOS) || localStorage.getItem("UPP_HISTORIAL_EPISODIOS") || "[]";
+    const historial = JSON.parse(rawH);
     historial.unshift(episodioCompleto);
+    localStorage.setItem(STORAGE_KEY_HISTORIAL_EPISODIOS, JSON.stringify(historial));
     localStorage.setItem("UPP_HISTORIAL_EPISODIOS", JSON.stringify(historial));
   } catch (e) {}
-
-  // 2. Sincronizar en la nube de Supabase
+  // 2. Guardar en el expediente maestro del paciente (vinculando permanentemente alergias y este episodio)
+  try {
+    const master = cargarPacientesMaster();
+    const cleanId = normalizarClavePaciente(STATE.identificador);
+    const cleanHc = normalizarClavePaciente(STATE.historiaClinica);
+    let matchKey = null;
+    for (const [k, p] of Object.entries(master)) {
+      if ((cleanId && normalizarClavePaciente(p.identificador) === cleanId) || (cleanHc && normalizarClavePaciente(p.historia_clinica) === cleanHc)) {
+        matchKey = k;
+        break;
+      }
+    }
+    if (!matchKey) {
+      matchKey = STATE.identificador;
+      master[matchKey] = {
+        identificador: STATE.identificador,
+        historia_clinica: STATE.historiaClinica,
+        nombre_completo: STATE.nombreReniec || STATE.identificador,
+        fecha_nacimiento: document.getElementById("fecha_nac_full")?.value || "",
+        edad: STATE.edad,
+        sexo: STATE.sexo,
+        tipo_seguro: STATE.tipoSeguro || "Particular",
+        alergias: alergiasActuales,
+        antecedentes: "Registrado en servicio de emergencia",
+        episodios: []
+      };
+    }
+    // Actualizar alergias permanentes en el expediente maestro
+    master[matchKey].alergias = alergiasActuales;
+    if (document.getElementById("fecha_nac_full")?.value) master[matchKey].fecha_nacimiento = document.getElementById("fecha_nac_full").value;
+    if (STATE.edad) master[matchKey].edad = STATE.edad;
+    if (STATE.sexo) master[matchKey].sexo = STATE.sexo;
+    if (STATE.tipoSeguro) master[matchKey].tipo_seguro = STATE.tipoSeguro;
+    if (!Array.isArray(master[matchKey].episodios)) master[matchKey].episodios = [];
+    master[matchKey].episodios.unshift(episodioCompleto);
+    guardarPacientesMaster(master);
+  } catch (e) {}
+  // 3. Sincronizar en la nube de Supabase
   if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.key) {
     try {
       await sincronizarConSupabase(
@@ -3692,23 +4606,18 @@ async function grabarAtencionCompleta() {
       );
     } catch (e) {}
   }
-
-  // 3. Sincronizar en base de datos SQLite local
+  // 4. Sincronizar en base de datos SQLite local
   try {
     fetch(`/api/hc?identificador=${encodeURIComponent(STATE.identificador)}&nombre=${encodeURIComponent(STATE.nombreReniec || STATE.identificador)}`).catch(() => {});
   } catch (e) {}
-
-  // 4. Desplegar comprobante visual de atención guardada
+  // 5. Desplegar comprobante visual de atención guardada
   mostrarModalRegistroExitoso(episodioCompleto);
 }
-
 function mostrarModalRegistroExitoso(ep) {
   const modal = document.getElementById("modal_registro_guardado");
   const body = document.getElementById("modal_registro_guardado_body");
   if (!modal || !body) return;
-
   const liq = ep.liquidacion;
-
   body.innerHTML = `
     <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:16px;margin-bottom:16px;">
       <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px dashed #86efac;padding-bottom:8px;margin-bottom:10px;">
@@ -3720,7 +4629,6 @@ function mostrarModalRegistroExitoso(ep) {
           <span class="hc-pill-tag" style="font-size:1rem;padding:4px 12px;">${ep.historia_clinica}</span>
         </div>
       </div>
-
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;font-size:0.82rem;">
         <div><strong>Paciente:</strong> ${ep.nombre_completo}</div>
         <div><strong>DNI/ID:</strong> ${ep.identificador}</div>
@@ -3729,10 +4637,9 @@ function mostrarModalRegistroExitoso(ep) {
         <div><strong>Prioridad de Triaje:</strong> <span style="font-weight:800;color:#0284c7;">${ep.prioridad}</span></div>
         <div><strong>Destino Clínico:</strong> ${ep.destino_clinico}</div>
         <div><strong>Establecimiento:</strong> ${ep.lugar_atencion}</div>
-        <div><strong>Alergias:</strong> <span style="color:#b91c1c;font-weight:800;">${ep.alergias}</span></div>
+        <div><strong>Alergias en HC:</strong> <span style="color:#b91c1c;font-weight:800;">${ep.alergias}</span></div>
       </div>
     </div>
-
     <!-- Resumen Financiero -->
     <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:16px;">
       <h4 style="margin:0 0 10px;font-size:0.88rem;color:#0f172a;">💰 Liquidación Económica del Episodio</h4>
@@ -3754,7 +4661,6 @@ function mostrarModalRegistroExitoso(ep) {
         <span>Coaseguro Farmacéutico EPS (10%):</span>
         <span>S/. ${liq.coaseguroFarmacia.toFixed(2)}</span>
       </div>` : ""}
-      
       <div style="border-top:1.5px solid #cbd5e1;padding-top:8px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
         <strong style="font-size:0.95rem;">TOTAL A PAGAR POR EL PACIENTE:</strong>
         <span style="font-size:1.2rem;font-weight:900;color:${liq.totalPaciente === 0 ? "#16a34a" : "#0284c7"};">
@@ -3762,18 +4668,25 @@ function mostrarModalRegistroExitoso(ep) {
         </span>
       </div>
     </div>
-
-    <div style="text-align:center;font-size:0.75rem;color:#64748b;margin-bottom:12px;">
-      ✓ Atención registrada y vinculada permanentemente a la Historia Clínica <strong>${ep.historia_clinica}</strong> en Supabase Cloud y servidor local.
+    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px;flex-wrap:wrap;">
+      <button type="button" class="btn-full-secondary" style="padding:8px 14px;font-size:0.82rem;"
+        onclick="document.getElementById('modal_registro_guardado').classList.remove('open','show');visualizarHistoriaClinica('${encodeURIComponent(JSON.stringify({identificador: ep.identificador, historia_clinica: ep.historia_clinica, nombre_completo: ep.nombre_completo}))}')">
+        👁️ Ver Expediente Completo (con Histórico)
+      </button>
+      <button type="button" class="btn-full-secondary" style="padding:8px 14px;font-size:0.82rem;"
+        onclick="imprimirFichaHistoriaClinica('${encodeURIComponent(JSON.stringify({identificador: ep.identificador, historia_clinica: ep.historia_clinica, nombre_completo: ep.nombre_completo}))}')">
+        🖨️ Imprimir Ficha Oficial
+      </button>
+    </div>
+    <div style="text-align:center;font-size:0.75rem;color:#64748b;">
+      ✓ Atención registrada y acumulada con éxito en la Historia Clínica <strong>${ep.historia_clinica}</strong>.
     </div>
   `;
-
   modal.classList.add("open"); modal.classList.add("show"); modal.style.setProperty("display", "flex", "important");
 }
-
-
 function resetSimulador() {
   if (!confirm("¿Iniciar nuevo paciente? Se perderán los datos actuales.")) return;
+
 
   // Reset STATE
   Object.assign(STATE, {
@@ -3789,6 +4702,7 @@ function resetSimulador() {
     firmante: null, firmaTiempo: null, ts: {},
   });
 
+
   // Reset DOM
   document.getElementById("ident_full").value = "";
   document.getElementById("hora_full").value = "";
@@ -3801,10 +4715,12 @@ function resetSimulador() {
   document.getElementById("eva_range").value = "0";
   document.getElementById("eva_label").textContent = "Sin dolor";
 
+
   ["ant_cardio","ant_resp","ant_diab","ant_neuro"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.checked = false;
   });
+
 
   document.getElementById("hc_badge_estado").textContent = "Por confirmar";
   document.getElementById("hc_badge_estado").className = "badge-estado badge-conf";
@@ -3824,16 +4740,20 @@ function resetSimulador() {
   if (boxPideReset) boxPideReset.style.display = "none";
   refrescarCaptchaSeguro();
 
+
   // Reset modalidad
   document.querySelectorAll(".modalidad-btn").forEach((b, i) => b.classList.toggle("selected", i === 0));
+
 
   // Reset stocks visuales (sin resetear el stock real entre pacientes en la misma sesión)
   actualizarFactura();
   renderizarRutaClinica("III");
   renderizarStockCamas();
 
+
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
+
 
 // ---------------------------------------------------------------------------
 // 20. UTILIDADES
@@ -3841,6 +4761,7 @@ function resetSimulador() {
 function registrarTimestamp(evento) {
   STATE.ts[evento] = new Date().toLocaleTimeString();
 }
+
 
 // ---------------------------------------------------------------------------
 // 21. SERVIDOR PYTHON (retrocompatibilidad)
@@ -3850,11 +4771,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const text = document.getElementById("serverStatusText");
   if (!badge || !text) return;
 
+
   if (window.location.protocol === "file:") {
     badge.className = "server-badge offline";
     text.textContent = "Modo Local Autónomo (Navegador)";
     return;
   }
+
 
   fetch("/api/health")
     .then(r => r.json())
@@ -3871,21 +4794,27 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+
+
 // ---------------------------------------------------------------------------
 // NAVEGACIÓN Y SINCRONIZACIÓN DE PANTALLA DIVIDIDA (HIS 8 MÓDULOS)
 // ---------------------------------------------------------------------------
 let moduloActivoActual = 1;
 
+
 function irAModulo(num) {
   moduloActivoActual = num;
+
 
   // 1. Actualizar estados de botones en Navbar Superior, Stepper de Drawer y Canvas
   for (let i = 1; i <= 8; i++) {
     const btnDrawer = document.getElementById(`btnStepDrawer_${i}`);
     if (btnDrawer) btnDrawer.classList.toggle("active", i === num);
 
+
     const btnTop = document.getElementById(`btnStepTop_${i}`);
     if (btnTop) btnTop.classList.toggle("active", i === num);
+
 
     const canvasNode = document.getElementById(`full_step_${i}`);
     if (canvasNode) {
@@ -3894,11 +4823,13 @@ function irAModulo(num) {
     }
   }
 
+
   // 2. Abrir el módulo correspondiente en el Drawer Operativo
     // Garantizar renderizado de componentes dinámicos
   if (num === 4) try { renderizarStockCamas(); } catch(e){}
   if (num === 5) try { renderizarLaboratorio(); } catch(e){}
   if (num === 6) try { renderizarFarmacia(); } catch(e){}
+
 
   const targetBody = document.getElementById(`body_mod${num}`);
   const targetArrow = document.getElementById(`arrow_mod${num}`);
@@ -3906,6 +4837,7 @@ function irAModulo(num) {
     targetBody.style.display = "";
     targetBody.classList.add("open");
     if (targetArrow) targetArrow.classList.add("open");
+
 
     // Desplazar el Drawer Operativo SUAVEMENTE hacia el módulo activo (SIN desorientar la pantalla)
     try {
@@ -3917,11 +4849,13 @@ function irAModulo(num) {
   }
 }
 
+
 function moduloAnterior() {
   if (moduloActivoActual > 1) {
     irAModulo(moduloActivoActual - 1);
   }
 }
+
 
 function moduloSiguiente() {
   if (moduloActivoActual < 8) {
@@ -3929,12 +4863,14 @@ function moduloSiguiente() {
   }
 }
 
+
 // Inicializar en Módulo 1 en el primer render
 document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => {
     irAModulo(1);
   }, 100);
 });
+
 
 // ---------------------------------------------------------------------------
 // 22. OBSERVER SCROLL SPY PARA MENÚ SUPERIOR ANCLADO (1.ID ... 8.FACTURA)
@@ -3956,6 +4892,7 @@ function initScrollSpySteps() {
     }
   }, { passive: true });
 }
+
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initScrollSpySteps);
