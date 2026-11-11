@@ -636,6 +636,218 @@
     /* modo demo */
     #sectionModoPiloto { display: none; }
     #sectionModoSimulador { display: block; }
+  
+    /* ======================================================================
+       REGLAS CRÍTICAS DE EXPERIENCIA DE USUARIO Y ARQUITECTURA
+       ====================================================================== */
+
+    /* 1. ELIMINACIÓN DEL ESPACIO ENORME ANTES DE LOS MÓDULOS DE DATOS */
+    .flowchart-canvas-pane {
+      display: none !important;
+    }
+
+    body.split-workspace-app {
+      display: block !important;
+      height: auto !important;
+      min-height: 100vh !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      background: #0f172a !important;
+    }
+
+    .split-workspace-body {
+      display: block !important;
+      width: 100% !important;
+      max-width: 1120px !important;
+      margin: 0 auto !important;
+      padding: 16px 20px 80px 20px !important;
+      height: auto !important;
+      overflow: visible !important;
+      background: transparent !important;
+    }
+
+    .operational-drawer-pane {
+      display: block !important;
+      width: 100% !important;
+      height: auto !important;
+      overflow: visible !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+
+    /* Ocultar el stepper interno redundante del drawer */
+    .drawer-context-nav {
+      display: none !important;
+    }
+
+    /* Margen de anclaje para que el encabezado del módulo no quede tapado */
+    .module-section {
+      scroll-margin-top: 135px !important;
+    }
+
+    /* 2. MENÚ SUPERIOR ANCLADO / STICKY VISUALMENTE AGRADABLE (1.ID ... 8.FACTURA) */
+    .telemetry-header {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 1001 !important;
+      background: rgba(15, 23, 42, 0.96) !important;
+      backdrop-filter: blur(14px) !important;
+      -webkit-backdrop-filter: blur(14px) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+      padding: 10px 20px !important;
+    }
+
+    .top-steps-navbar {
+      position: sticky !important;
+      top: 57px !important;
+      z-index: 1000 !important;
+      background: rgba(11, 17, 26, 0.95) !important;
+      backdrop-filter: blur(14px) !important;
+      -webkit-backdrop-filter: blur(14px) !important;
+      border-bottom: 2px solid #0284c7 !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+      padding: 8px 20px !important;
+      display: block !important;
+    }
+
+    .top-steps-scroll {
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px !important;
+      max-width: 1120px !important;
+      margin: 0 auto !important;
+      overflow-x: auto !important;
+      padding: 4px 2px !important;
+      scrollbar-width: thin !important;
+    }
+
+    .top-step-btn {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 7px !important;
+      padding: 7px 15px !important;
+      border-radius: 9999px !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+      background: rgba(30, 41, 59, 0.85) !important;
+      color: #e2e8f0 !important;
+      font-size: 0.82rem !important;
+      font-weight: 700 !important;
+      cursor: pointer !important;
+      white-space: nowrap !important;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    .top-step-btn:hover {
+      background: rgba(51, 65, 85, 0.95) !important;
+      border-color: #38bdf8 !important;
+      color: #ffffff !important;
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35) !important;
+    }
+
+    .top-step-btn.active {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+      color: #ffffff !important;
+      border-color: #38bdf8 !important;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.6) !important;
+    }
+
+    .top-step-btn .step-circle {
+      width: 20px !important;
+      height: 20px !important;
+      border-radius: 50% !important;
+      background: rgba(255, 255, 255, 0.25) !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 0.72rem !important;
+      font-weight: 800 !important;
+    }
+
+    .top-step-btn.active .step-circle {
+      background: #ffffff !important;
+      color: #0284c7 !important;
+    }
+
+    /* 3. VENTANA PEQUEÑA Y COMPACTA PARA CATÁLOGO DE HISTORIAS CLÍNICAS */
+    .modal-hc-overlay {
+      position: fixed !important;
+      inset: 0 !important;
+      background: rgba(15, 23, 42, 0.75) !important;
+      backdrop-filter: blur(8px) !important;
+      -webkit-backdrop-filter: blur(8px) !important;
+      z-index: 10005 !important;
+      display: none;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 16px !important;
+      animation: modalFadeIn 0.2s ease-out !important;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-hc-container {
+      background: #ffffff !important;
+      width: 100% !important;
+      max-width: 660px !important;
+      max-height: 500px !important;
+      border-radius: 16px !important;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+      border: 2px solid #0284c7 !important;
+      animation: modalZoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    @keyframes modalZoomIn {
+      from { transform: scale(0.95) translateY(10px); }
+      to { transform: scale(1) translateY(0); }
+    }
+
+    .modal-hc-header {
+      padding: 12px 18px !important;
+      background: #0f172a !important;
+      color: #ffffff !important;
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      border-bottom: 2px solid #0284c7 !important;
+    }
+
+    .modal-hc-body {
+      padding: 14px 18px !important;
+      overflow-y: auto !important;
+      flex: 1 !important;
+    }
+
+    .modal-hc-table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      font-size: 0.8rem !important;
+    }
+
+    .modal-hc-table th {
+      background: #f1f5f9 !important;
+      padding: 8px 10px !important;
+      text-align: left !important;
+      font-weight: 700 !important;
+      color: #334155 !important;
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 2 !important;
+    }
+
+    .modal-hc-table td {
+      padding: 8px 10px !important;
+      border-bottom: 1px solid #f1f5f9 !important;
+    }
+
   </style>
 </head>
 <body class="split-workspace-app">
@@ -1840,7 +2052,7 @@
 </div>
 
 <!-- ===== MODAL DE CONSULTA DE HISTORIAS CLÍNICAS (SUPABASE / LOCAL) ===== -->
-<div class="modal-hc-overlay" id="modal_consulta_hc">
+<div class="modal-hc-overlay" id="modal_consulta_hc" onclick="if(event.target===this)cerrarModalConsultaHC()">
   <div class="modal-hc-container">
     <div class="modal-hc-header">
       <div style="display:flex;align-items:center;gap:10px;">
