@@ -712,7 +712,7 @@
           </div>
         </div>
 
-        <!-- SELECTOR DE ENTORNO ASISTENCIAL SEPARADO EN: HOSPITAL MINSA (SIS), HOSPITAL ESSALUD & CLÍNICA PRIVADA (EPS) -->
+        <!-- SELECTOR DE ENTORNO ASISTENCIAL SEPARADO EN: HOSPITAL MINSA (SIS), HOSPITAL ESSALUD, CLÍNICA PRIVADA (EPS) & PARTICULAR (SIN SEGURO) -->
         <div style="margin-top: 14px; margin-bottom: 14px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
             <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
@@ -723,13 +723,13 @@
               🏛️ Hospital MINSA (SIS)
             </span>
           </div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
             <!-- 1. HOSPITAL MINSA (SIS) -->
             <button type="button" id="btn_entorno_minsa" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('minsa_sis', true)" style="border-color: #0284c7; background: #f0f9ff; color: #0369a1; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
               <span style="font-size: 20px;">🏛️</span>
               <div>
                 <strong style="display: block;">Hospital MINSA (SIS)</strong>
-                <span style="font-size: 0.7rem; color: #0369a1; font-weight: normal;">Régimen estatal FUA · Cobertura 100% Pago Cero</span>
+                <span style="font-size: 0.7rem; color: #0369a1; font-weight: normal;">Régimen estatal FUA · 100% Pago Cero</span>
               </div>
             </button>
             <!-- 2. HOSPITAL ESSALUD -->
@@ -737,7 +737,7 @@
               <span style="font-size: 20px;">🏥</span>
               <div>
                 <strong style="display: block;">Hospital EsSalud</strong>
-                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Seguro Social ESSI · Cobertura 100% Pago Cero</span>
+                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Seguro Social ESSI · 100% Pago Cero</span>
               </div>
             </button>
             <!-- 3. CLÍNICA PRIVADA (EPS) -->
@@ -746,6 +746,14 @@
               <div>
                 <strong style="display: block;">Clínica Privada (EPS)</strong>
                 <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Pacífico, Rímac · Urgencia S/. 80 + 10% farmacia</span>
+              </div>
+            </button>
+            <!-- 4. SIN SEGURO (PARTICULAR) -->
+            <button type="button" id="btn_entorno_particular" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('particular', true)" style="border-color: #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <span style="font-size: 20px;">👤</span>
+              <div>
+                <strong style="display: block;">Sin Seguro (Particular)</strong>
+                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Sin cobertura activa · Paciente paga el 100%</span>
               </div>
             </button>
           </div>
@@ -763,6 +771,9 @@
             </div>
             • <strong>Si es Emergencia Médica o Quirúrgica (P-I / P-II):</strong> Protegido por Ley N° 27604. Consulta médica, sala de shock trauma, procedimientos, cama y exámenes S/. 0.00 (cubiertos al 100% por EPS). En medicamentos de farmacia, el paciente asume únicamente el <strong>10% de coaseguro</strong>.<br>
             • <strong>Si NO es Emergencia (P-III / P-IV / P-V):</strong> El sistema clasifica <strong>AUTOMÁTICAMENTE COMO URGENCIA</strong>. Se cobra tarifa fija de <strong>S/. 80.00 por consulta de urgencia</strong> y el <strong>10% del total de medicamentos</strong> prescritos. Todos los exámenes de laboratorio e imágenes complementarios quedan 100% cubiertos por la EPS.
+          </div>
+          <div id="banner_condicion_particular" style="display: none; margin-top: 10px; background: #fef2f2; border: 1.5px solid #f87171; border-radius: 8px; padding: 10px 12px; font-size: 0.76rem; color: #991b1b; line-height: 1.45;">
+            <strong>👤 ATENCIÓN PARTICULAR (SIN NINGÚN SEGURO ACTIVO):</strong> Paciente no cuenta con cobertura activa en SIS, EsSalud ni aseguradoras privadas EPS. En todos los casos, el paciente asume el <strong>100% de la totalidad de lo facturado</strong> (consulta médica, tópicos, cama, medicamentos, laboratorio e imágenes diagnósticas). Cobertura de aseguradora: S/. 0.00.
           </div>
         </div>
 
@@ -1219,84 +1230,77 @@
         <div id="seccion_pide_wrapper">
           <div class="norma-pill-banner">
             <span class="norma-tag">Ley N° 29344 AUS</span>
-            <span>Acreditación de derechos en salud mediante plataforma unificada PIDE-SUSALUD. Cruce de datos en vivo con Supabase.</span>
+            <span><strong>Acreditación Oficial PIDE-SUSALUD:</strong> Cruce informático centralizado con Base de Datos Nacional e historial de IAFAS (SIS, EsSalud, EPS). El sistema audita y asigna el régimen de aseguramiento oficial del paciente de forma automática e inalterable.</span>
           </div>
 
-          <!-- BOTONERA DE SELECCIÓN RÁPIDA DE COBERTURA / SEGURO -->
-          <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px;">
-            <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
-              <span>🏛️ Acreditación Rápida de Financiador / IAFA (PIDE-SUSALUD):</span>
-              <span style="font-size: 0.72rem; color: #64748b;">Selección directa o consulta con CAPTCHA</span>
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px;">
-              <button type="button" id="btn_seg_eps" class="btn-full-secondary" onclick="seleccionarRegimenSeguroDirecto('EPS')" style="padding: 10px 12px; font-size: 0.78rem; font-weight: 800; text-align: left; display: flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;">
-                <span style="font-size: 18px;">🏢</span>
-                <div>
-                  <strong style="display: block;">Clínica Privada / EPS</strong>
-                  <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Rímac, Pacífico, Mapfre</span>
-                </div>
-              </button>
-              <button type="button" id="btn_seg_sis" class="btn-full-secondary" onclick="seleccionarRegimenSeguroDirecto('SIS')" style="padding: 10px 12px; font-size: 0.78rem; font-weight: 800; text-align: left; display: flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;">
-                <span style="font-size: 18px;">🏛️</span>
-                <div>
-                  <strong style="display: block;">SIS Gratuito (MINSA)</strong>
-                  <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">FUA · Pago Cero 100%</span>
-                </div>
-              </button>
-              <button type="button" id="btn_seg_essalud" class="btn-full-secondary" onclick="seleccionarRegimenSeguroDirecto('EsSalud')" style="padding: 10px 12px; font-size: 0.78rem; font-weight: 800; text-align: left; display: flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;">
-                <span style="font-size: 18px;">🏥</span>
-                <div>
-                  <strong style="display: block;">EsSalud (Seguro Social)</strong>
-                  <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Titular Regular ESSI</span>
-                </div>
-              </button>
-              <button type="button" id="btn_seg_particular" class="btn-full-secondary" onclick="seleccionarRegimenSeguroDirecto('Particular')" style="padding: 10px 12px; font-size: 0.78rem; font-weight: 800; text-align: left; display: flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;">
-                <span style="font-size: 18px;">👤</span>
-                <div>
-                  <strong style="display: block;">Particular (Sin Seguro)</strong>
-                  <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Gasto 100% asumido por paciente</span>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color:white; border-radius:12px; padding:16px; margin-bottom:16px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+          <!-- FORMULARIO DE CONSULTA PIDE-SUSALUD CON CAPTCHA -->
+          <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color:white; border-radius:12px; padding:18px; margin-bottom:16px; border: 1.5px solid #38bdf8;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
               <div>
-                <span style="background:#38bdf8; color:#0f172a; padding:2px 8px; border-radius:9999px; font-size:0.7rem; font-weight:800;">
-                  🏛️ PIDE-SUSALUD OFICIAL
+                <span style="background:#38bdf8; color:#0f172a; padding:3px 10px; border-radius:9999px; font-size:0.72rem; font-weight:800; letter-spacing:0.5px;">
+                  🏛️ PIDE-SUSALUD · PLATAFORMA DE INTEROPERABILIDAD DEL ESTADO
                 </span>
-                <h4 style="margin:4px 0 0; font-size:0.95rem;">Consulta y Acreditación de Cobertura con CAPTCHA</h4>
+                <h4 style="margin:6px 0 0; font-size:1rem; font-weight:800; color:#f8fafc;">
+                  Consulta Automática de Cobertura y Aseguramiento en Salud
+                </h4>
+                <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">
+                  Ingrese el código de verificación gráfica para auditar el aseguramiento oficial en Base de Datos. El régimen se acredita de forma automática y definitiva.
+                </div>
               </div>
-              <button type="button" class="btn-full-secondary" style="font-size:0.75rem; padding:4px 10px; color:#ffffff; background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.25);" onclick="refrescarCaptchaSeguro()">
+              <button type="button" class="btn-full-secondary" style="font-size:0.75rem; padding:5px 12px; color:#ffffff; background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.25);" onclick="refrescarCaptchaSeguro()">
                 🔄 Cambiar Código
               </button>
             </div>
 
-            <!-- CAPTCHA INTERACTIVO -->
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-              <div style="background:#ffffff; border-radius:6px; padding:2px 6px;">
+            <!-- CAPTCHA INTERACTIVO Y ACCIÓN DE CONSULTA -->
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+              <div style="background:#ffffff; border-radius:6px; padding:3px 6px;">
                 <canvas id="captcha_canvas_seguro" width="135" height="36" style="cursor:pointer;" onclick="refrescarCaptchaSeguro()" title="Clic para generar nuevo código"></canvas>
               </div>
-              <input type="text" id="captcha_input_seguro" class="input-full" placeholder="Código" maxlength="6" style="width:110px; text-transform:uppercase; font-weight:800; letter-spacing:2px; text-align:center;">
-              <select id="entidad_consulta_seguro" class="input-full" style="width:auto; min-width:180px; font-size:0.78rem; font-weight:700; background:#0f172a; color:#38bdf8; border:1px solid #38bdf8; height:38px;">
-                <option value="auto">🤖 Detección Auto PIDE</option>
-                <option value="eps">🏢 Clínica Privada / EPS</option>
-                <option value="sis">🏛️ SIS Gratuito (MINSA)</option>
-                <option value="essalud">🏥 EsSalud (Seguro Social)</option>
-                <option value="particular">👤 Particular (Sin Seguro)</option>
-              </select>
-              <button type="button" class="btn-full-primary" style="background:#38bdf8; color:#0f172a; height:38px;" onclick="ejecutarConsultaSeguroConCaptcha()">
+              <input type="text" id="captcha_input_seguro" class="input-full" placeholder="CÓDIGO" maxlength="6" style="width:120px; text-transform:uppercase; font-weight:800; letter-spacing:2px; text-align:center; height:40px; font-size:0.95rem;">
+              <button type="button" class="btn-full-primary" style="background:#38bdf8; color:#0f172a; height:40px; font-weight:800; padding:0 20px;" onclick="ejecutarConsultaSeguroConCaptcha()">
                 🔍 Validar y Acreditar Cobertura
               </button>
             </div>
-            <div id="captcha_error_seguro" style="display:none; color:#fca5a5; font-size:0.75rem; margin-top:6px; font-weight:700;"></div>
+            <div id="captcha_error_seguro" style="display:none; color:#fca5a5; font-size:0.78rem; margin-top:8px; font-weight:700;"></div>
+          </div>
+
+          <!-- CUADRO DE RESULTADO DE ACREDITACIÓN PIDE-SUSALUD (INALTERABLE) -->
+          <div id="pide_acreditacion_box" style="display:none; background:#ffffff; border:2px solid #0284c7; border-radius:12px; padding:16px 18px; margin-bottom:16px; box-shadow: 0 4px 12px rgba(2,132,199,0.08);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px; border-bottom:1.5px solid #e2e8f0; padding-bottom:10px;">
+              <div>
+                <span id="pide_badge_bloqueo" style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:9999px; font-size:0.7rem; font-weight:800;">
+                  🔒 ACREDITACIÓN OFICIAL INALTERABLE
+                </span>
+                <h4 id="pide_tipo_titulo" style="margin:4px 0 0; font-size:1.05rem; font-weight:900; color:#0f172a;">
+                  RÉGIMEN ACREDITADO
+                </h4>
+              </div>
+              <span id="pide_badge_estado" style="background:#10b981; color:#ffffff; padding:4px 12px; border-radius:9999px; font-size:0.75rem; font-weight:800;">
+                ACREDITADO ACTIVO
+              </span>
+            </div>
+
+            <!-- DETALLES DEL SEGURO ACREDITADO -->
+            <div id="pide_detalles_grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; font-size:0.83rem; margin-bottom:12px;">
+              <!-- Se llena dinámicamente con los datos oficiales -->
+            </div>
+
+            <!-- BANNER DE CONDICIONES DE COBRO OFICIALES ASIGNADAS -->
+            <div id="pide_condiciones_cobro_banner" style="background:#f8fafc; border-left:4px solid #0284c7; padding:10px 14px; border-radius:6px; font-size:0.8rem; color:#334155; line-height:1.45;">
+              <!-- Se llena dinámicamente con la regla financiera aplicable -->
+            </div>
           </div>
 
           <!-- ESTADO DE SEGURO CONSOLIDADO -->
-          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px; font-size:0.82rem;">
-            <strong>Régimen Acreditado en Establecimiento:</strong>
-            <span id="seguro_consolidado" style="font-weight:800; color:#0284c7; margin-left:6px;">Sin registrar (Pendiente de Acreditación)</span>
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px; font-size:0.82rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <strong style="color:#475569;">Régimen Acreditado en Establecimiento:</strong>
+              <span id="seguro_consolidado" style="font-weight:800; color:#0284c7; margin-left:6px;">Sin registrar (Pendiente de Consulta PIDE)</span>
+            </div>
+            <span id="seguro_candado_lbl" style="font-size:0.72rem; color:#64748b; background:#e2e8f0; padding:2px 8px; border-radius:4px; font-weight:700;">
+              Auditoría SUSALUD Activa · No Modificable
+            </span>
           </div>
         </div>
 
