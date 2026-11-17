@@ -1734,6 +1734,7 @@ document.addEventListener("DOMContentLoaded", () => {
   iniciarCronometrosRecursos();
   renderizarTableroCamasYQuirofanos();
   renderizarMonitorObservacionModulo5();
+  actualizarWidgetFlotanteCamas();
   renderizarLaboratorio();
   renderizarFarmacia();
   renderizarRutaClinica("III"); // ruta por defecto
@@ -6019,6 +6020,7 @@ function tickCronometrosCamas() {
 
   // Actualizar elementos DOM dinámicamente
   actualizarTelemetriaDomCronometros(camasDisponibles, camasOcupadas);
+  actualizarWidgetFlotanteCamas();
 }
 
 function actualizarTelemetriaDomCronometros(disponibles, ocupadas) {
@@ -6089,6 +6091,102 @@ function actualizarTelemetriaDomCronometros(disponibles, ocupadas) {
     });
   }
 }
+
+
+// ==============================================================================
+// GESTIÓN DEL BOTÓN FLOTANTE HUD DE DISPONIBILIDAD HOSPITALARIA
+// Permite ver en todo momento las camas libres desglosadas por tipo mientras se navega
+// ==============================================================================
+function toggleDrawerFlotante(e) {
+  if (e) e.stopPropagation();
+  const drawer = document.getElementById("widgetPanelDrawer");
+  const arrow = document.getElementById("widget_drawer_arrow");
+  if (!drawer) return;
+  const isOpen = drawer.classList.contains("open");
+  if (isOpen) {
+    drawer.classList.remove("open");
+    if (arrow) arrow.style.transform = "rotate(0deg)";
+  } else {
+    drawer.classList.add("open");
+    if (arrow) arrow.style.transform = "rotate(180deg)";
+    actualizarWidgetFlotanteCamas();
+  }
+}
+
+function actualizarWidgetFlotanteCamas() {
+  const counts = {
+    total: { total: 0, disponible: 0, ocupada: 0 },
+    quirofano: { total: 0, disponible: 0, ocupada: 0 },
+    observacion: { total: 0, disponible: 0, ocupada: 0 },
+    shock_trauma: { total: 0, disponible: 0, ocupada: 0 },
+    urpa: { total: 0, disponible: 0, ocupada: 0 },
+    uci: { total: 0, disponible: 0, ocupada: 0 }
+  };
+
+  for (const id in RECURSOS_HOSPITALARIOS) {
+    const rec = RECURSOS_HOSPITALARIOS[id];
+    const tipo = rec.tipo || "observacion";
+    if (counts[tipo]) {
+      counts[tipo].total++;
+      if (rec.estado === "ocupada") counts[tipo].ocupada++;
+      else counts[tipo].disponible++;
+    }
+    counts.total.total++;
+    if (rec.estado === "ocupada") counts.total.ocupada++;
+    else counts.total.disponible++;
+  }
+
+  // 1. Contador total en la cápsula
+  const elTotal = document.getElementById("hud_total_count");
+  if (elTotal) {
+    elTotal.textContent = `${counts.total.disponible}/${counts.total.total} LIBRES`;
+    if (counts.total.disponible === 0) {
+      elTotal.style.color = "#ef4444";
+      elTotal.style.textShadow = "0 0 10px rgba(239, 68, 68, 0.6)";
+    } else if (counts.total.disponible <= 3) {
+      elTotal.style.color = "#f59e0b";
+      elTotal.style.textShadow = "0 0 10px rgba(245, 158, 11, 0.6)";
+    } else {
+      elTotal.style.color = "#4ade80";
+      elTotal.style.textShadow = "0 0 10px rgba(74, 222, 128, 0.5)";
+    }
+  }
+
+  // 2. Chips en la cápsula flotante
+  const setPillChip = (elId, disp, tot, icon) => {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.textContent = `${icon} ${disp}/${tot}`;
+    if (disp === 0) {
+      el.style.background = "rgba(239, 68, 68, 0.85)";
+      el.style.color = "#ffffff";
+      el.style.borderColor = "#f87171";
+    } else {
+      el.style.background = "";
+      el.style.color = "";
+      el.style.borderColor = "";
+    }
+  };
+
+  setPillChip("pill_chip_sop", counts.quirofano.disponible, counts.quirofano.total, "🔪");
+  setPillChip("pill_chip_obs", counts.observacion.disponible, counts.observacion.total, "🛏️");
+  setPillChip("pill_chip_st", counts.shock_trauma.disponible, counts.shock_trauma.total, "⚡");
+  setPillChip("pill_chip_urpa", counts.urpa.disponible, counts.urpa.total, "🛌");
+  setPillChip("pill_chip_uci", counts.uci.disponible, counts.uci.total, "🏥");
+
+  // 3. Filas en el panel desplegable
+  const setDrawerCount = (elId, disp, tot) => {
+    const el = document.getElementById(elId);
+    if (el) el.textContent = `${disp} / ${tot} Libres`;
+  };
+
+  setDrawerCount("hud_sop_count", counts.quirofano.disponible, counts.quirofano.total);
+  setDrawerCount("hud_obs_count", counts.observacion.disponible, counts.observacion.total);
+  setDrawerCount("hud_st_count", counts.shock_trauma.disponible, counts.shock_trauma.total);
+  setDrawerCount("hud_urpa_count", counts.urpa.disponible, counts.urpa.total);
+  setDrawerCount("hud_uci_count", counts.uci.disponible, counts.uci.total);
+}
+
 
 // RENDERIZADO DEL TABLERO EN MÓDULO 6 Y EN EL MODAL FLOTANTE
 function renderizarTableroCamasYQuirofanos(filtro = null, targetContainerId = "camas_stock_grid") {
@@ -7511,3 +7609,5 @@ window.liberarCamaActualManual = liberarCamaActualManual;
 window.renderizarTableroCamasYQuirofanos = renderizarTableroCamasYQuirofanos;
 window.renderizarMonitorObservacionModulo5 = renderizarMonitorObservacionModulo5;
 window.autoGuardarCambioEnHistoriaClinica = autoGuardarCambioEnHistoriaClinica;
+window.toggleDrawerFlotante = toggleDrawerFlotante;
+window.actualizarWidgetFlotanteCamas = actualizarWidgetFlotanteCamas;

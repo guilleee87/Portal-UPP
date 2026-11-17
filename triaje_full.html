@@ -693,6 +693,154 @@
 
     /* Ocultar canvas/diagrama para flujo clínico full width */
     .flowchart-canvas-pane { display: none !important; }
+  
+    /* ===== WIDGET FLOTANTE DE DISPONIBILIDAD HOSPITALARIA (HUD EN VIVO) ===== */
+    .widget-flotante-camas {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      z-index: 9995;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      animation: floatWidgetSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes floatWidgetSlide {
+      from { transform: translateY(40px) scale(0.9); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .widget-flotante-pill {
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 2px solid #22c55e;
+      border-radius: 9999px;
+      padding: 8px 16px;
+      box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.5), 0 0 25px rgba(34, 197, 94, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.25s ease;
+    }
+    .widget-flotante-pill:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 16px 40px -5px rgba(0, 0, 0, 0.6), 0 0 32px rgba(34, 197, 94, 0.6);
+      border-color: #4ade80;
+    }
+    .widget-beacon {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+    }
+    .widget-beacon-dot {
+      width: 10px;
+      height: 10px;
+      background-color: #22c55e;
+      border-radius: 50%;
+      z-index: 2;
+    }
+    .widget-beacon-ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background-color: rgba(34, 197, 94, 0.6);
+      animation: beaconRipple 1.8s infinite cubic-bezier(0, 0.2, 0.8, 1);
+      z-index: 1;
+    }
+    @keyframes beaconRipple {
+      0% { transform: scale(0.8); opacity: 1; }
+      100% { transform: scale(2.8); opacity: 0; }
+    }
+    .widget-total-count {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: #4ade80;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0.5px;
+      text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+      white-space: nowrap;
+    }
+    .widget-chip-tipo {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .widget-chip-sop {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+    .widget-chip-obs {
+      background: rgba(234, 179, 8, 0.2);
+      color: #fde047;
+      border: 1px solid rgba(234, 179, 8, 0.5);
+    }
+    .widget-chip-st {
+      background: rgba(249, 115, 22, 0.2);
+      color: #fdba74;
+      border: 1px solid rgba(249, 115, 22, 0.5);
+    }
+    .widget-chip-urpa {
+      background: rgba(34, 197, 94, 0.2);
+      color: #86efac;
+      border: 1px solid rgba(34, 197, 94, 0.5);
+    }
+    .widget-chip-uci {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.5);
+    }
+
+    /* Tarjeta desplegable HUD con detalle */
+    .widget-panel-drawer {
+      display: none;
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 2px solid #22c55e;
+      border-radius: 16px;
+      padding: 16px;
+      width: 330px;
+      box-shadow: 0 20px 45px -5px rgba(0, 0, 0, 0.65), 0 0 30px rgba(34, 197, 94, 0.35);
+      margin-bottom: 10px;
+      color: #ffffff;
+      animation: drawerSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes drawerSlideUp {
+      from { transform: translateY(15px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .widget-panel-drawer.open {
+      display: block;
+    }
+    .widget-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    .widget-row-tipo {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.8rem;
+    }
+
   </style>
 </head>
 <body>
@@ -2534,6 +2682,103 @@
         </div>
       </div>
     </div>
+  </div>
+
+
+  <!-- ==========================================================================
+       BOTÓN FLOTANTE HUD DE DISPONIBILIDAD DE CAMAS Y QUIRÓFANOS (STICKY FLOTANTE)
+       Sigue al usuario mientras baja/sube por la web con contadores en tiempo real
+       ========================================================================== -->
+  <div class="widget-flotante-camas" id="widgetFlotanteCamasContainer">
+    
+    <!-- PANEL DESPLEGABLE CON EL DESGLOSE DETALLADO -->
+    <div class="widget-panel-drawer" id="widgetPanelDrawer">
+      <div class="widget-drawer-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.3rem;">🛏️</span>
+          <div>
+            <strong style="font-size:0.88rem; color:#ffffff;">Disponibilidad en Tiempo Real</strong>
+            <div style="font-size:0.7rem; color:#94a3b8;">Monitoreo activo según tipo de área</div>
+          </div>
+        </div>
+        <button type="button" onclick="toggleDrawerFlotante(event)" style="background:none; border:none; color:#94a3b8; font-size:1.3rem; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <!-- DESGLOSE POR TIPO -->
+      <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:12px;">
+        <div class="widget-row-tipo">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span>🔪</span> <span>Quirófanos (SOP)</span>
+          </span>
+          <span class="widget-chip-tipo widget-chip-sop" id="hud_sop_count">3 / 3 Libres</span>
+        </div>
+        <div class="widget-row-tipo">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span>🛏️</span> <span>Sala Observación</span>
+          </span>
+          <span class="widget-chip-tipo widget-chip-obs" id="hud_obs_count">6 / 6 Libres</span>
+        </div>
+        <div class="widget-row-tipo">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span>⚡</span> <span>Shock Trauma</span>
+          </span>
+          <span class="widget-chip-tipo widget-chip-st" id="hud_st_count">2 / 2 Libres</span>
+        </div>
+        <div class="widget-row-tipo">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span>🛌</span> <span>Sala URPA (Recup.)</span>
+          </span>
+          <span class="widget-chip-tipo widget-chip-urpa" id="hud_urpa_count">2 / 2 Libres</span>
+        </div>
+        <div class="widget-row-tipo">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span>🏥</span> <span>Cuidados Críticos UCI</span>
+          </span>
+          <span class="widget-chip-tipo widget-chip-uci" id="hud_uci_count">2 / 2 Libres</span>
+        </div>
+      </div>
+
+      <!-- ACCIONES DIRECTAS DESDE EL HUD -->
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn-full-primary" style="flex:1; font-size:0.75rem; padding:6px 8px; background:#16a34a; border-color:#22c55e;" onclick="abrirModalTableroCamas()">
+          🔍 Ver Mapa Completo
+        </button>
+        <button type="button" class="btn-full-secondary" style="font-size:0.75rem; padding:6px 8px; color:#ffffff; border-color:rgba(255,255,255,0.3);" onclick="irAModulo(6); toggleDrawerFlotante();">
+          ⚡ Ir a Módulo 6
+        </button>
+      </div>
+    </div>
+
+    <!-- BOTÓN CÁPSULA FLOTANTE ULTRA-LLAMATIVO (JALA LA MIRADA) -->
+    <div class="widget-flotante-pill" id="widgetFlotantePill" onclick="toggleDrawerFlotante(event)" title="Haga clic para ver el desglose en tiempo real de camas y quirófanos">
+      <div class="widget-beacon">
+        <div class="widget-beacon-ring"></div>
+        <div class="widget-beacon-dot"></div>
+      </div>
+      
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:1.15rem;">🛏️</span>
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:0.62rem; color:#94a3b8; font-weight:800; letter-spacing:0.8px; text-transform:uppercase;">DISPONIBILIDAD HOSPITALARIA</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="widget-total-count" id="hud_total_count">15/15 LIBRES</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHIPS RÁPIDOS POR TIPO EN LA CÁPSULA (SIEMPRE VISIBLES) -->
+      <div style="display:flex; align-items:center; gap:4px; border-left:1px solid rgba(255,255,255,0.18); padding-left:10px;">
+        <span class="widget-chip-tipo widget-chip-sop" id="pill_chip_sop" title="Quirófanos SOP">🔪 3/3</span>
+        <span class="widget-chip-tipo widget-chip-obs" id="pill_chip_obs" title="Camas Observación">🛏️ 6/6</span>
+        <span class="widget-chip-tipo widget-chip-st" id="pill_chip_st" title="Shock Trauma">⚡ 2/2</span>
+        <span class="widget-chip-tipo widget-chip-urpa" id="pill_chip_urpa" title="Sala URPA">🛌 2/2</span>
+        <span class="widget-chip-tipo widget-chip-uci" id="pill_chip_uci" title="Camas UCI">🏥 2/2</span>
+      </div>
+
+      <!-- FLECHA INDICADORA -->
+      <span id="widget_drawer_arrow" style="color:#22c55e; font-size:0.85rem; transition:transform 0.25s ease;">▲</span>
+    </div>
+
   </div>
 
 </body>
