@@ -1444,53 +1444,62 @@
           </div>
         </div>
 
-        <!-- SELECTOR DE ENTORNO ASISTENCIAL SEPARADO EN: HOSPITAL MINSA (SIS), HOSPITAL ESSALUD, CLÍNICA PRIVADA (EPS) & PARTICULAR (SIN SEGURO) -->
+        <!-- SELECTOR DE ENTORNO ASISTENCIAL (INMUTABLE / BLOQUEADO A LA ESPERA DE MÓDULO 3) -->
         <div style="margin-top: 14px; margin-bottom: 14px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
             <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
               <span>🏢</span>
               <span>Entorno del Establecimiento Asistencial (Selección Automática por Base de Datos):</span>
             </div>
-            <span id="badge_entorno_actual" style="font-size: 0.74rem; padding: 3px 10px; border-radius: 9999px; background: #e0f2fe; color: #0369a1; font-weight: 800; border: 1px solid #bae6fd;">
-              🏛️ Hospital MINSA (SIS)
+            <span id="badge_entorno_actual" style="font-size: 0.74rem; padding: 3px 10px; border-radius: 9999px; background: #f1f5f9; color: #64748b; font-weight: 800; border: 1px dashed #cbd5e1;">
+              🔒 En espera de selección en Módulo 3
             </span>
           </div>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
             <!-- 1. HOSPITAL MINSA (SIS) -->
-            <button type="button" id="btn_entorno_minsa" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('minsa_sis', true)" style="border-color: #0284c7; background: #f0f9ff; color: #0369a1; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <button type="button" id="btn_entorno_minsa" class="btn-full-secondary btn-entorno-lock" onclick="advertirEntornoBloqueado()" disabled style="border-color: #e2e8f0; background: #f8fafc; color: #94a3b8; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: not-allowed; opacity: 0.75; pointer-events: auto;">
               <span style="font-size: 20px;">🏛️</span>
               <div>
                 <strong style="display: block;">Hospital MINSA (SIS)</strong>
-                <span style="font-size: 0.7rem; color: #0369a1; font-weight: normal;">Régimen estatal FUA · 100% Pago Cero</span>
+                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: normal;">Régimen estatal FUA · 100% Pago Cero</span>
               </div>
             </button>
             <!-- 2. HOSPITAL ESSALUD -->
-            <button type="button" id="btn_entorno_essalud" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('essalud', true)" style="border-color: #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <button type="button" id="btn_entorno_essalud" class="btn-full-secondary btn-entorno-lock" onclick="advertirEntornoBloqueado()" disabled style="border-color: #e2e8f0; background: #f8fafc; color: #94a3b8; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: not-allowed; opacity: 0.75; pointer-events: auto;">
               <span style="font-size: 20px;">🏥</span>
               <div>
                 <strong style="display: block;">Hospital EsSalud</strong>
-                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Seguro Social ESSI · 100% Pago Cero</span>
+                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: normal;">Seguro Social ESSI · 100% Pago Cero</span>
               </div>
             </button>
             <!-- 3. CLÍNICA PRIVADA (EPS) -->
-            <button type="button" id="btn_entorno_clinica_eps" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('clinica_eps', true)" style="border-color: #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <button type="button" id="btn_entorno_clinica_eps" class="btn-full-secondary btn-entorno-lock" onclick="advertirEntornoBloqueado()" disabled style="border-color: #e2e8f0; background: #f8fafc; color: #94a3b8; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: not-allowed; opacity: 0.75; pointer-events: auto;">
               <span style="font-size: 20px;">🏢</span>
               <div>
                 <strong style="display: block;">Clínica Privada (EPS)</strong>
-                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Pacífico, Rímac · Urgencia S/. 80 + 10% farmacia</span>
+                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: normal;">Pacífico, Rímac · Urgencia S/. 80 + 10% farmacia</span>
               </div>
             </button>
             <!-- 4. SIN SEGURO (PARTICULAR) -->
-            <button type="button" id="btn_entorno_particular" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('particular', true)" style="border-color: #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <button type="button" id="btn_entorno_particular" class="btn-full-secondary btn-entorno-lock" onclick="advertirEntornoBloqueado()" disabled style="border-color: #e2e8f0; background: #f8fafc; color: #94a3b8; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: not-allowed; opacity: 0.75; pointer-events: auto;">
               <span style="font-size: 20px;">👤</span>
               <div>
                 <strong style="display: block;">Sin Seguro (Particular)</strong>
-                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Sin cobertura activa · Paciente paga el 100%</span>
+                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: normal;">Sin cobertura activa · Paciente paga el 100%</span>
               </div>
             </button>
           </div>
-          <!-- BANNERS INFORMATIVOS DE CONDICIÓN SEGÚN EL ENTORNO -->
-          <div id="banner_condicion_minsa" style="display: block; margin-top: 10px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 10px 12px; font-size: 0.76rem; color: #166534; line-height: 1.45;">
+
+          <!-- BANNER PENDIENTE DE ACREDITACIÓN EN MÓDULO 3 -->
+          <div id="banner_entorno_pendiente" style="display: flex; align-items: center; gap: 10px; margin-top: 10px; background: #f1f5f9; border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 10px 14px; font-size: 0.76rem; color: #475569;">
+            <span style="font-size: 1.3rem;">🔒</span>
+            <div>
+              <strong>Selección Bloqueada e Inmutable:</strong> El régimen del establecimiento y la IAFAS aseguradora se asignan automáticamente al validar el documento en el <strong>Módulo 3: Acreditación PIDE-SUSALUD &amp; SOAT</strong>. No puede ser alterado manualmente.
+            </div>
+          </div>
+
+          <!-- BANNERS INFORMATIVOS DE CONDICIÓN SEGÚN EL ENTORNO (INICIALMENTE TODOS OCULTOS) -->
+          <div id="banner_condicion_minsa" style="display: none; margin-top: 10px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 10px 12px; font-size: 0.76rem; color: #166534; line-height: 1.45;">
             <strong>🏛️ RÉGIMEN PÚBLICO MINSA (SIS GRATUITO):</strong> Paciente acreditado en SIS. Cobertura integral 100% mediante Formato Único de Atención (FUA). Consulta, procedimientos, tópicos, cama, medicamentos, imágenes y laboratorio con cobro S/. 0.00 (Pago Cero).
           </div>
           <div id="banner_condicion_essalud" style="display: none; margin-top: 10px; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 8px; padding: 10px 12px; font-size: 0.76rem; color: #1e40af; line-height: 1.45;">

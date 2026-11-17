@@ -8421,3 +8421,6 @@ if (document.readyState === 'loading') {
 } else {
   setTimeout(inicializarTableroColaPacientes, 200);
 }
+
+window.advertirEntornoBloqueado = advertirEntornoBloqueado;
+window.resetearEntornoEstablecimientoAPendiente = resetearEntornoEstablecimientoAPendiente;
