@@ -3361,6 +3361,9 @@ function asignarCama() {
 
   registrarFacturaItem(`Cama: ${tipoCama}`, tipoCama === "UCI" ? 500 : (tipoCama === "Trauma Shock" ? 300 : 150), "Hospitalización");
   renderizarStockCamas();
+  if (typeof actualizarWidgetFlotanteCamas === "function") {
+    actualizarWidgetFlotanteCamas();
+  }
   registrarTimestamp("M4_cama");
   avanzarRuta(1);
 }
@@ -3372,8 +3375,12 @@ function liberarCama() {
   const tipoCama = mapPrioACama[STATE.prioridad] || "Observación";
   STOCK_CAMAS[tipoCama].disponible = Math.min(STOCK_CAMAS[tipoCama].disponible + 1, STOCK_CAMAS[tipoCama].total);
   STATE.camaAsignada = null;
-  document.getElementById("camaAsignadaDisplay").style.display = "none";
+  const elDisp = document.getElementById("camaAsignadaDisplay");
+  if (elDisp) elDisp.style.display = "none";
   renderizarStockCamas();
+  if (typeof actualizarWidgetFlotanteCamas === "function") {
+    actualizarWidgetFlotanteCamas();
+  }
 }
 
 
@@ -6528,6 +6535,10 @@ function actualizarTelemetriaDomCronometros(disponibles, ocupadas) {
       el.style.width = `${rec.progresoPct.toFixed(1)}%`;
     });
   }
+
+  if (typeof actualizarWidgetFlotanteCamas === "function") {
+    actualizarWidgetFlotanteCamas();
+  }
 }
 
 // RENDERIZADO DEL TABLERO EN MÓDULO 6 Y EN EL MODAL FLOTANTE
@@ -6703,6 +6714,9 @@ function asignarPacienteActualARecurso(idRecurso, duracionManual = null, motivoM
   }
   renderizarMonitorObservacionModulo5();
   actualizarFactura();
+  if (typeof actualizarWidgetFlotanteCamas === "function") {
+    actualizarWidgetFlotanteCamas();
+  }
 
   alert(`✅ ASIGNACIÓN CONFIRMADA:\n\n${rec.nombre}\nPaciente: ${rec.paciente.nombre}\nEstancia programada: ${horas} horas (${rec.norma})\n\nEl contador en tiempo real ha iniciado.`);
 }
@@ -6770,6 +6784,9 @@ function liberarCamaRecurso(idRecurso, motivoSalida = "Alta Médica") {
     renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "modal_camas_stock_grid");
   }
   renderizarMonitorObservacionModulo5();
+  if (typeof actualizarWidgetFlotanteCamas === "function") {
+    actualizarWidgetFlotanteCamas();
+  }
 
   alert(`🔓 RECURSO LIBERADO:\n\n${rec.nombre} ha quedado libre.\nMotivo: ${motivoSalida} de ${pacienteNombre}.\nLa cama se encuentra disponible para nueva asignación.`);
 }
@@ -6801,6 +6818,9 @@ function liberarRecursoPorExpiracion(idRecurso) {
     renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "modal_camas_stock_grid");
   }
   renderizarMonitorObservacionModulo5();
+  if (typeof actualizarWidgetFlotanteCamas === "function") {
+    actualizarWidgetFlotanteCamas();
+  }
 
   alert(`⏰ TIEMPO DE OBSERVACIÓN COMPLETADO:\n\nLa cama ${rec.nombre} ha cumplido sus ${horasTot} horas de estancia programada para el paciente ${nombrePac}.\n\n✅ La cama ha sido liberada automáticamente conforme a la NTS N° 042-MINSA y se encuentra disponible para admisión.`);
 }
@@ -7513,7 +7533,7 @@ function actualizarWidgetFlotanteCamas() {
   // 1. Contador total en la cápsula
   const elTotal = document.getElementById("hud_total_count");
   if (elTotal) {
-    elTotal.textContent = `${counts.total.disponible}/${counts.total.total} LIBRES`;
+    elTotal.innerHTML = `${counts.total.disponible}/${counts.total.total}<span class="widget-libres-label"> LIBRES</span>`;
     if (counts.total.disponible === 0) {
       elTotal.style.color = "#ef4444";
       elTotal.style.textShadow = "0 0 10px rgba(239, 68, 68, 0.6)";
