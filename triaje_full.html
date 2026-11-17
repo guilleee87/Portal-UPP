@@ -841,6 +841,82 @@
       font-size: 0.8rem;
     }
 
+  
+    /* ==========================================================================
+       OPTIMIZACIONES MÓVILES AVANZADAS (MOBILE-FIRST ERGONOMICS & UX)
+       ========================================================================== */
+    @media (max-width: 768px) {
+      /* Encabezados y barras principales */
+      .hero-header { padding: 12px 14px; }
+      .header-title-row h1 { font-size: 1.15rem; line-height: 1.25; }
+      .cloud-status-badge { font-size: 0.68rem; padding: 2px 6px; }
+      .top-steps-navbar { top: 0; padding: 6px 10px; }
+      .top-steps-scroll { gap: 4px; padding-bottom: 4px; }
+      .top-step-btn { padding: 5px 9px; font-size: 0.72rem; }
+      .navbar-mini-stats { display: none; } /* En móvil se usa el widget compacto de camas */
+
+      /* Contenedor principal */
+      .main-app-container { padding: 0 10px; margin: 10px auto 40px; }
+      .module-section { margin-bottom: 12px; border-radius: 10px; }
+      .module-section-header { padding: 12px 14px; }
+      .module-section-title { font-size: 0.92rem; }
+      .module-section-subtitle { font-size: 0.72rem; }
+      .module-section-body { padding: 12px 14px; }
+
+      /* Formularios ergonómicos para móvil: 1 columna y botones grandes */
+      .form-grid-2, .form-grid-3, .form-grid-4, .prioridad-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
+      }
+      .input-full, select.input-full {
+        font-size: 16px !important; /* Previene auto-zoom molesto en iPhone / Android */
+        min-height: 46px;
+        padding: 10px 12px;
+        border-radius: 8px;
+      }
+      .btn-full-primary, .btn-full-secondary, .btn-panico-shock {
+        min-height: 46px;
+        padding: 12px 14px;
+        font-size: 0.92rem;
+        border-radius: 8px;
+        justify-content: center;
+      }
+      .modalidad-btn { flex: 1 1 calc(50% - 6px); }
+
+      /* Tablas clínicas con scroll suave sin romper el ancho de pantalla */
+      .kardex-table-wrap, table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* WIDGET FLOTANTE DE CAMAS COMPACTO EN MÓVIL (NO TAPA BOTONES) */
+      .widget-flotante-camas {
+        bottom: 12px;
+        right: 12px;
+      }
+      .widget-flotante-pill {
+        padding: 6px 12px;
+        gap: 8px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+      }
+      .widget-chips-container {
+        display: none !important; /* Oculta chips largos en móvil */
+      }
+      .widget-total-count {
+        font-size: 0.92rem;
+      }
+
+      /* Modales ajustados a pantallas pequeñas */
+      .modal-hc-container {
+        width: 95vw !important;
+        max-height: 90vh !important;
+        padding: 16px !important;
+        margin: 10px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -893,7 +969,7 @@
         <span class="step-circle">7</span> 7. Egreso &amp; Auditoría Legal
       </a>
       <a href="#sec_mod8" class="top-step-btn" id="btnStepTop_8" onclick="irAModulo(8)">
-        <span class="step-circle">8</span> 8. Facturación Acumulativa
+        <span class="step-circle">8</span> 8. Cierre &amp; Facturación Post-Estabilización
       </a>
 
       <div class="navbar-mini-stats">
@@ -904,9 +980,9 @@
         <span class="mini-chip" id="mini_soat_badge" style="display:none; background:#fff7ed; color:#c2410c; border-color:#fb923c;">
           🚗 SOAT Saldo: S/. 27,500.00
         </span>
-        <span class="mini-chip" id="factura_total_mini" style="background:#0f172a; color:#ffffff;">
-          💰 S/. 0.00
-        </span>
+        <a href="facturacion.html" target="_blank" class="mini-chip" id="btn_nav_facturacion" style="background:#0284c7; color:#ffffff; text-decoration:none; font-weight:800; cursor:pointer;" title="Acceder a la Unidad de Facturación Post-Estabilización (D.S. 016-2002-SA)">
+          🧾 Facturación Post-Estabilización ↗
+        </a>
       </div>
     </div>
   </nav>
@@ -1665,7 +1741,6 @@
               <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
                 <th style="padding:8px 10px; text-align:left;">Ítem / Fármaco Prescrito</th>
                 <th style="padding:8px 10px; text-align:left;">Dosis / Vía / Horario</th>
-                <th style="padding:8px 10px; text-align:right; width:80px;">Costo</th>
                 <th style="padding:8px 10px; text-align:center; width:210px;">Acción de Enfermería (Kardex)</th>
               </tr>
             </thead>
@@ -1714,7 +1789,6 @@
                 <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
                   <th style="padding:8px 10px; text-align:left;">Prueba Analítica Solicitada</th>
                   <th style="padding:8px 10px; text-align:left; width:160px;">Prioridad / Muestra</th>
-                  <th style="padding:8px 10px; text-align:right; width:80px;">Costo</th>
                   <th style="padding:8px 10px; text-align:center; width:160px;">Estado de Procesamiento</th>
                 </tr>
               </thead>
@@ -1761,7 +1835,6 @@
                 <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
                   <th style="padding:8px 10px; text-align:left;">Estudio Radiológico / Procedimiento</th>
                   <th style="padding:8px 10px; text-align:left; width:160px;">Indicación Médica</th>
-                  <th style="padding:8px 10px; text-align:right; width:80px;">Costo</th>
                   <th style="padding:8px 10px; text-align:center; width:160px;">Estado de Realización</th>
                 </tr>
               </thead>
@@ -2053,10 +2126,10 @@
               <div class="form-field" style="margin-bottom:0;">
                 <label for="select_cirugia_catalogo">Tipo de Procedimiento Quirúrgico:</label>
                 <select id="select_cirugia_catalogo" class="input-full" style="font-weight:700;">
-                  <option value="Laparotomía Exploratoria y Cirugía de Control de Daños|850">Laparotomía Exploratoria / Control de Daños (S/. 850.00)</option>
-                  <option value="Apendicectomía de Emergencia por Peritonitis|650">Apendicectomía de Urgencia por Peritonitis (S/. 650.00)</option>
+                  <option value="Laparotomía Exploratoria y Cirugía de Control de Daños|850">Laparotomía Exploratoria y Cirugía de Control de Daños</option>
+                  <option value="Apendicectomía de Emergencia por Peritonitis|650">Apendicectomía de Urgencia por Peritonitis Aguda</option>
                   <option value="Toracotomía de Urgencia / Drenaje Torácico Sellado|720">Toracotomía de Emergencia / Drenaje Torácico (S/. 720.00)</option>
-                  <option value="Cesárea de Emergencia por Sufrimiento Fetal|780">Cesárea de Emergencia por Sufrimiento Fetal (S/. 780.00)</option>
+                  <option value="Cesárea de Emergencia por Sufrimiento Fetal|780">Cesárea de Emergencia por Sufrimiento Fetal Agudo</option>
                   <option value="Craneotomía Descompresiva por Hematoma Epidural/Subdural|1200">Craneotomía Descompresiva por Hematoma Epidural (S/. 1,200.00)</option>
                   <option value="Reducción Quirúrgica y Fijación de Fractura Expuesta|890">Reducción Quirúrgica y Fijación de Fractura Expuesta (S/. 890.00)</option>
                   <option value="Lavado Quirúrgico y Debridación de Trauma Complejo|420">Lavado Quirúrgico y Debridación de Trauma Complejo (S/. 420.00)</option>
@@ -2070,7 +2143,7 @@
                 </select>
               </div>
               <button type="button" class="btn-full-primary" style="height:38px; background:#ea580c; border-color:#c2410c; white-space:nowrap; font-weight:700;" onclick="ejecutarOrdenQuirurgicaEmergencia()">
-                + Ordenar Cirugía &amp; Facturar
+                + Programar Procedimiento Quirúrgico de Emergencia
               </button>
             </div>
             <div id="status_cirugia_display" style="margin-top:8px; font-size:0.75rem; color:#475569;"></div>
@@ -2343,139 +2416,84 @@
         <div class="module-section-title">
           <span class="module-num-badge">8</span>
           <div>
-            <div>Módulo 8: Facturación Acumulativa, Liquidación &amp; Auditoría Legal</div>
-            <div class="module-section-subtitle">Ley N° 29414 y D.S. N° 027-2015-SA (SUSALUD) · D.S. N° 024-2002-MTC (SOAT 5 UIT) · Cierre Financiero y Auditoría</div>
+            <div>Módulo 8: Cierre Clínico, Trazabilidad &amp; Derivación a Facturación Post-Estabilización</div>
+            <div class="module-section-subtitle">Ley N° 27604 y D.S. N° 016-2002-SA (Liquidación Post-Estabilización) · Auditoría TEDEF-SUSALUD</div>
           </div>
         </div>
         <span class="toggle-arrow open" id="arrow_mod8">▼</span>
       </div>
       <div class="module-section-body open" id="body_mod8">
 
-        <div class="norma-pill-banner">
-          <span class="norma-tag">TEDEF-SUSALUD</span>
-          <span><strong>Liquidación Financiera Exacta:</strong> Consolidación de los 6 escenarios normativos peruanos (SOAT con tope 5 UIT, Fuga, SIS FUA, EsSalud ESSI, EPS Copago y Particular).</span>
+        <!-- ALERTA LEGAL OFICIAL LEY 27604 Y D.S. 016-2002-SA -->
+        <div class="norma-pill-banner" style="background:#f0fdf4; border-color:#86efac; color:#166534; padding:16px;">
+          <span class="norma-tag" style="background:#16a34a; color:#fff;">D.S. N° 016-2002-SA Art. 12° y 14°</span>
+          <span>
+            <strong>Principio de Estabilización Primero, Facturación Después:</strong> 
+            El triaje y la atención de emergencia están diseñados exclusivamente para salvar la vida y estabilizar al paciente. Ningún cobro o liquidación monetaria puede condicionar o interferir con el acto médico. La liquidación financiera, auditoría de cobertura (SIS, EsSalud, EPS o SOAT) y emisión de comprobantes se realiza en la <strong>Unidad de Facturación Post-Estabilización</strong>.
+          </span>
         </div>
 
-        <!-- TABLA DE CONSUMO FACTURADO ACUMULATIVO -->
-        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:16px; margin-bottom:16px;">
-          <h4 style="margin:0 0 10px; font-size:0.9rem; color:#0f172a;">📊 Estado de Cuenta Hospitalaria Detallada:</h4>
-          <table class="modal-hc-table" id="tabla_facturacion_full">
-            <thead>
-              <tr>
-                <th>Concepto / Procedimiento / Fármaco</th>
-                <th>Categoría</th>
-                <th>Costo Bruto</th>
-                <th>Cobertura Aplicable</th>
-                <th>A Cargo del Paciente</th>
-              </tr>
-            </thead>
-            <tbody id="factura_items_body">
-              <tr>
-                <td>Atención Inicial de Triaje y Admisión de Emergencia</td>
-                <td>Triaje</td>
-                <td>S/. 30.00</td>
-                <td id="fac_cob_triaje">100% Cubierto</td>
-                <td id="fac_pac_triaje">S/. 0.00</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- RESUMEN CLÍNICO DE TRANSFERENCIA / EPICRISIS -->
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:18px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <h4 style="margin:0; font-size:0.95rem; color:#0f172a; font-weight:800;">
+              📋 Resumen Clínico de Atención de Emergencia para Auditoría:
+            </h4>
+            <span style="font-size:0.75rem; font-weight:800; background:#e0f2fe; color:#0369a1; padding:3px 10px; border-radius:9999px;">
+              Expediente Clínico Listo
+            </span>
+          </div>
 
-          <!-- RESUMEN ECONÓMICO FINAL -->
-          <div style="border-top:2px solid #e2e8f0; margin-top:14px; padding-top:14px; display:flex; flex-direction:column; gap:6px;">
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-              <span>Total Facturado Bruto Acumulado:</span>
-              <strong id="factura_subtotal_bruto">S/. 30.00</strong>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; font-size:0.84rem; margin-bottom:14px;">
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.72rem; color:#64748b; font-weight:700;">PACIENTE</div>
+              <strong id="m8_disp_nombre" style="color:#0f172a;">Paciente en Atención</strong>
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#16a34a;">
-              <span>Cobertura Asumida por Aseguradora / SOAT / SIS / EsSalud:</span>
-              <strong id="factura_cobertura_monto">- S/. 30.00</strong>
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.72rem; color:#64748b; font-weight:700;">HISTORIA CLÍNICA</div>
+              <strong id="m8_disp_hc" style="color:#0284c7;">HC-2026-—</strong>
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#b45309;" id="factura_deducible_row">
-              <span>Copago / Deducible del Paciente:</span>
-              <strong id="factura_deducible_monto">S/. 0.00</strong>
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.72rem; color:#64748b; font-weight:700;">PRIORIDAD ASIGNADA</div>
+              <strong id="m8_disp_prio" style="color:#ea580c;">Por evaluar</strong>
             </div>
-            <div style="border-top:2px solid #0f172a; padding-top:8px; margin-top:4px; display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size:1.05rem; font-weight:900;">TOTAL A PAGAR POR EL PACIENTE:</span>
-              <span style="font-size:1.35rem; font-weight:900; color:#16a34a;" id="factura_total_paciente">
-                S/. 0.00 (PAGO CERO — CUBIERTO AL 100%)
-              </span>
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.72rem; color:#64748b; font-weight:700;">SEGURO ACREDITADO</div>
+              <strong id="m8_disp_seguro" style="color:#15803d;">Sin acreditar</strong>
+            </div>
+          </div>
+
+          <!-- BOTÓN PRINCIPAL DESTACADO: ENLACE A FACTURACION.HTML -->
+          <div style="background:linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border:2px solid #38bdf8; border-radius:10px; padding:20px; text-align:center; margin:16px 0;">
+            <div style="font-size:0.85rem; color:#0369a1; font-weight:700; margin-bottom:6px;">
+              🏛️ UNIDAD DE FACTURACIÓN, CONVENIOS &amp; AUDITORÍA TEDEF-SUSALUD
+            </div>
+            <div style="font-size:1.05rem; font-weight:900; color:#0f172a; margin-bottom:12px;">
+              La atención médica ha concluido. El expediente ha sido derivado al área administrativa para liquidación de cobertura.
+            </div>
+            <a href="facturacion.html" target="_blank" class="btn-full-primary" style="display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:14px 28px; font-size:1.05rem; font-weight:800; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#ffffff; text-decoration:none; border-radius:8px; box-shadow:0 6px 20px rgba(2,132,199,0.35); cursor:pointer;">
+              🧾 Abrir Portal de Facturación &amp; Liquidación Post-Estabilización ↗
+            </a>
+            <div style="font-size:0.75rem; color:#64748b; margin-top:8px;">
+              (Abre en subdominio / portal especializado sin interrumpir las pantallas médicas)
             </div>
           </div>
         </div>
 
-        <!-- SUSTENTO DE AUDITORÍA LEGAL Y NORMATIVA PERUANA -->
-        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:14px; margin-bottom:16px;">
-          <h4 style="margin:0 0 8px; font-size:0.85rem; color:#0f172a;">
-            🏛️ Sustento Normativo Peruano Oficial (Matriz de Defensa en Auditoría Hospitalaria):
-          </h4>
-          <table class="legal-audit-table">
-            <thead>
-              <tr>
-                <th style="width:160px;">Norma Legal</th>
-                <th style="width:220px;">Nombre Oficial</th>
-                <th>Regulación y Justificación dentro del HIS</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Ley N° 27604 y D.S. N° 016-2002-SA</strong></td>
-                <td>Ley de Emergencia y Partos</td>
-                <td>Prohíbe exigir DNI o pago previo antes de Triaje y Shock Trauma. Regula notificación policial a pacientes NN.</td>
-              </tr>
-              <tr>
-                <td><strong>D.S. N° 024-2002-MTC</strong></td>
-                <td>TUO Reglamento Nacional SOAT</td>
-                <td>Tope legal de 5 UIT para gastos médicos por placa. En caso de fuga / no identificado, cobra el 100% al paciente.</td>
-              </tr>
-              <tr>
-                <td><strong>NTS N° 042-MINSA/DGSP-V.01</strong></td>
-                <td>Norma Técnica de Servicios de Emergencia</td>
-                <td>Regula la puerta de entrada universal en Triaje, las 5 prioridades y el límite de estancia en Observación (12-24h).</td>
-              </tr>
-              <tr>
-                <td><strong>NTS N° 031-MINSA/DGSP-V.01</strong></td>
-                <td>Norma Técnica de Cuidados Intensivos</td>
-                <td>Establece la Priorización de Camas UCI 1 al 4 y el algoritmo matemático de desempate fisiológico ABCDE.</td>
-              </tr>
-              <tr>
-                <td><strong>Ley N° 26842 (Art. 4°)</strong></td>
-                <td>Ley General de Salud</td>
-                <td>Regula el Alta Voluntaria (retiro bajo responsabilidad con exoneración civil y penal de la clínica).</td>
-              </tr>
-              <tr>
-                <td><strong>Código Procesal Penal (Art. 195°)</strong></td>
-                <td>Levantamiento de Cadáver</td>
-                <td>Candado médico-legal: Prohíbe SINADEF en muerte por accidente de tránsito o &lt;24h sin diagnóstico; deriva a Fiscalía.</td>
-              </tr>
-              <tr>
-                <td><strong>Ley N° 27408 y Ley N° 28683</strong></td>
-                <td>Ley de Atención Preferente</td>
-                <td>Prioridad de atención para gestantes (claves obstétricas), niños y adultos mayores.</td>
-              </tr>
-              <tr>
-                <td><strong>NTS N° 139-MINSA/2018/DGAIN</strong></td>
-                <td>Gestión de la Historia Clínica</td>
-                <td>Exige registro de hora exacta en Kardex, balance hídrico, diagnóstico CIE-10 y liquidación auditable.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
         <!-- BOTONES DE GRABACIÓN, IMPRESIÓN Y REINICIO -->
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button type="button" class="btn-full-primary" style="flex:1; padding:12px; font-size:0.95rem; background:#16a34a;" onclick="grabarAtencionCompleta()">
+          <button type="button" class="btn-full-primary" style="flex:1; padding:14px; font-size:0.95rem; background:#16a34a;" onclick="grabarAtencionCompleta()">
             💾 Grabar Atención Completa y Sincronizar en la Nube (Supabase)
           </button>
-          <button type="button" class="btn-full-secondary" style="padding:12px 18px;" onclick="imprimirFacturaOficial()">
-            🖨️ Imprimir Liquidación y Factura Oficial
+          <button type="button" class="btn-full-secondary" style="padding:14px 20px;" onclick="imprimirBrazalete()">
+            🏷️ Imprimir Brazalete Asistencial
           </button>
-          <button type="button" class="btn-full-secondary" style="padding:12px 18px;" onclick="resetSimulador()">
+          <button type="button" class="btn-full-secondary" style="padding:14px 20px;" onclick="resetSimulador()">
             🔄 Atender Siguiente Paciente / Nuevo Caso
           </button>
         </div>
 
-      </div>
-    </section>
+      </div></section>
 
   </main>
 
@@ -2578,7 +2596,7 @@
   <div class="brazalete-print" id="brazalete_print_area" style="display:none;"></div>
 
   <!-- SCRIPT MAESTRO DE LÓGICA Y REGLAS DE NEGOCIO -->
-  <script src="app_full.js?v=20261117_02"></script>
+  <script src="app_full.js?v=20261117_03"></script>
 
   <!-- ======================================================================
        MODAL: REGULARIZACIÓN ADMINISTRATIVA POST-ESTABILIZACIÓN (LEY N° 27604)

@@ -3,543 +3,2801 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Prioridad de Atención - Triaje Hospitalario | UPP</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏥</text></svg>">
+  <title>Simulador HIS Completo — Emergencia Nivel III-1 | UPP FCS</title>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --primary-light: #1e293b;
+      --accent: #0284c7;
+      --accent-light: #e0f2fe;
+      --success: #16a34a;
+      --warning: #ca8a04;
+      --danger: #dc2626;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    /* ===== HEADER SUPERIOR TELEMETRÍA (40px) ===== */
+    .telemetry-header {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 0 18px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .telemetry-left { display: flex; align-items: center; gap: 14px; }
+    .telemetry-brand { font-weight: 800; letter-spacing: 0.5px; color: #38bdf8; display: flex; align-items: center; gap: 6px; }
+    .telemetry-authors { color: #94a3b8; font-size: 0.73rem; }
+    .telemetry-authors strong { color: #f1f5f9; }
+    .telemetry-right { display: flex; align-items: center; gap: 14px; }
+    .cloud-status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(34, 197, 94, 0.15); color: #4ade80;
+      padding: 2px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.72rem;
+      border: 1px solid rgba(74, 222, 128, 0.3);
+    }
+    .cloud-pulse { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 6px #22c55e; }
+    .live-clock { font-family: monospace; font-weight: 700; color: #cbd5e1; }
+
+    /* ===== NAVBAR STICKY DE LOS 8 PASOS ===== */
+    .top-steps-navbar {
+      position: sticky;
+      top: 42px;
+      z-index: 999;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1.5px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+      padding: 8px 18px;
+    }
+    .top-steps-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      max-width: 1200px;
+      margin: auto;
+      align-items: center;
+      scrollbar-width: none;
+    }
+    .top-steps-scroll::-webkit-scrollbar { display: none; }
+    .top-step-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1.5px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .top-step-btn:hover { border-color: #0284c7; color: #0284c7; background: #f0f9ff; }
+    .top-step-btn.active { background: #0f172a; color: #ffffff; border-color: #0f172a; }
+    .step-circle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #0f172a;
+      font-size: 0.68rem;
+      font-weight: 800;
+    }
+    .top-step-btn.active .step-circle { background: #38bdf8; color: #0f172a; }
+    .navbar-mini-stats {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .mini-chip {
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f1f5f9;
+      color: #0f172a;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ===== CONTENEDOR PRINCIPAL ===== */
+    .main-app-container {
+      max-width: 1160px;
+      margin: 18px auto 60px;
+      padding: 0 16px;
+    }
+
+    /* ===== SECCIONES / MÓDULOS DEL SIMULADOR ===== */
+    .module-section {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      scroll-margin-top: 100px;
+    }
+    .module-section-header {
+      padding: 14px 20px;
+      background: #ffffff;
+      border-bottom: 1.5px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .module-section-header:hover { background: #f8fafc; }
+    .module-section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.98rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .module-num-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: #0f172a;
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .module-section-subtitle { font-size: 0.74rem; font-weight: 500; color: #64748b; margin-top: 1px; }
+    .module-section-body { padding: 22px; display: none; }
+    .module-section-body.open { display: block; }
+    .toggle-arrow { font-size: 1rem; color: #64748b; transition: transform 0.2s; }
+    .toggle-arrow.open { transform: rotate(180deg); }
+
+    /* ===== BANNERS NORMATIVOS Y ALERTAS ===== */
+    .norma-pill-banner {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      color: #334155;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .norma-tag {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    /* ===== SELECTOR ORIGEN DEL EVENTO ===== */
+    .origen-evento-card {
+      background: #f8fafc;
+      border: 2px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+    }
+    .origen-evento-title {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .origen-evento-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 680px) { .origen-evento-options { grid-template-columns: 1fr; } }
+    .origen-option {
+      background: #ffffff;
+      border: 2px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 12px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      transition: all 0.15s ease;
+    }
+    .origen-option:hover { border-color: #0284c7; background: #f0f9ff; }
+    .origen-option.selected {
+      border-color: #0284c7;
+      background: #f0f9ff;
+      box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+    }
+    .origen-option.selected.soat {
+      border-color: #ea580c;
+      background: #fff7ed;
+      box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2);
+    }
+    .origen-option input[type="radio"] { margin-top: 3px; }
+    .origen-option .icon { font-size: 1.3rem; }
+    .origen-option .desc { font-size: 0.74rem; color: #64748b; margin-top: 2px; }
+
+    /* ===== BOTÓN DE PÁNICO SHOCK TRAUMA ===== */
+    .btn-panico-shock {
+      width: 100%;
+      background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 0.95rem;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-panico-shock:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(220, 38, 38, 0.45);
+    }
+    .btn-panico-shock .subtext {
+      font-size: 0.73rem;
+      font-weight: 500;
+      opacity: 0.92;
+    }
+
+    /* ===== GRIDS Y FORMULARIOS ===== */
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    .form-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 768px) {
+      .form-grid-2, .form-grid-3, .form-grid-4 { grid-template-columns: 1fr; }
+    }
+    .form-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+    .form-field label { font-size: 0.8rem; font-weight: 700; color: #334155; }
+    .form-field .field-hint { font-size: 0.72rem; color: #64748b; }
+    .input-full {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-family: inherit;
+      background: #ffffff;
+      color: #0f172a;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .input-full:focus {
+      outline: none;
+      border-color: #0284c7;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    }
+    .input-full.is-invalid {
+      border-color: #ef4444 !important;
+      background: #fef2f2 !important;
+    }
+
+    /* ===== BOTONES PRIMARIOS Y SECUNDARIOS ===== */
+    .btn-full-primary {
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 0.88rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    .btn-full-primary:hover { background: #0369a1; }
+    .btn-full-secondary {
+      background: #ffffff;
+      color: #334155;
+      border: 1.5px solid #cbd5e1;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.82rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn-full-secondary:hover { background: #f8fafc; border-color: #94a3b8; }
+
+    /* ===== CODIGOS TIEMPO-DEPENDIENTES & ACTIVADORES ===== */
+    .codigos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+    .codigo-card {
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .codigo-card:hover { border-color: #0284c7; background: #f0f9ff; }
+    .codigo-card.active { border-color: #ea580c; background: #fff7ed; box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2); }
+    .codigo-card input[type="checkbox"] { width: 16px; height: 16px; }
+    .codigo-card strong { font-size: 0.82rem; color: #0f172a; display: block; }
+    .codigo-card span { font-size: 0.72rem; color: #64748b; }
+
+    /* ===== MEDIDOR SOAT 5 UIT ===== */
+    .soat-meter-card {
+      background: #ffffff;
+      border: 2px solid #ea580c;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .soat-meter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .soat-progress-bar {
+      width: 100%;
+      height: 14px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    .soat-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #16a34a 0%, #ca8a04 70%, #dc2626 100%);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .alerta-soat-fuga {
+      background: #fef2f2;
+      border: 2px solid #ef4444;
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #991b1b;
+      font-size: 0.82rem;
+      font-weight: 700;
+      line-height: 1.45;
+      margin-top: 10px;
+    }
+
+    /* ===== KARDEX DE ENFERMERÍA AUDITABLE ===== */
+    .kardex-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      margin-top: 10px;
+    }
+    .kardex-table th {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+    .kardex-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: middle;
+    }
+    .kardex-table tr:hover { background: #f8fafc; }
+    .btn-kardex-admin {
+      background: #ffffff;
+      border: 1.5px solid #16a34a;
+      color: #16a34a;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 0.72rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-kardex-admin:hover { background: #16a34a; color: #ffffff; }
+    .btn-kardex-admin.administrado {
+      background: #16a34a;
+      color: #ffffff;
+      border-color: #16a34a;
+    }
+
+    /* ===== CRONÓMETRO NORMATIVO DE OBSERVACIÓN ===== */
+    .estancia-meter-card {
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .estancia-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+    .estancia-verde { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .estancia-ambar { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+    .estancia-rojo { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
+
+    
+    /* ===== TABLERO DE RECURSOS, CAMAS Y QUIRÓFANOS EN TIEMPO REAL ===== */
+    .recurso-card {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      position: relative;
+    }
+    .recurso-card.disponible {
+      border-left: 5px solid #16a34a;
+    }
+    .recurso-card.ocupada {
+      border-left: 5px solid #dc2626;
+      background: #fffafa;
+    }
+    .recurso-card.alerta-ambar {
+      border-left: 5px solid #d97706;
+      background: #fffdf5;
+    }
+    .recurso-card.alerta-roja {
+      border-left: 5px solid #991b1b;
+      background: #fef2f2;
+    }
+    .recurso-tipo-badge {
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .recurso-tipo-quirofano { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .recurso-tipo-observacion { background: #fefce8; color: #854d0e; border: 1px solid #fef08a; }
+    .recurso-tipo-shock_trauma { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .recurso-tipo-urpa { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .recurso-tipo-uci { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+
+    .timer-display-box {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 1.15rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f8fafc;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      margin: 6px 0;
+    }
+    .timer-pulsing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #dc2626;
+      display: inline-block;
+      animation: pulseTimer 1s infinite alternate;
+    }
+    @keyframes pulseTimer {
+      from { opacity: 0.3; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1.2); }
+    }
+    .recurso-progress-track {
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin: 4px 0 8px 0;
+    }
+    .recurso-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #16a34a, #eab308, #dc2626);
+      transition: width 0.5s ease;
+    }
+    .chip-filtro-recurso {
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .chip-filtro-recurso:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+    .chip-filtro-recurso.active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+    }
+
+    /* ===== PRELACIÓN CLÍNICA ABCDE ===== */
+    .desempate-box {
+      background: #f0fdf4;
+      border: 1.5px solid #86efac;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 12px;
+    }
+    .score-badge {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: #15803d;
+      font-family: monospace;
+      background: #ffffff;
+      padding: 3px 10px;
+      border-radius: 6px;
+      border: 1px solid #86efac;
+    }
+
+    /* ===== CANDADO MÉDICO-LEGAL ART 195 CPP ===== */
+    .bloqueo-sinadef-card {
+      background: #fef2f2;
+      border: 2px solid #dc2626;
+      border-radius: 10px;
+      padding: 14px;
+      color: #991b1b;
+      margin-top: 12px;
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    /* ===== TABLA DE AUDITORÍA LEGAL ===== */
+    .legal-audit-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      margin-top: 12px;
+    }
+    .legal-audit-table th {
+      background: #1e293b;
+      color: #ffffff;
+      padding: 7px 10px;
+      text-align: left;
+    }
+    .legal-audit-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+
+    /* ===== PRIORIDAD DISPLAY ===== */
+    .prioridad-display {
+      display: none;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      color: #ffffff;
+      animation: fadeIn 0.3s ease;
+    }
+    .prioridad-display.visible, #apisperu_panel.visible { display: block !important; }
+    .prioridad-I   { background: linear-gradient(135deg, #991b1b, #dc2626); }
+    .prioridad-II  { background: linear-gradient(135deg, #c2410c, #ea580c); }
+    .prioridad-III { background: linear-gradient(135deg, #854d0e, #ca8a04); }
+    .prioridad-IV  { background: linear-gradient(135deg, #15803d, #16a34a); }
+    .prioridad-V   { background: linear-gradient(135deg, #1d4ed8, #2563eb); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ===== MODALES ===== */
+    .modal-hc-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);
+      z-index: 9999; display: none; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-hc-overlay.open { display: flex !important; }
+    .modal-hc-container {
+      background: #ffffff; border-radius: 14px; width: 95%; max-width: 900px;
+      max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); border: 1.5px solid var(--border);
+    }
+    .modal-hc-header {
+      padding: 14px 20px; background: #0f172a; color: #ffffff;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-hc-body { padding: 18px 22px; overflow-y: auto; flex: 1; }
+    .modal-hc-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .modal-hc-table th { background: #f1f5f9; padding: 8px 10px; text-align: left; font-weight: 700; color: #334155; }
+    .modal-hc-table td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+
+    /* ===== PILLS Y BADGES ===== */
+    .hc-pill-tag {
+      background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc;
+      padding: 2px 8px; border-radius: 4px; font-weight: 800; font-family: monospace; font-size: 0.78rem;
+    }
+    .hc-pill-seguro {
+      background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1;
+      padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.74rem;
+    }
+    .badge-estado {
+      padding: 2px 8px; border-radius: 9999px; font-weight: 700; font-size: 0.72rem;
+    }
+    .badge-si { background: #dcfce7; color: #166534; }
+    .badge-no { background: #fee2e2; color: #991b1b; }
+    .badge-conf { background: #fef3c7; color: #92400e; }
+
+    /* Ocultar canvas/diagrama para flujo clínico full width */
+    .flowchart-canvas-pane { display: none !important; }
+  
+    /* ===== WIDGET FLOTANTE DE DISPONIBILIDAD HOSPITALARIA (HUD EN VIVO) ===== */
+    .widget-flotante-camas {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      z-index: 9995;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      animation: floatWidgetSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes floatWidgetSlide {
+      from { transform: translateY(40px) scale(0.9); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .widget-flotante-pill {
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 2px solid #22c55e;
+      border-radius: 9999px;
+      padding: 8px 16px;
+      box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.5), 0 0 25px rgba(34, 197, 94, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.25s ease;
+    }
+    .widget-flotante-pill:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 16px 40px -5px rgba(0, 0, 0, 0.6), 0 0 32px rgba(34, 197, 94, 0.6);
+      border-color: #4ade80;
+    }
+    .widget-beacon {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+    }
+    .widget-beacon-dot {
+      width: 10px;
+      height: 10px;
+      background-color: #22c55e;
+      border-radius: 50%;
+      z-index: 2;
+    }
+    .widget-beacon-ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background-color: rgba(34, 197, 94, 0.6);
+      animation: beaconRipple 1.8s infinite cubic-bezier(0, 0.2, 0.8, 1);
+      z-index: 1;
+    }
+    @keyframes beaconRipple {
+      0% { transform: scale(0.8); opacity: 1; }
+      100% { transform: scale(2.8); opacity: 0; }
+    }
+    .widget-total-count {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: #4ade80;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0.5px;
+      text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+      white-space: nowrap;
+    }
+    .widget-chip-tipo {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .widget-chip-sop {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+    .widget-chip-obs {
+      background: rgba(234, 179, 8, 0.2);
+      color: #fde047;
+      border: 1px solid rgba(234, 179, 8, 0.5);
+    }
+    .widget-chip-st {
+      background: rgba(249, 115, 22, 0.2);
+      color: #fdba74;
+      border: 1px solid rgba(249, 115, 22, 0.5);
+    }
+    .widget-chip-urpa {
+      background: rgba(34, 197, 94, 0.2);
+      color: #86efac;
+      border: 1px solid rgba(34, 197, 94, 0.5);
+    }
+    .widget-chip-uci {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.5);
+    }
+
+    /* Tarjeta desplegable HUD con detalle */
+    .widget-panel-drawer {
+      display: none;
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 2px solid #22c55e;
+      border-radius: 16px;
+      padding: 16px;
+      width: 330px;
+      box-shadow: 0 20px 45px -5px rgba(0, 0, 0, 0.65), 0 0 30px rgba(34, 197, 94, 0.35);
+      margin-bottom: 10px;
+      color: #ffffff;
+      animation: drawerSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes drawerSlideUp {
+      from { transform: translateY(15px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .widget-panel-drawer.open {
+      display: block;
+    }
+    .widget-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    .widget-row-tipo {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.8rem;
+    }
+
+  
+    /* ==========================================================================
+       OPTIMIZACIONES MÓVILES AVANZADAS (MOBILE-FIRST ERGONOMICS & UX)
+       ========================================================================== */
+    @media (max-width: 768px) {
+      /* Encabezados y barras principales */
+      .hero-header { padding: 12px 14px; }
+      .header-title-row h1 { font-size: 1.15rem; line-height: 1.25; }
+      .cloud-status-badge { font-size: 0.68rem; padding: 2px 6px; }
+      .top-steps-navbar { top: 0; padding: 6px 10px; }
+      .top-steps-scroll { gap: 4px; padding-bottom: 4px; }
+      .top-step-btn { padding: 5px 9px; font-size: 0.72rem; }
+      .navbar-mini-stats { display: none; } /* En móvil se usa el widget compacto de camas */
+
+      /* Contenedor principal */
+      .main-app-container { padding: 0 10px; margin: 10px auto 40px; }
+      .module-section { margin-bottom: 12px; border-radius: 10px; }
+      .module-section-header { padding: 12px 14px; }
+      .module-section-title { font-size: 0.92rem; }
+      .module-section-subtitle { font-size: 0.72rem; }
+      .module-section-body { padding: 12px 14px; }
+
+      /* Formularios ergonómicos para móvil: 1 columna y botones grandes */
+      .form-grid-2, .form-grid-3, .form-grid-4, .prioridad-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
+      }
+      .input-full, select.input-full {
+        font-size: 16px !important; /* Previene auto-zoom molesto en iPhone / Android */
+        min-height: 46px;
+        padding: 10px 12px;
+        border-radius: 8px;
+      }
+      .btn-full-primary, .btn-full-secondary, .btn-panico-shock {
+        min-height: 46px;
+        padding: 12px 14px;
+        font-size: 0.92rem;
+        border-radius: 8px;
+        justify-content: center;
+      }
+      .modalidad-btn { flex: 1 1 calc(50% - 6px); }
+
+      /* Tablas clínicas con scroll suave sin romper el ancho de pantalla */
+      .kardex-table-wrap, table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* WIDGET FLOTANTE DE CAMAS COMPACTO EN MÓVIL (NO TAPA BOTONES) */
+      .widget-flotante-camas {
+        bottom: 12px;
+        right: 12px;
+      }
+      .widget-flotante-pill {
+        padding: 6px 12px;
+        gap: 8px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+      }
+      .widget-chips-container {
+        display: none !important; /* Oculta chips largos en móvil */
+      }
+      .widget-total-count {
+        font-size: 0.92rem;
+      }
+
+      /* Modales ajustados a pantallas pequeñas */
+      .modal-hc-container {
+        width: 95vw !important;
+        max-height: 90vh !important;
+        padding: 16px !important;
+        margin: 10px !important;
+      }
+    }
+
+  </style>
 </head>
 <body>
 
-  <div class="app-container">
-    
-    <!-- ENCABEZADO PRINCIPAL / METADATOS ACADÉMICOS -->
-    <header class="app-header">
-      <div class="header-top">
-        <a href="index.html" class="academic-badge" style="text-decoration: none; color: #ffffff; background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); cursor: pointer;">
-          ⬅ Volver al Portal de Proyectos
+  <!-- ==========================================================================
+       BARRA SUPERIOR DE TELEMETRÍA (42px) — CITA NORMAS Y DESARROLLADORES
+       ========================================================================== -->
+  <header class="telemetry-header">
+    <div class="telemetry-left">
+      <span class="telemetry-brand">
+        <span>🏥</span> HIS-EMG NIVEL III-1
+      </span>
+      <span class="telemetry-authors">
+        Desarrolladores: <strong>Luis Guillermo Vásquez Valdivieso & Rodrigo Alonso Añazgo Farro</strong>
+      </span>
+    </div>
+    <div class="telemetry-right">
+      <span class="cloud-status-badge">
+        <span class="cloud-pulse"></span>
+        <span id="telemetry_db_status">Supabase Cloud &amp; Local SQLite (NTS N° 139-MINSA)</span>
+      </span>
+      <span class="live-clock" id="limaClockDisplay">--:--:-- UTC-5</span>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       STICKY TOP NAVBAR CON LOS 8 PASOS REDISEÑADOS Y MEDIDOR EN VIVO
+       ========================================================================== -->
+  <nav class="top-steps-navbar" id="topStepsNavbar">
+    <div class="top-steps-scroll">
+      <a href="#sec_mod1" class="top-step-btn active" id="btnStepTop_1" onclick="irAModulo(1)">
+        <span class="step-circle">1</span> 1. Triaje Fisiológico
+      </a>
+      <a href="#sec_mod2" class="top-step-btn" id="btnStepTop_2" onclick="irAModulo(2)">
+        <span class="step-circle">2</span> 2. Admisión &amp; RENIEC
+      </a>
+      <a href="#sec_mod3" class="top-step-btn" id="btnStepTop_3" onclick="irAModulo(3)">
+        <span class="step-circle">3</span> 3. Acreditación PIDE-SUSALUD &amp; SOAT
+      </a>
+      <a href="#sec_mod4" class="top-step-btn" id="btnStepTop_4" onclick="irAModulo(4)">
+        <span class="step-circle">4</span> 4. Shock Trauma &amp; Kardex
+      </a>
+      <a href="#sec_mod5" class="top-step-btn" id="btnStepTop_5" onclick="irAModulo(5)">
+        <span class="step-circle">5</span> 5. Sala de Observación
+      </a>
+      <a href="#sec_mod6" class="top-step-btn" id="btnStepTop_6" onclick="irAModulo(6)">
+        <span class="step-circle">6</span> 6. Camas Críticas &amp; SOP
+      </a>
+      <a href="#sec_mod7" class="top-step-btn" id="btnStepTop_7" onclick="irAModulo(7)">
+        <span class="step-circle">7</span> 7. Egreso &amp; Auditoría Legal
+      </a>
+      <a href="#sec_mod8" class="top-step-btn" id="btnStepTop_8" onclick="irAModulo(8)">
+        <span class="step-circle">8</span> 8. Cierre &amp; Facturación Post-Estabilización
+      </a>
+
+      <div class="navbar-mini-stats">
+        <button type="button" class="mini-chip" id="mini_camas_sop_badge" onclick="abrirModalTableroCamas()" title="Ver Disponibilidad en Tiempo Real de Camas y Quirófanos" style="cursor:pointer; background:#f0fdf4; color:#166534; border:1px solid #86efac; font-weight:700;">
+          🛏️ Camas &amp; Quirófanos: <span id="lbl_navbar_dispo_resumen">15/15 Libres</span>
+        </button>
+        <span class="mini-chip" id="mini_prioridad_badge">🚦 Triaje: Por evaluar</span>
+        <span class="mini-chip" id="mini_soat_badge" style="display:none; background:#fff7ed; color:#c2410c; border-color:#fb923c;">
+          🚗 SOAT Saldo: S/. 27,500.00
+        </span>
+        <a href="facturacion.html" target="_blank" class="mini-chip" id="btn_nav_facturacion" style="background:#0284c7; color:#ffffff; text-decoration:none; font-weight:800; cursor:pointer;" title="Acceder a la Unidad de Facturación Post-Estabilización (D.S. 016-2002-SA)">
+          🧾 Facturación Post-Estabilización ↗
         </a>
-        <span class="academic-badge">
-          🎓 UPP • Pensamiento Algorítmico • Ciclo II
-        </span>
-        <div id="serverStatusBadge" class="server-badge offline">
-          <span class="status-dot"></span>
-          <span id="serverStatusText">Modo Autónomo (Navegador)</span>
-        </div>
       </div>
-      <div class="header-title-area">
-        <h1>🏥 Sistema de Prioridad de Atención — Caso 6</h1>
-        <p>
-          Simulador clínico y administrativo de triaje en urgencias con restricción de recursos (1 sola cama disponible).
-          Estructurado en 3 módulos: <strong>Enfermería 1</strong> (Detección automática de ID y gestión de Historia Clínica),
-          <strong>Enfermería 2</strong> (Emisión automática de Ticket según orden cronológico de llegada y cobertura de Seguro), y
-          <strong>Triage Clínico</strong> (Decisiones 1 y 2 con Alerta Roja y Alerta Ámbar).
-        </p>
-      </div>
-    </header>
-
-    <!-- BARRA DE CASOS PREDEFINIDOS / PRUEBAS RÁPIDAS -->
-    <section class="presets-card">
-      <div class="presets-label">
-        <span>🧪 Casos de Estudio y Pruebas:</span>
-      </div>
-      <div class="presets-buttons">
-        <button type="button" class="preset-btn highlight" data-preset="caso6">
-          ⭐ Caso 6 Oficial (Demo)
-        </button>
-        <button type="button" class="preset-btn" data-preset="dniRegistrado">
-          🪪 Pacientes BD (10203040 vs 70809010)
-        </button>
-        <button type="button" class="preset-btn" data-preset="pacienteNuevo">
-          🆕 Paciente Nuevo (DNI no en BD)
-        </button>
-        <button type="button" class="preset-btn" data-preset="pacienteNN">
-          🚑 Paciente NN (HC Temporal)
-        </button>
-        <button type="button" class="preset-btn" data-preset="empateCritico">
-          ⚖️ Empate Crítico (P1 vs P1)
-        </button>
-        <button type="button" class="preset-btn" data-preset="empateModerado">
-          ⏱️ Empate Moderado (P3 vs P3)
-        </button>
-        <button type="button" class="preset-btn" data-preset="umbralSpo2">
-          🎯 Sensibilidad SpO2 (91% vs 92%)
-        </button>
-        <button type="button" class="preset-btn" data-preset="spo2Invalido" style="color: #b91c1c; border-color: #fca5a5;">
-          ⚠️ Probar SpO2 Inválido (120%)
-        </button>
-        <button type="button" class="preset-btn" id="btnLimpiarDesdeCero" style="background: #e0f2fe; border: 1.5px solid #0284c7; color: #0369a1; font-weight: 700;">
-          ✨ Ingresar Datos desde Cero
-        </button>
-      </div>
-    </section>
-
-    <!-- BANNER DE ALERTA GLOBAL -->
-    <div id="bannerAlerta" class="banner-alerta-error" style="display: none;">
-      <span style="font-size: 1.3rem;">⛔</span>
-      <span id="bannerAlertaTexto">Error de validación en los datos ingresados.</span>
     </div>
+  </nav>
 
-    <!-- FORMULARIO DE ENTRADA: PACIENTE A Y PACIENTE B -->
-    <main class="patients-grid">
-      
-      <!-- TARJETA PACIENTE A -->
-      <article class="patient-card patient-a" id="card_paciente_a">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="patient-pill">PACIENTE A</span>
-            <span id="title_nombre_a">Px A</span>
-          </div>
-          <div id="badge_live_a" class="live-badge badge-moderado">
-            <span class="status-dot"></span> P3 - Moderado
-          </div>
-        </div>
+  <!-- CONTENEDOR PRINCIPAL DE LOS 8 MÓDULOS -->
+  <main class="main-app-container">
 
-        <!-- MÓDULO 1: ENFERMERÍA 1 (REGISTRO Y BD DE HISTORIAS CLÍNICAS) -->
-        <div class="module-block">
-          <div class="module-header-tag">
-            <span class="module-tag-title">
-              <span class="mod-num">1</span> Enfermería 1: Registro e Identidad
-            </span>
-            <span style="font-size: 0.72rem; color: #64748b;">Búsqueda automática en BD</span>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 8px;">
-            <label class="form-label" for="nombre_a">Identificador (DNI 8 dígitos, Nombre Completo o NN):</label>
-            <input type="text" id="nombre_a" class="input-control" value="Px A" placeholder="Ej. 10203040, Carlos Mendoza Rojas o NN">
-            <div id="error_ident_a" class="input-error-msg" style="display: none;"></div>
-          </div>
-
-          <!-- Cuadro en tiempo real del estado de la HC -->
-          <div class="hc-box" id="hc_box_a">
-            <div class="hc-box-row">
-              <span>Estado en BD: <span id="badge_estado_a" class="badge-status badge-status-si">Si</span></span>
-              <span>Nro. HC: <span id="val_hc_a" class="hc-code-pill">HC-2025-089</span></span>
-            </div>
-            <div class="hc-box-row">
-              <span id="val_accion_a" style="color: #64748b; font-size: 0.75rem;">Encontrado en BD (HC-2025-089 recuperada)</span>
-            </div>
+    <!-- ======================================================================
+         MÓDULO 1: ENFERMERÍA DE TRIAJE (PUERTA DE ENTRADA UNIVERSAL)
+         Sustento: NTS N° 042-MINSA/DGSP-V.01 y Ley N° 27604
+         ====================================================================== -->
+    <section class="module-section" id="sec_mod1">
+      <div class="module-section-header" onclick="toggleModule('mod1')">
+        <div class="module-section-title">
+          <span class="module-num-badge">1</span>
+          <div>
+            <div>Módulo 1: Triaje Fisiológico, Origen del Evento &amp; Categorización I–V</div>
+            <div class="module-section-subtitle">Puerta de entrada universal · NTS N° 042-MINSA/DGSP-V.01 · Ley N° 27604</div>
           </div>
         </div>
+        <span class="toggle-arrow open" id="arrow_mod1">▼</span>
+      </div>
+      <div class="module-section-body open" id="body_mod1">
 
-        <!-- MÓDULO 2: ENFERMERÍA 2 (ATENCIÓN ADMINISTRATIVA Y TICKET) -->
-        <div class="module-block">
-          <div class="module-header-tag">
-            <span class="module-tag-title">
-              <span class="mod-num">2</span> Enfermería 2: Admisión Administrativa
-            </span>
-            <span style="font-size: 0.72rem; color: #64748b;">Turno por hora de llegada</span>
+        <div class="norma-pill-banner">
+          <span class="norma-tag">NTS N° 042-MINSA</span>
+          <span><strong>Puerta de Entrada Universal Obligatoria:</strong> Ningún paciente puede ser derivado a admisión ni condicionado a pago o trámite sin haber sido evaluado previamente por Enfermería de Triaje.</span>
+        </div>
+
+        <!-- 1. SELECTOR OBLIGATORIO DE ORIGEN DEL EVENTO EN SERVICIO DE EMERGENCIA -->
+        <div class="origen-evento-card" style="border: 2px solid #0284c7; background: #f0f9ff; border-radius: 12px; padding: 16px; margin-bottom: 18px;">
+          <div class="origen-evento-title" style="color: #0369a1; font-weight: 800; font-size: 0.9rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.2rem;">🏥</span>
+            <span>SERVICIO DE EMERGENCIA HOSPITALARIA — ORIGEN DE ATENCIÓN (NTS N° 042-MINSA):</span>
           </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label" for="hora_a">Hora de Llegada (HH:MM):</label>
-              <input type="text" id="hora_a" class="input-control" value="07:15" placeholder="HH:MM (24h)">
-              <div id="error_hora_a" class="input-error-msg" style="display: none;"></div>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">Ticket Emitido (Auto):</label>
-              <div style="margin-top: 4px;">
-                <span class="ticket-display" id="badge_ticket_a">🎫 Turno: T-01</span>
+          <div style="font-size: 0.78rem; color: #475569; margin-bottom: 12px;">
+            Clasificación inicial obligatoria para determinar la ruta asistencial, legal y de cobertura financiera de emergencia:
+          </div>
+          <div class="origen-evento-options" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+            <label class="origen-option selected" id="opt_origen_comun" onclick="cambiarOrigenEvento('comun')" style="cursor: pointer; padding: 12px; border-radius: 10px; border: 2px solid #0284c7; background: #ffffff; display: flex; gap: 10px; align-items: flex-start; transition: all 0.2s;">
+              <input type="radio" name="origen_evento" id="rb_origen_comun" value="comun" checked style="margin-top: 3px;">
+              <div>
+                <strong style="color: #0f172a; font-size: 0.88rem; display: block;">🩺 Emergencia Médica / Quirúrgica / Urgencia</strong>
+                <div class="desc" style="font-size: 0.75rem; color: #64748b; margin-top: 3px; line-height: 1.35;">
+                  Patología clínica aguda, dolor, shock o urgencia. Acreditación de cobertura en Módulo 3 mediante PIDE-SUSALUD (SIS, EsSalud, EPS o Particular).
+                </div>
               </div>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 4px;">
-            <label class="form-label" for="seguro_a">Cobertura / Seguro Administrativo:</label>
-            <select id="seguro_a" class="input-control">
-              <option value="Asegurado" selected>Asegurado</option>
-              <option value="No asegurado (Particular)">No asegurado (Particular)</option>
-              <option value="SIS">SIS (Seguro Integral)</option>
-              <option value="EsSalud">EsSalud</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- MÓDULO 3: TRIAGE CLÍNICO -->
-        <div class="module-block" style="margin-bottom: 0;">
-          <div class="module-header-tag">
-            <span class="module-tag-title">
-              <span class="mod-num">3</span> Triage Clínico: Datos Críticos
-            </span>
-            <span style="font-size: 0.72rem; color: #64748b;">Decisión 1: SpO2 y Riesgo</span>
-          </div>
-
-          <div class="form-group">
-            <div class="form-label">
-              <label for="spo2_num_a">Saturación SpO2 (%):</label>
-              <span class="form-hint">Dato Crítico 1 (Rango: 0 a 100 %)</span>
-            </div>
-            <div class="input-with-unit">
-              <input type="number" id="spo2_num_a" class="input-control" value="99" placeholder="Ej. 99" step="any">
-              <span class="input-unit">%</span>
-            </div>
-            <div id="error_spo2_a" class="input-error-msg" style="display: none;"></div>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 0;">
-            <div class="form-label">
-              <span>Antecedentes Relevantes:</span>
-              <span class="form-hint">Dato Crítico 2</span>
-            </div>
-            <label class="switch-container">
-              <div class="switch-label-area">
-                <span class="switch-title">Registra antecedentes de riesgo</span>
-                <span class="switch-subtitle">Enfermedades cardíacas, respiratorias o crónicas</span>
-              </div>
-              <div class="toggle-switch">
-                <input type="checkbox" id="ant_a">
-                <span class="toggle-slider"></span>
+            </label>
+            <label class="origen-option" id="opt_origen_soat" onclick="cambiarOrigenEvento('soat')" style="cursor: pointer; padding: 12px; border-radius: 10px; border: 2px solid #cbd5e1; background: #ffffff; display: flex; gap: 10px; align-items: flex-start; transition: all 0.2s;">
+              <input type="radio" name="origen_evento" id="rb_origen_soat" value="soat" style="margin-top: 3px;">
+              <div>
+                <strong style="color: #dc2626; font-size: 0.88rem; display: block;">🚗 Accidente de Tránsito / Trauma Vial (SOAT)</strong>
+                <div class="desc" style="font-size: 0.75rem; color: #64748b; margin-top: 3px; line-height: 1.35;">
+                  Siniestro vial o atropello. Activa Módulo 3 con pestaña SOAT (tope legal de 5 UIT o chofer en fuga sin placa) y candado médico-legal en Módulo 7.
+                </div>
               </div>
             </label>
           </div>
         </div>
 
-      </article>
-
-      <!-- TARJETA PACIENTE B -->
-      <article class="patient-card patient-b" id="card_paciente_b">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="patient-pill">PACIENTE B</span>
-            <span id="title_nombre_b">Px B</span>
+        <!-- SELECTOR DE ENTORNO ASISTENCIAL SEPARADO EN: HOSPITAL MINSA (SIS), HOSPITAL ESSALUD, CLÍNICA PRIVADA (EPS) & PARTICULAR (SIN SEGURO) -->
+        <div style="margin-top: 14px; margin-bottom: 14px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+            <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+              <span>🏢</span>
+              <span>Entorno del Establecimiento Asistencial (Selección Automática por Base de Datos):</span>
+            </div>
+            <span id="badge_entorno_actual" style="font-size: 0.74rem; padding: 3px 10px; border-radius: 9999px; background: #e0f2fe; color: #0369a1; font-weight: 800; border: 1px solid #bae6fd;">
+              🏛️ Hospital MINSA (SIS)
+            </span>
           </div>
-          <div id="badge_live_b" class="live-badge badge-critico">
-            <span class="status-dot"></span> P1 - Crítico
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+            <!-- 1. HOSPITAL MINSA (SIS) -->
+            <button type="button" id="btn_entorno_minsa" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('minsa_sis', true)" style="border-color: #0284c7; background: #f0f9ff; color: #0369a1; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <span style="font-size: 20px;">🏛️</span>
+              <div>
+                <strong style="display: block;">Hospital MINSA (SIS)</strong>
+                <span style="font-size: 0.7rem; color: #0369a1; font-weight: normal;">Régimen estatal FUA · 100% Pago Cero</span>
+              </div>
+            </button>
+            <!-- 2. HOSPITAL ESSALUD -->
+            <button type="button" id="btn_entorno_essalud" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('essalud', true)" style="border-color: #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <span style="font-size: 20px;">🏥</span>
+              <div>
+                <strong style="display: block;">Hospital EsSalud</strong>
+                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Seguro Social ESSI · 100% Pago Cero</span>
+              </div>
+            </button>
+            <!-- 3. CLÍNICA PRIVADA (EPS) -->
+            <button type="button" id="btn_entorno_clinica_eps" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('clinica_eps', true)" style="border-color: #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <span style="font-size: 20px;">🏢</span>
+              <div>
+                <strong style="display: block;">Clínica Privada (EPS)</strong>
+                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Pacífico, Rímac · Urgencia S/. 80 + 10% farmacia</span>
+              </div>
+            </button>
+            <!-- 4. SIN SEGURO (PARTICULAR) -->
+            <button type="button" id="btn_entorno_particular" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('particular', true)" style="border-color: #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <span style="font-size: 20px;">👤</span>
+              <div>
+                <strong style="display: block;">Sin Seguro (Particular)</strong>
+                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Sin cobertura activa · Paciente paga el 100%</span>
+              </div>
+            </button>
+          </div>
+          <!-- BANNERS INFORMATIVOS DE CONDICIÓN SEGÚN EL ENTORNO -->
+          <div id="banner_condicion_minsa" style="display: block; margin-top: 10px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 10px 12px; font-size: 0.76rem; color: #166534; line-height: 1.45;">
+            <strong>🏛️ RÉGIMEN PÚBLICO MINSA (SIS GRATUITO):</strong> Paciente acreditado en SIS. Cobertura integral 100% mediante Formato Único de Atención (FUA). Consulta, procedimientos, tópicos, cama, medicamentos, imágenes y laboratorio con cobro S/. 0.00 (Pago Cero).
+          </div>
+          <div id="banner_condicion_essalud" style="display: none; margin-top: 10px; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 8px; padding: 10px 12px; font-size: 0.76rem; color: #1e40af; line-height: 1.45;">
+            <strong>🏥 RÉGIMEN SOCIAL ESSALUD (SEGURO SOCIAL):</strong> Acreditación vigente en el sistema ESSI de EsSalud. La institución asume la totalidad de la atención médica de emergencia, estancia, medicamentos e insumos (Pago Cero).
+          </div>
+          <div id="banner_condicion_eps" style="display: none; margin-top: 10px; background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 8px; padding: 10px 12px; font-size: 0.76rem; color: #065f46; line-height: 1.45;">
+            <div style="font-weight: 800; font-size: 0.82rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+              <span>⚖️</span>
+              <span>CONDICIONES CONTRACTUALES EN CLÍNICA PRIVADA CON EPS / SEGURO PRIVADO:</span>
+            </div>
+            • <strong>Si es Emergencia Médica o Quirúrgica (P-I / P-II):</strong> Protegido por Ley N° 27604. Consulta médica, sala de shock trauma, procedimientos, cama y exámenes S/. 0.00 (cubiertos al 100% por EPS). En medicamentos de farmacia, el paciente asume únicamente el <strong>10% de coaseguro</strong>.<br>
+            • <strong>Si NO es Emergencia (P-III / P-IV / P-V):</strong> El sistema clasifica <strong>AUTOMÁTICAMENTE COMO URGENCIA</strong>. Se cobra tarifa fija de <strong>S/. 80.00 por consulta de urgencia</strong> y el <strong>10% del total de medicamentos</strong> prescritos. Todos los exámenes de laboratorio e imágenes complementarios quedan 100% cubiertos por la EPS.
+          </div>
+          <div id="banner_condicion_particular" style="display: none; margin-top: 10px; background: #fef2f2; border: 1.5px solid #f87171; border-radius: 8px; padding: 10px 12px; font-size: 0.76rem; color: #991b1b; line-height: 1.45;">
+            <strong>👤 ATENCIÓN PARTICULAR (SIN NINGÚN SEGURO ACTIVO):</strong> Paciente no cuenta con cobertura activa en SIS, EsSalud ni aseguradoras privadas EPS. En todos los casos, el paciente asume el <strong>100% de la totalidad de lo facturado</strong> (consulta médica, tópicos, cama, medicamentos, laboratorio e imágenes diagnósticas). Cobertura de aseguradora: S/. 0.00.
           </div>
         </div>
 
-        <!-- MÓDULO 1: ENFERMERÍA 1 (REGISTRO Y BD DE HISTORIAS CLÍNICAS) -->
-        <div class="module-block">
-          <div class="module-header-tag">
-            <span class="module-tag-title">
-              <span class="mod-num">1</span> Enfermería 1: Registro e Identidad
-            </span>
-            <span style="font-size: 0.72rem; color: #64748b;">Búsqueda automática en BD</span>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 8px;">
-            <label class="form-label" for="nombre_b">Identificador (DNI 8 dígitos, Nombre Completo o NN):</label>
-            <input type="text" id="nombre_b" class="input-control" value="Px B" placeholder="Ej. 70809010, Maria Torres Silva o NN">
-            <div id="error_ident_b" class="input-error-msg" style="display: none;"></div>
-          </div>
-
-          <!-- Cuadro en tiempo real del estado de la HC -->
-          <div class="hc-box" id="hc_box_b">
-            <div class="hc-box-row">
-              <span>Estado en BD: <span id="badge_estado_b" class="badge-status badge-status-si">Si</span></span>
-              <span>Nro. HC: <span id="val_hc_b" class="hc-code-pill">HC-2026-142</span></span>
-            </div>
-            <div class="hc-box-row">
-              <span id="val_accion_b" style="color: #64748b; font-size: 0.75rem;">Encontrado en BD (HC-2026-142 recuperada)</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- MÓDULO 2: ENFERMERÍA 2 (ATENCIÓN ADMINISTRATIVA Y TICKET) -->
-        <div class="module-block">
-          <div class="module-header-tag">
-            <span class="module-tag-title">
-              <span class="mod-num">2</span> Enfermería 2: Admisión Administrativa
-            </span>
-            <span style="font-size: 0.72rem; color: #64748b;">Turno por hora de llegada</span>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label" for="hora_b">Hora de Llegada (HH:MM):</label>
-              <input type="text" id="hora_b" class="input-control" value="07:19" placeholder="HH:MM (24h)">
-              <div id="error_hora_b" class="input-error-msg" style="display: none;"></div>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">Ticket Emitido (Auto):</label>
-              <div style="margin-top: 4px;">
-                <span class="ticket-display" id="badge_ticket_b">🎫 Turno: T-02</span>
+        <!-- BANNER DE ALERTA VISUAL CUANDO SE ACTIVA ACCIDENTE DE TRÁNSITO -->
+        <div id="banner_origen_transito" style="display: none; background: #fef2f2; border: 2px solid #ef4444; border-radius: 10px; padding: 14px 16px; margin-bottom: 18px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 26px;">🚗</span>
+            <div style="flex: 1;">
+              <strong style="color: #991b1b; font-size: 0.95rem;">PROTOCOLO LEGAL DE ACCIDENTE DE TRÁNSITO ACTIVADO (LEY N° 27604 & D.S. N° 024-2002-MTC)</strong>
+              <div style="font-size: 0.78rem; color: #7f1d1d; margin-top: 3px; line-height: 1.4;">
+                • <strong>Atención médica inmediata:</strong> Prohibido condicionar atención a pago, voucher o verificación previa.<br>
+                • <strong>Acreditación SOAT:</strong> Se habilitó en el Módulo 3 la pestaña exclusiva para validar placa (cobertura hasta S/. 27,500) o declarar chofer en fuga.<br>
+                • <strong>Candado Médico-Legal:</strong> En caso de fallecimiento, el Artículo 195° del Código Procesal Penal bloquea SINADEF y obliga a oficiar a Fiscalía.
               </div>
             </div>
           </div>
+        </div>
 
-          <div class="form-group" style="margin-bottom: 4px;">
-            <label class="form-label" for="seguro_b">Cobertura / Seguro Administrativo:</label>
-            <select id="seguro_b" class="input-control">
-              <option value="Asegurado" selected>Asegurado</option>
-              <option value="No asegurado (Particular)">No asegurado (Particular)</option>
-              <option value="SIS">SIS (Seguro Integral)</option>
-              <option value="EsSalud">EsSalud</option>
+        <!-- 2. BOTONES DE ACCESO INMEDIATO: SHOCK TRAUMA & QUIRÓFANO DIRECTO (LEY N° 27604) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
+          <button type="button" class="btn-panico-shock" onclick="activarPanicoShockTrauma()" style="background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);">
+            <span>🚨 INGRESO DIRECTO A SHOCK TRAUMA</span>
+            <span class="subtext">Paro Cardiorrespiratorio / Falla Vital Inminente (P-I). Admisión en regularización paralela.</span>
+          </button>
+          <button type="button" class="btn-panico-shock" onclick="activarIngresoDirectoQuirofano()" style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%); box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);">
+            <span>🏥 INGRESO DIRECTO A QUIRÓFANO (SOP)</span>
+            <span class="subtext">Cirugía de Control de Daños / Hemorragia Masiva. Salta Triaje y Admisión (Ley N° 27604).</span>
+          </button>
+        </div>
+
+        <!-- 3. MOTIVO DE CONSULTA -->
+        <div class="form-field">
+          <label for="motivo_full">Motivo Principal de Consulta / Anamnesis Breve:</label>
+          <input type="text" id="motivo_full" class="input-full" placeholder="Ej. Dolor torácico opresivo / Dificultad respiratoria súbita / Politraumatismo por atropello" oninput="STATE.motivoConsulta = this.value">
+        </div>
+
+        <!-- 4. 8 SIGNOS VITALES FISIOLÓGICOS (GRILLA 4x2) -->
+        <div style="font-size:0.82rem; font-weight:800; color:#0f172a; margin: 12px 0 8px; text-transform:uppercase; letter-spacing:0.5px;">
+          🩺 Evaluación de Constantes Vitales Fisiológicas:
+        </div>
+        <div class="form-grid-4">
+          <div class="form-field" id="card_spo2">
+            <label for="spo2_full">Saturación SpO2 (%):</label>
+            <input type="number" id="spo2_full" class="input-full" placeholder="98" min="0" max="100">
+            <span class="field-hint">Alerta: &lt; 90% Hipoxemia severa</span>
+          </div>
+          <div class="form-field" id="card_fc">
+            <label for="fc_full">Frec. Cardíaca (lpm):</label>
+            <input type="number" id="fc_full" class="input-full" placeholder="78" min="0" max="260">
+            <span class="field-hint">Alerta: &gt; 130 o &lt; 45 lpm</span>
+          </div>
+          <div class="form-field" id="card_pas">
+            <label for="pas_full">PA Sistólica (mmHg):</label>
+            <input type="number" id="pas_full" class="input-full" placeholder="120" min="0" max="280">
+            <span class="field-hint">Alerta: &lt; 80 o &gt; 180 mmHg</span>
+          </div>
+          <div class="form-field" id="card_pad">
+            <label for="pad_full">PA Diastólica (mmHg):</label>
+            <input type="number" id="pad_full" class="input-full" placeholder="80" min="0" max="180">
+            <span class="field-hint">Alerta: &gt; 110 mmHg</span>
+          </div>
+          <div class="form-field" id="card_fr">
+            <label for="fr_full">Frec. Respiratoria (rpm):</label>
+            <input type="number" id="fr_full" class="input-full" placeholder="18" min="0" max="70">
+            <span class="field-hint">Alerta: &gt; 30 o &lt; 10 rpm</span>
+          </div>
+          <div class="form-field" id="card_temp">
+            <label for="temp_full">Temperatura (°C):</label>
+            <input type="number" step="0.1" id="temp_full" class="input-full" placeholder="36.5" min="25" max="44">
+            <span class="field-hint">Alerta: &gt; 39.5°C o &lt; 35°C</span>
+          </div>
+          <div class="form-field" id="card_glasgow">
+            <label for="glasgow_full">Escala de Glasgow (3-15):</label>
+            <input type="number" id="glasgow_full" class="input-full" placeholder="15" min="3" max="15">
+            <span class="field-hint">Alerta: &lt;= 8 Coma (Shock Trauma)</span>
+          </div>
+          <div class="form-field" id="card_glucosa">
+            <label for="glucosa_full">Glicemia Capilar (mg/dL):</label>
+            <input type="number" id="glucosa_full" class="input-full" placeholder="105" min="0" max="800">
+            <span class="field-hint">Alerta: &lt; 54 (Hipo) o &gt; 400 (Ceto)</span>
+          </div>
+        </div>
+
+        <!-- 5. ESCALA VISUAL ANALÓGICA DEL DOLOR (EVA) -->
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 16px; margin: 12px 0;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label for="eva_range" style="font-weight:700; font-size:0.82rem; color:#0f172a;">
+              Escala Visual Analógica del Dolor (EVA 0 a 10):
+            </label>
+            <span id="eva_label" style="font-weight:800; font-size:0.88rem; color:#0284c7;">Sin dolor (0/10)</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; margin-top:6px;">
+            <input type="range" id="eva_range" min="0" max="10" value="0" style="flex:1;" oninput="actualizarEVA(this.value)">
+            <input type="number" id="eva_full" min="0" max="10" value="0" style="width:55px; text-align:center;" class="input-full" oninput="actualizarEVA(this.value)">
+          </div>
+          <div style="font-size:0.72rem; color:#64748b; margin-top:4px;">
+            * Nota de Auditoría NTS N° 042-MINSA: Un dolor severo (EVA 8 a 10) eleva automáticamente al paciente al menos a Prioridad II o III aun con signos normales.
+          </div>
+        </div>
+
+        <!-- 6. ACTIVADORES DE CÓDIGOS TIEMPO-DEPENDIENTES -->
+        <div style="font-size:0.82rem; font-weight:800; color:#0f172a; margin: 14px 0 6px; text-transform:uppercase;">
+          ⏱️ Activadores de Códigos Tiempo-Dependientes (Ruta Crítica Inmediata):
+        </div>
+        <div class="codigos-grid">
+          <label class="codigo-card" id="card_cod_infarto">
+            <input type="checkbox" id="check_cod_infarto" onchange="toggleCodigoTiempo('infarto', this.checked)">
+            <div>
+              <strong>⚡ Código Infarto</strong>
+              <span>Dolor torácico opresivo retroesternal → Orden obligatoria de EKG en &lt; 10 min</span>
+            </div>
+          </label>
+          <label class="codigo-card" id="card_cod_ictus">
+            <input type="checkbox" id="check_cod_ictus" onchange="toggleCodigoTiempo('ictus', this.checked)">
+            <div>
+              <strong>🧠 Código Ictus / ACV</strong>
+              <span>Escala de Cincinnati (+) (asimetría facial, brazo, habla) → Alerta a Tomógrafo</span>
+            </div>
+          </label>
+          <label class="codigo-card" id="card_cod_sepsis">
+            <input type="checkbox" id="check_cod_sepsis" onchange="toggleCodigoTiempo('sepsis', this.checked)">
+            <div>
+              <strong>🧫 Código Sepsis (qSOFA)</strong>
+              <span>Criterios qSOFA (FR &gt;= 22, PAS &lt;= 100, Glasgow &lt; 15) → Lactato y hemocultivo</span>
+            </div>
+          </label>
+        </div>
+
+        <!-- 7. VARIABLES POBLACIONALES Y ATENCIÓN PREFERENTE (LEY N° 27408) -->
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin: 12px 0;">
+          <div style="font-size:0.82rem; font-weight:800; color:#0f172a; margin-bottom:8px;">
+            🏛️ Poblaciones Vulnerables y Atención Preferente (Ley N° 27408 y Ley N° 28683):
+          </div>
+          <div style="display:flex; gap:16px; flex-wrap:wrap;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;">
+              <input type="checkbox" id="check_gestante" onchange="toggleGestante(this.checked)">
+              <strong>Gestante / Puérpera</strong>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;">
+              <input type="checkbox" id="check_pediatrico" onchange="togglePediatrico(this.checked)">
+              <strong>Ajuste Pediátrico (&lt; 14 años)</strong>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;">
+              <input type="checkbox" id="check_aislamiento">
+              <strong>Aislamiento Epidemiológico (Transmisible)</strong>
+            </label>
+          </div>
+
+          <!-- Campos dinámicos de Gestante -->
+          <div id="box_gestante" style="display:none; margin-top:10px; padding:10px; background:#fff1f2; border:1px solid #fecdd3; border-radius:8px;">
+            <div style="font-size:0.78rem; font-weight:800; color:#9f1239; margin-bottom:6px;">
+              🤰 Protocolo de Emergencia Obstétrica — Claves Hospitalarias:
+            </div>
+            <div class="form-grid-3">
+              <div class="form-field">
+                <label>Semanas de Gestación:</label>
+                <input type="number" id="sem_gestacion" class="input-full" placeholder="32" min="1" max="42">
+              </div>
+              <div class="form-field">
+                <label>Latidos Fetales (LCF lpm):</label>
+                <input type="number" id="lcf_gestacion" class="input-full" placeholder="140" min="0" max="200">
+              </div>
+              <div class="form-field">
+                <label>Activación de Clave Obstétrica:</label>
+                <select id="clave_obstetrica_sel" class="input-full">
+                  <option value="ninguna">Sin clave activada</option>
+                  <option value="roja">🔴 Clave Roja (Hemorragia / Shock)</option>
+                  <option value="azul">🔵 Clave Azul (Preeclampsia Severa / Eclampsia)</option>
+                  <option value="amarilla">🟡 Clave Amarilla (Sepsis Obstétrica)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8. BOTÓN DE EVALUACIÓN Y RESULTADO DE TRIAJE -->
+        <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+          <button type="button" class="btn-full-primary" style="flex:1; padding:12px; font-size:0.92rem;" onclick="evaluarPacienteCompleto()">
+            🚦 Evaluar Prioridad Clínica (I a V) — Triaje MINSA
+          </button>
+          <button type="button" class="btn-full-secondary" style="padding:12px 18px;" onclick="imprimirBrazalete()">
+            🏷️ Imprimir Pulsera / Brazalete Hospitalario
+          </button>
+        </div>
+
+        <!-- DESPLIEGUE VISUAL DE LA PRIORIDAD EVALUADA -->
+        <div id="prioridad_display" class="prioridad-display">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+            <div>
+              <span style="font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; opacity:0.9;">RESULTADO OFICIAL DE TRIAJE FISIOLÓGICO</span>
+              <div style="font-size:1.8rem; font-weight:900; line-height:1.2; margin-top:2px;" id="prio_tipo">
+                PRIORIDAD --
+              </div>
+              <div style="font-size:0.85rem; opacity:0.95; margin-top:4px;" id="prio_desc">
+                Ingrese las constantes vitales y presione Evaluar.
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:2.8rem; font-weight:900; line-height:1; font-family:monospace;" id="prio_numero">--</div>
+              <div style="font-size:0.78rem; font-weight:800; margin-top:4px;" id="prio_destino">Destino: Por evaluar</div>
+            </div>
+          </div>
+          <div id="ley27604_banner" style="display:none; margin-top:12px; padding:8px 12px; border-radius:6px; background:rgba(0,0,0,0.25); font-size:0.76rem; font-weight:700;">
+            🛡️ AMPARO LEGAL NTS N° 042-MINSA Y LEY N° 27604: Paciente con riesgo inminente de muerte o secuela grave. Atención inmediata sin condicionamiento de pago ni seguro previo.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ======================================================================
+         MÓDULO 2: ADMISIÓN DE EMERGENCIA & PROTOCOLO NN
+         Sustento: Ley N° 27604 (Art. 3°) y NTS N° 139-MINSA
+         ====================================================================== -->
+    <section class="module-section" id="sec_mod2">
+      <div class="module-section-header" onclick="toggleModule('mod2')">
+        <div class="module-section-title">
+          <span class="module-num-badge">2</span>
+          <div>
+            <div>Módulo 2: Admisión, Identificación RENIEC, Supabase &amp; Protocolo NN</div>
+            <div class="module-section-subtitle">Paralelo para Prioridad I/II · Secuencial para III/IV/V · Ley N° 27604 · NTS N° 139-MINSA</div>
+          </div>
+        </div>
+        <span class="toggle-arrow open" id="arrow_mod2">▼</span>
+      </div>
+      <div class="module-section-body open" id="body_mod2">
+
+        <div class="norma-pill-banner" style="background:#eff6ff; border-color:#93c5fd; color:#1e40af;">
+          <span class="norma-tag" style="background:#1d4ed8;">Ley N° 27604 Art. 3°</span>
+          <span>Para Prioridad I y II, este módulo corre en paralelo por Admisión mientras el equipo médico reanima en Shock Trauma. Nunca bloquea la atención médica.</span>
+        </div>
+
+        <!-- MODALIDAD DE INGRESO -->
+        <div class="form-field">
+          <label>Modalidad de Ingreso al Establecimiento:</label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-full-secondary modalidad-btn selected" data-mod="A pie" onclick="selectModalidad(this)">🚶 A pie / Ambulatorio</button>
+            <button type="button" class="btn-full-secondary modalidad-btn" data-mod="Ambulancia" onclick="selectModalidad(this)">🚑 Ambulancia</button>
+            <button type="button" class="btn-full-secondary modalidad-btn" data-mod="Policía / Serenazgo" onclick="selectModalidad(this)">🚓 Policía Nacional / Serenazgo</button>
+            <button type="button" class="btn-full-secondary modalidad-btn" data-mod="Particular" onclick="selectModalidad(this)">🚗 Vehículo Particular</button>
+          </div>
+        </div>
+
+        <!-- BÚSQUEDA RENIEC / IDENTIFICADOR -->
+        <div class="form-grid-2" style="align-items:flex-end;">
+          <div class="form-field">
+            <label for="ident_full">Número de DNI / Identificador de Admisión:</label>
+            <div style="position:relative;">
+              <input type="text" id="ident_full" class="input-full" placeholder="Ingrese 8 dígitos de DNI o apellidos completos" oninput="procesarIdentificadorFull()">
+              <div id="hc_sugerencias_dropdown" style="display:none; position:absolute; top:100%; left:0; width:100%; background:#ffffff; border:1.5px solid #0284c7; border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.15); z-index:100; max-height:220px; overflow-y:auto;"></div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <button type="button" class="btn-full-primary" style="flex:1;" onclick="consultarReniec()">
+              🔍 Consultar RENIEC
+            </button>
+            <button type="button" class="btn-full-secondary" style="flex:1;" onclick="abrirModalConsultaHC()">
+              📂 Catálogo de Historias Clínicas
+            </button>
+          </div>
+        </div>
+
+        <!-- PANEL DE RESPUESTA APISPERU / RENIEC -->
+        <div id="apisperu_panel" style="display:none; margin:10px 0; padding:12px 14px; border-radius:8px; background:#f0fdf4; border:1.5px solid #86efac;"></div>
+
+        <!-- INDICADORES DE HISTORIA CLÍNICA Y BASE DE DATOS -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #cbd5e1; margin:12px 0; font-size:0.8rem;">
+          <div><strong>Estado en BD:</strong> <span id="hc_badge_estado" class="badge-estado badge-conf">Por confirmar</span></div>
+          <div><strong>Historia Clínica:</strong> <span class="hc-pill-tag" id="hc_code_display">—</span></div>
+          <div style="grid-column: 1 / -1; color:#64748b;" id="hc_accion_display">Esperando ingreso de datos...</div>
+        </div>
+
+        <!-- ALERGIAS MEDICAMENTOSAS REGISTRADAS (DATO PERMANENTE EN HC) -->
+        <div class="form-field" style="margin-top:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <label for="alergias_full" style="font-weight:700; margin:0;">Alergias Medicamentosas Registradas (Dato Permanente en HC):</label>
+            <span id="alergias_alerta_tag" style="display:none; font-size:0.74rem; font-weight:800; background:#fee2e2; color:#b91c1c; border:1px solid #ef4444; border-radius:6px; padding:2px 8px;">
+              ⚠️ ALERTA MÉDICA PERMANENTE
+            </span>
+          </div>
+          <input type="text" id="alergias_full" class="input-full" placeholder="Ej. Niega alergias conocidas / Alérgico a Penicilina o AINEs" oninput="actualizarAlergiasEnTiempoReal(this.value)">
+          <div id="alergias_alerta_banner" style="display:none; margin-top:6px; padding:6px 12px; border-radius:6px; background:#fff1f2; border:1.5px solid #f43f5e; color:#9f1239; font-size:0.8rem; font-weight:700;"></div>
+        </div>
+
+        <!-- DATOS DEMOGRÁFICOS -->
+        <div class="form-grid-4">
+          <div class="form-field">
+            <label for="fecha_nac_full">Fecha de Nacimiento:</label>
+            <input type="date" id="fecha_nac_full" class="input-full" onchange="calcularEdadDesdeFecha()">
+          </div>
+          <div class="form-field">
+            <label for="edad_full">Edad Calculada:</label>
+            <input type="number" id="edad_full" class="input-full" placeholder="Años">
+          </div>
+          <div class="form-field">
+            <label for="sexo_full">Sexo Biológico:</label>
+            <select id="sexo_full" class="input-full">
+              <option value="M">Masculino (M)</option>
+              <option value="F">Femenino (F)</option>
+              <option value="Desconocido">Desconocido (NN)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="gsan_full">Grupo Sanguíneo y Factor Rh:</label>
+            <select id="gsan_full" class="input-full">
+              <option>O+</option><option>O-</option><option>A+</option><option>A-</option>
+              <option>B+</option><option>B-</option><option>AB+</option><option>AB-</option>
             </select>
           </div>
         </div>
 
-        <!-- MÓDULO 3: TRIAGE CLÍNICO -->
-        <div class="module-block" style="margin-bottom: 0;">
-          <div class="module-header-tag">
-            <span class="module-tag-title">
-              <span class="mod-num">3</span> Triage Clínico: Datos Críticos
+        <!-- PROTOCOLO DE PACIENTE NN -->
+        <div style="background:#fff7ed; border:1.5px solid #fb923c; border-radius:10px; padding:12px 16px; margin-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div>
+            <strong style="color:#c2410c; font-size:0.85rem;">🚨 ¿Paciente Indocumentado / En estado de Inconsciencia (NN)?</strong>
+            <div style="font-size:0.75rem; color:#9a3412;">Abre Historia Temporal, deja en blanco fecha/edad sin bloquear el flujo y emite oficio legal a PNP.</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-full-secondary" style="border-color:#ea580c; color:#c2410c; font-weight:800;" onclick="ingresarPacienteNN()">
+              🚨 Ingresar Paciente NN
+            </button>
+            <button type="button" class="btn-full-secondary" id="btn_notif_pnp" style="display:none;" onclick="imprimirAlertaNN()">
+              📄 Acta PNP / Servicio Social
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ======================================================================
+         MÓDULO 3: ADMISIÓN / CUENTAS CORRIENTES (SOAT & PIDE-SUSALUD)
+         Sustento: D.S. N° 024-2002-MTC (SOAT) · Ley N° 29344 (AUS) · Ley N° 27604
+         ====================================================================== -->
+    <section class="module-section" id="sec_mod3">
+      <div class="module-section-header" onclick="toggleModule('mod3')">
+        <div class="module-section-title">
+          <span class="module-num-badge">3</span>
+          <div>
+            <div>Módulo 3: Acreditación PIDE-SUSALUD, Pestaña SOAT &amp; Cobertura</div>
+            <div class="module-section-subtitle">D.S. N° 024-2002-MTC (SOAT) · Ley N° 29344 (AUS) · Ley N° 27604</div>
+          </div>
+        </div>
+        <span class="toggle-arrow open" id="arrow_mod3">▼</span>
+      </div>
+      <div class="module-section-body open" id="body_mod3">
+
+        <!-- RAMA A: PESTAÑA EXCLUSIVA SOAT (ACCIDENTE DE TRÁNSITO) -->
+        <div id="seccion_soat_wrapper" style="display:none; margin-bottom:20px;">
+          <div class="norma-pill-banner" style="background:#fff7ed; border-color:#fb923c; color:#9a3412;">
+            <span class="norma-tag" style="background:#ea580c;">D.S. N° 024-2002-MTC</span>
+            <span><strong>Régimen SOAT de Accidentes de Tránsito:</strong> Cobertura obligatoria de gastos médicos hasta 5 UIT (S/. 27,500.00). En caso de chofer en fuga sin vehículo identificado, el paciente asume el 100%.</span>
+          </div>
+
+          <!-- SELECTOR DE IDENTIFICACIÓN VEHICULAR -->
+          <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:16px; margin-bottom:14px;">
+            <div style="font-size:0.88rem; font-weight:800; color:#0f172a; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+              <span>🚗</span>
+              <span>Identificación del Vehículo Involucrado en el Siniestro Vial:</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px;">
+              <label style="display:flex; align-items:flex-start; gap:10px; background:#f0fdf4; border:2px solid #86efac; border-radius:8px; padding:12px; cursor:pointer;">
+                <input type="radio" name="soat_opcion" id="rb_soat_identificado" value="identificado" checked onchange="cambiarOpcionSoat('identificado')" style="margin-top:3px;">
+                <div>
+                  <strong style="color:#166534; font-size:0.85rem; display:block;">Opción 1: Vehículo con Placa Identificada</strong>
+                  <span style="font-size:0.75rem; color:#15803d;">Permite consultar la póliza en APESEG y activar cobertura legal de hasta 5 UIT (S/. 27,500.00).</span>
+                </div>
+              </label>
+              <label style="display:flex; align-items:flex-start; gap:10px; background:#fef2f2; border:2px solid #fca5a5; border-radius:8px; padding:12px; cursor:pointer;">
+                <input type="radio" name="soat_opcion" id="rb_soat_fuga" value="fuga" onchange="cambiarOpcionSoat('fuga')" style="margin-top:3px;">
+                <div>
+                  <strong style="color:#991b1b; font-size:0.85rem; display:block;">Opción 2: 🚨 Sin Identificación de Placa (Fuga / No identificado)</strong>
+                  <span style="font-size:0.75rem; color:#b91c1c;">No se activa ningún seguro. Se liquida con CARGO COMPLETO al 100% a cargo del paciente.</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- FORMULARIO DE PLACA Y PÓLIZA SOAT (OPCIÓN 1) -->
+          <div id="box_soat_campos" class="form-grid-4">
+            <div class="form-field">
+              <label for="soat_placa">Placa del Vehículo:</label>
+              <div style="display:flex; gap:6px;">
+                <input type="text" id="soat_placa" class="input-full" placeholder="ABC-123" style="text-transform:uppercase; font-weight:800;">
+                <button type="button" class="btn-full-secondary" onclick="consultarSoatApeseg()">🔍 APESEG</button>
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="soat_aseguradora">Compañía Aseguradora SOAT:</label>
+              <select id="soat_aseguradora" class="input-full" onchange="actualizarFactura()">
+                <option value="Pacífico Seguros">Pacífico Seguros</option>
+                <option value="Rímac Seguros">Rímac Seguros</option>
+                <option value="La Positiva">La Positiva</option>
+                <option value="Mapfre Perú">Mapfre Perú</option>
+                <option value="Protecta Security">Protecta Security</option>
+                <option value="Interseguro">Interseguro</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="soat_poliza">N° de Póliza / Certificado:</label>
+              <input type="text" id="soat_poliza" class="input-full" placeholder="POL-SOAT-884920">
+            </div>
+            <div class="form-field">
+              <label for="soat_estado">Estado de Póliza SOAT:</label>
+              <select id="soat_estado" class="input-full" onchange="actualizarFactura()">
+                <option value="ACTIVO">✅ VIGENTE / ACTIVO</option>
+                <option value="VENCIDO">❌ VENCIDO / SIN FONDOS</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- MEDIDOR DE CONSUMO SOAT (TOPE LEGAL 5 UIT) -->
+          <div class="soat-meter-card" id="soat_meter_card">
+            <div class="soat-meter-header">
+              <span style="font-size:0.8rem; font-weight:800; color:#ea580c;">
+                🚗 MEDIDOR DE CONSUMO DE COBERTURA SOAT (TOPE LEGAL: 5 UIT = S/. 27,500.00):
+              </span>
+              <span id="soat_saldo_display" style="font-size:0.88rem; font-weight:900; color:#16a34a;">
+                Saldo Disponible: S/. 27,500.00
+              </span>
+            </div>
+            <div class="soat-progress-bar">
+              <div class="soat-progress-fill" id="soat_progress_fill" style="width: 0%;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#64748b;">
+              <span>Facturado acumulativo: <strong id="soat_facturado_lbl">S/. 0.00</strong></span>
+              <span>Límite máximo según Art. 29° D.S. N° 024-2002-MTC</span>
+            </div>
+          </div>
+
+          <!-- ALERTA DE VEHÍCULO EN FUGA (OPCIÓN 2) -->
+          <div id="box_soat_fuga_alert" class="alerta-soat-fuga" style="display:none; background:#fff1f2; border:2px solid #f43f5e; border-radius:10px; padding:16px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+              <span style="font-size:24px;">🚨</span>
+              <div>
+                <strong style="color:#9f1239; font-size:0.95rem;">ACCIDENTE DE TRÁNSITO SIN PLACA IDENTIFICADA (VEHÍCULO EN FUGA)</strong>
+                <div style="font-size:0.78rem; color:#881337;">Amparo Legal: Art. 31° D.S. N° 024-2002-MTC y Ley N° 27604 (Emergencias y Partos)</div>
+              </div>
+            </div>
+            <p style="font-size:0.82rem; color:#4c0519; margin:6px 0 12px; line-height:1.5;">
+              Al haberse declarado que <strong>no se tiene identificación de placa vehicular</strong>, el sistema <strong>NO ACTIVA NINGÚN SEGURO SOAT</strong> por falta de póliza identificada. La atención médica de estabilización continúa garantizada por ley, pero en el Módulo 8 se generará el <strong>CARGO COMPLETO (100% FACTURADO AL PACIENTE)</strong> como particular, emitiéndose la liquidación y atestado para su posterior gestión ante el Fondo de Compensación del SOAT (FONSAT/MTC).
+            </p>
+            <div style="display:flex; justify-content:flex-end;">
+              <button type="button" class="btn-full-primary" style="background:#e11d48; border-color:#be123c;" onclick="irAModulo(4)">
+                Continuar al Módulo 4: Shock Trauma &amp; Tópicos ➔
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RAMA B: ACREDITACIÓN PIDE-SUSALUD (ENFERMEDAD COMÚN) -->
+        <div id="seccion_pide_wrapper">
+          <div class="norma-pill-banner">
+            <span class="norma-tag">Ley N° 29344 AUS</span>
+            <span><strong>Acreditación Oficial PIDE-SUSALUD:</strong> Cruce informático centralizado con Base de Datos Nacional e historial de IAFAS (SIS, EsSalud, EPS). El sistema audita y asigna el régimen de aseguramiento oficial del paciente de forma automática e inalterable.</span>
+          </div>
+
+          <!-- FORMULARIO DE CONSULTA PIDE-SUSALUD CON CAPTCHA -->
+          <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color:white; border-radius:12px; padding:18px; margin-bottom:16px; border: 1.5px solid #38bdf8;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+              <div>
+                <span style="background:#38bdf8; color:#0f172a; padding:3px 10px; border-radius:9999px; font-size:0.72rem; font-weight:800; letter-spacing:0.5px;">
+                  🏛️ PIDE-SUSALUD · PLATAFORMA DE INTEROPERABILIDAD DEL ESTADO
+                </span>
+                <h4 style="margin:6px 0 0; font-size:1rem; font-weight:800; color:#f8fafc;">
+                  Consulta Automática de Cobertura y Aseguramiento en Salud
+                </h4>
+                <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">
+                  Ingrese el código de verificación gráfica para auditar el aseguramiento oficial en Base de Datos. El régimen se acredita de forma automática y definitiva.
+                </div>
+              </div>
+              <button type="button" class="btn-full-secondary" style="font-size:0.75rem; padding:5px 12px; color:#ffffff; background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.25);" onclick="refrescarCaptchaSeguro()">
+                🔄 Cambiar Código
+              </button>
+            </div>
+
+            <!-- CAPTCHA INTERACTIVO Y ACCIÓN DE CONSULTA -->
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+              <div style="background:#ffffff; border-radius:6px; padding:3px 6px;">
+                <canvas id="captcha_canvas_seguro" width="135" height="36" style="cursor:pointer;" onclick="refrescarCaptchaSeguro()" title="Clic para generar nuevo código"></canvas>
+              </div>
+              <input type="text" id="captcha_input_seguro" class="input-full" placeholder="CÓDIGO" maxlength="6" style="width:120px; text-transform:uppercase; font-weight:800; letter-spacing:2px; text-align:center; height:40px; font-size:0.95rem;">
+              <button type="button" class="btn-full-primary" style="background:#38bdf8; color:#0f172a; height:40px; font-weight:800; padding:0 20px;" onclick="ejecutarConsultaSeguroConCaptcha()">
+                🔍 Validar y Acreditar Cobertura
+              </button>
+            </div>
+            <div id="captcha_error_seguro" style="display:none; color:#fca5a5; font-size:0.78rem; margin-top:8px; font-weight:700;"></div>
+          </div>
+
+          <!-- CUADRO DE RESULTADO DE ACREDITACIÓN PIDE-SUSALUD (INALTERABLE) -->
+          <div id="pide_acreditacion_box" style="display:none; background:#ffffff; border:2px solid #0284c7; border-radius:12px; padding:16px 18px; margin-bottom:16px; box-shadow: 0 4px 12px rgba(2,132,199,0.08);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px; border-bottom:1.5px solid #e2e8f0; padding-bottom:10px;">
+              <div>
+                <span id="pide_badge_bloqueo" style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:9999px; font-size:0.7rem; font-weight:800;">
+                  🔒 ACREDITACIÓN OFICIAL INALTERABLE
+                </span>
+                <h4 id="pide_tipo_titulo" style="margin:4px 0 0; font-size:1.05rem; font-weight:900; color:#0f172a;">
+                  RÉGIMEN ACREDITADO
+                </h4>
+              </div>
+              <span id="pide_badge_estado" style="background:#10b981; color:#ffffff; padding:4px 12px; border-radius:9999px; font-size:0.75rem; font-weight:800;">
+                ACREDITADO ACTIVO
+              </span>
+            </div>
+
+            <!-- DETALLES DEL SEGURO ACREDITADO -->
+            <div id="pide_detalles_grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; font-size:0.83rem; margin-bottom:12px;">
+              <!-- Se llena dinámicamente con los datos oficiales -->
+            </div>
+
+            <!-- BANNER DE CONDICIONES DE COBRO OFICIALES ASIGNADAS -->
+            <div id="pide_condiciones_cobro_banner" style="background:#f8fafc; border-left:4px solid #0284c7; padding:10px 14px; border-radius:6px; font-size:0.8rem; color:#334155; line-height:1.45;">
+              <!-- Se llena dinámicamente con la regla financiera aplicable -->
+            </div>
+          </div>
+
+          <!-- ESTADO DE SEGURO CONSOLIDADO -->
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px; font-size:0.82rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <strong style="color:#475569;">Régimen Acreditado en Establecimiento:</strong>
+              <span id="seguro_consolidado" style="font-weight:800; color:#0284c7; margin-left:6px;">Sin registrar (Pendiente de Consulta PIDE)</span>
+            </div>
+            <span id="seguro_candado_lbl" style="font-size:0.72rem; color:#64748b; background:#e2e8f0; padding:2px 8px; border-radius:4px; font-weight:700;">
+              Auditoría SUSALUD Activa · No Modificable
             </span>
-            <span style="font-size: 0.72rem; color: #64748b;">Decisión 1: SpO2 y Riesgo</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ======================================================================
+         MÓDULO 4: MÉDICO EMERGECIÓLOGO Y ENFERMERÍA DE TÓPICO (KARDEX & DESTINO)
+         Sustento: NTS N° 042-MINSA y NTS N° 139-MINSA
+         ====================================================================== -->
+    <section class="module-section" id="sec_mod4">
+      <div class="module-section-header" onclick="toggleModule('mod4')">
+        <div class="module-section-title">
+          <span class="module-num-badge">4</span>
+          <div>
+            <div>Módulo 4: Shock Trauma, Tópicos de Emergencia &amp; Kardex</div>
+            <div class="module-section-subtitle">NTS N° 042-MINSA · NTS N° 139-MINSA · Kardex de Enfermería, Laboratorio Clínico e Imágenes</div>
+          </div>
+        </div>
+        <span class="toggle-arrow open" id="arrow_mod4">▼</span>
+      </div>
+      <div class="module-section-body open" id="body_mod4">
+
+        <div class="norma-pill-banner">
+          <span class="norma-tag">NTS N° 139-MINSA</span>
+          <span><strong>Órdenes Asistenciales y Kardex Auditable:</strong> Prescripción de fármacos, analítica de laboratorio y estudios radiológicos de emergencia. Solo los medicamentos efectivamente administrados por Enfermería se debitan en la cuenta del paciente.</span>
+        </div>
+
+        <!-- AMBIENTE ASIGNADO Y MÉDICO DE GUARDIA -->
+        <div class="form-grid-3" style="margin-bottom:14px;">
+          <div class="form-field">
+            <label>Ambiente Asignado por Triaje:</label>
+            <div style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:8px; padding:9px 12px; font-weight:800; color:#0f172a;" id="topico_asignado_lbl">
+              Tópico de Emergencia General
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="cie10_select">Diagnóstico CIE-10 (Obligatorio para Cobertura):</label>
+            <select id="cie10_select" class="input-full" onchange="seleccionarCIE10(this.value)">
+              <option value="">Seleccione diagnóstico CIE-10...</option>
+              <option value="I21.9 — Infarto agudo del miocardio sin otra especificación">I21.9 — Infarto agudo del miocardio</option>
+              <option value="I64.X — Accidente vascular encefálico agudo (Ictus)">I64.X — Accidente vascular encefálico (Ictus)</option>
+              <option value="A41.9 — Sepsis, no especificada">A41.9 — Sepsis no especificada</option>
+              <option value="T14.9 — Traumatismo no especificado por accidente de tránsito">T14.9 — Traumatismo por accidente de tránsito</option>
+              <option value="S06.9 — Traumatismo intracraneal no especificado (TEC)">S06.9 — Traumatismo intracraneal (TEC)</option>
+              <option value="K35.8 — Apendicitis aguda">K35.8 — Apendicitis aguda</option>
+              <option value="J45.9 — Asma, no especificada (Crisis asmática)">J45.9 — Crisis asmática aguda</option>
+              <option value="R10.4 — Otros dolores abdominales y los no especificados">R10.4 — Dolor abdominal agudo</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="medico_responsable_select">Médico Asistencial de Guardia:</label>
+            <div style="display:flex; gap:6px;">
+              <select id="medico_responsable_select" class="input-full" onchange="actualizarMedicoAsignado(this.value)" style="font-weight:700;">
+                <option value="Médico de Turno 1 (Emergenciólogo / CMP 0001)">Médico de Turno 1 (Emergenciólogo) — 🟢 Disponible</option>
+                <option value="Médico de Turno 2 (Cirujano de Guardia / CMP 0002)">Médico de Turno 2 (Cirujano de Guardia) — 🟢 Disponible</option>
+                <option value="Médico de Turno 3 (Médico Internista / CMP 0003)">Médico de Turno 3 (Médico Internista) — 🟢 Disponible</option>
+                <option value="Médico de Turno 4 (Pediatra de Turno / CMP 0004)">Médico de Turno 4 (Pediatra de Turno) — 🟢 Disponible</option>
+                <option value="Médico de Turno 5 (Ginecólogo Obstetra / CMP 0005)">Médico de Turno 5 (Ginecólogo Obstetra) — 🟢 Disponible</option>
+                <option value="Médico de Turno 6 (Traumatólogo de Guardia / CMP 0006)">Médico de Turno 6 (Traumatólogo de Guardia) — 🟢 Disponible</option>
+              </select>
+              <button type="button" class="btn-full-primary" style="white-space:nowrap; padding:0 14px; font-weight:700; background:#0284c7; display:flex; align-items:center; gap:6px;" onclick="asignarMedicoDisponible()" title="Verificar rol de guardia y asignar médico disponible según especialidad">
+                🩺 Asignar Disponible
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 4.1: KARDEX DE MEDICAMENTOS Y FLUIDOTERAPIA -->
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <div style="font-size:0.88rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+              <span>💊</span>
+              <span>Kardex de Farmacia y Medicamentos de Urgencia:</span>
+            </div>
+            <span style="font-size:0.75rem; color:#64748b; background:#f1f5f9; padding:4px 8px; border-radius:6px;">
+              NTS N° 139-MINSA · Solo se factura con verificación de administración
+            </span>
           </div>
 
-          <div class="form-group">
-            <div class="form-label">
-              <label for="spo2_num_b">Saturación SpO2 (%):</label>
-              <span class="form-hint">Dato Crítico 1 (Rango: 0 a 100 %)</span>
+          <!-- SELECTOR DINÁMICO DE MEDICAMENTO DEL CATÁLOGO -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:10px; align-items:end;">
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="select_farmacia_catalogo">Seleccionar Medicamento / Solución EV:</label>
+                <select id="select_farmacia_catalogo" class="input-full" style="font-weight:600;">
+                  <!-- Se llena dinámicamente con los fármacos de FARMACIA -->
+                </select>
+              </div>
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="input_dosis_kardex">Dosis / Vía de Administración:</label>
+                <input type="text" id="input_dosis_kardex" class="input-full" placeholder="Ej. 1 gr EV diluido cada 12h" value="Dosis terapéutica EV">
+              </div>
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="input_horario_kardex">Frecuencia / Horario:</label>
+                <input type="text" id="input_horario_kardex" class="input-full" placeholder="Horario" value="Stat (Inmediato)">
+              </div>
+              <button type="button" class="btn-full-primary" style="height:38px; white-space:nowrap; background:#0284c7;" onclick="agregarMedicamentoAKardex()">
+                + Agregar al Kardex
+              </button>
             </div>
-            <div class="input-with-unit">
-              <input type="number" id="spo2_num_b" class="input-control" value="91" placeholder="Ej. 91" step="any">
-              <span class="input-unit">%</span>
-            </div>
-            <div id="error_spo2_b" class="input-error-msg" style="display: none;"></div>
           </div>
 
-          <div class="form-group" style="margin-bottom: 0;">
-            <div class="form-label">
-              <span>Antecedentes Relevantes:</span>
-              <span class="form-hint">Dato Crítico 2</span>
+          <table class="kardex-table" id="tabla_kardex_enfermeria" style="width:100%; border-collapse:collapse; font-size:12px;">
+            <thead>
+              <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+                <th style="padding:8px 10px; text-align:left;">Ítem / Fármaco Prescrito</th>
+                <th style="padding:8px 10px; text-align:left;">Dosis / Vía / Horario</th>
+                <th style="padding:8px 10px; text-align:center; width:210px;">Acción de Enfermería (Kardex)</th>
+              </tr>
+            </thead>
+            <tbody id="kardex_items_body">
+              <!-- Renderizado dinámico -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- SECCIÓN 4.2: ÓRDENES DE EXÁMENES DE LABORATORIO CLÍNICO -->
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <div style="font-size:0.88rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+              <span>🧪</span>
+              <span>Laboratorio Clínico de Emergencia (Órdenes Analíticas):</span>
             </div>
-            <label class="switch-container">
-              <div class="switch-label-area">
-                <span class="switch-title">Registra antecedentes de riesgo</span>
-                <span class="switch-subtitle">Enfermedades cardíacas, respiratorias o crónicas</span>
+            <span style="font-size:0.75rem; color:#64748b; background:#f1f5f9; padding:4px 8px; border-radius:6px;">
+              Toma de muestra y procesamiento estat
+            </span>
+          </div>
+
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 3fr 1fr auto; gap:10px; align-items:end;">
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="select_laboratorio_catalogo">Seleccionar Prueba de Laboratorio:</label>
+                <select id="select_laboratorio_catalogo" class="input-full" style="font-weight:600;">
+                  <!-- Se llena dinámicamente con los exámenes de LABORATORIO -->
+                </select>
               </div>
-              <div class="toggle-switch">
-                <input type="checkbox" id="ant_b" checked>
-                <span class="toggle-slider"></span>
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="select_prioridad_lab">Prioridad Analítica:</label>
+                <select id="select_prioridad_lab" class="input-full">
+                  <option value="Urgente (30 min)">🚨 Urgente / Emergencia (30 min)</option>
+                  <option value="Rutina (2 horas)">Rutina Hospitalaria (2 horas)</option>
+                </select>
               </div>
+              <button type="button" class="btn-full-primary" style="height:38px; white-space:nowrap; background:#0891b2;" onclick="solicitarExamenLaboratorio()">
+                + Solicitar Análisis
+              </button>
+            </div>
+          </div>
+
+          <div id="contenedor_ordenes_lab">
+            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+              <thead>
+                <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+                  <th style="padding:8px 10px; text-align:left;">Prueba Analítica Solicitada</th>
+                  <th style="padding:8px 10px; text-align:left; width:160px;">Prioridad / Muestra</th>
+                  <th style="padding:8px 10px; text-align:center; width:160px;">Estado de Procesamiento</th>
+                </tr>
+              </thead>
+              <tbody id="tabla_ordenes_lab_body">
+                <!-- Se llena con las órdenes de laboratorio activas -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 4.3: ÓRDENES DE DIAGNÓSTICO POR IMÁGENES Y PROCEDIMIENTOS -->
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <div style="font-size:0.88rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+              <span>🩻</span>
+              <span>Diagnóstico por Imágenes &amp; Procedimientos de Emergencia:</span>
+            </div>
+            <span style="font-size:0.75rem; color:#64748b; background:#f1f5f9; padding:4px 8px; border-radius:6px;">
+              Radiología, Tomografía, Ecografía FAST y Procedimientos
+            </span>
+          </div>
+
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 3fr 1fr auto; gap:10px; align-items:end;">
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="select_imagenes_catalogo">Seleccionar Estudio Radiológico / Imagen:</label>
+                <select id="select_imagenes_catalogo" class="input-full" style="font-weight:600;">
+                  <!-- Se llena dinámicamente con los estudios de IMAGENES -->
+                </select>
+              </div>
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="input_indicacion_img">Indicación Clínica:</label>
+                <input type="text" id="input_indicacion_img" class="input-full" placeholder="Ej. Descarte neumotórax / TEC" value="Evaluación de emergencia">
+              </div>
+              <button type="button" class="btn-full-primary" style="height:38px; white-space:nowrap; background:#4f46e5;" onclick="solicitarEstudioImagen()">
+                + Solicitar Estudio
+              </button>
+            </div>
+          </div>
+
+          <div id="contenedor_ordenes_img">
+            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+              <thead>
+                <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+                  <th style="padding:8px 10px; text-align:left;">Estudio Radiológico / Procedimiento</th>
+                  <th style="padding:8px 10px; text-align:left; width:160px;">Indicación Médica</th>
+                  <th style="padding:8px 10px; text-align:center; width:160px;">Estado de Realización</th>
+                </tr>
+              </thead>
+              <tbody id="tabla_ordenes_img_body">
+                <!-- Se llena con las órdenes de imágenes activas -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SELECTOR OBLIGATORIO DE DESTINO POST-TÓPICO -->
+        <div style="background:#f8fafc; border:2px solid #0284c7; border-radius:10px; padding:14px; margin-top:16px;">
+          <div style="font-size:0.84rem; font-weight:800; color:#0284c7; margin-bottom:8px;">
+            🚦 SELECTOR OBLIGATORIO DE DESTINO POST-TÓPICO (CONTROL DE FLUJO CLÍNICO):
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <label style="display:flex; align-items:center; gap:8px; font-weight:700; cursor:pointer;">
+              <input type="radio" name="destino_post_topico" id="btn_destino_alta" value="alta_directa" onchange="seleccionarDestinoPostTopico('alta')">
+              <span>Ruta 1 — Alta Directa desde Tópico / Consultorio (Salta Módulos 5 y 6 directo al Módulo 7 de Egreso — Obligatorio para P-IV y P-V)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-weight:700; cursor:pointer;">
+              <input type="radio" name="destino_post_topico" id="btn_destino_observacion" value="observacion" checked onchange="seleccionarDestinoPostTopico('observacion')">
+              <span>Ruta 2 — Pase a Sala de Observación de Emergencia (Habilita el Módulo 5 para monitoreo de 12 a 24 horas)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-weight:700; cursor:pointer;">
+              <input type="radio" name="destino_post_topico" id="btn_destino_quirofano_uci" value="sop_uci" onchange="seleccionarDestinoPostTopico('quirofano_uci')">
+              <span>Ruta 3 — Pase Directo a Quirófano (SOP) o UCI/Hospitalización (Salta al Módulo 6 para soporte crítico o cirugía urgente)</span>
             </label>
           </div>
         </div>
 
-      </article>
-
-    </main>
-
-    <!-- BARRA DE ACCIONES Y CONTROLES -->
-    <section class="main-actions-card">
-      <div class="actions-left">
-        <button type="button" id="btnEvaluar" class="btn-primary">
-          <span>⚡ Evaluar Triage y Asignar Cama</span>
-        </button>
-        <button type="button" id="btnLimpiarAccion" class="btn-secondary">
-          <span>🔄 Limpiar / Datos desde Cero</span>
-        </button>
-        <button type="button" id="btnReporte" class="btn-secondary">
-          <span>📄 Generar Reporte Clínico Oficial</span>
-        </button>
       </div>
+    </section><!-- ======================================================================
+         MÓDULO 5: SALA DE OBSERVACIÓN DE EMERGENCIA & REEVALUACIÓN MÉDICA
+         Sustento: NTS N° 042-MINSA/DGSP-V.01 (Estancia de 12 a 24 horas)
+         ====================================================================== -->
+    <section class="module-section" id="sec_mod5">
+      <div class="module-section-header" onclick="toggleModule('mod5')">
+        <div class="module-section-title">
+          <span class="module-num-badge">5</span>
+          <div>
+            <div>Módulo 5: Sala de Observación &amp; Reevaluación Médica</div>
+            <div class="module-section-subtitle">Estancia reglamentaria de 12 a 24 horas · Balance hídrico · NTS N° 042-MINSA/DGSP-V.01</div>
+          </div>
+        </div>
+        <span class="toggle-arrow open" id="arrow_mod5">▼</span>
+      </div>
+      <div class="module-section-body open" id="body_mod5">
 
-      <div class="mode-toggle-group">
-        <button type="button" id="modeAnimado" class="mode-option active">
-          🎬 Modo Animado (Paso a Paso)
-        </button>
-        <button type="button" id="modeInstantaneo" class="mode-option">
-          ⚡ Modo Instantáneo
-        </button>
+        <div class="norma-pill-banner">
+          <span class="norma-tag">NTS N° 042-MINSA</span>
+          <span><strong>Límite de Estancia en Observación:</strong> Máximo de 12 a 24 horas. Pacientes que excedan las 24 horas constituyen falta de auditoría médica hospitalaria.</span>
+        </div>
+
+        <!-- 1. MONITOR EN TIEMPO REAL DE OBSERVACIÓN (NTS N° 042-MINSA) -->
+        <div class="estancia-meter-card" id="card_monitor_observacion_m5" style="border: 2px solid #0284c7; background: #f0f9ff; padding: 14px; margin-bottom: 14px; border-radius: 12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:24px;">⏱️</span>
+              <div>
+                <strong style="font-size:0.92rem; color:#0369a1;">Contador Activo de Estancia en Sala de Observación</strong>
+                <div style="font-size:0.75rem; color:#0284c7;">Control de liberación automática según NTS N° 042-MINSA/DGSP-V.01 (Estancia estándar máx. 12 horas)</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="estancia-badge estancia-verde" id="estancia_estado_badge">En espera de paciente</span>
+              <button type="button" class="btn-full-secondary" style="font-size:0.72rem; padding:3px 8px; border-color:#0284c7; color:#0284c7; background:#ffffff;" onclick="irAModulo(6); filtrarTableroRecursos('observacion');">
+                🛏️ Ver Camas OBS
+              </button>
+            </div>
+          </div>
+
+          <!-- DETALLES DE CAMA ASIGNADA Y SELECTOR NORMATIVO -->
+          <div style="background:#ffffff; border:1px solid #bae6fd; border-radius:10px; padding:12px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px; align-items:center;">
+              <div>
+                <span style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase;">Cama de Observación Asignada:</span>
+                <div style="font-size:0.95rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px; margin-top:2px;">
+                  <span id="lbl_m5_cama_nombre">🛏️ Ninguna cama asignada</span>
+                  <span id="lbl_m5_cama_estado" style="background:#f1f5f9; color:#475569; font-size:0.7rem; padding:1px 6px; border-radius:4px; font-weight:800;">DISPONIBLE</span>
+                </div>
+                <div style="font-size:0.74rem; color:#64748b; margin-top:3px;" id="lbl_m5_paciente_info">
+                  Complete la admisión y asigne una cama en el Módulo 4, 5 o 6 para iniciar el monitoreo.
+                </div>
+              </div>
+
+              <div>
+                <label for="select_m5_patologia_horas" style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase; display:block; margin-bottom:3px;">
+                  Condición Clínica &amp; Horas Normativas (NTS N° 042-MINSA):
+                </label>
+                <select id="select_m5_patologia_horas" class="input-full" style="font-size:0.8rem; font-weight:700;" onchange="aplicarNormaHorasObservacion(this.value)">
+                  <option value="6|Dolor Abdominal Agudo en estudio (Descarte apendicitis / ecografía)">6h — Dolor Abdominal Agudo (Evaluación seriada / NTS 042)</option>
+                  <option value="8|Traumatismo Encéfalo-Craneano (TEC) Leve con riesgo / Moderado">8h — TEC Leve-Moderado (Glasgow horario / Neuro-monitoreo)</option>
+                  <option value="4|Crisis Asmática / Broncoespasmo Agudo">4h — Crisis Asmática (Nebulizaciones seriadas / Saturometría)</option>
+                  <option value="6|Deshidratación Moderada / Intoxicación Aguda no letal">6h — Deshidratación / Intoxicación (Hidratación parenteral)</option>
+                  <option value="6|Síndrome Coronario Agudo Descartado / Dolor Torácico">6h — Dolor Torácico Atípico (Curva de Troponinas 0h-6h)</option>
+                  <option value="12|Límite Máximo Estándar en Observación de Emergencia">12h — Límite Estándar de Observación (NTS N° 042-MINSA)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONTADOR EN VIVO (HH:MM:SS) Y CONTROLES DEMO -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
+            <div>
+              <span style="font-size:0.75rem; color:#475569; font-weight:700;">TIEMPO RESTANTE PARA LIBERACIÓN AUTOMÁTICA:</span>
+              <div class="timer-display-box" style="margin-top:2px;">
+                <span class="timer-pulsing-dot"></span>
+                <span id="lbl_m5_tiempo_restante" style="color:#64748b; font-size:1.4rem;">--:--:--</span>
+                <span style="font-size:0.74rem; color:#64748b; font-family:sans-serif; font-weight:600;" id="lbl_m5_tiempo_total_info">(Sin cama asignada)</span>
+              </div>
+            </div>
+
+            <div style="text-align:right;">
+              <span style="font-size:0.72rem; color:#64748b; font-weight:700; display:block;">CONTROLES DE DEMO / SIMULACIÓN:</span>
+              <div style="display:flex; gap:6px; margin-top:4px;">
+                <button type="button" class="btn-full-secondary" style="font-size:0.72rem; padding:4px 8px; background:#ffffff;" onclick="acelerarTiempoDemoObservacion()" title="Acelera 1 hora para probar el avance">
+                  ⚡ Avanzar 1h (Demo)
+                </button>
+                <button type="button" class="btn-full-secondary" style="font-size:0.72rem; padding:4px 8px; background:#fff1f2; color:#be123c; border-color:#fecdd3;" onclick="finalizarTiempoDemoObservacion()" title="Fuerza al contador a 0 para ver la liberación">
+                  ⏩ Probar Fin de Tiempo (00:00)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- BARRA DE PROGRESO DE ESTANCIA -->
+          <div class="recurso-progress-track">
+            <div id="bar_m5_progreso_estancia" class="recurso-progress-bar" style="width: 2%;"></div>
+          </div>
+
+          <!-- SECCIÓN DE AMPLIACIÓN DE HORAS (REQUERIMIENTO CLAVE) -->
+          <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; margin-top:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div>
+                <strong style="font-size:0.8rem; color:#0f172a;">➕ Ampliar Horas de Observación Médica:</strong>
+                <div style="font-size:0.72rem; color:#64748b;">Aumenta el tiempo si la evolución del paciente requiere mayor monitoreo clínico.</div>
+              </div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button type="button" class="btn-full-secondary" style="font-size:0.74rem; font-weight:700; padding:4px 10px; border-color:#0284c7; color:#0369a1;" onclick="ampliarHorasCamaActual(2, 'Reevaluación de dolor abdominal y signos vitales')">
+                  +2 Horas (Reevaluación)
+                </button>
+                <button type="button" class="btn-full-secondary" style="font-size:0.74rem; font-weight:700; padding:4px 10px; border-color:#d97706; color:#b45309;" onclick="ampliarHorasCamaActual(4, 'Espera de ecografía y analítica seriada')">
+                  +4 Horas (Exámenes)
+                </button>
+                <button type="button" class="btn-full-secondary" style="font-size:0.74rem; font-weight:700; padding:4px 10px; border-color:#dc2626; color:#991b1b;" onclick="ampliarHorasCamaActual(6, 'Ampliación máxima dentro de límite normativo 12h')">
+                  +6 Horas (Límite 12h)
+                </button>
+                <button type="button" class="btn-full-secondary" style="font-size:0.74rem; font-weight:700; padding:4px 10px; border-color:#16a34a; color:#166534;" onclick="liberarCamaActualManual()">
+                  🔓 Liberar Cama Ahora (Alta)
+                </button>
+              </div>
+            </div>
+            <div id="lbl_m5_ampliaciones_log" style="font-size:0.72rem; color:#0369a1; margin-top:6px; display:none;"></div>
+          </div>
+
+          <div id="alerta_infraccion_estancia" style="display:none; color:#991b1b; font-weight:800; font-size:0.78rem; margin-top:8px;">
+            🚨 INFRACCIÓN NORMATIVA NTS N° 042-MINSA: El paciente supera las 24 horas en Observación. Debe definirse su internamiento en Hospitalización o su referencia inmediata vía REFCON.
+          </div>
+        </div>
+
+        <!-- 2. BALANCE HÍDRICO ESTRICTO (ML) -->
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:14px; margin-bottom:14px;">
+          <div style="font-size:0.84rem; font-weight:800; color:#0f172a; margin-bottom:10px;">
+            💧 Balance Hídrico Estricto (Kardex de Enfermería):
+          </div>
+          <div class="form-grid-3">
+            <div class="form-field">
+              <label for="ingresos_ml">Ingresos Totales (ml) (Sueros + EV):</label>
+              <input type="number" id="ingresos_ml" class="input-full" value="1500" oninput="calcularBalanceHidrico()">
+            </div>
+            <div class="form-field">
+              <label for="egresos_ml">Egresos Totales (ml) (Diuresis + Vómitos):</label>
+              <input type="number" id="egresos_ml" class="input-full" value="1100" oninput="calcularBalanceHidrico()">
+            </div>
+            <div class="form-field">
+              <label>Balance Hídrico Neto:</label>
+              <div id="balance_neto_lbl" style="font-size:1.1rem; font-weight:900; color:#16a34a; padding:6px 0;">+ 400 ml (Positivo)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. DECISIÓN ASISTENCIAL POST-OBSERVACIÓN -->
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn-full-primary" style="flex:1; background:#16a34a;" onclick="decisionObservacion('alta')">
+            ✅ Paciente Estabilizado — Proceder a Alta Médica (Módulo 7)
+          </button>
+          <button type="button" class="btn-full-primary" style="flex:1; background:#ea580c;" onclick="decisionObservacion('internamiento')">
+            🚨 Paciente Persiste Crítico / Requiere Cama o SOP (Módulo 6)
+          </button>
+        </div>
+
       </div>
     </section>
 
-    <!-- PIPELINE VISUAL DEL ALGORITMO (5 PASOS) -->
-    <section class="pipeline-section">
-      <div class="section-title-bar">
-        <h3 class="section-title">
-          <span>📊 Pipeline del Algoritmo (Flujo de Decisión en Vivo)</span>
-        </h3>
-        <span style="font-size: 0.85rem; color: var(--text-muted);">
-          Traza visual de ejecución en tiempo real
-        </span>
+
+    <!-- ======================================================================
+         MÓDULO 6: GESTIÓN DE CAMAS Y ÁREAS CRÍTICAS (SOP, UCI & DESEMPATE ABCDE)
+         Sustento: NTS N° 031-MINSA/DGSP-V.01 y Ley N° 27408
+         ====================================================================== -->
+    <section class="module-section" id="sec_mod6">
+      <div class="module-section-header" onclick="toggleModule('mod6')">
+        <div class="module-section-title">
+          <span class="module-num-badge">6</span>
+          <div>
+            <div>Módulo 6: Stock, Asignación de Camas Críticas, SOP &amp; Hospitalización</div>
+            <div class="module-section-subtitle">Stock en tiempo real · Priorización UCI NTS N° 031-MINSA · Algoritmo de Prelación ABCDE</div>
+          </div>
+        </div>
+        <span class="toggle-arrow open" id="arrow_mod6">▼</span>
       </div>
+      <div class="module-section-body open" id="body_mod6">
 
-      <div class="pipeline-steps">
-        <div class="pipeline-step" id="step_1">
-          <div class="step-num">1</div>
-          <div class="step-title">Enfermería 1</div>
-          <div class="step-desc">Detección de ID, búsqueda en BD y gestión de HC</div>
-          <div class="step-detail-badge" id="step_detail_1">En espera</div>
+        <div class="norma-pill-banner">
+          <span class="norma-tag">NTS N° 031-MINSA</span>
+          <span><strong>Modelo de Priorización de Camas Críticas:</strong> Selección por probabilidad de recuperación (Prioridad 1 al 4) y desempate matemático fisiológico ABCDE.</span>
         </div>
 
-        <div class="pipeline-step" id="step_2">
-          <div class="step-num">2</div>
-          <div class="step-title">Enfermería 2</div>
-          <div class="step-desc">Ticket por orden de llegada y cobertura de seguro</div>
-          <div class="step-detail-badge" id="step_detail_2">En espera</div>
+        <!-- BANNER DE CIRUGÍA DE CONTROL DE DAÑOS EN CURSO (SI SE ACTIVÓ PASE DIRECTO) -->
+        <div id="banner_quirofano_urgente_activo" style="display:none; background:#fff7ed; border:2px solid #ea580c; border-radius:10px; padding:14px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:28px;">🏥</span>
+              <div>
+                <strong style="color:#c2410c; font-size:0.95rem;">CIRUGÍA DE CONTROL DE DAÑOS EN CURSO (SOP 1) — LEY N° 27604</strong>
+                <div style="font-size:0.78rem; color:#9a3412;">Paciente en intervención quirúrgica de emergencia. Atención sin condicionamiento administrativo.</div>
+              </div>
+            </div>
+            <button type="button" class="btn-full-primary" style="background:#15803d; border-color:#166534; font-size:0.8rem; padding:6px 14px;" onclick="abrirModalRegularizacionDiferida()">
+              📝 Regularizar Datos Post-Estabilización (DNI / SOAT / Seguro)
+            </button>
+          </div>
         </div>
 
-        <div class="pipeline-step" id="step_3">
-          <div class="step-num">3</div>
-          <div class="step-title">Triage Clínico</div>
-          <div class="step-desc">Evaluación de SpO2 y antecedentes de riesgo</div>
-          <div class="step-detail-badge" id="step_detail_3">En espera</div>
+        <!-- SECCIÓN DE CENTRO QUIRÚRGICO DE EMERGENCIA (SOP & URPA) -->
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <div style="font-size:0.88rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+              <span>🏥</span>
+              <span>Centro Quirúrgico de Emergencia (SOP) &amp; Sala de Recuperación (URPA):</span>
+            </div>
+            <span style="font-size:0.75rem; color:#0369a1; background:#e0f2fe; padding:3px 8px; border-radius:6px; font-weight:700;">
+              Cirugía de Control de Daños · Cirugía General · Gineco-Obstetricia
+            </span>
+          </div>
+
+          <!-- TARJETAS DE QUIRÓFANOS -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px; margin-bottom:14px;">
+            <div id="card_sop1" style="background:#f8fafc; border:2px solid #cbd5e1; border-radius:10px; padding:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <strong style="font-size:0.85rem; color:#0f172a;">Quirófano 1 (SOP 1 - Trauma Shock)</strong>
+                <span id="badge_sop1" style="background:#dcfce7; color:#15803d; font-size:0.72rem; font-weight:800; padding:2px 8px; border-radius:9999px;">🟢 Disponible</span>
+              </div>
+              <div style="font-size:0.74rem; color:#64748b; margin-bottom:8px;">Equipado para Laparotomía de daño, toracotomía y politrauma crítico.</div>
+              <button type="button" class="btn-full-secondary" style="width:100%; font-size:0.78rem; font-weight:700;" onclick="asignarQuirofanoEspecifico(1)">
+                🏥 Asignar Quirófano SOP 1
+              </button>
+            </div>
+
+            <div id="card_sop2" style="background:#f8fafc; border:2px solid #cbd5e1; border-radius:10px; padding:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <strong style="font-size:0.85rem; color:#0f172a;">Quirófano 2 (SOP 2 - Urgencias)</strong>
+                <span id="badge_sop2" style="background:#dcfce7; color:#15803d; font-size:0.72rem; font-weight:800; padding:2px 8px; border-radius:9999px;">🟢 Disponible</span>
+              </div>
+              <div style="font-size:0.74rem; color:#64748b; margin-bottom:8px;">Equipado para Apendicectomías, Cesáreas de urgencia y Cirugía General.</div>
+              <button type="button" class="btn-full-secondary" style="width:100%; font-size:0.78rem; font-weight:700;" onclick="asignarQuirofanoEspecifico(2)">
+                🏥 Asignar Quirófano SOP 2
+              </button>
+            </div>
+
+            <div id="card_urpa" style="background:#f8fafc; border:2px solid #cbd5e1; border-radius:10px; padding:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <strong style="font-size:0.85rem; color:#0f172a;">Sala URPA (Recuperación)</strong>
+                <span id="badge_urpa" style="background:#dcfce7; color:#15803d; font-size:0.72rem; font-weight:800; padding:2px 8px; border-radius:9999px;">🟢 2 Camas Libres</span>
+              </div>
+              <div style="font-size:0.74rem; color:#64748b; margin-bottom:8px;">Monitorización post-anestésica inmediata (Escala Aldrete).</div>
+              <button type="button" class="btn-full-secondary" style="width:100%; font-size:0.78rem; font-weight:700;" onclick="asignarCamaURPA()">
+                🛌 Asignar Cama URPA
+              </button>
+            </div>
+          </div>
+
+          <!-- SELECTOR DE CIRUGÍA DE URGENCIA A REALIZAR -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
+            <div style="font-size:0.82rem; font-weight:800; color:#0f172a; margin-bottom:8px;">
+              🔪 Indicar Intervención Quirúrgica de Emergencia:
+            </div>
+            <div style="display:grid; grid-template-columns: 2fr 1fr auto; gap:10px; align-items:end;">
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="select_cirugia_catalogo">Tipo de Procedimiento Quirúrgico:</label>
+                <select id="select_cirugia_catalogo" class="input-full" style="font-weight:700;">
+                  <option value="Laparotomía Exploratoria y Cirugía de Control de Daños|850">Laparotomía Exploratoria y Cirugía de Control de Daños</option>
+                  <option value="Apendicectomía de Emergencia por Peritonitis|650">Apendicectomía de Urgencia por Peritonitis Aguda</option>
+                  <option value="Toracotomía de Urgencia / Drenaje Torácico Sellado|720">Toracotomía de Emergencia / Drenaje Torácico (S/. 720.00)</option>
+                  <option value="Cesárea de Emergencia por Sufrimiento Fetal|780">Cesárea de Emergencia por Sufrimiento Fetal Agudo</option>
+                  <option value="Craneotomía Descompresiva por Hematoma Epidural/Subdural|1200">Craneotomía Descompresiva por Hematoma Epidural (S/. 1,200.00)</option>
+                  <option value="Reducción Quirúrgica y Fijación de Fractura Expuesta|890">Reducción Quirúrgica y Fijación de Fractura Expuesta (S/. 890.00)</option>
+                  <option value="Lavado Quirúrgico y Debridación de Trauma Complejo|420">Lavado Quirúrgico y Debridación de Trauma Complejo (S/. 420.00)</option>
+                </select>
+              </div>
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="select_sala_destino_sop">Quirófano Asignado:</label>
+                <select id="select_sala_destino_sop" class="input-full">
+                  <option value="Quirófano 1 (SOP 1 - Trauma Shock)">Quirófano 1 (SOP 1 - Trauma Shock)</option>
+                  <option value="Quirófano 2 (SOP 2 - Cirugía General)">Quirófano 2 (SOP 2 - Cirugía General)</option>
+                </select>
+              </div>
+              <button type="button" class="btn-full-primary" style="height:38px; background:#ea580c; border-color:#c2410c; white-space:nowrap; font-weight:700;" onclick="ejecutarOrdenQuirurgicaEmergencia()">
+                + Programar Procedimiento Quirúrgico de Emergencia
+              </button>
+            </div>
+            <div id="status_cirugia_display" style="margin-top:8px; font-size:0.75rem; color:#475569;"></div>
+          </div>
         </div>
 
-        <div class="pipeline-step" id="step_4">
-          <div class="step-num">4</div>
-          <div class="step-title">Decisión 1</div>
-          <div class="step-desc">Clasificación: Prioridad 1 (Crítico) vs 3 (Moderado)</div>
-          <div class="step-detail-badge" id="step_detail_4">En espera</div>
+        <!-- TABLERO MAESTRO EN TIEMPO REAL: CAMAS Y QUIRÓFANOS (TOTALMENTE FUNCIONAL) -->
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:16px; margin-bottom:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:10px;">
+            <div>
+              <div style="font-size:0.95rem; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                <span>🛏️</span>
+                <span>Tablero Central de Disponibilidad de Camas &amp; Quirófanos en Tiempo Real</span>
+              </div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">
+                Control automatizado de ocupación, contadores regresivos de estancia y liberación programada (NTS N° 042-MINSA &amp; NTS N° 031-MINSA)
+              </div>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span id="badge_resumen_recursos_total" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.78rem; font-weight:800; padding:4px 10px; border-radius:9999px;">
+                🟢 15 de 15 Disponibles
+              </span>
+              <button type="button" class="btn-full-secondary" style="font-size:0.75rem; padding:4px 10px;" onclick="renderizarTableroCamasYQuirofanos()">
+                🔄 Actualizar
+              </button>
+            </div>
+          </div>
+
+          <!-- FILTROS DE ÁREA -->
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;" id="filtros_recursos_container">
+            <button type="button" class="chip-filtro-recurso active" onclick="filtrarTableroRecursos('todos', this)">Todos (15)</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroRecursos('quirofano', this)">🔪 Quirófanos SOP (3)</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroRecursos('observacion', this)">🛏️ Sala Observación (6)</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroRecursos('shock_trauma', this)">⚡ Shock Trauma (2)</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroRecursos('urpa', this)">🛌 URPA Recuperación (2)</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroRecursos('uci', this)">🏥 UCI / UCIN (2)</button>
+          </div>
+
+          <!-- GRID REACTIVO DE CAMAS Y QUIRÓFANOS -->
+          <div id="camas_stock_grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; margin-bottom:12px;">
+            <!-- Renderizado dinámicamente con contadores en vivo, estados y botones -->
+          </div>
         </div>
 
-        <div class="pipeline-step" id="step_5">
-          <div class="step-num">5</div>
-          <div class="step-title">Decisión 2 & Destino</div>
-          <div class="step-desc">Asignación de cama: Alerta Roja vs Alerta Ámbar</div>
-          <div class="step-detail-badge" id="step_detail_5">En espera</div>
+        <!-- FILTRO DE PRIORIZACIÓN DE CAMAS UCI (NTS N° 031-MINSA) -->
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:14px; margin-bottom:14px;">
+          <label for="prioridad_uci_sel" style="font-weight:800; font-size:0.84rem; color:#0f172a; display:block; margin-bottom:6px;">
+            Filtro Obligatorio de Priorización de Camas UCI (NTS N° 031-MINSA):
+          </label>
+          <select id="prioridad_uci_sel" class="input-full" onchange="actualizarPrioridadUCI(this.value)">
+            <option value="1">Prioridad 1 UCI — Crítico inestable recuperable (Ventilación / Vasopresores) [Acceso N° 1 UCI]</option>
+            <option value="2">Prioridad 2 UCI — Monitoreo invasivo continuo [Acceso a UCIN / Cuidados Intermedios]</option>
+            <option value="3">Prioridad 3 UCI — Crítico con enfermedad terminal o mínima recuperabilidad [Soporte Paliativo / Límite]</option>
+            <option value="4">Prioridad 4 UCI — Bajo riesgo o muerte encefálica irreversible [Bloqueado para Cama UCI]</option>
+          </select>
+          <div id="uci_alerta_prio" style="font-size:0.75rem; color:#0369a1; margin-top:4px;">
+            ✓ Prioridad 1 tiene prelación máxima para ocupación de cama crítica con ventilador mecánico.
+          </div>
         </div>
+
+        <!-- ALGORITMO MATEMÁTICO DE DESEMPATE ABCDE -->
+        <div class="desempate-box">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <strong style="color:#14532d; font-size:0.85rem;">🧮 Algoritmo Matemático de Desempate (Puntaje de Prelación Clínica):</strong>
+              <div style="font-size:0.74rem; color:#166534; margin-top:2px;">
+                Ordena la asignación ante mismo timestamp: Base Triaje + Fisiológico ABCDE + Ventana + Ley N° 27408.
+              </div>
+            </div>
+            <button type="button" class="btn-full-primary" style="background:#15803d; font-size:0.78rem; padding:6px 12px;" onclick="calcularPuntajePrelacionABCDE()">
+              Calcular Score ABCDE
+            </button>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; margin-top:10px;">
+            <span class="score-badge" id="prelacion_score_badge">565 pts</span>
+            <span style="font-size:0.78rem; color:#334155;" id="prelacion_formula_lbl">
+              P-I (500) + Fisiológico ABCDE (55) + Factores Preferentes (10)
+            </span>
+          </div>
+        </div>
+
+        <!-- PROTOCOLO ANTE STOCK CERO (CONTINGENCIA) -->
+        <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:10px; padding:12px 14px; margin-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div>
+            <strong style="color:#9f1239; font-size:0.82rem;">⚠️ ¿Stock Cero en Camas Críticas (Saturación Hospitalaria)?</strong>
+            <div style="font-size:0.72rem; color:#be123c;">Active contingencia normativa conforme a NTS N° 042-MINSA.</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-full-secondary" style="border-color:#e11d48; color:#be123c;" onclick="activarBoardingCritico()">
+              🏥 Activar Boarding en Shock Trauma
+            </button>
+            <button type="button" class="btn-full-secondary" style="border-color:#0284c7; color:#0369a1;" onclick="irAModulo(7); seleccionarModalidadEgreso('refcon');">
+              🚑 Disparar REFCON (Módulo 7)
+            </button>
+          </div>
+        </div>
+
       </div>
     </section>
 
-    <!-- RESULTADOS DE LA EVALUACIÓN (ALERTA ROJA Y ALERTA ÁMBAR) -->
-    <section class="results-container" id="seccionResultados">
-      
-      <!-- TARJETA GANADORA: ALERTA ROJA: CAMA ASIGNADA -->
-      <div class="winner-card" id="winnerCard">
-        <div class="winner-badge-top">
-          <span>🚨 [!] ALERTA ROJA: CAMA ASIGNADA</span>
-        </div>
-        <div class="winner-name" id="winnerName">Px B</div>
-        <div class="winner-specs">
-          <span class="winner-spec-item" id="winnerPriorityBadge">PRIORIDAD 1 (CRÍTICO)</span>
-          <span class="winner-spec-item" id="winnerHcBadge">HC: HC-2026-142</span>
-          <span class="winner-spec-item" id="winnerTicketHora">Ticket: T-02 | Llegada: 07:19</span>
-          <span class="winner-spec-item" id="winnerSeguro">Seguro: Asegurado</span>
-          <span class="winner-spec-item" id="winnerSpo2">SpO2: 91% | Antecedentes: Sí</span>
-          <span class="winner-spec-item" id="winnerEspecialidad">Especialidad: Cardiología / Trauma Shock</span>
-        </div>
-        <div class="winner-rationale" id="winnerRationale">
-          Mayor severidad clínica: Prioridad 1 vs Prioridad 3 (independiente del orden de llegada).
-        </div>
-      </div>
 
-      <!-- TARJETA EN ESPERA: ALERTA ÁMBAR: PACIENTE EN ESPERA -->
-      <div class="waiting-card" id="waitingCard">
-        <div>
-          <div class="waiting-badge-top">
-            <span>⚠️ [!] ALERTA ÁMBAR: PACIENTE EN ESPERA</span>
+    <!-- ======================================================================
+         MÓDULO 7: EGRESO CLÍNICO, REFCON, ALTA VOLUNTARIA O DEFUNCIÓN LEGAL
+         Sustento: Ley N° 26842 (Art. 4°) y Código Procesal Penal (Art. 195° y 196°)
+         ====================================================================== -->
+    <section class="module-section" id="sec_mod7">
+      <div class="module-section-header" onclick="toggleModule('mod7')">
+        <div class="module-section-title">
+          <span class="module-num-badge">7</span>
+          <div>
+            <div>Módulo 7: Egreso Clínico, REFCON, Alta Voluntaria o Defunción Legal</div>
+            <div class="module-section-subtitle">Cierre asistencial · Ley N° 26842 (Art. 4°) · Candado Médico-Legal Art. 195° CPP (SINADEF vs Fiscalía)</div>
           </div>
-          <div class="waiting-name" id="waitingName">Px A</div>
-          <div class="waiting-info" id="waitingSpecs">
-            HC: HC-2025-089 | Ticket: T-01 | Llegada: 07:15 | Seguro: Asegurado
+        </div>
+        <span class="toggle-arrow open" id="arrow_mod7">▼</span>
+      </div>
+      <div class="module-section-body open" id="body_mod7">
+
+        <div class="norma-pill-banner">
+          <span class="norma-tag">Código Procesal Penal Art. 195°</span>
+          <span><strong>Candado Médico-Legal de Defunción:</strong> Prohibido emitir certificado SINADEF en muertes por accidente de tránsito, violencia o fallecidos en &lt; 24h sin diagnóstico.</span>
+        </div>
+
+        <!-- SELECTOR DE LAS 4 MODALIDADES REALES DE EGRESO -->
+        <div style="font-size:0.84rem; font-weight:800; color:#0f172a; margin-bottom:10px;">
+          Modalidad de Cierre y Egreso del Servicio de Emergencia:
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-bottom:16px;">
+          <label class="origen-option selected" id="opt_egreso_alta" onclick="seleccionarModalidadEgreso('alta_medica')">
+            <input type="radio" name="modalidad_egreso" value="alta_medica" checked>
+            <div>
+              <strong>1. Alta Médica (Mejorado)</strong>
+              <div class="desc">Epicrisis, CIE-10 definitivo, receta y descanso.</div>
+            </div>
+          </label>
+          <label class="origen-option" id="opt_egreso_refcon" onclick="seleccionarModalidadEgreso('refcon')">
+            <input type="radio" name="modalidad_egreso" value="refcon">
+            <div>
+              <strong>2. Referencia (REFCON)</strong>
+              <div class="desc">Traslado en ambulancia Tipo I, II o III con personal.</div>
+            </div>
+          </label>
+          <label class="origen-option" id="opt_egreso_voluntaria" onclick="seleccionarModalidadEgreso('alta_voluntaria')">
+            <input type="radio" name="modalidad_egreso" value="alta_voluntaria">
+            <div>
+              <strong>3. Alta Voluntaria (Fuga/Retiro)</strong>
+              <div class="desc">Acta de Exoneración Art. 4° Ley N° 26842 + Cobro en Caja.</div>
+            </div>
+          </label>
+          <label class="origen-option" id="opt_egreso_fallecido" onclick="seleccionarModalidadEgreso('fallecido')">
+            <input type="radio" name="modalidad_egreso" value="fallecido">
+            <div>
+              <strong>4. Fallecimiento (Defunción)</strong>
+              <div class="desc">Filtro Médico-Legal: SINADEF vs. Fiscalía / Morgue.</div>
+            </div>
+          </label>
+        </div>
+
+        <!-- CONTENEDORES DINÁMICOS SEGÚN EGRESO -->
+
+        <!-- 1. ALTA MÉDICA -->
+        <div id="box_egreso_alta" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:14px; margin-bottom:12px;">
+          <div style="font-weight:800; font-size:0.84rem; color:#15803d; margin-bottom:8px;">
+            📄 Epicrisis Médica de Emergencia y Tratamiento Ambulatorio:
           </div>
-          <p id="waitingPriority" style="font-weight: 800; color: #b45309; margin-bottom: 8px;">
-            PRIORIDAD 3 (MODERADO)
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label>Condición al Egreso:</label>
+              <input type="text" class="input-full" value="Curado / Estabilizado con remisión sintomática">
+            </div>
+            <div class="form-field">
+              <label>Días de Descanso Médico Otorgados:</label>
+              <input type="number" class="input-full" value="3" min="0" max="30">
+            </div>
+          </div>
+          <button type="button" class="btn-full-secondary" style="margin-top:8px;" onclick="imprimirEpicrisisReceta()">
+            🖨️ Imprimir Epicrisis y Receta de Alta
+          </button>
+        </div>
+
+        <!-- 2. REFCON -->
+        <div id="box_egreso_refcon" style="display:none; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:14px; margin-bottom:12px;">
+          <div style="font-weight:800; font-size:0.84rem; color:#0284c7; margin-bottom:8px;">
+            🚑 Hoja Oficial de Referencia Interinstitucional (REFCON):
+          </div>
+          <div class="form-grid-3">
+            <div class="form-field">
+              <label>Establecimiento de Destino:</label>
+              <input type="text" class="input-full" value="Hospital Nacional Guillermo Almenara Irigoyen">
+            </div>
+            <div class="form-field">
+              <label>Categoría de Ambulancia:</label>
+              <select class="input-full">
+                <option>Tipo III (UCI Móvil con Ventilador)</option>
+                <option>Tipo II (Asistencial con Desfibrilador)</option>
+                <option>Tipo I (Transporte Básico)</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Personal que Acompaña:</label>
+              <input type="text" class="input-full" value="Médico Asistencial y Lic. Enfermería">
+            </div>
+          </div>
+          <button type="button" class="btn-full-secondary" style="margin-top:8px;" onclick="imprimirFormatoRefcon()">
+            📄 Imprimir Formato Oficial REFCON
+          </button>
+        </div>
+
+        <!-- 3. ALTA VOLUNTARIA -->
+        <div id="box_egreso_voluntaria" style="display:none; background:#fff7ed; border:1.5px solid #fb923c; border-radius:10px; padding:14px; margin-bottom:12px;">
+          <div style="font-weight:800; font-size:0.84rem; color:#c2410c; margin-bottom:6px;">
+            ⚖️ Acta Legal de Alta Voluntaria y Exoneración de Responsabilidad (Art. 4° Ley N° 26842):
+          </div>
+          <p style="font-size:0.76rem; color:#9a3412; margin-bottom:10px;">
+            El paciente o familiar exige retirarse contra la opinión médica. Se exonera de toda responsabilidad civil y penal a la clínica/hospital. La cuenta acumulada se remite a Caja (Módulo 8) para cobro previo.
           </p>
-          <div id="waitingDatosCriticos" style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px;">
-            SpO2: 99% | Antecedentes: No
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label>DNI del Solicitante / Familiar:</label>
+              <input type="text" id="dni_alta_voluntaria" class="input-full" placeholder="DNI">
+            </div>
+            <div class="form-field">
+              <label>Nombres Completos y Parentesco:</label>
+              <input type="text" id="nombres_alta_voluntaria" class="input-full" placeholder="Nombres">
+            </div>
+          </div>
+          <button type="button" class="btn-full-secondary" style="margin-top:8px; border-color:#ea580c; color:#c2410c;" onclick="imprimirActaAltaVoluntaria()">
+            ⚖️ Imprimir Acta Legal de Retiro Voluntario
+          </button>
+        </div>
+
+        <!-- 4. FALLECIMIENTO Y CANDADO MÉDICO-LEGAL ART 195 CPP -->
+        <div id="box_egreso_fallecido" style="display:none;">
+          <div id="bloqueo_sinadef_box" class="bloqueo-sinadef-card">
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.9rem; font-weight:900;">
+              <span>⚖️</span> BLOQUEO MÉDICO-LEGAL (Art. 195° del Código Procesal Penal):
+            </div>
+            <p style="margin:6px 0 0; font-size:0.78rem;">
+              <strong>PROHIBIDO EMITIR CERTIFICADO SINADEF:</strong> La causa de defunción está vinculada a <strong>Accidente de Tránsito / Muerte Violenta o fallecido en menos de 24 horas sin diagnóstico definitivo</strong>. Se genera Oficio a la Fiscalía Provincial Penal de Turno y Policía Nacional para Levantamiento de Cadáver e internamiento en la Morgue Central (Instituto de Medicina Legal).
+            </p>
+            <button type="button" class="btn-full-secondary" style="margin-top:10px; background:#ffffff; border-color:#dc2626; color:#991b1b; font-weight:800;" onclick="imprimirOficioFiscaliaLevantamiento()">
+              ⚖️ Emitir Oficio a Fiscalía y Acta de Levantamiento
+            </button>
+          </div>
+
+          <div id="sinadef_permitido_box" style="display:none; background:#f0fdf4; border:1px solid #86efac; border-radius:10px; padding:12px; margin-top:10px;">
+            <div style="color:#166534; font-weight:800; font-size:0.84rem;">
+              ✓ Defunción por Causa Natural Médica (&gt; 24h de estancia hospitalaria):
+            </div>
+            <p style="font-size:0.75rem; color:#14532d; margin:4px 0 8px;">
+              Fallecimiento por enfermedad común plenamente diagnosticada. Habilitado para registro directo en SINADEF.
+            </p>
+            <button type="button" class="btn-full-secondary" onclick="imprimirCertificadoSinadef()">
+              📄 Emitir Certificado de Defunción SINADEF
+            </button>
           </div>
         </div>
-        <div class="waiting-box" id="waitingDestino">
-          Derivación: Sala de Espera Regular (Medicina General) con monitoreo preventivo.
+
+      </div>
+    </section>
+
+
+    <!-- ======================================================================
+         MÓDULO 8: FACTURACIÓN ACUMULATIVA, LIQUIDACIÓN SOAT & AUDITORÍA LEGAL
+         Sustento: D.S. N° 024-2002-MTC · TEDEF-SUSALUD · SUNAT
+         ====================================================================== -->
+    <section class="module-section" id="sec_mod8">
+      <div class="module-section-header" onclick="toggleModule('mod8')">
+        <div class="module-section-title">
+          <span class="module-num-badge">8</span>
+          <div>
+            <div>Módulo 8: Cierre Clínico, Trazabilidad &amp; Derivación a Facturación Post-Estabilización</div>
+            <div class="module-section-subtitle">Ley N° 27604 y D.S. N° 016-2002-SA (Liquidación Post-Estabilización) · Auditoría TEDEF-SUSALUD</div>
+          </div>
         </div>
+        <span class="toggle-arrow open" id="arrow_mod8">▼</span>
       </div>
+      <div class="module-section-body open" id="body_mod8">
 
-    </section>
+        <!-- ALERTA LEGAL OFICIAL LEY 27604 Y D.S. 016-2002-SA -->
+        <div class="norma-pill-banner" style="background:#f0fdf4; border-color:#86efac; color:#166534; padding:16px;">
+          <span class="norma-tag" style="background:#16a34a; color:#fff;">D.S. N° 016-2002-SA Art. 12° y 14°</span>
+          <span>
+            <strong>Principio de Estabilización Primero, Facturación Después:</strong> 
+            El triaje y la atención de emergencia están diseñados exclusivamente para salvar la vida y estabilizar al paciente. Ningún cobro o liquidación monetaria puede condicionar o interferir con el acto médico. La liquidación financiera, auditoría de cobertura (SIS, EsSalud, EPS o SOAT) y emisión de comprobantes se realiza en la <strong>Unidad de Facturación Post-Estabilización</strong>.
+          </span>
+        </div>
 
-    <!-- TABLA COMPARATIVA FORMAL DE VARIABLES -->
-    <section class="comparison-card">
-      <h3 class="section-title" style="margin-bottom: 8px;">
-        <span>📋 Cuadro Comparativo Formal de Decisiones (3 Módulos)</span>
-      </h3>
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
-        Matriz integral de variables: Enfermería 1 (ID y HC), Enfermería 2 (Ticket y Seguro) y Triage Clínico
-      </p>
+        <!-- RESUMEN CLÍNICO DE TRANSFERENCIA / EPICRISIS -->
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:18px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <h4 style="margin:0; font-size:0.95rem; color:#0f172a; font-weight:800;">
+              📋 Resumen Clínico de Atención de Emergencia para Auditoría:
+            </h4>
+            <span style="font-size:0.75rem; font-weight:800; background:#e0f2fe; color:#0369a1; padding:3px 10px; border-radius:9999px;">
+              Expediente Clínico Listo
+            </span>
+          </div>
 
-      <table class="comparison-table">
-        <thead>
-          <tr>
-            <th>Módulo / Variable</th>
-            <th>Paciente A</th>
-            <th>Paciente B</th>
-            <th>Regla Algorítmica Aplicada</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>Identificador (ID)</strong></td>
-            <td id="compNombreA">Px A</td>
-            <td id="compNombreB">Px B</td>
-            <td>DNI (8 dígitos), Nombre Completo o código de emergencia</td>
-          </tr>
-          <tr>
-            <td><strong>Estado en BD</strong></td>
-            <td id="compEstadoA">Si</td>
-            <td id="compEstadoB">Si</td>
-            <td>"Si" (registrado), "No" (creación nueva HC) o "Por confirmar" (NN/parcial)</td>
-          </tr>
-          <tr>
-            <td><strong>Historia Clínica (HC)</strong></td>
-            <td id="compHcA">HC-2025-089</td>
-            <td id="compHcB">HC-2026-142</td>
-            <td>Recuperada de BD, creada (HC-NUEVA) o de emergencia (HC-TEMP-EMG)</td>
-          </tr>
-          <tr>
-            <td><strong>Turno / Ticket Asignado</strong></td>
-            <td id="compTicketA">T-01</td>
-            <td id="compTicketB">T-02</td>
-            <td>Asignación automática cronológica por hora de llegada (T-01 al primero)</td>
-          </tr>
-          <tr>
-            <td><strong>Hora de Llegada</strong></td>
-            <td id="compHoraA">07:15</td>
-            <td id="compHoraB">07:19</td>
-            <td>Criterio de desempate en igualdad de prioridad</td>
-          </tr>
-          <tr>
-            <td><strong>Seguro / Cobertura</strong></td>
-            <td id="compSeguroA">Asegurado</td>
-            <td id="compSeguroB">Asegurado</td>
-            <td>Asegurado, Particular, SIS, EsSalud (admisión administrativa)</td>
-          </tr>
-          <tr>
-            <td><strong>SpO2 (%)</strong></td>
-            <td id="compSpo2A">99%</td>
-            <td id="compSpo2B">91%</td>
-            <td>Regla SpO2: Rango [0-100]. Hipoxemia crítica si &lt; 92%</td>
-          </tr>
-          <tr>
-            <td><strong>Antecedentes Relevantes</strong></td>
-            <td id="compAntA">No</td>
-            <td id="compAntB">Sí</td>
-            <td>Factor determinante de riesgo en Decisión 1</td>
-          </tr>
-          <tr>
-            <td><strong>Decisión 1: Prioridad</strong></td>
-            <td id="compPrioA"><strong>Prioridad 3</strong> (Moderado)</td>
-            <td id="compPrioB"><strong>Prioridad 1</strong> (Crítico)</td>
-            <td>P1 si SpO2 &lt; 92% o Antecedentes; de lo contrario P3</td>
-          </tr>
-          <tr>
-            <td><strong>Decisión 2: Asignación</strong></td>
-            <td id="compDestA" style="color: #b45309; font-weight: 700;">ALERTA ÁMBAR (En Espera)</td>
-            <td id="compDestB" style="color: #be123c; font-weight: 800;">ALERTA ROJA: CAMA ASIGNADA</td>
-            <td>Prioridad 1 prevalece sobre P3. En empate, desempata hora (Ticket T-01)</td>
-          </tr>
-          <tr>
-            <td><strong>Destino / Especialidad</strong></td>
-            <td id="compEspA">Sala de Espera Regular (Medicina General)</td>
-            <td id="compEspB">Cardiología / Unidad de Trauma Shock</td>
-            <td>Derivación médica según prioridad de atención</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; font-size:0.84rem; margin-bottom:14px;">
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.72rem; color:#64748b; font-weight:700;">PACIENTE</div>
+              <strong id="m8_disp_nombre" style="color:#0f172a;">Paciente en Atención</strong>
+            </div>
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.72rem; color:#64748b; font-weight:700;">HISTORIA CLÍNICA</div>
+              <strong id="m8_disp_hc" style="color:#0284c7;">HC-2026-—</strong>
+            </div>
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.72rem; color:#64748b; font-weight:700;">PRIORIDAD ASIGNADA</div>
+              <strong id="m8_disp_prio" style="color:#ea580c;">Por evaluar</strong>
+            </div>
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.72rem; color:#64748b; font-weight:700;">SEGURO ACREDITADO</div>
+              <strong id="m8_disp_seguro" style="color:#15803d;">Sin acreditar</strong>
+            </div>
+          </div>
 
-  </div>
+          <!-- BOTÓN PRINCIPAL DESTACADO: ENLACE A FACTURACION.HTML -->
+          <div style="background:linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border:2px solid #38bdf8; border-radius:10px; padding:20px; text-align:center; margin:16px 0;">
+            <div style="font-size:0.85rem; color:#0369a1; font-weight:700; margin-bottom:6px;">
+              🏛️ UNIDAD DE FACTURACIÓN, CONVENIOS &amp; AUDITORÍA TEDEF-SUSALUD
+            </div>
+            <div style="font-size:1.05rem; font-weight:900; color:#0f172a; margin-bottom:12px;">
+              La atención médica ha concluido. El expediente ha sido derivado al área administrativa para liquidación de cobertura.
+            </div>
+            <a href="facturacion.html" target="_blank" class="btn-full-primary" style="display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:14px 28px; font-size:1.05rem; font-weight:800; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#ffffff; text-decoration:none; border-radius:8px; box-shadow:0 6px 20px rgba(2,132,199,0.35); cursor:pointer;">
+              🧾 Abrir Portal de Facturación &amp; Liquidación Post-Estabilización ↗
+            </a>
+            <div style="font-size:0.75rem; color:#64748b; margin-top:8px;">
+              (Abre en subdominio / portal especializado sin interrumpir las pantallas médicas)
+            </div>
+          </div>
+        </div>
 
-  <!-- MODAL DE REPORTE CLÍNICO IMPRIMIBLE -->
-  <div class="modal-overlay" id="modalReporte">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title">📄 Reporte Clínico y Administrativo Oficial</h3>
-        <button type="button" class="modal-close" id="btnCloseModal">&times;</button>
+        <!-- BOTONES DE GRABACIÓN, IMPRESIÓN Y REINICIO -->
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn-full-primary" style="flex:1; padding:14px; font-size:0.95rem; background:#16a34a;" onclick="grabarAtencionCompleta()">
+            💾 Grabar Atención Completa y Sincronizar en la Nube (Supabase)
+          </button>
+          <button type="button" class="btn-full-secondary" style="padding:14px 20px;" onclick="imprimirBrazalete()">
+            🏷️ Imprimir Brazalete Asistencial
+          </button>
+          <button type="button" class="btn-full-secondary" style="padding:14px 20px;" onclick="resetSimulador()">
+            🔄 Atender Siguiente Paciente / Nuevo Caso
+          </button>
+        </div>
+
+      </div></section>
+
+  </main>
+
+  <!-- ==========================================================================
+       MODALES CLÍNICOS Y DE AUDITORÍA HOSPITALARIA
+       ========================================================================== -->
+
+  <!-- MODAL DE CONSULTA Y CATÁLOGO DE HISTORIAS CLÍNICAS (SUPABASE / LOCAL) -->
+  <div class="modal-hc-overlay" id="modal_consulta_hc" onclick="if(event.target===this)cerrarModalConsultaHC()">
+    <div class="modal-hc-container">
+      <div class="modal-hc-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.3rem;">📂</span>
+          <div>
+            <h3 style="margin:0; font-size:1.05rem; font-weight:800;">Catálogo de Historias Clínicas (HIS Base de Datos)</h3>
+            <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">
+              Conexión activa: <span style="color:#4ade80; font-weight:700;">🟢 Supabase Cloud &amp; Local SQLite</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" onclick="cerrarModalConsultaHC()" style="background:none; border:none; color:#ffffff; font-size:1.4rem; cursor:pointer;">✕</button>
       </div>
-      <div class="modal-body" id="modalBodyContent">
-        <!-- Generado dinámicamente -->
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" onclick="cerrarModalReporte()">Cerrar</button>
-        <button type="button" class="btn-primary" id="btnImprimir">🖨️ Imprimir / Guardar como PDF</button>
+      <div class="modal-hc-body">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <input type="text" id="modal_search_hc_input" class="input-full" placeholder="Buscar por Apellidos, Nombres, DNI o N° de HC..." oninput="cargarTablaCatalogoHC(this.value)">
+          <button type="button" class="btn-full-secondary" onclick="cargarTablaCatalogoHC('')">🔄 Ver Todos</button>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#64748b; margin-bottom:8px;">
+          <span>Registros sincronizados en tiempo real</span>
+          <strong id="modal_hc_total_count">0 registros</strong>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="modal-hc-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Paciente</th>
+                <th>DNI / ID</th>
+                <th>Historia Clínica</th>
+                <th>Seguro</th>
+                <th>Ticket</th>
+                <th style="text-align:center;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="modal_hc_table_body">
+              <!-- Filas dinámicas -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- MODAL VISUALIZACIÓN DE EXPEDIENTE E HISTORIAL ACUMULATIVO -->
+  <div class="modal-hc-overlay" id="modal_visualizar_hc" onclick="if(event.target===this)cerrarModalVisualizarHC()">
+    <div class="modal-hc-container" style="max-width: 900px; width: 95%;">
+      <div class="modal-hc-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">👁️</span>
+          <div>
+            <h3 style="margin:0; font-size:1.05rem; font-weight:800;">Expediente Clínico Digital</h3>
+            <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Consulta Oficial de Historia Clínica y Datos del Paciente</div>
+          </div>
+        </div>
+        <button type="button" onclick="cerrarModalVisualizarHC()" style="background:none; border:none; color:#ffffff; font-size:1.4rem; cursor:pointer;">✕</button>
+      </div>
+      <div class="modal-hc-body" id="modal_visualizar_hc_body">
+        <!-- Inyectado dinámicamente -->
+      </div>
+      <div style="padding:14px 22px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-full-secondary" id="btn_modal_imprimir_hc">🖨️ Imprimir Ficha Oficial</button>
+          <button type="button" class="btn-full-primary" id="btn_modal_cargar_paciente" style="background:#16a34a;">✓ Cargar Paciente para Nueva Atención</button>
+        </div>
+        <button type="button" class="btn-full-secondary" onclick="cerrarModalVisualizarHC()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE ATENCIÓN GUARDADA EXITOSAMENTE -->
+  <div class="modal-hc-overlay" id="modal_registro_guardado" onclick="if(event.target===this)this.classList.remove('open','show')">
+    <div class="modal-hc-container" style="max-width: 700px;">
+      <div class="modal-hc-header" style="background:#166534;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">✅</span>
+          <div>
+            <h3 style="margin:0; font-size:1.05rem; font-weight:800;">Atención Registrada y Sincronizada</h3>
+            <div style="font-size:0.75rem; color:#bbf7d0;">Folio generado y vinculado a la Historia Clínica</div>
+          </div>
+        </div>
+        <button type="button" onclick="document.getElementById('modal_registro_guardado').classList.remove('open','show')" style="background:none; border:none; color:#ffffff; font-size:1.4rem; cursor:pointer;">✕</button>
+      </div>
+      <div class="modal-hc-body" id="modal_registro_guardado_body">
+        <!-- Inyectado dinámicamente -->
+      </div>
+    </div>
+  </div>
+
+  <!-- BRAZALETE IMPRIMIBLE OCULTO -->
+  <div class="brazalete-print" id="brazalete_print_area" style="display:none;"></div>
+
+  <!-- SCRIPT MAESTRO DE LÓGICA Y REGLAS DE NEGOCIO -->
+  <script src="app_full.js?v=20261117_03"></script>
+
+  <!-- ======================================================================
+       MODAL: REGULARIZACIÓN ADMINISTRATIVA POST-ESTABILIZACIÓN (LEY N° 27604)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="modal_regularizacion_diferida" style="display:none;">
+    <div class="modal-window" style="max-width:650px;">
+      <div class="modal-header" style="background:#0f172a; color:#ffffff; display:flex; justify-content:space-between; align-items:center; padding:14px 18px;">
+        <h3 style="margin:0; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+          <span>📝</span>
+          <span>REGULARIZACIÓN ADMINISTRATIVA POST-ESTABILIZACIÓN (LEY N° 27604)</span>
+        </h3>
+        <button type="button" class="modal-close-btn" onclick="cerrarModalRegularizacionDiferida()" style="color:#ffffff; background:none; border:none; font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:18px;">
+        <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:0.8rem; color:#166534; line-height:1.4;">
+          ✅ <strong>Paciente Intervenido / Estabilizado en Quirófano o Shock Trauma:</strong><br>
+          En estricto cumplimiento del Artículo 3° de la Ley N° 27604 y el D.S. N° 016-2002-SA, la atención médico-quirúrgica ya fue brindada sin cobro previo. Ingrese los datos filiatorios y de cobertura obtenidos para consolidar la Historia Clínica y el cierre financiero de cuenta.
+        </div>
+
+        <div class="form-grid-2" style="margin-bottom:12px;">
+          <div class="form-field">
+            <label for="reg_dni_input">DNI / Documento del Paciente Identificado:</label>
+            <div style="display:flex; gap:6px;">
+              <input type="text" id="reg_dni_input" class="input-full" placeholder="DNI (8 dígitos) o dejar en blanco" maxlength="15">
+              <button type="button" class="btn-full-secondary" style="white-space:nowrap;" onclick="consultarReniecDiferida()">🔍 RENIEC</button>
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="reg_nombre_input">Nombres y Apellidos Completos:</label>
+            <input type="text" id="reg_nombre_input" class="input-full" placeholder="Nombres del paciente">
+          </div>
+        </div>
+
+        <div class="form-grid-2" style="margin-bottom:12px;">
+          <div class="form-field">
+            <label for="reg_origen_select">Origen del Evento Confirmado:</label>
+            <select id="reg_origen_select" class="input-full" onchange="toggleRegSoat(this.value)">
+              <option value="comun">Emergencia Médica / Quirúrgica Común</option>
+              <option value="soat_placa">🚗 Accidente de Tránsito con Placa (SOAT)</option>
+              <option value="soat_fuga">🚨 Accidente de Tránsito con Fuga (Sin Placa)</option>
+            </select>
+          </div>
+          <div class="form-field" id="box_reg_soat_placa" style="display:none;">
+            <label for="reg_placa_input">Placa Vehicular para APESEG/SOAT:</label>
+            <input type="text" id="reg_placa_input" class="input-full" placeholder="ABC-123" style="text-transform:uppercase;">
+          </div>
+          <div class="form-field" id="box_reg_seguro">
+            <label for="reg_seguro_select">Régimen de Aseguramiento:</label>
+            <select id="reg_seguro_select" class="input-full">
+              <option value="SIS">SIS Gratuito (MINSA / FUA)</option>
+              <option value="EsSalud">EsSalud (Asegurado Regular)</option>
+              <option value="EPS">Clínica Privada / EPS (Rímac, Pacífico, etc.)</option>
+              <option value="Particular">Particular (Sin Seguro)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn-full-secondary" onclick="cerrarModalRegularizacionDiferida()">
+            Cancelar
+          </button>
+          <button type="button" class="btn-full-primary" style="background:#15803d; border-color:#166534;" onclick="guardarRegularizacionDiferida()">
+            💾 Guardar Regularización y Actualizar Cuenta
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL FLOTANTE DE DISPONIBILIDAD DE CAMAS Y QUIRÓFANOS EN TIEMPO REAL
+       ========================================================================== -->
+  <div class="modal-hc-overlay" id="modalTableroCamasOverlay" onclick="if(event.target===this) cerrarModalTableroCamas()">
+    <div class="modal-hc-container" style="max-width: 1050px;">
+      <div class="modal-hc-header" style="background:#0f172a; color:#ffffff;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:22px;">🛏️</span>
+          <div>
+            <div style="font-weight:900; font-size:1rem;">Mapa Hospitalario de Camas y Quirófanos en Tiempo Real</div>
+            <div style="font-size:0.75rem; color:#94a3b8;">Monitoreo en vivo de estancias, contadores normativos NTS N° 042-MINSA y disponibilidad</div>
+          </div>
+        </div>
+        <button type="button" onclick="cerrarModalTableroCamas()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-hc-body" style="padding:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;" id="filtros_modal_container">
+            <button type="button" class="chip-filtro-recurso active" onclick="filtrarTableroModal('todos', this)">Todos</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroModal('quirofano', this)">🔪 Quirófanos</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroModal('observacion', this)">🛏️ Observación</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroModal('shock_trauma', this)">⚡ Shock Trauma</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroModal('urpa', this)">🛌 URPA</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroModal('uci', this)">🏥 UCI</button>
+          </div>
+          <span id="badge_modal_dispo_resumen" style="font-size:0.8rem; font-weight:800; color:#15803d; background:#dcfce7; padding:4px 10px; border-radius:9999px;">
+            15 / 15 Libres
+          </span>
+        </div>
+        <div id="modal_camas_stock_grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:12px;">
+          <!-- Grid dinámico sincronizado -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ==========================================================================
+       BOTÓN FLOTANTE HUD DE DISPONIBILIDAD DE CAMAS Y QUIRÓFANOS (STICKY FLOTANTE)
+       Sigue al usuario mientras baja/sube por la web con contadores en tiempo real
+       ========================================================================== -->
+  <div class="widget-flotante-camas" id="widgetFlotanteCamasContainer">
+    
+    <!-- PANEL DESPLEGABLE CON EL DESGLOSE DETALLADO -->
+    <div class="widget-panel-drawer" id="widgetPanelDrawer">
+      <div class="widget-drawer-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.3rem;">🛏️</span>
+          <div>
+            <strong style="font-size:0.88rem; color:#ffffff;">Disponibilidad en Tiempo Real</strong>
+            <div style="font-size:0.7rem; color:#94a3b8;">Monitoreo activo según tipo de área</div>
+          </div>
+        </div>
+        <button type="button" onclick="toggleDrawerFlotante(event)" style="background:none; border:none; color:#94a3b8; font-size:1.3rem; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <!-- DESGLOSE POR TIPO -->
+      <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:12px;">
+        <div class="widget-row-tipo">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span>🔪</span> <span>Quirófanos (SOP)</span>
+          </span>
+          <span class="widget-chip-tipo widget-chip-sop" id="hud_sop_count">3 / 3 Libres</span>
+        </div>
+        <div class="widget-row-tipo">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span>🛏️</span> <span>Sala Observación</span>
+          </span>
+          <span class="widget-chip-tipo widget-chip-obs" id="hud_obs_count">6 / 6 Libres</span>
+        </div>
+        <div class="widget-row-tipo">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span>⚡</span> <span>Shock Trauma</span>
+          </span>
+          <span class="widget-chip-tipo widget-chip-st" id="hud_st_count">2 / 2 Libres</span>
+        </div>
+        <div class="widget-row-tipo">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span>🛌</span> <span>Sala URPA (Recup.)</span>
+          </span>
+          <span class="widget-chip-tipo widget-chip-urpa" id="hud_urpa_count">2 / 2 Libres</span>
+        </div>
+        <div class="widget-row-tipo">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span>🏥</span> <span>Cuidados Críticos UCI</span>
+          </span>
+          <span class="widget-chip-tipo widget-chip-uci" id="hud_uci_count">2 / 2 Libres</span>
+        </div>
+      </div>
+
+      <!-- ACCIONES DIRECTAS DESDE EL HUD -->
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn-full-primary" style="flex:1; font-size:0.75rem; padding:6px 8px; background:#16a34a; border-color:#22c55e;" onclick="abrirModalTableroCamas()">
+          🔍 Ver Mapa Completo
+        </button>
+        <button type="button" class="btn-full-secondary" style="font-size:0.75rem; padding:6px 8px; color:#ffffff; border-color:rgba(255,255,255,0.3);" onclick="irAModulo(6); toggleDrawerFlotante();">
+          ⚡ Ir a Módulo 6
+        </button>
+      </div>
+    </div>
+
+    <!-- BOTÓN CÁPSULA FLOTANTE ULTRA-LLAMATIVO (JALA LA MIRADA) -->
+    <div class="widget-flotante-pill" id="widgetFlotantePill" onclick="toggleDrawerFlotante(event)" title="Haga clic para ver el desglose en tiempo real de camas y quirófanos">
+      <div class="widget-beacon">
+        <div class="widget-beacon-ring"></div>
+        <div class="widget-beacon-dot"></div>
+      </div>
+      
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:1.15rem;">🛏️</span>
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:0.62rem; color:#94a3b8; font-weight:800; letter-spacing:0.8px; text-transform:uppercase;">DISPONIBILIDAD HOSPITALARIA</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="widget-total-count" id="hud_total_count">15/15 LIBRES</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHIPS RÁPIDOS POR TIPO EN LA CÁPSULA (SIEMPRE VISIBLES) -->
+      <div style="display:flex; align-items:center; gap:4px; border-left:1px solid rgba(255,255,255,0.18); padding-left:10px;">
+        <span class="widget-chip-tipo widget-chip-sop" id="pill_chip_sop" title="Quirófanos SOP">🔪 3/3</span>
+        <span class="widget-chip-tipo widget-chip-obs" id="pill_chip_obs" title="Camas Observación">🛏️ 6/6</span>
+        <span class="widget-chip-tipo widget-chip-st" id="pill_chip_st" title="Shock Trauma">⚡ 2/2</span>
+        <span class="widget-chip-tipo widget-chip-urpa" id="pill_chip_urpa" title="Sala URPA">🛌 2/2</span>
+        <span class="widget-chip-tipo widget-chip-uci" id="pill_chip_uci" title="Camas UCI">🏥 2/2</span>
+      </div>
+
+      <!-- FLECHA INDICADORA -->
+      <span id="widget_drawer_arrow" style="color:#22c55e; font-size:0.85rem; transition:transform 0.25s ease;">▲</span>
+    </div>
+
+  </div>
+
 </body>
 </html>

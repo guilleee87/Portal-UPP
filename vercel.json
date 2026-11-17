@@ -5,7 +5,21 @@
   "routes": [
     {
       "src": "/triaje",
-      "dest": "/triaje.html"
+      "dest": "/triaje_full.html"
+    },
+    {
+      "src": "/facturacion",
+      "dest": "/facturacion.html"
+    },
+    {
+      "has": [
+        {
+          "type": "host",
+          "value": "facturacion\\..*"
+        }
+      ],
+      "src": "/(.*)",
+      "dest": "/facturacion.html"
     },
     {
       "src": "/(.*)",

@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal de Facturación Hospitalaria, Liquidación de Seguros & Auditoría TEDEF | UPP</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧾</text></svg>">
+  <style>
+    :root {
+      --primary: #0f172a;
+      --primary-light: #1e293b;
+      --accent: #0284c7;
+      --accent-hover: #0369a1;
+      --success: #16a34a;
+      --warning: #ca8a04;
+      --danger: #dc2626;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding-bottom: 60px;
+    }
+
+    /* TOP NAVBAR */
+    .top-nav {
+      background: var(--primary);
+      color: #ffffff;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #ffffff;
+    }
+    .nav-brand-icon {
+      font-size: 1.6rem;
+      background: #1e293b;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+    .nav-brand-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+    .nav-brand-sub {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-nav {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .btn-nav:hover {
+      background: #334155;
+      border-color: #475569;
+    }
+    .btn-nav-primary {
+      background: #0284c7;
+      border-color: #0284c7;
+    }
+    .btn-nav-primary:hover {
+      background: #0369a1;
+    }
+
+    /* CONTAINER */
+    .container {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+
+    /* LEGAL BANNER */
+    .legal-alert {
+      background: #f0fdf4;
+      border: 1.5px solid #86efac;
+      border-left: 6px solid #16a34a;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 6px rgba(22, 163, 74, 0.08);
+    }
+    .legal-alert-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #166534;
+      font-weight: 800;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+    .legal-alert-text {
+      font-size: 0.84rem;
+      color: #14532d;
+      line-height: 1.45;
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-badge {
+      font-size: 0.76rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* PATIENT DEMO GRID */
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .demo-item {
+      background: #f8fafc;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .demo-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+    .demo-value {
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    /* TABLE */
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-top: 10px;
+    }
+    table.invoice-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+    table.invoice-table th {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 800;
+      padding: 10px 12px;
+      border-bottom: 2px solid #cbd5e1;
+      white-space: nowrap;
+    }
+    table.invoice-table td {
+      padding: 12px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #1e293b;
+    }
+    table.invoice-table tr:hover {
+      background: #f8fafc;
+    }
+    .cat-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .cat-farmacia { background: #e0f2fe; color: #0369a1; }
+    .cat-laboratorio { background: #fef3c7; color: #92400e; }
+    .cat-imagenes { background: #ede9fe; color: #5b21b6; }
+    .cat-procedimientos { background: #fee2e2; color: #991b1b; }
+    .cat-estancia { background: #dcfce7; color: #166534; }
+    .cat-consulta { background: #f1f5f9; color: #475569; }
+
+    /* SUMMARY LIQUIDATION */
+    .liq-summary-box {
+      background: #ffffff;
+      border: 2px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .liq-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      font-size: 0.95rem;
+      border-bottom: 1px dashed #e2e8f0;
+    }
+    .liq-row.total-row {
+      border-bottom: none;
+      border-top: 2px solid #0f172a;
+      margin-top: 8px;
+      padding-top: 14px;
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    /* ACTIONS BAR */
+    .actions-bar {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+    .btn-act {
+      padding: 12px 22px;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: none;
+      transition: all 0.2s ease;
+    }
+    .btn-act-primary {
+      background: var(--accent);
+      color: #ffffff;
+    }
+    .btn-act-primary:hover {
+      background: var(--accent-hover);
+    }
+    .btn-act-success {
+      background: var(--success);
+      color: #ffffff;
+    }
+    .btn-act-success:hover {
+      background: #15803d;
+    }
+    .btn-act-outline {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      color: #334155;
+    }
+    .btn-act-outline:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+
+    /* SOAT SPECIAL METER */
+    .soat-meter-box {
+      background: #fff7ed;
+      border: 1.5px solid #fdba74;
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .soat-progress-track {
+      background: #fed7aa;
+      height: 14px;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    .soat-progress-fill {
+      background: #ea580c;
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    /* PRINT STYLES */
+    @media print {
+      body { background: #ffffff; padding: 0; }
+      .top-nav, .actions-bar, .no-print { display: none !important; }
+      .container { max-width: 100%; margin: 0; padding: 0; }
+      .card { border: 1px solid #000; box-shadow: none; margin-bottom: 16px; page-break-inside: avoid; }
+      .legal-alert { border: 1px solid #000; }
+    }
+
+    /* RESPONSIVE MOBILE OPTIMIZATIONS */
+    @media (max-width: 768px) {
+      .top-nav { flex-direction: column; align-items: flex-start; gap: 12px; padding: 12px 16px; }
+      .nav-actions { width: 100%; justify-content: space-between; }
+      .btn-nav { font-size: 0.78rem; padding: 8px 10px; }
+      .demo-grid { grid-template-columns: 1fr; gap: 8px; }
+      .actions-bar { flex-direction: column; }
+      .btn-act { width: 100%; justify-content: center; }
+      .card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVEGACIÓN SUPERIOR INSTITUCIONAL -->
+  <header class="top-nav">
+    <a href="triaje_full.html" class="nav-brand">
+      <div class="nav-brand-icon">🏥</div>
+      <div>
+        <div class="nav-brand-title">UPP FCS · Unidad de Facturación & Seguros</div>
+        <div class="nav-brand-sub">Liquidación Post-Estabilización · TEDEF-SUSALUD</div>
+      </div>
+    </a>
+    <div class="nav-actions">
+      <a href="triaje_full.html" class="btn-nav">
+        🚑 Volver a Triaje de Emergencia
+      </a>
+      <button type="button" class="btn-nav btn-nav-primary" onclick="window.print()">
+        🖨️ Imprimir Factura
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- SUSTENTO LEGAL OBLIGATORIO: LEY N° 27604 Y D.S. N° 016-2002-SA -->
+    <section class="legal-alert">
+      <div class="legal-alert-header">
+        <span>⚖️ Marco Legal Vigente: Ley N° 27604 &amp; D.S. N° 016-2002-SA</span>
+      </div>
+      <p class="legal-alert-text">
+        <strong>Atención Médica Primero, Liquidación Financiera Después:</strong> En concordancia estricta con el Artículo 3° de la Ley N° 27604 y los Artículos 12° y 14° del D.S. N° 016-2002-SA, la atención de emergencia fue brindada de forma inmediata e incondicional para salvaguardar la vida y estabilizar al paciente. La presente auditoría y liquidación económica se ejecuta de manera posterior y separada de las decisiones médicas asistenciales.
+      </p>
+    </section>
+
+    <!-- FICHA DEL PACIENTE Y EXPEDIENTE ASISTENCIAL -->
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <span>📋 Expediente Clínico &amp; Datos de Cobertura</span>
+        </h2>
+        <span id="badge_seguro_header" class="card-badge" style="background:#e0f2fe; color:#0369a1;">
+          Cargando seguro...
+        </span>
+      </div>
+
+      <div class="demo-grid">
+        <div class="demo-item">
+          <div class="demo-label">Paciente Asegurado</div>
+          <div class="demo-value" id="disp_nombre">—</div>
+        </div>
+        <div class="demo-item">
+          <div class="demo-label">N° DNI / Identificación</div>
+          <div class="demo-value" id="disp_dni">—</div>
+        </div>
+        <div class="demo-item">
+          <div class="demo-label">Historia Clínica</div>
+          <div class="demo-value" id="disp_hc">—</div>
+        </div>
+        <div class="demo-item">
+          <div class="demo-label">Folio de Atención</div>
+          <div class="demo-value" id="disp_folio">—</div>
+        </div>
+        <div class="demo-item">
+          <div class="demo-label">Prioridad Triaje</div>
+          <div class="demo-value" id="disp_prioridad">—</div>
+        </div>
+        <div class="demo-item">
+          <div class="demo-label">Régimen Acreditado</div>
+          <div class="demo-value" id="disp_regimen">—</div>
+        </div>
+        <div class="demo-item">
+          <div class="demo-label">Centro de Adscripción</div>
+          <div class="demo-value" id="disp_establecimiento">—</div>
+        </div>
+        <div class="demo-item">
+          <div class="demo-label">Fecha &amp; Hora de Cierre</div>
+          <div class="demo-value" id="disp_fecha">—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DETALLE DE GASTOS Y AUDITORÍA ASISTENCIAL -->
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <span>📊 Detalle de Prestaciones, Fármacos y Procedimientos Consumidos</span>
+        </h2>
+        <span id="disp_items_count" style="font-size:0.82rem; color:var(--text-muted); font-weight:700;">
+          0 prestaciones registradas
+        </span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="invoice-table">
+          <thead>
+            <tr>
+              <th style="width:40px;">#</th>
+              <th>Descripción del Servicio / Fármaco / Procedimiento</th>
+              <th style="width:140px;">Categoría</th>
+              <th style="width:110px; text-align:right;">Costo Unit.</th>
+              <th style="width:130px; text-align:center;">Protección Ley</th>
+              <th style="width:120px; text-align:right;">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody id="invoice_tbody">
+            <tr>
+              <td colspan="6" style="text-align:center; padding:24px; color:#94a3b8;">
+                Cargando prestaciones hospitalarias del paciente...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- MEDIDOR SOAT (SI ES ACCIDENTE DE TRÁNSITO) -->
+      <div id="soat_box" class="soat-meter-box" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:0.9rem; color:#9a3412;">
+          <span>🚗 Cobertura SOAT (D.S. N° 024-2002-MTC · Tope 5 UIT = S/. 27,500.00)</span>
+          <span id="soat_saldo_txt">Saldo: S/. 27,500.00</span>
+        </div>
+        <div class="soat-progress-track">
+          <div id="soat_bar" class="soat-progress-fill"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:#c2410c;">
+          <span>Consumo actual: <strong id="soat_consumo_txt">S/. 0.00</strong></span>
+          <span id="soat_poliza_info">Póliza: Registrada en APESEG</span>
+        </div>
+      </div>
+
+      <!-- RESUMEN DE LIQUIDACIÓN Y CONDICIONES DE SEGURO -->
+      <div class="liq-summary-box">
+        <div class="liq-row">
+          <span style="color:#475569;">Gasto Bruto Hospitalario Acumulado:</span>
+          <strong id="liq_subtotal_bruto">S/. 0.00</strong>
+        </div>
+
+        <div class="liq-row" id="liq_row_cobertura" style="color:#15803d;">
+          <span>Cobertura Financiada por Aseguradora / IAFAS:</span>
+          <strong id="liq_cobertura_monto">- S/. 0.00</strong>
+        </div>
+
+        <!-- CONDICIÓN CLÍNICA PRIVADA EPS: COPAGO S/. 80 + 10% MEDICAMENTOS SI NO FUE EMERGENCIA -->
+        <div class="liq-row" id="liq_row_copago_eps" style="display:none; color:#b45309;">
+          <span>Copago Consulta de Urgencia (Clínica Privada EPS - No Emergencia):</span>
+          <strong id="liq_copago_eps_val">+ S/. 80.00</strong>
+        </div>
+        <div class="liq-row" id="liq_row_coaseguro_meds" style="display:none; color:#b45309;">
+          <span>Coaseguro Farmacia (10% valor de medicamentos prescritos):</span>
+          <strong id="liq_coaseguro_meds_val">+ S/. 0.00</strong>
+        </div>
+
+        <!-- CONDICIÓN PARTICULAR: PAGA EL 100% -->
+        <div class="liq-row" id="liq_row_particular" style="display:none; color:#dc2626;">
+          <span>Atención Particular (Sin cobertura de seguro acreditada):</span>
+          <span>100% asumido por el paciente</span>
+        </div>
+
+        <div class="liq-row total-row">
+          <span>MONTO TOTAL A CARGO DEL PACIENTE:</span>
+          <span id="liq_total_paciente" style="color:#16a34a;">S/. 0.00 (PAGO CERO)</span>
+        </div>
+
+        <div id="liq_explicacion_legal" style="margin-top:10px; font-size:0.8rem; color:#64748b; line-height:1.4;">
+          <!-- Explicación de la condición aplicada -->
+        </div>
+      </div>
+    </section>
+
+    <!-- FIRMAS Y AUTORIZACIÓN DE AUDITORÍA -->
+    <section class="card" style="margin-bottom:0;">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:20px; text-align:center; padding-top:20px;">
+        <div>
+          <div style="border-top:1.5px solid #94a3b8; width:80%; margin:40px auto 6px; padding-top:6px;"></div>
+          <div style="font-size:0.84rem; font-weight:800; color:#0f172a;" id="firmante_medico">Dr. Médico Asistente de Turno</div>
+          <div style="font-size:0.74rem; color:#64748b;">CMP / RNE Especialista en Emergencias</div>
+        </div>
+        <div>
+          <div style="border-top:1.5px solid #94a3b8; width:80%; margin:40px auto 6px; padding-top:6px;"></div>
+          <div style="font-size:0.84rem; font-weight:800; color:#0f172a;">Lic. Auditoría &amp; Seguros UPP</div>
+          <div style="font-size:0.74rem; color:#64748b;">Unidad de Facturación y Convenios IAFAS</div>
+        </div>
+        <div>
+          <div style="border-top:1.5px solid #94a3b8; width:80%; margin:40px auto 6px; padding-top:6px;"></div>
+          <div style="font-size:0.84rem; font-weight:800; color:#0f172a;" id="firmante_paciente">Firma del Paciente / Acompañante</div>
+          <div style="font-size:0.74rem; color:#64748b;">Recepción de Liquidación y Alta de Cuenta</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BARRA DE ACCIONES INFERIOR -->
+    <section class="actions-bar no-print">
+      <a href="triaje_full.html" class="btn-act btn-act-outline">
+        ⬅ Volver al Triaje
+      </a>
+      <button type="button" class="btn-act btn-act-primary" onclick="descargarJsonLiquidacion()">
+        📥 Exportar TEDEF (JSON)
+      </button>
+      <button type="button" class="btn-act btn-act-success" onclick="window.print()">
+        🖨️ Imprimir Liquidación Oficial
+      </button>
+    </section>
+
+  </main>
+
+  <!-- SCRIPT DE AUDITORÍA Y SINCRONIZACIÓN -->
+  <script>
+    // Recuperar datos consolidados del expediente
+    function cargarExpedienteFacturacion() {
+      // 1. Obtener parámetros de URL si existen
+      const urlParams = new URLSearchParams(window.location.search);
+      const dniParam = urlParams.get("dni");
+      const hcParam = urlParams.get("hc");
+
+      // 2. Cargar estado de Triaje persistido en LocalStorage
+      let master = {};
+      try { master = JSON.parse(localStorage.getItem("UPP_PACIENTES_MASTER") || "{}"); } catch(e){}
+
+      let episodio = null;
+      try { episodio = JSON.parse(localStorage.getItem("UPP_EPISODIO_ACTUAL") || "null"); } catch(e){}
+
+      let facturaItems = [];
+      try { facturaItems = JSON.parse(localStorage.getItem("UPP_ITEMS_FACTURA") || "[]"); } catch(e){}
+
+      let seguroActual = localStorage.getItem("UPP_TIPO_SEGURO") || "SIS";
+      let prioridadActual = localStorage.getItem("UPP_PRIORIDAD") || "II";
+      let nombreActual = localStorage.getItem("UPP_PACIENTE_NOMBRE") || "LUIS GUILLERMO VASQUEZ VALDIVIESO";
+      let dniActual = localStorage.getItem("UPP_PACIENTE_DNI") || "44418504";
+      let hcActual = localStorage.getItem("UPP_PACIENTE_HC") || "HC-2026-8504";
+      let esAccidente = localStorage.getItem("UPP_ES_SOAT") === "true";
+      let esFuga = localStorage.getItem("UPP_SOAT_FUGA") === "true";
+
+      // Si hay un episodio grabado formalmente
+      if (episodio) {
+        if (episodio.nombre_completo) nombreActual = episodio.nombre_completo;
+        if (episodio.identificador) dniActual = episodio.identificador.replace(/\D/g, "") || episodio.identificador;
+        if (episodio.historia_clinica) hcActual = episodio.historia_clinica;
+        if (episodio.tipo_seguro) seguroActual = episodio.tipo_seguro;
+        if (episodio.prioridad) prioridadActual = episodio.prioridad.replace("P-", "");
+        if (Array.isArray(episodio.items_factura) && episodio.items_factura.length > 0) {
+          facturaItems = episodio.items_factura;
+        }
+      }
+
+      // Si no hay items, precargar items estándar de atención asistencial
+      if (!facturaItems || facturaItems.length === 0) {
+        facturaItems = [
+          { servicio: "Evaluación Médica y Triaje de Emergencia (Nivel III-1)", costo: 30, categoria: "Consulta", timestamp: "08:00:00" },
+          { servicio: "Monitoreo Continuo No Invasivo de Signos Vitales", costo: 25, categoria: "Procedimientos", timestamp: "08:15:00" },
+          { servicio: "Cloruro de Sodio 0.9% 1000 mL + Equipo de Venoclisis", costo: 18, categoria: "Farmacia", timestamp: "08:20:00" },
+          { servicio: "Omeprazol 40 mg Inyectable", costo: 14, categoria: "Farmacia", timestamp: "08:30:00" },
+          { servicio: "Hemograma Completo Automatizado + PCR Cuantitativa", costo: 45, categoria: "Laboratorio", timestamp: "08:45:00" },
+          { servicio: "Estancia en Cama de Observación de Emergencia (6 horas)", costo: 90, categoria: "Estancia", timestamp: "09:00:00" }
+        ];
+      }
+
+      // Desplegar datos demográficos
+      document.getElementById("disp_nombre").textContent = nombreActual;
+      document.getElementById("disp_dni").textContent = dniActual;
+      document.getElementById("disp_hc").textContent = hcActual;
+      document.getElementById("disp_folio").textContent = episodio?.folio || `FOL-2026-${dniActual.slice(-4) || "8821"}`;
+      document.getElementById("disp_prioridad").textContent = `Prioridad ${prioridadActual}`;
+      document.getElementById("disp_regimen").textContent = seguroActual.toUpperCase();
+      document.getElementById("disp_fecha").textContent = new Date().toLocaleString();
+
+      const elFirmante = document.getElementById("firmante_paciente");
+      if (elFirmante) elFirmante.textContent = nombreActual;
+
+      // Calcular liquidación según seguro
+      const totalBruto = facturaItems.reduce((acc, i) => acc + (parseFloat(i.costo) || 0), 0);
+      const subtotalFarmacia = facturaItems
+        .filter(i => (i.categoria || "").toLowerCase().includes("farmacia"))
+        .reduce((acc, i) => acc + (parseFloat(i.costo) || 0), 0);
+
+      const esEmergencia = (prioridadActual === "I" || prioridadActual === "II" || prioridadActual === "1" || prioridadActual === "2");
+      const seguroL = seguroActual.toLowerCase();
+
+      let coberturaMonto = 0;
+      let copagoEps = 0;
+      let coaseguroFarmacia = 0;
+      let totalPaciente = 0;
+      let explicacion = "";
+      let badgeHtml = "";
+      let establecimiento = "Hospital Regional Docente UPP (Red Asistencial Pública)";
+
+      if (esAccidente) {
+        // Régimen SOAT
+        establecimiento = "Clínica Privada / Hospital - Red de Emergencias SOAT";
+        badgeHtml = `<span style="background:#ea580c; color:#fff; padding:4px 10px; border-radius:9999px;">🚗 ACCIDENTE DE TRÁNSITO (SOAT)</span>`;
+        const topeSoat = 27500;
+        const cubiertoSoat = Math.min(totalBruto, topeSoat);
+        coberturaMonto = cubiertoSoat;
+        totalPaciente = Math.max(0, totalBruto - topeSoat);
+
+        document.getElementById("soat_box").style.display = "block";
+        const saldoSoat = Math.max(0, topeSoat - cubiertoSoat);
+        document.getElementById("soat_saldo_txt").textContent = `Saldo: S/. ${saldoSoat.toFixed(2)}`;
+        document.getElementById("soat_consumo_txt").textContent = `S/. ${cubiertoSoat.toFixed(2)}`;
+        const pctSoat = Math.min(100, (cubiertoSoat / topeSoat) * 100);
+        document.getElementById("soat_bar").style.width = `${pctSoat}%`;
+
+        explicacion = `Accidente de tránsito amparado por Ley General de Transporte y D.S. N° 024-2002-MTC. Cobertura obligatoria de gastos médicos hasta 5 UIT (S/. 27,500.00). Cobertura al 100% sin deducible.`;
+      } else if (seguroL.includes("sis") || seguroL.includes("minsa")) {
+        // SIS
+        establecimiento = "Hospital Nacional Docente Madre Niño San Bartolomé (MINSA - Lima)";
+        badgeHtml = `<span style="background:#15803d; color:#fff; padding:4px 10px; border-radius:9999px;">🏛️ SIS GRATUITO (MINSA)</span>`;
+        coberturaMonto = totalBruto;
+        totalPaciente = 0;
+        explicacion = `Paciente acreditado en el Seguro Integral de Salud (SIS Gratuito). Cobertura total al 100% de consultas, medicamentos e insumos hospitalarios mediante Formato Único de Atención (FUA). Copago paciente: S/. 0.00 (Pago Cero).`;
+      } else if (seguroL.includes("essalud")) {
+        // EsSalud
+        establecimiento = "Hospital Nacional Edgardo Rebagliati Martins (Red Rebagliati - Lima)";
+        badgeHtml = `<span style="background:#0284c7; color:#fff; padding:4px 10px; border-radius:9999px;">🏥 ESSALUD (RED ASISTENCIAL LIMA)</span>`;
+        coberturaMonto = totalBruto;
+        totalPaciente = 0;
+        explicacion = `Paciente asegurado en el Seguro Social de Salud (EsSalud). Prestaciones integrales cubiertas al 100% en la red de establecimientos de EsSalud conforme a Ley N° 26790. Copago paciente: S/. 0.00 (Pago Cero).`;
+      } else if (seguroL.includes("eps") || seguroL.includes("privad") || seguroL.includes("rimac") || seguroL.includes("pacifico") || seguroL.includes("mapfre") || seguroL.includes("sanitas") || seguroL.includes("positiva")) {
+        // EPS / Clínica Privada
+        establecimiento = "Clínica Internacional (Sede Lima Centro / San Borja)";
+        badgeHtml = `<span style="background:#4f46e5; color:#fff; padding:4px 10px; border-radius:9999px;">🏢 CLÍNICA PRIVADA (SEGURO EPS)</span>`;
+
+        if (esEmergencia) {
+          // Emergencia (P-I / P-II) -> 100% Ley 27604
+          coberturaMonto = totalBruto;
+          totalPaciente = 0;
+          explicacion = `Atención de Emergencia Médica / Quirúrgica (Prioridad ${prioridadActual}). Protegida por el Principio de No Condicionamiento de la Ley N° 27604 y D.S. N° 016-2002-SA. Cobertura al 100% hasta la estabilización clínica hemodinámica completa. Copago paciente: S/. 0.00.`;
+        } else {
+          // No es Emergencia (P-III, IV, V) -> Automáticamente Urgencia: Cobro 80 soles por consulta + 10% medicamentos
+          copagoEps = 80;
+          coaseguroFarmacia = subtotalFarmacia * 0.10;
+          totalPaciente = copagoEps + coaseguroFarmacia;
+          coberturaMonto = Math.max(0, totalBruto - totalPaciente);
+
+          document.getElementById("liq_row_copago_eps").style.display = "flex";
+          document.getElementById("liq_row_coaseguro_meds").style.display = "flex";
+          document.getElementById("liq_coaseguro_meds_val").textContent = `+ S/. ${coaseguroFarmacia.toFixed(2)}`;
+
+          explicacion = `Atención en Clínica Privada con póliza EPS clasificada como Urgencia Médica (No Emergencia / P-${prioridadActual}). Se aplica la condición contractual estipulada: Copago fijo de S/. 80.00 por consulta de urgencia + coaseguro del 10% sobre el valor total de medicamentos despachados (S/. ${subtotalFarmacia.toFixed(2)} * 10% = S/. ${coaseguroFarmacia.toFixed(2)}).`;
+        }
+      } else {
+        // Particular (Sin seguro)
+        establecimiento = "Atención Particular Ambulatoria / Hospitalaria";
+        badgeHtml = `<span style="background:#dc2626; color:#fff; padding:4px 10px; border-radius:9999px;">👤 PARTICULAR (SIN SEGURO)</span>`;
+        coberturaMonto = 0;
+        totalPaciente = totalBruto;
+        document.getElementById("liq_row_particular").style.display = "flex";
+        explicacion = `El paciente no cuenta con seguro de salud activo (SIS, EsSalud ni EPS). Conforme a la normativa, al no existir aseguradora que asuma la cobertura, el paciente o responsable abona el 100% de las prestaciones y fármacos brindados.`;
+      }
+
+      document.getElementById("disp_establecimiento").textContent = establecimiento;
+      document.getElementById("badge_seguro_header").innerHTML = badgeHtml;
+
+      // Renderizar tabla
+      const tbody = document.getElementById("invoice_tbody");
+      tbody.innerHTML = "";
+      facturaItems.forEach((it, idx) => {
+        const tr = document.createElement("tr");
+        const c = parseFloat(it.costo) || 0;
+        const catClass = `cat-${(it.categoria || "general").toLowerCase().replace(/[^a-z]/g, "")}`;
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>
+            <strong>${it.servicio}</strong>
+            <div style="font-size:0.75rem; color:#64748b;">Prestación asistencial · ${it.timestamp || "Registrado"}</div>
+          </td>
+          <td><span class="cat-badge ${catClass}">${it.categoria || "General"}</span></td>
+          <td style="text-align:right;">S/. ${c.toFixed(2)}</td>
+          <td style="text-align:center;">
+            <span style="font-size:0.75rem; font-weight:700; color:#15803d; background:#dcfce7; padding:2px 6px; border-radius:4px;">
+              ${esEmergencia ? "Ley N° 27604" : "Regulado"}
+            </span>
+          </td>
+          <td style="text-align:right; font-weight:800;">S/. ${c.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("disp_items_count").textContent = `${facturaItems.length} prestaciones registradas`;
+      document.getElementById("liq_subtotal_bruto").textContent = `S/. ${totalBruto.toFixed(2)}`;
+      document.getElementById("liq_cobertura_monto").textContent = `- S/. ${coberturaMonto.toFixed(2)}`;
+
+      const elTotalPac = document.getElementById("liq_total_paciente");
+      if (totalPaciente === 0) {
+        elTotalPac.textContent = `S/. 0.00 (PAGO CERO — CUBIERTO AL 100%)`;
+        elTotalPac.style.color = "#16a34a";
+      } else {
+        elTotalPac.textContent = `S/. ${totalPaciente.toFixed(2)}`;
+        elTotalPac.style.color = "#dc2626";
+      }
+
+      document.getElementById("liq_explicacion_legal").textContent = explicacion;
+    }
+
+    function descargarJsonLiquidacion() {
+      const data = {
+        institucion: "Universidad Politécnica del Perú - Facultad de Ciencias de la Salud",
+        sistema: "TEDEF - Auditoría y Liquidación Post-Estabilización",
+        normativa: "Ley N° 27604 / D.S. N° 016-2002-SA / Ley N° 29414",
+        paciente: document.getElementById("disp_nombre").textContent,
+        dni: document.getElementById("disp_dni").textContent,
+        historia_clinica: document.getElementById("disp_hc").textContent,
+        folio: document.getElementById("disp_folio").textContent,
+        regimen_seguro: document.getElementById("disp_regimen").textContent,
+        total_bruto: document.getElementById("liq_subtotal_bruto").textContent,
+        total_paciente: document.getElementById("liq_total_paciente").textContent,
+        fecha_emision: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `LIQUIDACION_${data.dni}_${data.folio}.json`;
+      a.click();
+    }
+
+    window.addEventListener("DOMContentLoaded", cargarExpedienteFacturacion);
+  </script>
+</body>
+</html>

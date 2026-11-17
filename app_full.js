@@ -3884,6 +3884,28 @@ function actualizarFactura() {
   const leyBanner = document.getElementById("factura_ley27604");
 
   const liq = calcularLiquidacionSeguro();
+  // Sincronizar estado completo para el portal especializado facturacion.html
+  try {
+    localStorage.setItem("UPP_ITEMS_FACTURA", JSON.stringify(STATE.items_factura || []));
+    localStorage.setItem("UPP_TIPO_SEGURO", STATE.tipoSeguro || "Particular");
+    localStorage.setItem("UPP_PACIENTE_NOMBRE", STATE.nombreReniec || STATE.identificador || "Paciente");
+    localStorage.setItem("UPP_PACIENTE_DNI", STATE.numDni || "");
+    localStorage.setItem("UPP_PACIENTE_HC", STATE.historiaClinica || "");
+    localStorage.setItem("UPP_PRIORIDAD", STATE.prioridad || "II");
+    localStorage.setItem("UPP_ES_SOAT", STATE.esAccidenteTransito ? "true" : "false");
+    localStorage.setItem("UPP_SOAT_FUGA", STATE.soatVehiculoFuga ? "true" : "false");
+  } catch(e) {}
+
+  // Actualizar resumen clínico de Módulo 8
+  const m8Nom = document.getElementById("m8_disp_nombre");
+  if (m8Nom) m8Nom.textContent = STATE.nombreReniec || STATE.identificador || "Paciente en Atención";
+  const m8Hc = document.getElementById("m8_disp_hc");
+  if (m8Hc) m8Hc.textContent = STATE.historiaClinica || "HC-2026-—";
+  const m8Prio = document.getElementById("m8_disp_prio");
+  if (m8Prio) m8Prio.textContent = STATE.prioridad ? `Prioridad ${STATE.prioridad}` : "Por evaluar";
+  const m8Seg = document.getElementById("m8_disp_seguro");
+  if (m8Seg) m8Seg.textContent = STATE.tipoSeguro ? STATE.tipoSeguro.toUpperCase() : "Sin acreditar";
+
 
   // Actualizar acumulador en Top Steps Navbar
   const navMontoEl = document.getElementById("navFacturaMonto");
@@ -7255,7 +7277,7 @@ function renderizarKardex() {
   if (!tbody) return;
 
   if (!Array.isArray(STATE.kardexItems) || STATE.kardexItems.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:12px;color:#94a3b8;">Sin medicamentos prescritos en el Kardex. Seleccione un fármaco arriba para indicar.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:12px;color:#94a3b8;">Sin medicamentos prescritos en el Kardex. Seleccione un fármaco arriba para indicar.</td></tr>`;
     return;
   }
 
@@ -7266,7 +7288,6 @@ function renderizarKardex() {
       <tr style="border-bottom:1px solid #e2e8f0;">
         <td style="padding:8px 10px;font-weight:600;color:#0f172a;">${k.nombre}</td>
         <td style="padding:8px 10px;color:#475569;">${k.dosis}</td>
-        <td style="padding:8px 10px;text-align:right;font-weight:700;color:#0f172a;">S/. ${k.costo.toFixed(2)}</td>
         <td style="padding:8px 10px;text-align:center;">
           <button type="button" 
                   class="btn-kardex-admin"
@@ -7340,7 +7361,7 @@ function renderizarOrdenesLaboratorio() {
   if (!tbody) return;
 
   if (!Array.isArray(STATE.ordenesLaboratorio) || STATE.ordenesLaboratorio.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:12px;color:#94a3b8;">Sin análisis de laboratorio solicitados. Seleccione una prueba arriba para ordenar.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:12px;color:#94a3b8;">Sin análisis de laboratorio solicitados. Seleccione una prueba arriba para ordenar.</td></tr>`;
     return;
   }
 
@@ -7350,7 +7371,6 @@ function renderizarOrdenesLaboratorio() {
       <tr style="border-bottom:1px solid #e2e8f0;">
         <td style="padding:8px 10px;font-weight:600;color:#0f172a;">${o.nombre}</td>
         <td style="padding:8px 10px;color:#475569;font-size:11px;">${o.prioridad}</td>
-        <td style="padding:8px 10px;text-align:right;font-weight:700;color:#0f172a;">S/. ${o.costo.toFixed(2)}</td>
         <td style="padding:8px 10px;text-align:center;">
           <span style="background:#ecfeff;color:#0891b2;border:1px solid #a5f3fc;padding:3px 8px;border-radius:9999px;font-size:10px;font-weight:800;">
             ${o.estado}
@@ -7392,7 +7412,7 @@ function renderizarOrdenesImagenes() {
   if (!tbody) return;
 
   if (!Array.isArray(STATE.ordenesImagenes) || STATE.ordenesImagenes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:12px;color:#94a3b8;">Sin estudios radiológicos solicitados. Seleccione un estudio arriba para ordenar.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:12px;color:#94a3b8;">Sin estudios radiológicos solicitados. Seleccione un estudio arriba para ordenar.</td></tr>`;
     return;
   }
 
@@ -7402,7 +7422,6 @@ function renderizarOrdenesImagenes() {
       <tr style="border-bottom:1px solid #e2e8f0;">
         <td style="padding:8px 10px;font-weight:600;color:#0f172a;">${o.nombre}</td>
         <td style="padding:8px 10px;color:#475569;font-size:11px;">${o.indicacion}</td>
-        <td style="padding:8px 10px;text-align:right;font-weight:700;color:#0f172a;">S/. ${o.costo.toFixed(2)}</td>
         <td style="padding:8px 10px;text-align:center;">
           <span style="background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;padding:3px 8px;border-radius:9999px;font-size:10px;font-weight:800;">
             ${o.estado}
