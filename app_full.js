@@ -6395,8 +6395,23 @@ function renderizarTableroCamasYQuirofanos(filtro = null, targetContainerId = "c
 
   let html = "";
 
-  for (const id in RECURSOS_HOSPITALARIOS) {
-    const rec = RECURSOS_HOSPITALARIOS[id];
+  const ORDEN_PRIORIDAD_TIPOS = {
+    "shock_trauma": 1,
+    "quirofano": 2,
+    "uci": 3,
+    "observacion": 4,
+    "urpa": 5
+  };
+
+  const listaOrdenada = Object.values(RECURSOS_HOSPITALARIOS).sort((a, b) => {
+    const ordenA = ORDEN_PRIORIDAD_TIPOS[a.tipo] || 99;
+    const ordenB = ORDEN_PRIORIDAD_TIPOS[b.tipo] || 99;
+    if (ordenA !== ordenB) return ordenA - ordenB;
+    return a.id.localeCompare(b.id, undefined, { numeric: true });
+  });
+
+  for (const rec of listaOrdenada) {
+    const id = rec.id;
 
     // Aplicar filtro
     if (f !== "todos" && rec.tipo !== f) continue;
@@ -8688,7 +8703,7 @@ window.actualizarGrupoSanguineo = actualizarGrupoSanguineo;
 // ==============================================================================
 // GESTIÓN DE VISTA APP: MODO PASOS (TABS) VS VISTA CONTINUA
 // ==============================================================================
-let modoTabsActivo = true; // Por defecto: Modo Paso a Paso (Estilo App)
+let modoTabsActivo = false; // Por defecto: Modo Paso a Paso (Estilo App)
 
 function alternarModoVistaApp(forzarModo) {
   if (forzarModo !== undefined) {
@@ -8750,3 +8765,47 @@ function actualizarVistaModoTabs(num) {
 
 window.alternarModoVistaApp = alternarModoVistaApp;
 window.actualizarVistaModoTabs = actualizarVistaModoTabs;
+
+// ==============================================================================
+// SLIDER HORIZONTAL DE CAMAS & GESTIÓN DE MODO OSCURO (DARK MODE)
+// ==============================================================================
+function desplazarSliderCamas(containerId, offset) {
+  const track = document.getElementById(containerId);
+  if (track) {
+    track.scrollBy({ left: offset, behavior: 'smooth' });
+  }
+}
+window.desplazarSliderCamas = desplazarSliderCamas;
+
+function alternarModoOscuro() {
+  const isDark = document.documentElement.classList.toggle("dark");
+  try {
+    localStorage.setItem("triaje_dark_mode", isDark ? "true" : "false");
+  } catch(e) {}
+  actualizarIconoModoOscuro(isDark);
+}
+
+function actualizarIconoModoOscuro(isDark) {
+  const icon = document.getElementById("dark_mode_icon");
+  if (icon) {
+    icon.textContent = isDark ? "☀️" : "🌙";
+  }
+}
+
+// Cargar preferencia guardada de modo oscuro
+try {
+  if (localStorage.getItem("triaje_dark_mode") === "true") {
+    document.documentElement.classList.add("dark");
+  }
+} catch(e) {}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    actualizarIconoModoOscuro(document.documentElement.classList.contains("dark"));
+  });
+} else {
+  actualizarIconoModoOscuro(document.documentElement.classList.contains("dark"));
+}
+
+window.alternarModoOscuro = alternarModoOscuro;
+window.actualizarIconoModoOscuro = actualizarIconoModoOscuro;
