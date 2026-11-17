@@ -1329,6 +1329,7 @@ const STATE = {
   tipoOrigenEvento: "comun", // "comun" o "transito"
   esAccidenteTransito: false,
   esClinicaPrivada: false, // true cuando opera en modo Clínica Privada EPS
+  entornoBloqueado: false, // true cuando el seguro ha sido acreditado oficialmente en Módulo 3
   panicoShockTrauma: false,
 
   // Módulo 1: Triaje Fisiológico
@@ -1898,7 +1899,7 @@ async function consultarReniec() {
       buscarSeguroPacienteEnBd(ident).then(seguroGuardado => {
         if (seguroGuardado) {
           console.log(`🧠 Memoria Base de Datos: DNI ${ident} recuperó seguro guardado:`, seguroGuardado);
-          aplicarSeleccionSeguroYEntorno(seguroGuardado, false);
+          aplicarSeleccionSeguroYEntorno(seguroGuardado, false, true);
         } else {
           actualizarSeguroConsolidado("Sin consultar (Pendiente de Acreditación con CAPTCHA)");
           STATE.tipoSeguro = null;
@@ -2241,7 +2242,7 @@ function procesarResultadoAcreditacion(datos, ident) {
 
   if (datos.tipo_seguro === "EsSalud") {
     STATE.tipoSeguro = "EsSalud";
-    seleccionarEntornoEstablecimiento("essalud", false);
+    seleccionarEntornoEstablecimiento("essalud", false, true);
     STATE.acreditadoEsSalud = true;
 
     if (titulo) titulo.textContent = "🏛️ ACREDITACIÓN PIDE-SUSALUD: EsSalud (Seguro Social de Salud)";
@@ -2272,7 +2273,7 @@ function procesarResultadoAcreditacion(datos, ident) {
     actualizarSeguroConsolidado("EsSalud — Asegurado Activo ESSI (Pago Cero 100%)");
   } else if (datos.tipo_seguro === "SIS") {
     STATE.tipoSeguro = "SIS";
-    seleccionarEntornoEstablecimiento("minsa_sis", false);
+    seleccionarEntornoEstablecimiento("minsa_sis", false, true);
 
     if (titulo) titulo.textContent = "🏛️ ACREDITACIÓN PIDE-SUSALUD: SIS Gratuito (MINSA / AUS)";
     if (badgeEstado) {
@@ -2302,7 +2303,7 @@ function procesarResultadoAcreditacion(datos, ident) {
     actualizarSeguroConsolidado("SIS Gratuito Integral — MINSA / FUA (Pago Cero 100%)");
   } else if (datos.tipo_seguro === "EPS") {
     STATE.tipoSeguro = "EPS";
-    seleccionarEntornoEstablecimiento("clinica_eps", false);
+    seleccionarEntornoEstablecimiento("clinica_eps", false, true);
 
     if (titulo) titulo.textContent = "🏢 ACREDITACIÓN PIDE-SUSALUD: Clínica Privada (Red EPS)";
     if (badgeEstado) {
@@ -2334,7 +2335,7 @@ function procesarResultadoAcreditacion(datos, ident) {
   } else if (datos.tipo_seguro === "Particular" || String(datos.tipo_seguro).toLowerCase().includes("particular") || String(datos.tipo_seguro).toLowerCase().includes("sin seguro")) {
     STATE.tipoSeguro = "Particular";
     STATE.esClinicaPrivada = false;
-    seleccionarEntornoEstablecimiento("particular", false);
+    seleccionarEntornoEstablecimiento("particular", false, true);
 
     if (titulo) titulo.textContent = "👤 ACREDITACIÓN PIDE-SUSALUD: Sin Seguro (Paciente Particular)";
     if (badgeEstado) {
@@ -4995,28 +4996,34 @@ async function guardarSeguroPacienteEnBd(identificador, nroHc, nombre, tipoSegur
   }
 }
 
-function aplicarSeleccionSeguroYEntorno(seguro, sincronizarBd = false) {
+function aplicarSeleccionSeguroYEntorno(seguro, sincronizarBd = false, bloquearOtros = false) {
   if (!seguro) return;
   const s = String(seguro).trim().toLowerCase();
 
   if (s.includes("sis") || s.includes("minsa")) {
-    seleccionarEntornoEstablecimiento("minsa_sis", sincronizarBd);
+    seleccionarEntornoEstablecimiento("minsa_sis", sincronizarBd, bloquearOtros);
   } else if (s.includes("essalud")) {
-    seleccionarEntornoEstablecimiento("essalud", sincronizarBd);
+    seleccionarEntornoEstablecimiento("essalud", sincronizarBd, bloquearOtros);
   } else if (s.includes("eps") || s.includes("privad") || s.includes("rimac") || s.includes("pacifico") || s.includes("mapfre") || s.includes("sanitas") || s.includes("positiva")) {
-    seleccionarEntornoEstablecimiento("clinica_eps", sincronizarBd);
+    seleccionarEntornoEstablecimiento("clinica_eps", sincronizarBd, bloquearOtros);
   } else if (s.includes("soat")) {
     cambiarOrigenEvento("soat");
-  } else if (s.includes("particular")) {
-    STATE.tipoSeguro = "Particular";
-    STATE.esClinicaPrivada = false;
-    actualizarSeguroConsolidado("Particular (Sin Cobertura Activa)");
-    recalcularPrioridad();
-    actualizarFactura();
+  } else if (s.includes("particular") || s.includes("sin seguro") || s.includes("ningun")) {
+    seleccionarEntornoEstablecimiento("particular", sincronizarBd, bloquearOtros);
   }
 }
 
-function seleccionarEntornoEstablecimiento(entorno, sincronizarConBd = true) {
+function seleccionarEntornoEstablecimiento(entorno, sincronizarConBd = true, bloquearOtros = false) {
+  // Si ya fue bloqueado oficialmente por Módulo 3 y se intenta modificar manualmente desde Módulo 1
+  if (STATE.entornoBloqueado && !bloquearOtros) {
+    alert("🔒 El entorno asistencial está bloqueado e inalterable por la Acreditación Oficial PIDE-SUSALUD validada en el Módulo 3.");
+    return;
+  }
+
+  if (bloquearOtros) {
+    STATE.entornoBloqueado = true;
+  }
+
   STATE.entornoEstablecimiento = entorno;
   STATE.esClinicaPrivada = (entorno === "clinica_eps");
 
@@ -5030,26 +5037,38 @@ function seleccionarEntornoEstablecimiento(entorno, sincronizarConBd = true) {
   const bannerEps = document.getElementById("banner_condicion_eps");
   const bannerPart = document.getElementById("banner_condicion_particular");
 
-  [btnMinsa, btnEssalud, btnCli, btnPart].forEach(b => {
+  const todosBotones = [btnMinsa, btnEssalud, btnCli, btnPart];
+
+  // Reset base styles
+  todosBotones.forEach(b => {
     if (b) {
       b.style.background = "#ffffff";
       b.style.borderColor = "#cbd5e1";
       b.style.color = "#334155";
+      b.style.opacity = "1";
+      b.style.filter = "none";
+      b.style.pointerEvents = "auto";
+      b.style.cursor = "pointer";
+      b.disabled = false;
     }
   });
+
   if (bannerMinsa) bannerMinsa.style.display = "none";
   if (bannerEssalud) bannerEssalud.style.display = "none";
   if (bannerEps) bannerEps.style.display = "none";
   if (bannerPart) bannerPart.style.display = "none";
 
+  let botonActivo = null;
+
   if (entorno === "minsa_sis") {
+    botonActivo = btnMinsa;
     if (btnMinsa) {
       btnMinsa.style.background = "#f0f9ff";
       btnMinsa.style.borderColor = "#0284c7";
       btnMinsa.style.color = "#0369a1";
     }
     if (badge) {
-      badge.textContent = "🏛️ Hospital MINSA (SIS)";
+      badge.textContent = bloquearOtros ? "🔒 🏛️ Hospital MINSA (SIS) — Acreditado PIDE (Bloqueado)" : "🏛️ Hospital MINSA (SIS)";
       badge.style.background = "#e0f2fe";
       badge.style.color = "#0369a1";
       badge.style.borderColor = "#bae6fd";
@@ -5061,13 +5080,14 @@ function seleccionarEntornoEstablecimiento(entorno, sincronizarConBd = true) {
       actualizarSeguroConsolidado("SIS Gratuito Integral (MINSA / Formato FUA)");
     }
   } else if (entorno === "essalud") {
+    botonActivo = btnEssalud;
     if (btnEssalud) {
       btnEssalud.style.background = "#eff6ff";
       btnEssalud.style.borderColor = "#3b82f6";
       btnEssalud.style.color = "#1d4ed8";
     }
     if (badge) {
-      badge.textContent = "🏥 Hospital EsSalud";
+      badge.textContent = bloquearOtros ? "🔒 🏥 Hospital EsSalud — Acreditado PIDE (Bloqueado)" : "🏥 Hospital EsSalud";
       badge.style.background = "#dbeafe";
       badge.style.color = "#1d4ed8";
       badge.style.borderColor = "#bfdbfe";
@@ -5079,13 +5099,14 @@ function seleccionarEntornoEstablecimiento(entorno, sincronizarConBd = true) {
       actualizarSeguroConsolidado("EsSalud (Asegurado Regular ESSI / D.L. 728)");
     }
   } else if (entorno === "clinica_eps") {
+    botonActivo = btnCli;
     if (btnCli) {
       btnCli.style.background = "#f0fdf4";
       btnCli.style.borderColor = "#10b981";
       btnCli.style.color = "#065f46";
     }
     if (badge) {
-      badge.textContent = "🏢 Clínica Privada (Red EPS)";
+      badge.textContent = bloquearOtros ? "🔒 🏢 Clínica Privada (Red EPS) — Acreditado PIDE (Bloqueado)" : "🏢 Clínica Privada (Red EPS)";
       badge.style.background = "#dcfce7";
       badge.style.color = "#15803d";
       badge.style.borderColor = "#86efac";
@@ -5097,13 +5118,14 @@ function seleccionarEntornoEstablecimiento(entorno, sincronizarConBd = true) {
       actualizarSeguroConsolidado("Clínica Privada — EPS Activa (Pacífico Salud / Rímac / Mapfre)");
     }
   } else if (entorno === "particular") {
+    botonActivo = btnPart;
     if (btnPart) {
       btnPart.style.background = "#fef2f2";
       btnPart.style.borderColor = "#f87171";
       btnPart.style.color = "#991b1b";
     }
     if (badge) {
-      badge.textContent = "👤 Atención Particular (Sin Seguro)";
+      badge.textContent = bloquearOtros ? "🔒 👤 Sin Seguro (Particular) — Auditado PIDE (Bloqueado)" : "👤 Atención Particular (Sin Seguro)";
       badge.style.background = "#fee2e2";
       badge.style.color = "#991b1b";
       badge.style.borderColor = "#fca5a5";
@@ -5116,24 +5138,28 @@ function seleccionarEntornoEstablecimiento(entorno, sincronizarConBd = true) {
     }
   }
 
-  // Sincronizar botones de Módulo 3
-  ["eps", "sis", "essalud", "particular"].forEach(id => {
-    const b = document.getElementById(`btn_seg_${id}`);
-    if (b) {
-      const match = (id === "eps" && entorno === "clinica_eps") ||
-                    (id === "sis" && entorno === "minsa_sis") ||
-                    (id === "essalud" && entorno === "essalud");
-      if (match) {
-        b.style.background = id === "eps" ? "#ecfdf5" : "#eff6ff";
-        b.style.borderColor = id === "eps" ? "#10b981" : "#3b82f6";
-        b.style.color = id === "eps" ? "#065f46" : "#1d4ed8";
-      } else {
-        b.style.background = "#ffffff";
-        b.style.borderColor = "#cbd5e1";
-        b.style.color = "#334155";
+  // SI SE INDICA BLOQUEO POR MÓDULO 3: BLOQUEAR TODOS LOS DEMÁS BOTONES PARA EVITAR MODIFICACIÓN POR ERROR
+  if (STATE.entornoBloqueado) {
+    todosBotones.forEach(b => {
+      if (b) {
+        if (b === botonActivo) {
+          b.disabled = false;
+          b.style.pointerEvents = "none"; // Evitar clics redundantes
+          b.style.cursor = "default";
+          b.style.boxShadow = "0 0 0 2px rgba(16,185,129,0.3)";
+        } else {
+          b.disabled = true;
+          b.style.pointerEvents = "none";
+          b.style.opacity = "0.38";
+          b.style.cursor = "not-allowed";
+          b.style.filter = "grayscale(100%)";
+          b.style.borderColor = "#e2e8f0";
+          b.style.background = "#f1f5f9";
+          b.style.color = "#94a3b8";
+        }
       }
-    }
-  });
+    });
+  }
 
   // Si se solicita sincronizar con BD y tenemos un identificador activo
   if (sincronizarConBd && STATE.identificador && STATE.tipoSeguro) {
