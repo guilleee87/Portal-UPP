@@ -27,14 +27,8 @@ const DEFAULT_APISPERU_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI
 // ---------------------------------------------------------------------------
 // 2. BASE DE DATOS SIMULADA (IDÉNTICA a triage_prioridad.py — NO MODIFICAR)
 // ---------------------------------------------------------------------------
-const BASE_DATOS_HC = {
-  "px a": "HC-2025-089",
-  "px b": "HC-2026-142",
-  "10203040": "HC-2024-510",
-  "70809010": "HC-2025-332",
-  "carlos mendoza rojas": "HC-2023-115",
-  "maria torres silva": "HC-2024-890",
-};
+// Base de datos de historias clínicas vacía (inicio desde cero)
+const BASE_DATOS_HC = {};
 
 
 // Cargar base de datos persistente desde localStorage
@@ -48,6 +42,36 @@ try {
 
 let contadorHcNueva = parseInt(localStorage.getItem("UPP_CONTADOR_HC") || "1", 10);
 let contadorHcTemp = 1;
+
+// ---------------------------------------------------------------------------
+// RESET LIMPIO DE HISTORIAS CLÍNICAS (INICIO DESDE CERO SOLICITADO)
+// ---------------------------------------------------------------------------
+(function verificarYPurgarBdInicial() {
+  const DB_VERSION_KEY = "UPP_DB_VERSION_ZERO_2026";
+  if (!localStorage.getItem(DB_VERSION_KEY)) {
+    try {
+      localStorage.removeItem("UPP_BASE_DATOS_HC");
+      localStorage.removeItem("UPP_PACIENTES_MASTER_V2");
+      localStorage.removeItem("UPP_HISTORIAL_EPISODIOS_V2");
+      localStorage.removeItem("UPP_HISTORIAL_EPISODIOS");
+      localStorage.removeItem("UPP_CONTADOR_HC");
+
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith("padron_susalud_") || k.startsWith("seguro_asignado_"))) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+
+      localStorage.setItem(DB_VERSION_KEY, "true");
+      localStorage.setItem("UPP_CONTADOR_HC", "1");
+      console.log("🧹 Base de datos local purgada con éxito. Comenzando historias clínicas desde cero.");
+    } catch(e) {}
+  }
+})();
+
 
 
 // ---------------------------------------------------------------------------
@@ -287,90 +311,8 @@ const STORAGE_KEY_HISTORIAL_EPISODIOS = "UPP_HISTORIAL_EPISODIOS_V2";
 
 
 // Semilla inicial de pacientes con datos clínicos permanentes y antecedentes de alergias
-const PACIENTES_MASTER_SEED = {
-  "10203040": {
-    identificador: "10203040",
-    historia_clinica: "HC-2024-510",
-    nombre_completo: "Carlos Mendoza Rojas",
-    fecha_nacimiento: "1988-06-15",
-    edad: 38,
-    sexo: "M",
-    tipo_seguro: "EsSalud",
-    alergias: "Alérgico a Penicilina (Anafilaxia previa severa) y Sulfas",
-    antecedentes: "Hipertensión Arterial, Asma bronquial leve",
-    episodios: [
-      {
-        folio: "FOLIO-20261102-1402",
-        fecha: "02/11/2026",
-        hora: "14:35",
-        fecha_hora: "02/11/2026, 14:35:10",
-        identificador: "10203040",
-        historia_clinica: "HC-2024-510",
-        nombre_completo: "Carlos Mendoza Rojas",
-        edad: 38,
-        sexo: "M",
-        alergias: "Alérgico a Penicilina (Anafilaxia previa severa) y Sulfas",
-        tipo_seguro: "EsSalud",
-        ticket: "T-03",
-        motivo_consulta: "Disnea y sibilancias respiratorias de inicio agudo",
-        prioridad: "P-II (EMERGENCIA)",
-        color_prioridad: "#ea580c",
-        destino_clinico: "Tópico de Emergencia / Nebulización",
-        signos_vitales: {
-          spo2: "91", fc: "108", fr: "26", pas: "135", pad: "85", temp: "36.7", glucosa: "112", glasgow: "15", dolor: "3"
-        },
-        cama_asignada: "Cama 02 - Observación",
-        examenes_realizados: [{ descripcion: "Gases Arteriales (AGA)", costo: 45 }, { descripcion: "Radiografía de Tórax AP", costo: 60 }],
-        medicamentos_despachados: [{ descripcion: "Salbutamol solución para nebulizar", costo: 15 }, { descripcion: "Hidrocortisona 100mg EV", costo: 25 }],
-        total_facturado: 0.00,
-        cobertura_info: "100% Cubierto por EsSalud (Ley N° 27604 - Pago Cero)",
-        estado_salida: "Alta con indicación de tratamiento ambulatorio",
-        firmante: "Lic. R. Añazgo Farro (CEP 84729) / Dr. L. Vásquez Valdivieso (CMP 62910)"
-      }
-    ]
-  },
-  "70809010": {
-    identificador: "70809010",
-    historia_clinica: "HC-2025-332",
-    nombre_completo: "Maria Torres Silva",
-    fecha_nacimiento: "1994-09-22",
-    edad: 32,
-    sexo: "F",
-    tipo_seguro: "SIS Gratuito",
-    alergias: "Alérgica a AINEs (Ibuprofeno, Ketorolaco — Angioedema)",
-    antecedentes: "Migraña episódica, Gastritis superficial",
-    episodios: [
-      {
-        folio: "FOLIO-20261105-0918",
-        fecha: "05/11/2026",
-        hora: "09:18",
-        fecha_hora: "05/11/2026, 09:18:24",
-        identificador: "70809010",
-        historia_clinica: "HC-2025-332",
-        nombre_completo: "Maria Torres Silva",
-        edad: 32,
-        sexo: "F",
-        alergias: "Alérgica a AINEs (Ibuprofeno, Ketorolaco — Angioedema)",
-        tipo_seguro: "SIS Gratuito",
-        ticket: "T-04",
-        motivo_consulta: "Cefalea holocraneana pulsátil EVA 8/10 con náuseas y fotofobia",
-        prioridad: "P-III (URGENCIA MENOR)",
-        color_prioridad: "#ca8a04",
-        destino_clinico: "Consultorio de Urgencias Médicas",
-        signos_vitales: {
-          spo2: "98", fc: "82", fr: "18", pas: "115", pad: "75", temp: "36.5", glucosa: "96", glasgow: "15", dolor: "8"
-        },
-        cama_asignada: "Cama 05 - Observación Mujeres",
-        examenes_realizados: [{ descripcion: "Hemograma Automatizado", costo: 30 }],
-        medicamentos_despachados: [{ descripcion: "Paracetamol 1g EV (Evitar AINEs por alergia)", costo: 18 }, { descripcion: "Dimenhidrinato 50mg EV", costo: 12 }],
-        total_facturado: 0.00,
-        cobertura_info: "100% Cubierto por SIS Gratuito (FUA Acreditado - Pago Cero)",
-        estado_salida: "Alta con remisión sintomática completa",
-        firmante: "Lic. L. Vásquez Valdivieso (CEP 78314) / Méd. Urgenciólogo"
-      }
-    ]
-  }
-};
+// Semilla maestra vacía (inicio desde cero)
+const PACIENTES_MASTER_SEED = {};
 
 
 function normalizarClavePaciente(val) {
@@ -873,6 +815,55 @@ async function abrirModalConsultaHC() {
 }
 
 
+
+// ---------------------------------------------------------------------------
+// PURGADO MANUAL COMPLETO DE BASE DE DATOS (REINICIO TOTAL A CERO)
+// ---------------------------------------------------------------------------
+async function purgarTodaLaBaseDeDatos() {
+  if (!confirm("⚠️ ¿Está seguro de reiniciar la Base de Datos a CERO?\n\nSe eliminarán todas las historias clínicas registradas localmente y en el servidor. Comenzaremos desde cero.")) {
+    return;
+  }
+
+  // 1. Limpiar estructuras en memoria
+  for (const k in BASE_DATOS_HC) delete BASE_DATOS_HC[k];
+  contadorHcNueva = 1;
+
+  // 2. Limpiar localStorage
+  try {
+    localStorage.removeItem("UPP_BASE_DATOS_HC");
+    localStorage.removeItem("UPP_PACIENTES_MASTER_V2");
+    localStorage.removeItem("UPP_HISTORIAL_EPISODIOS_V2");
+    localStorage.removeItem("UPP_HISTORIAL_EPISODIOS");
+    localStorage.setItem("UPP_CONTADOR_HC", "1");
+
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith("padron_susalud_") || k.startsWith("seguro_asignado_"))) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
+
+  // 3. Purgar SQLite en servidor Python
+  try {
+    await fetch("/api/hc/purgar");
+  } catch (e) {}
+
+  // 4. Limpiar formulario activo
+  if (typeof limpiarFormularioCompletoState === "function") {
+    limpiarFormularioCompletoState();
+  }
+
+  // 5. Actualizar vista de catálogo si está abierto
+  if (typeof cargarTablaCatalogoHC === "function") {
+    cargarTablaCatalogoHC("");
+  }
+
+  alert("✅ Base de datos purgada con éxito.\nTodas las Historias Clínicas comienzan desde cero.");
+}
+
 function cerrarModalConsultaHC() {
   const modal = document.getElementById("modal_consulta_hc");
   if (modal) {
@@ -892,7 +883,7 @@ async function cargarTablaCatalogoHC(filtro = "") {
   // 1. Obtener de Supabase
   if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.key) {
     try {
-      let url = `${SUPABASE_CONFIG.url}/rest/v1/historias_clinicas?select=*&order=id.desc&limit=50`;
+      let url = `${SUPABASE_CONFIG.url}/rest/v1/historias_clinicas?estado_bd=neq.ELIMINADO&select=*&order=id.desc&limit=50`;
       if (filtro && filtro.trim().length >= 2) {
         const enc = encodeURIComponent(filtro.trim());
         url = `${SUPABASE_CONFIG.url}/rest/v1/historias_clinicas?or=(identificador.ilike.*${enc}*,nombre_completo.ilike.*${enc}*,historia_clinica.ilike.*${enc}*)&select=*&order=id.desc&limit=50`;
@@ -904,7 +895,7 @@ async function cargarTablaCatalogoHC(filtro = "") {
         }
       });
       if (res.ok) {
-        registros = await res.json();
+        registros = (await res.json()).filter(r => r.estado_bd !== "ELIMINADO" && !String(r.identificador || "").startsWith("PURGED"));
       }
     } catch (e) {}
   }
@@ -1792,6 +1783,10 @@ function activarModo(modo) {
 // 7. MÓDULOS COLAPSABLES
 // ---------------------------------------------------------------------------
 function toggleModule(id) {
+  const num = parseInt(String(id).replace(/\D/g, ""), 10);
+  if (!isNaN(num) && num >= 1 && num <= 8) {
+    moduloActivoActual = num;
+  }
   const body = document.getElementById(`body_${id}`);
   const arrow = document.getElementById(`arrow_${id}`);
   if (!body) return;
@@ -1825,10 +1820,22 @@ window.cerrarTodosLosModulos = cerrarTodosLosModulos;
 // 8. MÓDULO 1 — ENFERMERÍA 1
 // ---------------------------------------------------------------------------
 function selectModalidad(btn) {
+  if (typeof btn === 'string') {
+    btn = document.querySelector(`.modalidad-btn[data-mod="${btn}"]`);
+  }
+  if (!btn) return;
   document.querySelectorAll(".modalidad-btn").forEach(b => b.classList.remove("selected"));
   btn.classList.add("selected");
-  STATE.modalidadIngreso = btn.getAttribute("data-mod");
-  registrarTimestamp("M1_modalidad");
+  const mod = btn.getAttribute("data-mod") || "A pie";
+  STATE.modalidadIngreso = mod;
+  
+  const lbl = document.getElementById("lbl_modalidad_activa");
+  if (lbl) {
+    lbl.textContent = btn.textContent.trim();
+  }
+  if (typeof registrarTimestamp === "function") {
+    registrarTimestamp("M1_modalidad");
+  }
 }
 
 
@@ -3241,6 +3248,22 @@ function mostrarPrioridad(prio) {
   if (elPrioDestino) {
     elPrioDestino.textContent = `Destino Clínico: ${def.destino}`;
     elPrioDestino.style.color = def.hex;
+  }
+
+  // Configuración de tránsito asistencial y salto de módulos según NTS N° 042-MINSA
+  if (prio === "IV" || prio === "V") {
+    const radioAlta = document.getElementById("btn_destino_alta");
+    if (radioAlta) radioAlta.checked = true;
+    STATE.destinoPostTopico = "alta";
+  } else if (prio === "III") {
+    const radioObs = document.getElementById("btn_destino_observacion");
+    if (radioObs) radioObs.checked = true;
+    STATE.destinoPostTopico = "observacion";
+  } else if (prio === "I" || prio === "II") {
+    if (STATE.destinoPostTopico !== "quirofano_uci" && !STATE.esEmergenciaDirecta) {
+      const radioObs = document.getElementById("btn_destino_observacion");
+      if (radioObs) radioObs.checked = true;
+    }
   }
 
   const topicoLbl = document.getElementById("topico_asignado_lbl");
@@ -5156,6 +5179,26 @@ function moduloAnterior() {
 }
 
 
+
+// ---------------------------------------------------------------------------
+// SALTO INTELIGENTE Y TRÁNSITO ASISTENCIAL DESDE MÓDULO 4 (NTS N° 042-MINSA)
+// ---------------------------------------------------------------------------
+function avanzarDesdeModulo4() {
+  const prio = STATE.prioridad;
+  const dest = STATE.destinoPostTopico;
+
+  if (prio === "IV" || prio === "V" || dest === "alta") {
+    alert(`🩺 Prioridad ${prio || 'IV/V'} (No Crítica) o Alta Directa:\n\nConforme a la Norma Técnica de Salud NTS N° 042-MINSA, esta condición no requiere hospitalización ni camas de observación.\nEl paciente salta los Módulos 5 y 6 directo al Módulo 7 (Egreso y Epicrisis).`);
+    irAModulo(7);
+  } else if (dest === "quirofano_uci" || prio === "I") {
+    alert("🩺 Prioridad I o Criterio Quirúrgico:\nPase directo a Quirófano SOP o Cama Crítica (Módulo 6).");
+    irAModulo(6);
+  } else {
+    irAModulo(5);
+  }
+}
+window.avanzarDesdeModulo4 = avanzarDesdeModulo4;
+
 function moduloSiguiente() {
   if (moduloActivoActual < 8) {
     irAModulo(moduloActivoActual + 1);
@@ -5681,6 +5724,9 @@ function activarPanicoShockTrauma() {
       renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "camas_stock_grid");
       renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "modal_camas_stock_grid");
     }
+    if (typeof actualizarWidgetFlotanteCamas === "function") {
+      actualizarWidgetFlotanteCamas();
+    }
   }
 
   // 3. Sincronizar DOM
@@ -5914,12 +5960,13 @@ function activarIngresoDirectoQuirofano() {
   STATE.grupoSanguineo = "Desconocido";
   STATE.tipoSeguro = "Regularización Diferida (Ley N° 27604)";
   STATE.camaAsignada = "Quirófano 1 (SOP 1 - Cirugía de Control de Daños)";
-  STATE.camaAsignadaId = "SOP-1";
+  STATE.camaAsignadaId = "SOP-01";
 
-  // Asignar recurso hospitalario SOP-1
-  if (typeof RECURSOS_HOSPITALARIOS !== "undefined" && RECURSOS_HOSPITALARIOS["SOP-1"]) {
-    RECURSOS_HOSPITALARIOS["SOP-1"].estado = "ocupada";
-    RECURSOS_HOSPITALARIOS["SOP-1"].paciente = {
+  // Asignar recurso hospitalario SOP-01
+  const recSopAdm = (typeof RECURSOS_HOSPITALARIOS !== "undefined") ? (RECURSOS_HOSPITALARIOS["SOP-01"] || RECURSOS_HOSPITALARIOS["SOP-1"]) : null;
+  if (recSopAdm) {
+    recSopAdm.estado = "ocupada";
+    recSopAdm.paciente = {
       nombre: nombreCritico,
       identificador: idEmergencia,
       historiaClinica: hcEmergencia,
@@ -5928,6 +5975,9 @@ function activarIngresoDirectoQuirofano() {
     if (typeof renderizarTableroCamasYQuirofanos === "function") {
       renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "camas_stock_grid");
       renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "modal_camas_stock_grid");
+    }
+    if (typeof actualizarWidgetFlotanteCamas === "function") {
+      actualizarWidgetFlotanteCamas();
     }
   }
 
@@ -6157,22 +6207,16 @@ const RECURSOS_HOSPITALARIOS = {
     area: "Centro Quirúrgico",
     categoria: "Cirugía de Urgencia",
     icono: "🔪",
-    estado: "ocupada",
-    paciente: {
-      nombre: "Carlos Mendoza Rivera",
-      dni: "09841235",
-      prioridad: "II",
-      diagnostico: "Apendicectomía de Urgencia por Peritonitis Aguda",
-      medico: "Dr. Víctor Larco Herrera (CMP 39821)"
-    },
-    inicioMs: Date.now() - (45 * 60 * 1000), // Inició hace 45 min
-    finMs: Date.now() + (75 * 60 * 1000),   // Quedan 75 min (1h 15m)
+    estado: "disponible",
+    paciente: null,
+    inicioMs: null,
+    finMs: null,
     duracionHoras: 2,
     horasAmpliadas: 0,
     motivo: "Apendicectomía de Emergencia (En acto quirúrgico)",
     norma: "NTS N° 042-MINSA",
-    tiempoFormateado: "01:15:00",
-    progresoPct: 37.5
+    tiempoFormateado: "--:--:--",
+    progresoPct: 0
   },
   "SOP-03": {
     id: "SOP-03",
@@ -6201,22 +6245,16 @@ const RECURSOS_HOSPITALARIOS = {
     area: "Sala de Observación",
     categoria: "Corta Estancia Adultos",
     icono: "🛏️",
-    estado: "ocupada",
-    paciente: {
-      nombre: "Luis Guillermo Vásquez Valdivieso",
-      dni: "44418504",
-      prioridad: "III",
-      diagnostico: "Dolor Abdominal Agudo en estudio / Descarte Apendicitis",
-      medico: "Dr. Roberto Mendoza Silva (CMP 48215)"
-    },
-    inicioMs: Date.now() - (2 * 60 * 1000), // Inició hace 2 min
-    finMs: Date.now() + (358 * 60 * 1000),  // Quedan 5h 58m de las 6h
+    estado: "disponible",
+    paciente: null,
+    inicioMs: null,
+    finMs: null,
     duracionHoras: 6,
     horasAmpliadas: 0,
     motivo: "Dolor Abdominal Agudo en estudio (Evaluación seriada NTS 042)",
     norma: "NTS N° 042-MINSA (Estancia estándar máx 12h)",
-    tiempoFormateado: "05:58:00",
-    progresoPct: 0.5
+    tiempoFormateado: "--:--:--",
+    progresoPct: 0
   },
   "OBS-02": {
     id: "OBS-02",
@@ -8917,6 +8955,63 @@ async function fetch_padron_susalud_siteds(dni) {
 // ------------------------------------------------------------------------------
 // PADRÓN ÚNICO Y PERSISTENCIA ESTRICTA (RANDOM DE UN SOLO USO)
 // ------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
+// CONSTRUCTOR DE PADRÓN SUSALUD A PARTIR DE SEGURO EXISTENTE EN BD HISTÓRICA
+// ------------------------------------------------------------------------------
+function crearPadronDesdeSeguroExistente(numDni, seguro) {
+  const s = String(seguro || "").toLowerCase();
+  const rndCode = Math.floor(1000 + Math.random() * 9000);
+  const rndSiteds = Math.floor(10000 + Math.random() * 90000);
+
+  if (s.includes("sis") || s.includes("minsa")) {
+    return {
+      dni: numDni,
+      tipo_aseguramiento: "SOLO_SIS",
+      condicion_evento: "NORMAL",
+      publico: { entidad: "SIS", regimen: "SIS Gratuito / Para Todos", estado: "ACTIVO", codigo: `FUA-2026-${rndCode}` },
+      privado: { iafas_eps: "SIN COBERTURA PRIVADA (AFILIADO SIS)", estado_poliza: "INACTIVA", copago_fijo: 0, coaseguro_pct: 1.0, exclusiones: [] },
+      origen_registro: "BD_HISTORICA"
+    };
+  } else if (s.includes("essalud")) {
+    return {
+      dni: numDni,
+      tipo_aseguramiento: "SOLO_ESSALUD",
+      condicion_evento: "NORMAL",
+      publico: { entidad: "ESSALUD", regimen: "EsSalud Regular Titular", estado: "ACTIVO", codigo: `AUT-ESS-${rndCode}` },
+      privado: { iafas_eps: "SIN COBERTURA EPS (SOLO ESSALUD)", estado_poliza: "INACTIVA", copago_fijo: 0, coaseguro_pct: 1.0, exclusiones: [] },
+      origen_registro: "BD_HISTORICA"
+    };
+  } else if (s.includes("eps") || s.includes("pacifico") || s.includes("rimac") || s.includes("mapfre") || s.includes("sanitas")) {
+    const iafas = s.includes("rimac") ? "Rímac EPS" : s.includes("mapfre") ? "Mapfre EPS" : s.includes("sanitas") ? "Sanitas Perú" : "Pacífico EPS";
+    return {
+      dni: numDni,
+      tipo_aseguramiento: "EPS_Y_ESSALUD",
+      condicion_evento: "NORMAL",
+      publico: { entidad: "ESSALUD", regimen: "EsSalud Activo (Vínculo Laboral EPS)", estado: "ACTIVO", codigo: `AUT-ESS-${rndCode}` },
+      privado: { siteds_codigo: `SITEDS-2026-${rndSiteds}`, iafas_eps: iafas, plan_salud: "Plan Red Preferente", estado_poliza: "ACTIVA", copago_fijo: 60.00, coaseguro_pct: 0.15, exclusiones: [] },
+      origen_registro: "BD_HISTORICA"
+    };
+  } else if (s.includes("privad")) {
+    return {
+      dni: numDni,
+      tipo_aseguramiento: "SOLO_PRIVADO",
+      condicion_evento: "NORMAL",
+      publico: { entidad: "NINGUNA (TIENE SEGURO PRIVADO)", regimen: "No Acreditado en Estado", estado: "INACTIVO", codigo: null },
+      privado: { siteds_codigo: `SITEDS-2026-${rndSiteds}`, iafas_eps: "Rímac EPS", plan_salud: "Plan Individual Preferente", estado_poliza: "ACTIVA", copago_fijo: 80.00, coaseguro_pct: 0.20, exclusiones: [] },
+      origen_registro: "BD_HISTORICA"
+    };
+  } else {
+    return {
+      dni: numDni,
+      tipo_aseguramiento: "SIN_SEGURO",
+      condicion_evento: "NORMAL",
+      publico: { entidad: "NINGUNA", regimen: "PARTICULAR NO ASEGURADO", estado: "INACTIVO", codigo: null },
+      privado: { iafas_eps: "PARTICULAR (SIN SEGURO)", estado_poliza: "INACTIVA", copago_fijo: 0, coaseguro_pct: 1.0, exclusiones: [] },
+      origen_registro: "BD_HISTORICA"
+    };
+  }
+}
+
 async function obtenerOGenerarPadronSusalud(dni) {
   if (!dni || String(dni).toUpperCase().startsWith("NN") || STATE.esNN) {
     return null; // Excepción NN: no se guarda en padrón definitivo
@@ -8924,18 +9019,6 @@ async function obtenerOGenerarPadronSusalud(dni) {
 
   const numDni = String(dni).replace(/\D/g, "");
   if (numDni.length !== 8) return null;
-
-  // Casos especiales deterministas para autores / demo oficial
-  if (numDni === "44418504" && !localStorage.getItem("padron_susalud_" + numDni)) {
-    const demoAutores = {
-      dni: numDni,
-      tipo_aseguramiento: "EPS_Y_ESSALUD",
-      condicion_evento: "NORMAL",
-      publico: { entidad: "ESSALUD", regimen: "EsSalud Activo (Vínculo Laboral EPS)", estado: "ACTIVO", codigo: "AUT-ESS-8504" },
-      privado: { siteds_codigo: "SITEDS-2026-44185", iafas_eps: "Pacífico EPS", plan_salud: "Plan Red Preferente", estado_poliza: "ACTIVA", copago_fijo: 60.00, coaseguro_pct: 0.15, exclusiones: [] }
-    };
-    try { localStorage.setItem("padron_susalud_" + numDni, JSON.stringify(demoAutores)); } catch(e){}
-  }
 
   // PASO 1: Buscar DNI en Base de Datos (localStorage / Supabase)
   try {
@@ -8949,6 +9032,25 @@ async function obtenerOGenerarPadronSusalud(dni) {
       }
     }
   } catch (e) {}
+
+  // PASO 1.5: Si no tiene padrón JSON pero ya tenía Historia Clínica / Seguro en BD
+  try {
+    const seguroPrevio = localStorage.getItem("seguro_asignado_" + numDni);
+    if (seguroPrevio && seguroPrevio !== "null" && seguroPrevio !== "undefined" && seguroPrevio !== "Seguro por confirmar") {
+      const padronPrevio = crearPadronDesdeSeguroExistente(numDni, seguroPrevio);
+      try { localStorage.setItem("padron_susalud_" + numDni, JSON.stringify(padronPrevio)); } catch(e){}
+      console.log(`📁 Padrón SUSALUD recuperado del historial médico previo (${seguroPrevio}) para DNI ${numDni}:`, padronPrevio);
+      return padronPrevio;
+    }
+    if (typeof buscarPacienteMaster === "function") {
+      const pacMaster = buscarPacienteMaster(numDni);
+      if (pacMaster && pacMaster.tipo_seguro && pacMaster.tipo_seguro !== "Seguro por confirmar") {
+        const padronPrevio = crearPadronDesdeSeguroExistente(numDni, pacMaster.tipo_seguro);
+        try { localStorage.setItem("padron_susalud_" + numDni, JSON.stringify(padronPrevio)); } catch(e){}
+        return padronPrevio;
+      }
+    }
+  } catch(e) {}
 
   // Consulta en Supabase historias_clinicas
   if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.key) {
@@ -8980,6 +9082,12 @@ async function obtenerOGenerarPadronSusalud(dni) {
   // Guardar en localStorage
   try {
     localStorage.setItem("padron_susalud_" + numDni, JSON.stringify(nuevoPadron));
+    // Guardar también en seguro_asignado para persistencia histórica
+    const seguroTexto = nuevoPadron.tipo_aseguramiento === "SOLO_SIS" ? "SIS" :
+                        nuevoPadron.tipo_aseguramiento === "SOLO_ESSALUD" ? "EsSalud" :
+                        nuevoPadron.tipo_aseguramiento === "EPS_Y_ESSALUD" ? (nuevoPadron.privado.iafas_eps || "Pacífico EPS") :
+                        nuevoPadron.tipo_aseguramiento === "SOLO_PRIVADO" ? (nuevoPadron.privado.iafas_eps || "Seguro Privado") : "Sin Seguro";
+    localStorage.setItem("seguro_asignado_" + numDni, seguroTexto);
   } catch (e) {}
 
   // Guardar en Supabase (si está configurado)
@@ -9020,6 +9128,16 @@ async function sincronizarPadronSusalud(dni) {
       STATE.eventoFugaTransversal = true;
       const chkFuga = document.getElementById("chk_evento_fuga");
       if (chkFuga) chkFuga.checked = true;
+    }
+
+    // Sincronizar STATE.tipoSeguro con el padrón recuperado/generado
+    const seguroTexto = padron.tipo_aseguramiento === "SOLO_SIS" ? "SIS" :
+                        padron.tipo_aseguramiento === "SOLO_ESSALUD" ? "EsSalud" :
+                        padron.tipo_aseguramiento === "EPS_Y_ESSALUD" ? (padron.privado.iafas_eps || "Pacífico EPS") :
+                        padron.tipo_aseguramiento === "SOLO_PRIVADO" ? (padron.privado.iafas_eps || "Seguro Privado") : "Sin Seguro";
+    STATE.tipoSeguro = seguroTexto;
+    if (typeof aplicarSeleccionSeguroYEntorno === "function") {
+      aplicarSeleccionSeguroYEntorno(seguroTexto, false, true);
     }
 
     renderizarBadgesPadronSusalud(padron);

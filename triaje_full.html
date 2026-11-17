@@ -386,6 +386,56 @@
       gap: 6px;
       transition: all 0.15s;
     }
+    .modalidad-btn {
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      cursor: pointer !important;
+    }
+    .modalidad-btn:hover {
+      background: #f1f5f9 !important;
+      border-color: #94a3b8 !important;
+      transform: translateY(-1px);
+    }
+    .modalidad-btn.selected,
+    .btn-full-secondary.modalidad-btn.selected {
+      background: #0284c7 !important;
+      color: #ffffff !important;
+      border-color: #0369a1 !important;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.35) !important;
+      font-weight: 800 !important;
+      transform: scale(1.02);
+    }
+    html.dark .modalidad-btn.selected,
+    html.dark .btn-full-secondary.modalidad-btn.selected {
+      background: #0284c7 !important;
+      color: #ffffff !important;
+      border-color: #38bdf8 !important;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.45) !important;
+    }
+    .modalidad-btn {
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      cursor: pointer !important;
+    }
+    .modalidad-btn:hover {
+      background: #f1f5f9 !important;
+      border-color: #94a3b8 !important;
+      transform: translateY(-1px);
+    }
+    .modalidad-btn.selected,
+    .btn-full-secondary.modalidad-btn.selected {
+      background: #0284c7 !important;
+      color: #ffffff !important;
+      border-color: #0369a1 !important;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.35) !important;
+      font-weight: 800 !important;
+      transform: scale(1.02);
+    }
+    html.dark .modalidad-btn.selected,
+    html.dark .btn-full-secondary.modalidad-btn.selected {
+      background: #0284c7 !important;
+      color: #ffffff !important;
+      border-color: #38bdf8 !important;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.45) !important;
+    }
     .btn-full-secondary:hover { background: #f8fafc; border-color: #94a3b8; }
 
     /* ===== CODIGOS TIEMPO-DEPENDIENTES & ACTIVADORES ===== */
@@ -2929,7 +2979,7 @@
         <div id="step_footer_mod_1" class="step-nav-footer">
           <span></span>
           <span class="step-counter-pill" id="step_footer_label_1">Paso 1 de 8</span>
-          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 2 (Admisión & RENIEC) →</button>
+          <button type="button" class="btn-full-primary" onclick="irAModulo(2)">Siguiente: Paso 2 (Admisión &amp; RENIEC) →</button>
         </div>
       </div>
     </section>
@@ -2959,8 +3009,11 @@
 
         <!-- MODALIDAD DE INGRESO -->
         <div class="form-field">
-          <label>Modalidad de Ingreso al Establecimiento:</label>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:6px;">
+            <span>Modalidad de Ingreso al Establecimiento:</span>
+            <span id="lbl_modalidad_activa" style="font-weight:800; color:#0284c7; background:#e0f2fe; padding:2px 10px; border-radius:12px; font-size:0.75rem; border:1px solid #bae6fd;">🚶 A pie / Ambulatorio</span>
+          </label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;" id="grupo_modalidad_ingreso">
             <button type="button" class="btn-full-secondary modalidad-btn selected" data-mod="A pie" onclick="selectModalidad(this)">🚶 A pie / Ambulatorio</button>
             <button type="button" class="btn-full-secondary modalidad-btn" data-mod="Ambulancia" onclick="selectModalidad(this)">🚑 Ambulancia</button>
             <button type="button" class="btn-full-secondary modalidad-btn" data-mod="Policía / Serenazgo" onclick="selectModalidad(this)">🚓 Policía Nacional / Serenazgo</button>
@@ -3067,9 +3120,9 @@
       
         <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
         <div id="step_footer_mod_2" class="step-nav-footer">
-          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <button type="button" class="btn-full-secondary" onclick="irAModulo(1)">← Paso Anterior</button>
           <span class="step-counter-pill" id="step_footer_label_2">Paso 2 de 8</span>
-          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 3 (Acreditación Seguro & SOAT) →</button>
+          <button type="button" class="btn-full-primary" onclick="irAModulo(3)">Siguiente: Paso 3 (Acreditación Seguro &amp; SOAT) →</button>
         </div>
       </div>
     </section>
@@ -3276,9 +3329,9 @@
       
         <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
         <div id="step_footer_mod_3" class="step-nav-footer">
-          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <button type="button" class="btn-full-secondary" onclick="irAModulo(2)">← Paso Anterior</button>
           <span class="step-counter-pill" id="step_footer_label_3">Paso 3 de 8</span>
-          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 4 (Shock Trauma & Kardex) →</button>
+          <button type="button" class="btn-full-primary" onclick="irAModulo(4)">Siguiente: Paso 4 (Shock Trauma &amp; Kardex) →</button>
         </div>
       </div>
     </section>
@@ -3553,11 +3606,10 @@
 
         <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
         <div id="step_footer_mod_4" class="step-nav-footer">
-          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <button type="button" class="btn-full-secondary" onclick="irAModulo(3)">← Paso Anterior</button>
           <span class="step-counter-pill" id="step_footer_label_4">Paso 4 de 8</span>
-          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 5 (Sala de Observación) →</button>
+          <button type="button" class="btn-full-primary" onclick="avanzarDesdeModulo4()">Siguiente Paso Clínico →</button>
         </div>
-
       </div>
     </section><!-- ======================================================================
          MÓDULO 5: SALA DE OBSERVACIÓN DE EMERGENCIA & REEVALUACIÓN MÉDICA
@@ -3722,9 +3774,12 @@
       
         <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
         <div id="step_footer_mod_5" class="step-nav-footer">
-          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <button type="button" class="btn-full-secondary" onclick="irAModulo(4)">← Paso Anterior</button>
           <span class="step-counter-pill" id="step_footer_label_5">Paso 5 de 8</span>
-          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 6 (Camas Críticas & SOP) →</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-full-primary" style="background:#0284c7; border-color:#0369a1;" onclick="irAModulo(7)">Alta Observación (Módulo 7) →</button>
+            <button type="button" class="btn-full-primary" onclick="irAModulo(6)">Siguiente: Paso 6 (Camas Críticas &amp; SOP) →</button>
+          </div>
         </div>
       </div>
     </section>
@@ -3948,9 +4003,9 @@
       
         <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
         <div id="step_footer_mod_6" class="step-nav-footer">
-          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <button type="button" class="btn-full-secondary" onclick="irAModulo(5)">← Paso Anterior</button>
           <span class="step-counter-pill" id="step_footer_label_6">Paso 6 de 8</span>
-          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 7 (Egreso & Auditoría Legal) →</button>
+          <button type="button" class="btn-full-primary" onclick="irAModulo(7)">Siguiente: Paso 7 (Egreso &amp; Auditoría Legal) →</button>
         </div>
       </div>
     </section>
@@ -4116,9 +4171,9 @@
       
         <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
         <div id="step_footer_mod_7" class="step-nav-footer">
-          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <button type="button" class="btn-full-secondary" onclick="irAModulo(6)">← Paso Anterior</button>
           <span class="step-counter-pill" id="step_footer_label_7">Paso 7 de 8</span>
-          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 8 (Cierre & Facturación) →</button>
+          <button type="button" class="btn-full-primary" onclick="irAModulo(8)">Siguiente: Paso 8 (Cierre &amp; Facturación) →</button>
         </div>
       </div>
     </section>
@@ -4263,7 +4318,7 @@
       
         <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
         <div id="step_footer_mod_8" class="step-nav-footer">
-          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <button type="button" class="btn-full-secondary" onclick="irAModulo(7)">← Paso Anterior</button>
           <span class="step-counter-pill" id="step_footer_label_8">Paso 8 de 8</span>
           <button type="button" class="btn-full-primary" onclick="grabarAtencionCompleta()">✅ Atención Completada</button>
         </div>
