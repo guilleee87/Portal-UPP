@@ -1363,8 +1363,8 @@
           <button type="button" class="btn-caos-action btn-start-action" onclick="abrirModalPreTriageSTART()" title="Pre-Triage de Cola en 15 segundos (Método START/Manchester)">
             ⚡ Pre-Triage de Cola (15s)
           </button>
-          <button type="button" class="btn-caos-action btn-newpx-action" onclick="crearNuevoPacienteEnBlanco()" title="Crear Ficha de Nuevo Paciente en Espera">
-            ➕ Nuevo Paciente
+          <button type="button" class="btn-caos-action btn-newpx-action" onclick="registrarPacienteEnEspera()" title="Registrar llegada de paciente a sala de espera" style="background:#0284c7; color:#ffffff; border:none; font-weight:800;">
+            ➕ Registrar Paciente en Espera
           </button>
         </div>
       </div>
@@ -3255,14 +3255,7 @@
               <input type="number" id="nn_edad_input" value="30" min="1" max="110" style="width:70px; padding:6px; border:1.5px solid #cbd5e1; border-radius:6px; font-weight:700; text-align:center;">
             </div>
           </div>
-          <div style="margin-bottom:14px;">
-            <label style="font-weight:700; font-size:0.82rem; display:block; margin-bottom:6px;">Modalidad de Llegada:</label>
-            <select id="nn_modalidad_input" style="width:100%; padding:8px; border:1.5px solid #cbd5e1; border-radius:8px;">
-              <option value="Ambulancia SAMU / Bomberos" selected>Ambulancia SAMU / Bomberos (Clínico Crítico)</option>
-              <option value="Patrullero PNP / Serenazgo">Patrullero PNP / Serenazgo (Vía Pública / Accidente)</option>
-              <option value="A pie / Traído por terceros">Traído por transeúntes / terceros</option>
-            </select>
-          </div>
+
           <div style="margin-bottom:16px;">
             <label style="font-weight:700; font-size:0.82rem; display:block; margin-bottom:6px;">Sospecha / Estado Inicial:</label>
             <input type="text" id="nn_estado_input" value="Inconsciente / Politraumatizado / Sin Respuesta Verbal" style="width:100%; padding:8px; border:1.5px solid #cbd5e1; border-radius:8px;">

@@ -5610,23 +5610,87 @@ function cambiarOrigenEvento(tipo) {
 }
 
 function activarPanicoShockTrauma() {
+  const ahora = new Date();
+  const horaStr = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).replace(':', '');
+  const idEmergencia = `CRITICO-ST-${horaStr}`;
+  const hcEmergencia = `HC-ST-${Math.floor(1000 + Math.random() * 9000)}`;
+  const nombreCritico = "PACIENTE CRÍTICO (SHOCK TRAUMA P-I)";
+
+  guardarEstadoPacienteActivo();
+
+  // 1. Asignar atención en el Tablero de Atención Simultánea (omitiendo cómo llegó o quién lo trajo)
+  const pxST = crearRegistroPaciente({
+    identificador: idEmergencia,
+    nombre: nombreCritico,
+    dni: "NN",
+    prioridad: "I",
+    motivo: "Paro Cardiorrespiratorio / Falla Vital Inminente (P-I Rojo)",
+    estadoAtencion: "En Atención — Shock Trauma ST-01",
+    camaNombre: "Shock Trauma ST-01",
+    camaId: "ST-01",
+    esEmergenciaDirecta: true,
+    esNN: true
+  });
+
+  PACIENTES_COLA.push(pxST);
+  pacienteActivoId = pxST.id;
+
+  // 2. Configurar STATE
+  limpiarFormularioCompletoState();
   STATE.panicoShockTrauma = true;
   STATE.prioridad = "I";
   STATE.colorPrioridad = "ROJO";
+  STATE.identificador = idEmergencia;
+  STATE.nombreReniec = nombreCritico;
+  STATE.historiaClinica = hcEmergencia;
+  STATE.camaAsignada = "Shock Trauma ST-01";
+  STATE.camaAsignadaId = "ST-01";
+  STATE.tipoSeguro = "SIS Gratuito";
+  STATE.grupoSanguineo = "Desconocido";
+  STATE.destinoPostTopico = "shock_trauma";
+
+  // Asignar recurso hospitalario ST-01
+  if (typeof RECURSOS_HOSPITALARIOS !== "undefined" && RECURSOS_HOSPITALARIOS["ST-01"]) {
+    RECURSOS_HOSPITALARIOS["ST-01"].estado = "ocupada";
+    RECURSOS_HOSPITALARIOS["ST-01"].paciente = {
+      nombre: nombreCritico,
+      identificador: idEmergencia,
+      historiaClinica: hcEmergencia,
+      prioridad: "I"
+    };
+    if (typeof renderizarTableroCamasYQuirofanos === "function") {
+      renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "camas_stock_grid");
+      renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "modal_camas_stock_grid");
+    }
+  }
+
+  // 3. Sincronizar DOM
+  const elIdent = document.getElementById("ident_full");
+  if (elIdent) elIdent.value = idEmergencia;
+  const elMotivo = document.getElementById("motivo_full");
+  if (elMotivo) elMotivo.value = "Paro Cardiorrespiratorio / Shock Circulatorio Extremo (P-I)";
+  const elGsan = document.getElementById("gsan_full");
+  if (elGsan) elGsan.value = "Desconocido";
+  const hcDisp = document.getElementById("hc_code_display");
+  if (hcDisp) hcDisp.textContent = hcEmergencia;
+  const badgeEstado = document.getElementById("hc_badge_estado");
+  if (badgeEstado) {
+    badgeEstado.textContent = "🚨 Shock Trauma (Ley 27604)";
+    badgeEstado.className = "badge-estado badge-danger";
+  }
 
   // Banner Paro / Agonía
   const bannerParo = document.getElementById("banner_paro_agonia");
   if (bannerParo) bannerParo.style.display = "block";
 
-  const chipLive = document.getElementById("chipPrioLive");
-  if (chipLive) {
-    chipLive.textContent = "P-I ROJO (PARO / SHOCK TRAUMA)";
-    chipLive.className = "top-prio-chip prio-I";
-  }
+  mostrarPrioridad("I", {
+    tipo: "Prioridad I — ROJO (Resucitación / Shock Trauma)",
+    desc: "Ingreso directo a Shock Trauma ST-01 activado. Trámites y origen omitidos por premura asistencial.",
+    destino: "Shock Trauma ST-01"
+  });
 
-  alert("🚨 ACTIVACIÓN DE INGRESO DIRECTO A SHOCK TRAUMA (PRIORIDAD I) — LEY N° 27604.\n\n" +
-        "Paciente en inestabilidad hemodinámica extrema o paro cardiorrespiratorio.\n" +
-        "Pase inmediato a Shock Trauma (Módulo 4). Módulos 2 y 3 quedan en estado: Regularización paralela por Admisión.");
+  renderizarTableroColaPacientes();
+  mostrarToastCola(`🚨 <strong>Ingreso Directo a Shock Trauma:</strong> Asignado en atención inmediata en el Tablero.`);
 
   irAModulo(4);
 }
@@ -7500,14 +7564,81 @@ document.addEventListener("DOMContentLoaded", () => {
 function activarIngresoDirectoQuirofano() {
   const now = new Date();
   const horaStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).replace(':', '');
-  const idEmergencia = `NN-EMERG-${horaStr}`;
+  const idEmergencia = `CRITICO-SOP-${horaStr}`;
   const hcEmergencia = `HC-SOP-${Math.floor(1000 + Math.random() * 9000)}`;
+  const nombreCritico = "PACIENTE CRÍTICO (QUIRÓFANO SOP 1)";
 
-  // 1. Configurar estado prioritario absoluto
+  guardarEstadoPacienteActivo();
+
+  // 1. Asignar atención en el Tablero de Atención Simultánea (omitiendo cómo llegó o quién lo trajo)
+  const pxSOP = crearRegistroPaciente({
+    identificador: idEmergencia,
+    nombre: nombreCritico,
+    dni: "NN",
+    prioridad: "I",
+    motivo: "Hemorragia Masiva Exsanguinante / Cirugía de Control de Daños (P-I)",
+    estadoAtencion: "En Atención — Quirófano SOP 1",
+    camaNombre: "Quirófano 1 (SOP 1)",
+    camaId: "SOP-01",
+    esEmergenciaDirecta: true,
+    esNN: true
+  });
+
+  PACIENTES_COLA.push(pxSOP);
+  pacienteActivoId = pxSOP.id;
+
+  // 2. Configurar STATE
+  limpiarFormularioCompletoState();
   STATE.prioridad = "I";
   STATE.colorPrioridad = "ROJO";
   STATE.regularizacionDiferida = true;
   STATE.destinoPostTopico = "sop_uci";
+  STATE.identificador = idEmergencia;
+  STATE.nombreReniec = nombreCritico;
+  STATE.historiaClinica = hcEmergencia;
+  STATE.camaAsignada = "Quirófano 1 (SOP 1)";
+  STATE.camaAsignadaId = "SOP-01";
+  STATE.tipoSeguro = "SIS Gratuito";
+  STATE.grupoSanguineo = "Desconocido";
+
+  // Asignar recurso hospitalario SOP-01
+  if (typeof RECURSOS_HOSPITALARIOS !== "undefined" && RECURSOS_HOSPITALARIOS["SOP-01"]) {
+    RECURSOS_HOSPITALARIOS["SOP-01"].estado = "ocupada";
+    RECURSOS_HOSPITALARIOS["SOP-01"].paciente = {
+      nombre: nombreCritico,
+      identificador: idEmergencia,
+      historiaClinica: hcEmergencia,
+      prioridad: "I"
+    };
+    if (typeof renderizarTableroCamasYQuirofanos === "function") {
+      renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "camas_stock_grid");
+      renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "modal_camas_stock_grid");
+    }
+  }
+
+  // 3. Sincronizar DOM
+  const elIdent = document.getElementById("ident_full");
+  if (elIdent) elIdent.value = idEmergencia;
+  const elMotivo = document.getElementById("motivo_full");
+  if (elMotivo) elMotivo.value = "Cirugía de Control de Daños / Hemorragia Masiva Activa (Pase Directo)";
+  const elGsan = document.getElementById("gsan_full");
+  if (elGsan) elGsan.value = "Desconocido";
+  const hcDisp = document.getElementById("hc_code_display");
+  if (hcDisp) hcDisp.textContent = hcEmergencia;
+  const badgeEstado = document.getElementById("hc_badge_estado");
+  if (badgeEstado) {
+    badgeEstado.textContent = "🔪 Quirófano SOP (Ley 27604)";
+    badgeEstado.className = "badge-estado badge-danger";
+  }
+
+  mostrarPrioridad("I", {
+    tipo: "Prioridad I — ROJO (Cirugía de Emergencia / SOP 1)",
+    desc: "Ingreso directo a sala de operaciones. Trámites y origen omitidos por premura asistencial.",
+    destino: "Quirófano 1 (SOP 1)"
+  });
+
+  renderizarTableroColaPacientes();
+  mostrarToastCola(`🔪 <strong>Ingreso Directo a Quirófano (SOP 1):</strong> Asignado en atención quirúrgica en el Tablero.`);
 
   // Si no tenía nombre o DNI, asignar código de reanimación inmediata
   if (!STATE.identificador || STATE.identificador.length < 2) {
@@ -7978,6 +8109,23 @@ function renderizarTableroColaPacientes() {
     countBadge.textContent = `${PACIENTES_COLA.length} ${PACIENTES_COLA.length === 1 ? 'Paciente en atención' : 'Pacientes en simultáneo'}`;
   }
 
+  if (PACIENTES_COLA.length === 0) {
+    if (countBadge) {
+      countBadge.textContent = "0 Pacientes en espera";
+      countBadge.style.background = "#f1f5f9";
+      countBadge.style.color = "#64748b";
+    }
+    container.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px; padding:12px 16px; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:10px; color:#64748b; font-size:0.8rem; width:100%;">
+        <span style="font-size:1.3rem;">⏳</span>
+        <div>
+          <strong>Sala de Espera y Triaje Despejada:</strong> No hay pacientes en cola. Presione <strong>«➕ Registrar Paciente en Espera»</strong> cuando ingrese un nuevo paciente, o active un ingreso directo (NN / Shock Trauma / Quirófano).
+        </div>
+      </div>
+    `;
+    return;
+  }
+
   container.innerHTML = "";
 
   PACIENTES_COLA.forEach(p => {
@@ -7990,6 +8138,15 @@ function renderizarTableroColaPacientes() {
     card.style.borderLeft = `5px solid ${prioCfg.border}`;
     card.onclick = () => cambiarPacienteActivo(p.id);
 
+    // OMITIR CÓMO LLEGÓ O QUIÉN LO TRAJO EN EMERGENCIAS CRÍTICAS (NN, SHOCK TRAUMA, QUIRÓFANO)
+    const metaOrigen = (p.esEmergenciaDirecta || p.esNN)
+      ? `<span style="font-weight:700; color:#dc2626;">🚨 Pase Directo Vital</span>`
+      : `<span>${p.modalidad || 'A pie'}</span>`;
+
+    const metaDestino = p.camaNombre
+      ? `<span style="font-weight:700; color:#15803d;">🛏️ ${p.camaNombre}</span>`
+      : `<span style="font-weight:700; color:#0284c7;">${p.estadoAtencion || 'En Espera'}</span>`;
+
     card.innerHTML = `
       <div class="card-top-row">
         <span class="card-prio-badge" style="background:${prioCfg.bg}; color:${prioCfg.text}; border:1px solid ${prioCfg.border};">
@@ -8001,10 +8158,8 @@ function renderizarTableroColaPacientes() {
         ${p.esNN ? '🚨 ' : ''}${p.nombre}
       </div>
       <div class="card-meta">
-        <span>${p.modalidad || 'A pie'}</span>
-        <span style="font-weight:700; color:${p.camaNombre ? '#15803d' : '#64748b'};">
-          ${p.camaNombre ? ('🛏️ ' + p.camaNombre) : (p.estadoAtencion || 'En Triaje')}
-        </span>
+        ${metaOrigen}
+        ${metaDestino}
       </div>
       <button type="button" class="btn-close-card" onclick="cerrarAtencionPaciente('${p.id}', event)" title="Finalizar atención / Dar de alta">&times;</button>
     `;
@@ -8128,9 +8283,7 @@ function cerrarAtencionPaciente(id, event) {
   PACIENTES_COLA = PACIENTES_COLA.filter(x => x.id !== id);
 
   if (PACIENTES_COLA.length === 0) {
-    const defaultPx = crearRegistroPaciente();
-    PACIENTES_COLA.push(defaultPx);
-    pacienteActivoId = defaultPx.id;
+    pacienteActivoId = null;
     limpiarFormularioCompletoState();
   } else if (pacienteActivoId === id) {
     pacienteActivoId = PACIENTES_COLA[0].id;
@@ -8158,8 +8311,8 @@ function ejecutarAdmisionRapidaNN(event) {
   for (let r of rbs) { if (r.checked) { sexo = r.value; break; } }
 
   const edad = parseInt(document.getElementById("nn_edad_input")?.value || "30", 10);
-  const modalidad = document.getElementById("nn_modalidad_input")?.value || "Ambulancia SAMU / Bomberos";
-  const motivo = document.getElementById("nn_estado_input")?.value || "Inconsciente / Politraumatizado / Sin Respuesta Verbal";
+  const modalidad = "Pase Directo"; // Omitido por premura de riesgo vital
+  const motivo = document.getElementById("nn_estado_input")?.value || "Inconsciente / Politraumatizado / Falla Vital Inminente";
 
   const ahora = new Date();
   const fechaCod = ahora.toISOString().slice(0, 10).replace(/-/g, "");
@@ -8338,7 +8491,7 @@ function simularLlegadaMasiva() {
       dni: "",
       edad: 35,
       sexo: "M",
-      modalidad: "Ambulancia SAMU",
+      modalidad: "Ambulancia",
       prioridad: "I",
       motivo: "Choque frontal a alta velocidad. Politraumatizado, shock hipovolémico, volet costal derecho, pérdida de conocimiento.",
       estadoAtencion: "Shock Trauma ST-01",
@@ -8452,12 +8605,36 @@ function mostrarToastCola(htmlMsg) {
   }, 4500);
 }
 
-function inicializarTableroColaPacientes() {
-  if (PACIENTES_COLA.length === 0) {
-    const p1 = crearRegistroPaciente();
-    PACIENTES_COLA.push(p1);
-    pacienteActivoId = p1.id;
+function registrarPacienteEnEspera() {
+  guardarEstadoPacienteActivo();
+  const num = contadorSecuencialPx++;
+  const nombrePx = `Paciente #${num} (En Espera)`;
+  const idPx = `PX-ESP-${num}-${Date.now().toString(36).slice(-4)}`;
+
+  const nuevoPx = crearRegistroPaciente({
+    numero: num,
+    id: idPx,
+    identificador: `Ticket T-${String(num).padStart(3, '0')}`,
+    nombre: nombrePx,
+    prioridad: null,
+    estadoAtencion: "En Espera de Triaje",
+    modalidad: "A pie"
+  });
+
+  PACIENTES_COLA.push(nuevoPx);
+
+  if (!pacienteActivoId || PACIENTES_COLA.length === 1) {
+    pacienteActivoId = nuevoPx.id;
+    cambiarPacienteActivo(nuevoPx.id);
   }
+
+  renderizarTableroColaPacientes();
+  mostrarToastCola(`👤 <strong>Llegada Registrada:</strong> ${nombrePx} ingresado a sala de espera.`);
+}
+window.registrarPacienteEnEspera = registrarPacienteEnEspera;
+
+function inicializarTableroColaPacientes() {
+  // Inicia 100% en blanco: NO coloca automáticamente ningún paciente en espera
   renderizarTableroColaPacientes();
 
   if (!intervalCronometrosCola) {
