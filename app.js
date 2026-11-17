@@ -2119,6 +2119,16 @@ async function consultarReniec() {
     `;
   }
 
+  // Sincronizar en Módulo 1, Módulo 2 y Módulo 4 inmediatamente
+  if (typeof sincronizarDatosPacienteEnTodosLosModulos === "function") {
+    sincronizarDatosPacienteEnTodosLosModulos({
+      dni: ident,
+      nombre: nombreCompleto,
+      sexo: sexoDetectado,
+      hc: STATE.historiaClinica
+    });
+  }
+
   // 5. Recuperar alergias previas si existían en el expediente maestro
   try {
     const masterReniec = obtenerPacienteMaster(ident, STATE.historiaClinica, nombreCompleto);
@@ -5155,9 +5165,10 @@ function moduloSiguiente() {
 
 // Inicializar en Módulo 1 en el primer render
 document.addEventListener("DOMContentLoaded", () => {
-  setTimeout(() => {
-    irAModulo(1);
-  }, 100);
+  // Inicializa navbar en paso 1 sin forzar apertura de pestañas
+  moduloActivoActual = 1;
+  const btnTop = document.getElementById("btnStepTop_1");
+  if (btnTop) btnTop.classList.add("active");
 });
 
 
@@ -5649,7 +5660,7 @@ function activarPanicoShockTrauma() {
   STATE.historiaClinica = hcEmergencia;
   STATE.camaAsignada = "Shock Trauma ST-01";
   STATE.camaAsignadaId = "ST-01";
-  STATE.tipoSeguro = "SIS Gratuito";
+  STATE.tipoSeguro = "Regularización Diferida (Ley N° 27604)";
   STATE.grupoSanguineo = "Desconocido";
   STATE.destinoPostTopico = "shock_trauma";
 
@@ -5694,7 +5705,7 @@ function activarPanicoShockTrauma() {
   });
 
   renderizarTableroColaPacientes();
-  mostrarToastCola(`🚨 <strong>Ingreso Directo a Shock Trauma:</strong> Asignado en atención inmediata en el Tablero.`);
+  mostrarToastCola(`🚨 <strong>Admitir Emergencia Shock Trauma (P-I):</strong> Asignado en atención inmediata en el Tablero.`);
 
   irAModulo(4);
 }
@@ -7617,7 +7628,7 @@ function activarIngresoDirectoQuirofano() {
   STATE.historiaClinica = hcEmergencia;
   STATE.camaAsignada = "Quirófano 1 (SOP 1)";
   STATE.camaAsignadaId = "SOP-01";
-  STATE.tipoSeguro = "SIS Gratuito";
+  STATE.tipoSeguro = "Regularización Diferida (Ley N° 27604)";
   STATE.grupoSanguineo = "Desconocido";
 
   // Asignar recurso hospitalario SOP-01
@@ -8368,7 +8379,7 @@ function ejecutarAdmisionRapidaNN(event) {
   STATE.edad = edad;
   STATE.sexo = sexo;
   STATE.grupoSanguineo = "Desconocido"; // OBLIGATORIO: Desconocido para NN
-  STATE.tipoSeguro = "SIS Gratuito";
+  STATE.tipoSeguro = "Regularización Diferida (Ley N° 27604)";
   STATE.modalidadIngreso = modalidad;
   STATE.motivoConsulta = motivo;
   STATE.prioridad = "I";
@@ -8432,7 +8443,7 @@ function ejecutarAdmisionRapidaNN(event) {
 
   cerrarModalAdmisionNN();
   renderizarTableroColaPacientes();
-  mostrarToastCola(`🚨 <strong>Admisión Rápida NN:</strong> ${codigoNN} cargado en Módulo 2 con Grupo Sanguíneo <strong>Desconocido</strong>.`);
+  mostrarToastCola(`🚨 <strong>Admitir Emergencia NN (P-I):</strong> ${codigoNN} cargado en Módulo 2 con Grupo Sanguíneo <strong>Desconocido</strong>.`);
 }
 
 function abrirModalPreTriageSTART() {
@@ -8809,3 +8820,134 @@ if (document.readyState === 'loading') {
 
 window.alternarModoOscuro = alternarModoOscuro;
 window.actualizarIconoModoOscuro = actualizarIconoModoOscuro;
+
+// ==============================================================================
+// SINCRONIZACIÓN UNIVERSAL RENIEC ENTRE MÓDULO 1, MÓDULO 2 Y MÓDULO 4
+// ==============================================================================
+function sincronizarDatosPacienteEnTodosLosModulos(datos = {}) {
+  const dni = datos.dni || STATE.numDni || "";
+  const nombre = (datos.nombre || STATE.nombreReniec || "").toUpperCase();
+  const sexo = datos.sexo || STATE.sexo || "M";
+  const hc = datos.hc || STATE.historiaClinica || "—";
+  const sexoDesc = (sexo === "F" ? "Femenino (F)" : "Masculino (M)");
+
+  // 1. Sincronizar Módulo 1 (Triaje Fisiológico)
+  const elDni1 = document.getElementById("dni_mod1");
+  if (elDni1 && dni) elDni1.value = dni;
+
+  const m1Card = document.getElementById("m1_reniec_result_card");
+  const m1Nombre = document.getElementById("m1_disp_nombre");
+  const m1Dni = document.getElementById("m1_disp_dni");
+  const m1Sexo = document.getElementById("m1_disp_sexo");
+  const m1Hc = document.getElementById("m1_disp_hc");
+
+  if (m1Card && nombre) {
+    if (m1Nombre) m1Nombre.textContent = nombre;
+    if (m1Dni) m1Dni.textContent = dni;
+    if (m1Sexo) m1Sexo.textContent = sexoDesc;
+    if (m1Hc) m1Hc.textContent = hc;
+    m1Card.style.display = "block";
+  }
+
+  // 2. Sincronizar Módulo 2 (Admisión & RENIEC)
+  const elIdent2 = document.getElementById("ident_full");
+  if (elIdent2 && nombre) elIdent2.value = `${nombre} (DNI ${dni})`;
+
+  const elSexo2 = document.getElementById("sexo_full");
+  if (elSexo2) elSexo2.value = sexo;
+
+  const hcDisp = document.getElementById("hc_code_display");
+  if (hcDisp) hcDisp.textContent = hc;
+
+  const hcBadge = document.getElementById("hc_badge_estado");
+  if (hcBadge && nombre) {
+    hcBadge.textContent = "✅ Identificado RENIEC";
+    hcBadge.className = "badge-estado badge-si";
+  }
+
+  // 3. Sincronizar Módulo 4 (Shock Trauma & Kardex)
+  const elDni4 = document.getElementById("dni_mod4");
+  if (elDni4 && dni) elDni4.value = dni;
+
+  const m4Card = document.getElementById("m4_reniec_result_card");
+  const m4Nombre = document.getElementById("m4_disp_nombre");
+  const m4Dni = document.getElementById("m4_disp_dni");
+  const m4Sexo = document.getElementById("m4_disp_sexo");
+  const m4Hc = document.getElementById("m4_disp_hc");
+
+  if (m4Card && nombre) {
+    if (m4Nombre) m4Nombre.textContent = nombre;
+    if (m4Dni) m4Dni.textContent = dni;
+    if (m4Sexo) m4Sexo.textContent = sexoDesc;
+    if (m4Hc) m4Hc.textContent = hc;
+    m4Card.style.display = "block";
+  }
+
+  // 4. Sincronizar con paciente activo en el Tablero de Atención Simultánea
+  if (pacienteActivoId && Array.isArray(PACIENTES_COLA)) {
+    const px = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
+    if (px && nombre) {
+      px.nombre = nombre;
+      px.dni = dni;
+      renderizarTableroColaPacientes();
+    }
+  }
+}
+
+function consultarReniecMod1() {
+  const elDni = document.getElementById("dni_mod1");
+  const dni = elDni ? elDni.value.trim() : "";
+  if (!dni) {
+    alert("⚠️ Ingrese un número de DNI de 8 dígitos en la casilla del Módulo 1.");
+    return;
+  }
+  const elIdent = document.getElementById("ident_full");
+  if (elIdent) elIdent.value = dni;
+  consultarReniec();
+}
+
+function consultarReniecMod4() {
+  const elDni = document.getElementById("dni_mod4");
+  const dni = elDni ? elDni.value.trim() : "";
+  if (!dni) {
+    alert("⚠️ Ingrese un número de DNI de 8 dígitos en la casilla del Módulo 4.");
+    return;
+  }
+  const elIdent = document.getElementById("ident_full");
+  if (elIdent) elIdent.value = dni;
+  consultarReniec();
+}
+
+function limpiarIdentificacionPaciente() {
+  STATE.numDni = null;
+  STATE.nombreReniec = null;
+  STATE.identificador = "";
+  STATE.historiaClinica = "—";
+
+  const ids = ["dni_mod1", "dni_mod4", "ident_full"];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
+  const cards = ["m1_reniec_result_card", "m4_reniec_result_card", "apisperu_panel"];
+  cards.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+
+  const hcBadge = document.getElementById("hc_badge_estado");
+  if (hcBadge) {
+    hcBadge.textContent = "Por confirmar";
+    hcBadge.className = "badge-estado badge-conf";
+  }
+  const hcDisp = document.getElementById("hc_code_display");
+  if (hcDisp) hcDisp.textContent = "—";
+
+  mostrarToastCola("🔄 Datos de identificación del paciente limpiados.");
+}
+
+window.sincronizarDatosPacienteEnTodosLosModulos = sincronizarDatosPacienteEnTodosLosModulos;
+window.consultarReniecMod1 = consultarReniecMod1;
+window.consultarReniecMod4 = consultarReniecMod4;
+window.limpiarIdentificacionPaciente = limpiarIdentificacionPaciente;

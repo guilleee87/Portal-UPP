@@ -2080,6 +2080,205 @@
       color: #f8fafc !important;
     }
 
+  
+    /* ==========================================================================
+       CORRECCIÓN GLOBAL DE TEXTO OSCURO EN MODO OSCURO (CONTRASTE AAA)
+       ========================================================================== */
+    html.dark {
+      color-scheme: dark;
+    }
+    html.dark body {
+      background-color: #0b0f19 !important;
+      color: #f1f5f9 !important;
+    }
+
+    /* Sobrescribir textos oscuros inline a blanco / colores vivos legibles */
+    html.dark [style*="color:#0f172a"], html.dark [style*="color: #0f172a"],
+    html.dark [style*="color:#1e293b"], html.dark [style*="color: #1e293b"],
+    html.dark [style*="color:#334155"], html.dark [style*="color: #334155"],
+    html.dark [style*="color:#374151"], html.dark [style*="color: #374151"],
+    html.dark [style*="color:#475569"], html.dark [style*="color: #475569"],
+    html.dark [style*="color:#000000"], html.dark [style*="color: #000000"],
+    html.dark [style*="color:#000"], html.dark [style*="color: #000"],
+    html.dark [style*="color:black"], html.dark [style*="color: black"] {
+      color: #f8fafc !important;
+    }
+
+    /* Textos secundarios en modo oscuro */
+    html.dark [style*="color:#64748b"], html.dark [style*="color: #64748b"] {
+      color: #94a3b8 !important;
+    }
+
+    /* Azules oscuros a azul cielo vivo en dark mode */
+    html.dark [style*="color:#0369a1"], html.dark [style*="color: #0369a1"],
+    html.dark [style*="color:#1e40af"], html.dark [style*="color: #1e40af"],
+    html.dark [style*="color:#0284c7"], html.dark [style*="color: #0284c7"] {
+      color: #38bdf8 !important;
+    }
+
+    /* Verdes oscuros a verde esmeralda vivo en dark mode */
+    html.dark [style*="color:#166534"], html.dark [style*="color: #166534"],
+    html.dark [style*="color:#15803d"], html.dark [style*="color: #15803d"],
+    html.dark [style*="color:#14532d"], html.dark [style*="color: #14532d"],
+    html.dark [style*="color:#065f46"], html.dark [style*="color: #065f46"] {
+      color: #4ade80 !important;
+    }
+
+    /* Rojos oscuros a coral claro vivo en dark mode */
+    html.dark [style*="color:#991b1b"], html.dark [style*="color: #991b1b"],
+    html.dark [style*="color:#b91c1c"], html.dark [style*="color: #b91c1c"],
+    html.dark [style*="color:#7f1d1d"], html.dark [style*="color: #7f1d1d"],
+    html.dark [style*="color:#9f1239"], html.dark [style*="color: #9f1239"],
+    html.dark [style*="color:#881337"], html.dark [style*="color: #881337"],
+    html.dark [style*="color:#be123c"], html.dark [style*="color: #be123c"],
+    html.dark [style*="color:#4c0519"], html.dark [style*="color: #4c0519"] {
+      color: #fca5a5 !important;
+    }
+
+    /* Naranjas / ámbares oscuros a naranja claro vivo */
+    html.dark [style*="color:#c2410c"], html.dark [style*="color: #c2410c"],
+    html.dark [style*="color:#9a3412"], html.dark [style*="color: #9a3412"],
+    html.dark [style*="color:#854d0e"], html.dark [style*="color: #854d0e"],
+    html.dark [style*="color:#a16207"], html.dark [style*="color: #a16207"] {
+      color: #fb923c !important;
+    }
+
+    /* Fondos claros inline convertidos a fondo oscuro con texto blanco */
+    html.dark [style*="background:#f8fafc"], html.dark [style*="background: #f8fafc"],
+    html.dark [style*="background:#ffffff"], html.dark [style*="background: #ffffff"],
+    html.dark [style*="background:#f1f5f9"], html.dark [style*="background: #f1f5f9"] {
+      background: #0f172a !important;
+      border-color: #334155 !important;
+      color: #f8fafc !important;
+    }
+
+    /* Banners clínicos de alerta en Dark Mode */
+    html.dark [style*="background:#f0fdf4"], html.dark [style*="background: #f0fdf4"],
+    html.dark [style*="background:#ecfdf5"], html.dark [style*="background: #ecfdf5"],
+    html.dark [style*="background:#dcfce7"], html.dark [style*="background: #dcfce7"] {
+      background: #052e16 !important;
+      border-color: #166534 !important;
+      color: #86efac !important;
+    }
+    html.dark [style*="background:#f0fdf4"] *, html.dark [style*="background: #f0fdf4"] *,
+    html.dark [style*="background:#ecfdf5"] *, html.dark [style*="background: #ecfdf5"] * {
+      color: #bbf7d0 !important;
+    }
+    html.dark [style*="background:#f0fdf4"] strong, html.dark [style*="background: #f0fdf4"] strong {
+      color: #4ade80 !important;
+    }
+
+    html.dark [style*="background:#fff1f2"], html.dark [style*="background: #fff1f2"],
+    html.dark [style*="background:#fef2f2"], html.dark [style*="background: #fef2f2"],
+    html.dark [style*="background:#fee2e2"], html.dark [style*="background: #fee2e2"] {
+      background: #450a0a !important;
+      border-color: #991b1b !important;
+      color: #fca5a5 !important;
+    }
+    html.dark [style*="background:#fff1f2"] *, html.dark [style*="background: #fff1f2"] *,
+    html.dark [style*="background:#fef2f2"] *, html.dark [style*="background: #fef2f2"] * {
+      color: #fecaca !important;
+    }
+    html.dark [style*="background:#fff1f2"] strong, html.dark [style*="background: #fef2f2"] strong {
+      color: #f87171 !important;
+    }
+
+    html.dark [style*="background:#fff7ed"], html.dark [style*="background: #fff7ed"] {
+      background: #431407 !important;
+      border-color: #9a3412 !important;
+      color: #fdba74 !important;
+    }
+    html.dark [style*="background:#fff7ed"] * {
+      color: #fed7aa !important;
+    }
+    html.dark [style*="background:#fff7ed"] strong {
+      color: #fb923c !important;
+    }
+
+    html.dark [style*="background:#f0f9ff"], html.dark [style*="background: #f0f9ff"],
+    html.dark [style*="background:#e0f2fe"], html.dark [style*="background: #e0f2fe"],
+    html.dark [style*="background:#eff6ff"], html.dark [style*="background: #eff6ff"] {
+      background: #082f49 !important;
+      border-color: #0369a1 !important;
+      color: #7dd3fc !important;
+    }
+    html.dark [style*="background:#f0f9ff"] *, html.dark [style*="background: #f0f9ff"] * {
+      color: #bae6fd !important;
+    }
+    html.dark [style*="background:#f0f9ff"] strong, html.dark [style*="background: #f0f9ff"] strong {
+      color: #38bdf8 !important;
+    }
+
+    html.dark [style*="background:#f5f3ff"], html.dark [style*="background: #f5f3ff"] {
+      background: #2e1065 !important;
+      border-color: #6b21a8 !important;
+      color: #d8b4fe !important;
+    }
+    html.dark [style*="background:#f5f3ff"] * {
+      color: #e9d5ff !important;
+    }
+    html.dark [style*="background:#f5f3ff"] strong {
+      color: #c084fc !important;
+    }
+
+    /* Tipografías base en modo oscuro */
+    html.dark label,
+    html.dark .form-field label,
+    html.dark strong,
+    html.dark b,
+    html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6 {
+      color: #f8fafc !important;
+    }
+    html.dark .field-hint {
+      color: #94a3b8 !important;
+    }
+    html.dark .input-full,
+    html.dark select.input-full,
+    html.dark textarea.input-full {
+      background-color: #0f172a !important;
+      border-color: #475569 !important;
+      color: #f8fafc !important;
+    }
+    html.dark .input-full::placeholder {
+      color: #64748b !important;
+    }
+
+    /* WIDGET FLOTANTE DE CAMAS: OPTIMIZACIÓN MÓVIL EXACTA */
+    @media (max-width: 768px) {
+      .widget-chips-container {
+        display: none !important;
+      }
+      .widget-flotante-camas {
+        bottom: 12px !important;
+        right: 12px !important;
+        left: auto !important;
+        max-width: calc(100vw - 24px) !important;
+        z-index: 9990 !important;
+      }
+      .widget-flotante-pill {
+        padding: 6px 12px !important;
+        gap: 8px !important;
+        max-width: 100% !important;
+        border-radius: 9999px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+      }
+      .widget-flotante-pill span:first-child {
+        font-size: 0.58rem !important;
+      }
+      .widget-total-count {
+        font-size: 0.85rem !important;
+      }
+      .widget-panel-drawer {
+        width: calc(100vw - 24px) !important;
+        max-width: 320px !important;
+        right: 0 !important;
+        bottom: 60px !important;
+        padding: 12px 14px !important;
+        box-sizing: border-box !important;
+        border-radius: 14px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -2214,8 +2413,8 @@
           <span class="badge-active-count" id="lbl_total_px_activos">1 Paciente en atención</span>
         </div>
         <div class="active-patients-btn-group">
-          <button type="button" class="btn-caos-action btn-nn-action" onclick="abrirModalAdmisionRapidaNN()" title="Admisión Rápida de Paciente Inconsciente o Sin DNI (Ley N° 27604)">
-            🚨 Admisión Rápida NN
+          <button type="button" class="btn-caos-action btn-nn-action" onclick="abrirModalAdmisionRapidaNN()" title="Admisión de Emergencia de Paciente Inconsciente o Sin DNI (Ley N° 27604)">
+            🚨 Admitir Emergencia NN (P-I)
           </button>
           <button type="button" class="btn-caos-action btn-start-action" onclick="abrirModalPreTriageSTART()" title="Pre-Triage de Cola en 15 segundos (Método START/Manchester)">
             ⚡ Pre-Triage de Cola (15s)
@@ -2246,9 +2445,9 @@
             <div class="module-section-subtitle">Puerta de entrada universal · NTS N° 042-MINSA/DGSP-V.01 · Ley N° 27604</div>
           </div>
         </div>
-        <span class="toggle-arrow open" id="arrow_mod1">▼</span>
+        <span class="toggle-arrow" id="arrow_mod1">▼</span>
       </div>
-      <div class="module-section-body open" id="body_mod1">
+      <div class="module-section-body" id="body_mod1">
 
         
         <div class="norma-pill-banner">
@@ -2267,6 +2466,44 @@
           </a>
         </div>
 
+
+                <!-- 1. CONSULTA RÁPIDA RENIEC EN MÓDULO 1 (TRIAJE FISIOLÓGICO) -->
+        <div class="reniec-consulta-card" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:14px 16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+            <div style="font-size:0.86rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+              <span>🔍</span>
+              <span>Identificación Rápida del Paciente — Consulta RENIEC (Módulo 1):</span>
+            </div>
+            <span style="font-size:0.72rem; color:#64748b; font-weight:600;">Sincroniza en vivo con Módulo 2 y Módulo 4</span>
+          </div>
+
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <div style="flex:1; min-width:200px;">
+              <input type="text" id="dni_mod1" class="input-full" placeholder="Ingrese 8 dígitos de DNI del paciente" maxlength="15" onkeydown="if(event.key==='Enter') consultarReniecMod1()">
+            </div>
+            <button type="button" class="btn-full-primary" style="padding:9px 18px; font-weight:700;" onclick="consultarReniecMod1()">
+              🔍 Consultar RENIEC
+            </button>
+            <button type="button" class="btn-full-secondary" style="padding:9px 14px;" onclick="limpiarIdentificacionPaciente()">
+              🔄 Limpiar
+            </button>
+          </div>
+
+          <!-- TARJETA DE RESULTADO RENIEC EN MÓDULO 1 -->
+          <div id="m1_reniec_result_card" style="display:none; margin-top:10px; padding:10px 14px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div>
+                <span style="font-size:0.7rem; font-weight:800; color:#15803d; text-transform:uppercase;">PACIENTE IDENTIFICADO:</span>
+                <div id="m1_disp_nombre" style="font-size:0.98rem; font-weight:900; color:#0f172a;">—</div>
+              </div>
+              <div style="display:flex; gap:12px; font-size:0.78rem; color:#334155; flex-wrap:wrap;">
+                <div><strong>DNI:</strong> <span id="m1_disp_dni">—</span></div>
+                <div><strong>Sexo:</strong> <span id="m1_disp_sexo">—</span></div>
+                <div><strong>Historia Clínica:</strong> <span id="m1_disp_hc" style="color:#0284c7; font-weight:800;">—</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- 1. SELECTOR OBLIGATORIO DE ORIGEN DEL EVENTO EN SERVICIO DE EMERGENCIA -->
         <div class="origen-evento-card" style="border: 2px solid #0284c7; background: #f0f9ff; border-radius: 12px; padding: 16px; margin-bottom: 18px;">
@@ -2393,11 +2630,11 @@
         <!-- 2. BOTONES DE ACCESO INMEDIATO: SHOCK TRAUMA & QUIRÓFANO DIRECTO (LEY N° 27604) -->
         <div class="panico-actions-grid">
           <button type="button" class="btn-panico-shock" onclick="activarPanicoShockTrauma()" style="background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);">
-            <span>🚨 INGRESO DIRECTO A SHOCK TRAUMA</span>
+            <span>🚨 ADMITIR EMERGENCIA SHOCK TRAUMA (P-I)</span>
             <span class="subtext">Paro Cardiorrespiratorio / Falla Vital Inminente (P-I). Admisión en regularización paralela.</span>
           </button>
           <button type="button" class="btn-panico-shock" onclick="activarIngresoDirectoQuirofano()" style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%); box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);">
-            <span>🏥 INGRESO DIRECTO A QUIRÓFANO (SOP)</span>
+            <span>🏥 ADMITIR EMERGENCIA QUIRÓFANO SOP (P-I)</span>
             <span class="subtext">Cirugía de Control de Daños / Hemorragia Masiva. Salta Triaje y Admisión (Ley N° 27604).</span>
           </button>
         </div>
@@ -2603,9 +2840,9 @@
             <div class="module-section-subtitle">Paralelo para Prioridad I/II · Secuencial para III/IV/V · Ley N° 27604 · NTS N° 139-MINSA</div>
           </div>
         </div>
-        <span class="toggle-arrow open" id="arrow_mod2">▼</span>
+        <span class="toggle-arrow" id="arrow_mod2">▼</span>
       </div>
-      <div class="module-section-body open" id="body_mod2">
+      <div class="module-section-body" id="body_mod2">
 
         <div class="norma-pill-banner" style="background:#eff6ff; border-color:#93c5fd; color:#1e40af;">
           <span class="norma-tag" style="background:#1d4ed8;">Ley N° 27604 Art. 3°</span>
@@ -2738,9 +2975,9 @@
             <div class="module-section-subtitle">D.S. N° 024-2002-MTC (SOAT) · Ley N° 29344 (AUS) · Ley N° 27604</div>
           </div>
         </div>
-        <span class="toggle-arrow open" id="arrow_mod3">▼</span>
+        <span class="toggle-arrow" id="arrow_mod3">▼</span>
       </div>
-      <div class="module-section-body open" id="body_mod3">
+      <div class="module-section-body" id="body_mod3">
 
         <!-- RAMA A: PESTAÑA EXCLUSIVA SOAT (ACCIDENTE DE TRÁNSITO) -->
         <div id="seccion_soat_wrapper" style="display:none; margin-bottom:20px;">
@@ -2947,13 +3184,53 @@
             <div class="module-section-subtitle">NTS N° 042-MINSA · NTS N° 139-MINSA · Kardex de Enfermería, Laboratorio Clínico e Imágenes</div>
           </div>
         </div>
-        <span class="toggle-arrow open" id="arrow_mod4">▼</span>
+        <span class="toggle-arrow" id="arrow_mod4">▼</span>
       </div>
-      <div class="module-section-body open" id="body_mod4">
+      <div class="module-section-body" id="body_mod4">
 
         <div class="norma-pill-banner">
           <span class="norma-tag">NTS N° 139-MINSA</span>
           <span><strong>Órdenes Asistenciales y Kardex Auditable:</strong> Prescripción de fármacos, analítica de laboratorio y estudios radiológicos de emergencia. Solo los medicamentos efectivamente administrados por Enfermería se debitan en la cuenta del paciente.</span>
+        </div>
+
+                <!-- IDENTIFICACIÓN DEL PACIENTE Y CONSULTA RENIEC EN MÓDULO 4 (SHOCK TRAUMA / KARDEX) -->
+        <div class="reniec-consulta-card" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:14px 16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+            <div style="font-size:0.86rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+              <span>🪪</span>
+              <span>Datos del Paciente en Atención — Módulo 4 (Shock Trauma / Kardex):</span>
+            </div>
+            <span id="m4_badge_sincronizado" style="font-size:0.72rem; padding:2px 8px; border-radius:9999px; background:#eff6ff; color:#1d4ed8; font-weight:700; border:1px solid #bfdbfe;">
+              Sincronizado con Módulo 1 y 2
+            </span>
+          </div>
+
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <div style="flex:1; min-width:200px;">
+              <input type="text" id="dni_mod4" class="input-full" placeholder="DNI del paciente (o consultar aquí si no se llenó en Módulo 1)" maxlength="15" onkeydown="if(event.key==='Enter') consultarReniecMod4()">
+            </div>
+            <button type="button" class="btn-full-primary" style="padding:9px 18px; font-weight:700;" onclick="consultarReniecMod4()">
+              🔍 Consultar RENIEC
+            </button>
+            <button type="button" class="btn-full-secondary" style="padding:9px 14px;" onclick="limpiarIdentificacionPaciente()">
+              🔄 Limpiar
+            </button>
+          </div>
+
+          <!-- TARJETA DE RESULTADO RENIEC EN MÓDULO 4 -->
+          <div id="m4_reniec_result_card" style="display:none; margin-top:10px; padding:10px 14px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div>
+                <span style="font-size:0.7rem; font-weight:800; color:#15803d; text-transform:uppercase;">PACIENTE ASIGNADO A SHOCK TRAUMA / TÓPICO:</span>
+                <div id="m4_disp_nombre" style="font-size:0.98rem; font-weight:900; color:#0f172a;">—</div>
+              </div>
+              <div style="display:flex; gap:12px; font-size:0.78rem; color:#334155; flex-wrap:wrap;">
+                <div><strong>DNI:</strong> <span id="m4_disp_dni">—</span></div>
+                <div><strong>Sexo:</strong> <span id="m4_disp_sexo">—</span></div>
+                <div><strong>Historia Clínica:</strong> <span id="m4_disp_hc" style="color:#0284c7; font-weight:800;">—</span></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- AMBIENTE ASIGNADO Y MÉDICO DE GUARDIA -->
@@ -3175,9 +3452,9 @@
             <div class="module-section-subtitle">Estancia reglamentaria de 12 a 24 horas · Balance hídrico · NTS N° 042-MINSA/DGSP-V.01</div>
           </div>
         </div>
-        <span class="toggle-arrow open" id="arrow_mod5">▼</span>
+        <span class="toggle-arrow" id="arrow_mod5">▼</span>
       </div>
-      <div class="module-section-body open" id="body_mod5">
+      <div class="module-section-body" id="body_mod5">
 
         <div class="norma-pill-banner">
           <span class="norma-tag">NTS N° 042-MINSA</span>
@@ -3346,9 +3623,9 @@
             <div class="module-section-subtitle">Stock en tiempo real · Priorización UCI NTS N° 031-MINSA · Algoritmo de Prelación ABCDE</div>
           </div>
         </div>
-        <span class="toggle-arrow open" id="arrow_mod6">▼</span>
+        <span class="toggle-arrow" id="arrow_mod6">▼</span>
       </div>
-      <div class="module-section-body open" id="body_mod6">
+      <div class="module-section-body" id="body_mod6">
 
         <div class="norma-pill-banner">
           <span class="norma-tag">NTS N° 031-MINSA</span>
@@ -3572,9 +3849,9 @@
             <div class="module-section-subtitle">Cierre asistencial · Ley N° 26842 (Art. 4°) · Candado Médico-Legal Art. 195° CPP (SINADEF vs Fiscalía)</div>
           </div>
         </div>
-        <span class="toggle-arrow open" id="arrow_mod7">▼</span>
+        <span class="toggle-arrow" id="arrow_mod7">▼</span>
       </div>
-      <div class="module-section-body open" id="body_mod7">
+      <div class="module-section-body" id="body_mod7">
 
         <div class="norma-pill-banner">
           <span class="norma-tag">Código Procesal Penal Art. 195°</span>
@@ -3740,9 +4017,9 @@
             <div class="module-section-subtitle">Ley N° 27604 y D.S. N° 016-2002-SA (Liquidación Post-Estabilización) · Auditoría TEDEF-SUSALUD</div>
           </div>
         </div>
-        <span class="toggle-arrow open" id="arrow_mod8">▼</span>
+        <span class="toggle-arrow" id="arrow_mod8">▼</span>
       </div>
-      <div class="module-section-body open" id="body_mod8">
+      <div class="module-section-body" id="body_mod8">
 
         <!-- ALERTA LEGAL OFICIAL LEY 27604 Y D.S. 016-2002-SA -->
         <div class="norma-pill-banner" style="background:#f0fdf4; border-color:#86efac; color:#166534; padding:16px;">
@@ -4113,7 +4390,7 @@
       </div>
 
       <!-- CHIPS RÁPIDOS POR TIPO EN LA CÁPSULA (SIEMPRE VISIBLES) -->
-      <div style="display:flex; align-items:center; gap:4px; border-left:1px solid rgba(255,255,255,0.18); padding-left:10px;">
+      <div class="widget-chips-container" style="display:flex; align-items:center; gap:4px; border-left:1px solid rgba(255,255,255,0.18); padding-left:10px;">
         <span class="widget-chip-tipo widget-chip-sop" id="pill_chip_sop" title="Quirófanos SOP">🔪 3/3</span>
         <span class="widget-chip-tipo widget-chip-obs" id="pill_chip_obs" title="Camas Observación">🛏️ 6/6</span>
         <span class="widget-chip-tipo widget-chip-st" id="pill_chip_st" title="Shock Trauma">⚡ 2/2</span>
@@ -4174,7 +4451,7 @@
           <div style="display:flex; gap:10px;">
             <button type="button" onclick="cerrarModalAdmisionNN()" class="btn-full-secondary" style="flex:1;">Cancelar</button>
             <button type="submit" class="btn-full-primary" style="flex:2; background:#dc2626; border-color:#b91c1c; font-weight:800;">
-              ⚡ Admitir de Urgencia (P-I)
+              ⚡ Admitir Emergencia (P-I)
             </button>
           </div>
         </form>
