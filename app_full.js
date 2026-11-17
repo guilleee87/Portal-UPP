@@ -1049,6 +1049,10 @@ function ingresarPacienteNN() {
   const elSexo = document.getElementById("sexo_full");
   if (elSexo) elSexo.value = "Desconocido";
 
+  const elGsan = document.getElementById("gsan_full");
+  if (elGsan) elGsan.value = "Desconocido";
+  STATE.grupoSanguineo = "Desconocido";
+
 
   // Indicadores de Módulo 1
   const badgeEl = document.getElementById("hc_badge_estado");
@@ -1809,6 +1813,18 @@ function procesarIdentificadorFull() {
   }
 
 
+  if (val.toUpperCase().startsWith("NN") || val.toUpperCase().includes("NO IDENTIFICADO") || val.toUpperCase().includes("INDOCUMENTADO")) {
+    STATE.esNN = true;
+    STATE.alertaPnpSs = true;
+    STATE.grupoSanguineo = "Desconocido";
+    const elGsan = document.getElementById("gsan_full");
+    if (elGsan) elGsan.value = "Desconocido";
+    const elSexo = document.getElementById("sexo_full");
+    if (elSexo && (!elSexo.value || elSexo.value === "M")) {
+      elSexo.value = val.toUpperCase().includes("FEM") ? "F" : "M";
+    }
+  }
+
   const { estado, nroHc, accion, esDni } = clasificarYBuscarEnBD(val);
   STATE.estadoRegistrado = estado;
   STATE.historiaClinica = nroHc;
@@ -1910,6 +1926,16 @@ async function consultarReniec() {
   const rawInput = inputEl ? inputEl.value.trim() : "";
   const token = (document.getElementById("apiToken") ? document.getElementById("apiToken").value.trim() : "") || DEFAULT_APISPERU_TOKEN;
   const panel = document.getElementById("apisperu_panel");
+
+  // Si el paciente es NN, informar sin pedir DNI (Ley N° 27604)
+  if (STATE.esNN || rawInput.toUpperCase().startsWith("NN") || rawInput.toUpperCase().includes("INDOCUMENTADO") || rawInput.toUpperCase().includes("NO IDENTIFICADO")) {
+    if (panel) {
+      panel.style.display = "block";
+      panel.innerHTML = `<div class="apisperu-title" style="color:#c2410c;">🚨 <strong>Paciente Indocumentado (NN) — Exonerado de Consulta RENIEC:</strong> Por mandato de la Ley N° 27604, la atención médica de emergencia no se condiciona a la presentación ni consulta de DNI. El paciente continuará su flujo con código temporal de reanimación.</div>`;
+      panel.classList.add("visible");
+    }
+    return;
+  }
 
   if (!rawInput) {
     if (panel) {
@@ -8057,6 +8083,10 @@ function limpiarFormularioCompletoState() {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
+  const elGsan = document.getElementById("gsan_full");
+  if (elGsan) elGsan.value = "Desconocido";
+  STATE.grupoSanguineo = "Desconocido";
+
   if (typeof actualizarEVA === "function") actualizarEVA(0);
   limpiarPrioridadUI();
 }
@@ -8129,7 +8159,7 @@ function ejecutarAdmisionRapidaNN(event) {
 
   const edad = parseInt(document.getElementById("nn_edad_input")?.value || "30", 10);
   const modalidad = document.getElementById("nn_modalidad_input")?.value || "Ambulancia SAMU / Bomberos";
-  const motivo = document.getElementById("nn_estado_input")?.value || "Inconsciente / Politraumatizado";
+  const motivo = document.getElementById("nn_estado_input")?.value || "Inconsciente / Politraumatizado / Sin Respuesta Verbal";
 
   const ahora = new Date();
   const fechaCod = ahora.toISOString().slice(0, 10).replace(/-/g, "");
@@ -8142,7 +8172,7 @@ function ejecutarAdmisionRapidaNN(event) {
   const pxNN = crearRegistroPaciente({
     identificador: codigoNN,
     nombre: nombreNN,
-    dni: "",
+    dni: "NN",
     edad: edad,
     sexo: sexo,
     modalidad: modalidad,
@@ -8156,38 +8186,81 @@ function ejecutarAdmisionRapidaNN(event) {
   pacienteActivoId = pxNN.id;
 
   limpiarFormularioCompletoState();
+
+  // Actualizar STATE con datos de NN
+  STATE.esNN = true;
+  STATE.alertaPnpSs = true;
   STATE.identificador = codigoNN;
   STATE.nombreReniec = nombreNN;
-  STATE.numDni = "";
+  STATE.numDni = "NN";
+  STATE.edad = edad;
+  STATE.sexo = sexo;
+  STATE.grupoSanguineo = "Desconocido"; // OBLIGATORIO: Desconocido para NN
   STATE.tipoSeguro = "SIS Gratuito";
   STATE.modalidadIngreso = modalidad;
   STATE.motivoConsulta = motivo;
   STATE.prioridad = "I";
   STATE.historiaClinica = `HC-NN-${fechaCod}-${numSec}`;
+  STATE.accionHc = `Paciente indocumentado (NN) — Historia clínica temporal abierta conforme a Ley N° 27604. Notificación emitida a PNP y Servicio Social.`;
 
-  const elIdent = document.getElementById("ident_full");
-  if (elIdent) elIdent.value = `${nombreNN} [${codigoNN}]`;
+  // 1. SINCRONIZAR MÓDULO 1
   const elMotivo = document.getElementById("motivo_full");
   if (elMotivo) elMotivo.value = motivo;
+
+  // 2. SINCRONIZAR MÓDULO 2 (IDENTIFICACIÓN & ADMISIÓN)
+  const elIdent = document.getElementById("ident_full");
+  if (elIdent) {
+    elIdent.value = codigoNN;
+    elIdent.placeholder = "PACIENTE NN — Documento No Requerido (Ley N° 27604)";
+  }
+  const elEdad = document.getElementById("edad_full");
+  if (elEdad) elEdad.value = edad;
+  const elSexo = document.getElementById("sexo_full");
+  if (elSexo) elSexo.value = sexo;
+  const elFechaNac = document.getElementById("fecha_nac_full");
+  if (elFechaNac) elFechaNac.value = "";
+  const elAlergias = document.getElementById("alergias_full");
+  if (elAlergias) elAlergias.value = "Desconocidas (Paciente NN)";
+
+  // GRUPO SANGUÍNEO: Asignar obligatoriamente "Desconocido"
+  const elGsan = document.getElementById("gsan_full");
+  if (elGsan) elGsan.value = "Desconocido";
+
+  // Marcar modalidad de ingreso en Módulo 2
+  document.querySelectorAll(".modalidad-btn").forEach(b => {
+    b.classList.remove("selected");
+    const modAttr = b.getAttribute("data-mod") || "";
+    if (modalidad.toLowerCase().includes(modAttr.toLowerCase()) || modAttr.toLowerCase().includes("ambulancia")) {
+      b.classList.add("selected");
+    }
+  });
+
+  // Indicadores de Historia Clínica
   const hcDisp = document.getElementById("hc_code_display");
   if (hcDisp) hcDisp.textContent = STATE.historiaClinica;
   const badgeEstado = document.getElementById("hc_badge_estado");
   if (badgeEstado) {
-    badgeEstado.textContent = "🚨 NN Registrado (Ley 27604)";
+    badgeEstado.textContent = "🚨 NN (Ley 27604)";
     badgeEstado.className = "badge-estado badge-warning";
   }
+  const accDisp = document.getElementById("hc_accion_display");
+  if (accDisp) accDisp.textContent = STATE.accionHc;
 
+  const btnPnp = document.getElementById("btn_notif_pnp");
+  if (btnPnp) btnPnp.style.display = "inline-block";
+
+  // 3. ACTIVAR PRIORIDAD I ROJO INMEDIATA
   if (typeof mostrarPrioridad === "function") {
     mostrarPrioridad("I", {
       tipo: "Prioridad I — ROJO (Resucitación / Shock Trauma)",
-      desc: `Paciente indocumentado (${codigoNN}) en riesgo vital. Atención inmediata garantizada por Ley N° 27604.`,
+      desc: `Paciente indocumentado (${codigoNN}) en riesgo vital. Atención inmediata garantizada por Ley N° 27604 sin requisito de DNI.`,
       destino: "Shock Trauma ST-01 / ST-02"
     });
   }
 
   cerrarModalAdmisionNN();
   renderizarTableroColaPacientes();
-  mostrarToastCola(`🚨 <strong>Paciente NN Admitido:</strong> ${codigoNN} ingresado a Shock Trauma.`);
+  mostrarToastCola(`🚨 <strong>Admisión Rápida NN:</strong> ${codigoNN} cargado en Módulo 2 con Grupo Sanguíneo <strong>Desconocido</strong>.`);
 }
 
 function abrirModalPreTriageSTART() {
@@ -8424,3 +8497,9 @@ if (document.readyState === 'loading') {
 
 window.advertirEntornoBloqueado = advertirEntornoBloqueado;
 window.resetearEntornoEstablecimientoAPendiente = resetearEntornoEstablecimientoAPendiente;
+
+function actualizarGrupoSanguineo(val) {
+  STATE.grupoSanguineo = val;
+  autoGuardarCambioEnHistoriaClinica(`Grupo sanguíneo actualizado a ${val}`);
+}
+window.actualizarGrupoSanguineo = actualizarGrupoSanguineo;
