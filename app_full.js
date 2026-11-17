@@ -4977,45 +4977,100 @@ if (document.readyState === "loading") {
 
 // --- MÓDULO 1: ENFERMERÍA DE TRIAJE ---
 function cambiarOrigenEvento(tipo) {
-  STATE.tipoOrigenEvento = tipo;
-  STATE.esAccidenteTransito = (tipo === "transito");
+  // Aceptar tanto 'soat' como 'transito' indistintamente
+  const esTransito = (tipo === "soat" || tipo === "transito");
+  STATE.tipoOrigenEvento = esTransito ? "soat" : "comun";
+  STATE.esAccidenteTransito = esTransito;
 
-  const btnComun = document.getElementById("btn_origen_comun");
-  const btnTransito = document.getElementById("btn_origen_transito");
+  const optComun = document.getElementById("opt_origen_comun");
+  const optSoat = document.getElementById("opt_origen_soat");
+  const rbComun = document.getElementById("rb_origen_comun");
+  const rbSoat = document.getElementById("rb_origen_soat");
   const bannerTransito = document.getElementById("banner_origen_transito");
   const navSoatBadge = document.getElementById("navSoatBadge");
+  const miniSoatBadge = document.getElementById("mini_soat_badge");
   const soatWrapper = document.getElementById("seccion_soat_wrapper");
   const pideWrapper = document.getElementById("seccion_pide_wrapper");
 
-  if (tipo === "transito") {
-    if (btnTransito) { btnTransito.classList.add("active"); btnTransito.style.background = "#dc2626"; btnTransito.style.color = "#ffffff"; }
-    if (btnComun) { btnComun.classList.remove("active"); btnComun.style.background = "#f1f5f9"; btnComun.style.color = "#334155"; }
-    if (bannerTransito) bannerTransito.style.display = "block";
-    if (navSoatBadge) navSoatBadge.style.display = "inline-flex";
+  if (esTransito) {
+    // 1. Estilos visuales del selector en Módulo 1
+    if (optSoat) {
+      optSoat.classList.add("selected");
+      optSoat.style.borderColor = "#dc2626";
+      optSoat.style.background = "#fef2f2";
+    }
+    if (optComun) {
+      optComun.classList.remove("selected");
+      optComun.style.borderColor = "#cbd5e1";
+      optComun.style.background = "#ffffff";
+    }
+    if (rbSoat) rbSoat.checked = true;
+    if (rbComun) rbComun.checked = false;
 
-    // Mostrar sección SOAT y ocultar PIDE común
+    // 2. Mostrar banner de protocolo de accidente de tránsito
+    if (bannerTransito) {
+      bannerTransito.style.display = "block";
+    }
+
+    // 3. Activar chip de SOAT en la barra de telemetría superior
+    if (navSoatBadge) navSoatBadge.style.display = "inline-flex";
+    if (miniSoatBadge) miniSoatBadge.style.display = "inline-flex";
+
+    // 4. Mostrar sección SOAT en Módulo 3 y ocultar consulta PIDE común
     if (soatWrapper) soatWrapper.style.display = "block";
     if (pideWrapper) pideWrapper.style.display = "none";
 
-    // Activar candado SINADEF
+    // 5. Configurar estado y candado médico legal (Art. 195 CPP)
+    STATE.tipoSeguro = "SOAT";
     STATE.bloqueoSinadef = true;
-    cambiarOpcionSoat("identificado");
-  } else {
-    if (btnComun) { btnComun.classList.add("active"); btnComun.style.background = "#0284c7"; btnComun.style.color = "#ffffff"; }
-    if (btnTransito) { btnTransito.classList.remove("active"); btnTransito.style.background = "#f1f5f9"; btnTransito.style.color = "#334155"; }
-    if (bannerTransito) bannerTransito.style.display = "none";
-    if (navSoatBadge) navSoatBadge.style.display = "none";
 
-    // Ocultar sección SOAT y mostrar PIDE común
+    // Inicializar con opción identificado por defecto si no estaba configurado
+    if (typeof cambiarOpcionSoat === "function") {
+      cambiarOpcionSoat(STATE.soatVehiculoFuga ? "fuga" : "identificado");
+    }
+
+    console.log("🚗 Modo Accidente de Tránsito SOAT activado correctamente.");
+  } else {
+    // 1. Estilos visuales de Emergencia Común
+    if (optComun) {
+      optComun.classList.add("selected");
+      optComun.style.borderColor = "#0284c7";
+      optComun.style.background = "#f0f9ff";
+    }
+    if (optSoat) {
+      optSoat.classList.remove("selected");
+      optSoat.style.borderColor = "#cbd5e1";
+      optSoat.style.background = "#ffffff";
+    }
+    if (rbComun) rbComun.checked = true;
+    if (rbSoat) rbSoat.checked = false;
+
+    // 2. Ocultar banner de accidente de tránsito
+    if (bannerTransito) bannerTransito.style.display = "none";
+
+    // 3. Ocultar badges SOAT
+    if (navSoatBadge) navSoatBadge.style.display = "none";
+    if (miniSoatBadge) miniSoatBadge.style.display = "none";
+
+    // 4. Mostrar consulta PIDE en Módulo 3 y ocultar SOAT
     if (soatWrapper) soatWrapper.style.display = "none";
     if (pideWrapper) pideWrapper.style.display = "block";
 
+    // 5. Desactivar candado de accidente
     STATE.bloqueoSinadef = false;
     STATE.soatVehiculoFuga = false;
     STATE.tipoSeguro = "Particular";
+
+    console.log("🩺 Modo Emergencia Común activado.");
   }
 
-  actualizarFactura();
+  // Actualizar candado en Módulo 7 y recálculo en Módulo 8
+  if (typeof verificarCandadoLegalSinadef === "function") {
+    try { verificarCandadoLegalSinadef(); } catch(e){}
+  }
+  if (typeof actualizarFactura === "function") {
+    try { actualizarFactura(); } catch(e){}
+  }
 }
 
 function activarPanicoShockTrauma() {
