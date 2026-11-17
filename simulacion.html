@@ -214,8 +214,8 @@
       flex-shrink: 0;
     }
     .module-section-subtitle { font-size: 0.74rem; font-weight: 500; color: #64748b; margin-top: 1px; }
-    .module-section-body { padding: 22px; display: none; }
-    .module-section-body.open { display: block; }
+    .module-section-body { padding: 22px; display: none !important; }
+    .module-section-body.open { display: block !important; }
     .toggle-arrow { font-size: 1rem; color: #64748b; transition: transform 0.2s; }
     .toggle-arrow.open { transform: rotate(180deg); }
 
@@ -2419,19 +2419,83 @@
   <main class="main-app-container">
 
     <!-- ======================================================================
-         TABLERO DE ATENCIÓN SIMULTÁNEA DE URGENCIAS & GESTIÓN DE CAOS
+         SELECTOR DE ENTORNO OPERATIVO ASISTENCIAL (NORMATIVA SUSALUD / SITEDS PERÚ)
+         ====================================================================== -->
+    <section class="entorno-operativo-card" id="entornoOperativoCard" style="background:#ffffff; border:2px solid #0284c7; border-radius:14px; padding:16px 20px; margin-bottom:18px; box-shadow:0 2px 8px rgba(2,132,199,0.08);">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.3rem;">⚖️</span>
+          <div>
+            <div style="font-size:0.92rem; font-weight:800; color:#0f172a;">ENTORNO OPERATIVO ASISTENCIAL — BIFURCACIÓN DE SECTOR</div>
+            <div style="font-size:0.75rem; color:#64748b;">Mismo motor clínico de triaje (P-I a P-V) y misma BD, interpretado según el sector prestador (SUSALUD / SITEDS)</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span id="badge_susalud_persistencia" style="display:none; font-size:0.72rem; font-weight:800; padding:4px 10px; border-radius:6px; letter-spacing:0.3px;">
+            <!-- [BD HISTÓRICA: PERFIL SUSALUD RECUPERADO] o [NUEVA CONSULTA API -> GUARDADO EN BD] -->
+          </span>
+          <span style="font-size:0.72rem; color:#0369a1; background:#e0f2fe; padding:3px 9px; border-radius:6px; font-weight:700;">
+            Padrón Único SUSALUD
+          </span>
+        </div>
+      </div>
+
+      <!-- TABS SELECTOR BIFURCACIÓN -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px;">
+        <button type="button" id="tab_entorno_publico" class="btn-entorno-tab active" onclick="cambiarEntornoOperativo('publico')" style="padding:12px 16px; border-radius:10px; font-weight:800; font-size:0.88rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; border:2.5px solid #0284c7; background:#eff6ff; color:#0369a1; box-shadow:0 2px 6px rgba(2,132,199,0.18); transition:all 0.2s;">
+          <span style="font-size:1.2rem;">🏛️</span>
+          <span style="text-align:left;">
+            <strong style="display:block; font-size:0.88rem;">Pestaña 1: Modo Público</strong>
+            <small style="font-size:0.72rem; font-weight:600; opacity:0.85;">MINSA / SIS / EsSalud (Gratuidad Universal Ley N° 27604)</small>
+          </span>
+        </button>
+
+        <button type="button" id="tab_entorno_privado" class="btn-entorno-tab" onclick="cambiarEntornoOperativo('privado')" style="padding:12px 16px; border-radius:10px; font-weight:800; font-size:0.88rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; transition:all 0.2s;">
+          <span style="font-size:1.2rem;">🏥</span>
+          <span style="text-align:left;">
+            <strong style="display:block; font-size:0.88rem;">Pestaña 2: Modo Privado</strong>
+            <small style="font-size:0.72rem; font-weight:600; opacity:0.85;">Clínica / EPS / SITEDS (Copagos y Reglas de Póliza)</small>
+          </span>
+        </button>
+      </div>
+
+      <!-- BANNER INFORMATIVO DINÁMICO DE REGLA DEL SECTOR -->
+      <div id="entorno_sector_info_banner" style="font-size:0.78rem; padding:8px 14px; border-radius:8px; background:#f0f9ff; border:1px solid #bae6fd; color:#0369a1; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div id="entorno_sector_info_texto">
+          <strong>Regla Sectorial Activa:</strong> Afiliados SIS y EsSalud gozan de cobertura al 100% (Pago S/ 0.00). Pacientes particulares o con seguro privado puro pagan 100%.
+        </div>
+        <!-- MARCADOR DE CONDICIÓN TRANSVERSAL DEL EVENTO: ACCIDENTE EN FUGA -->
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; color:#b91c1c; font-size:0.75rem; background:#fff1f2; padding:3px 8px; border-radius:6px; border:1px solid #fecdd3;">
+          <input type="checkbox" id="chk_evento_fuga" onchange="toggleCondicionFugaTransversal(this.checked)" style="cursor:pointer;">
+          <span>🚨 Marcar Accidente en Fuga (Sin SOAT)</span>
+        </label>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================
+         TABLERO DE ATENCIÓN SIMULTÁNEA DE EMERGENCIAS & GESTIÓN DE CAOS
          Sustento: NTS N° 042-MINSA (Triaje por severidad clínica, no por llegada)
          ====================================================================== -->
     <section class="active-patients-panel" id="activePatientsPanel">
       <div class="active-patients-top-bar">
         <div style="display:flex; align-items:center; gap:8px;">
           <span class="widget-beacon-dot" style="display:inline-block; width:10px; height:10px; background:#16a34a; border-radius:50%; box-shadow:0 0 0 3px rgba(34,197,94,0.3);"></span>
-          <strong style="color:#0f172a; font-size:0.92rem;">TABLERO DE ATENCIÓN SIMULTÁNEA &amp; COLA DE URGENCIAS</strong>
+          <strong style="color:#0f172a; font-size:0.92rem;">TABLERO DE ATENCIÓN SIMULTÁNEA &amp; COLA DE EMERGENCIAS</strong>
           <span class="badge-active-count" id="lbl_total_px_activos">1 Paciente en atención</span>
         </div>
         <div class="active-patients-btn-group">
+          <button type="button" class="btn-caos-action btn-shock-action" onclick="activarPanicoShockTrauma()" title="Admisión Inmediata de Emergencia a Shock Trauma (Ley N° 27604)" style="background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%); color: #ffffff; font-weight: 800; border: 1px solid #991c1c; box-shadow: 0 2px 6px rgba(185, 28, 28, 0.25);">
+            🚨 Admitir Emergencia Shock Trauma (P-I)
+          </button>
+          <button type="button" class="btn-caos-action btn-quirofano-action" onclick="activarIngresoDirectoQuirofano()" title="Admisión Inmediata de Emergencia a Quirófano SOP (Ley N° 27604)" style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%); color: #ffffff; font-weight: 800; border: 1px solid #9a3412; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);">
+            🏥 Admitir Emergencia Quirófano SOP (P-I)
+          </button>
           <button type="button" class="btn-caos-action btn-nn-action" onclick="abrirModalAdmisionRapidaNN()" title="Admisión de Emergencia de Paciente Inconsciente o Sin DNI (Ley N° 27604)">
             🚨 Admitir Emergencia NN (P-I)
+          </button>
+          <button type="button" class="btn-caos-action btn-soat-action" onclick="admitirEmergenciaSoat()" title="Protocolo de Emergencia Accidente de Tránsito / Trauma Vial (Ley N° 27181 & D.S. N° 024-2002-MTC)" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; font-weight: 800; border: 1px solid #075985; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);">
+            🚗 Accidente de Tránsito / Trauma Vial (SOAT)
           </button>
           <button type="button" class="btn-caos-action btn-start-action" onclick="abrirModalPreTriageSTART()" title="Pre-Triage de Cola en 15 segundos (Método START/Manchester)">
             ⚡ Pre-Triage de Cola (15s)
@@ -2464,7 +2528,7 @@
         </div>
         <span class="toggle-arrow" id="arrow_mod1">▼</span>
       </div>
-      <div class="module-section-body" id="body_mod1">
+      <div class="module-section-body" id="body_mod1" style="display: none;">
 
         
         <div class="norma-pill-banner">
@@ -2513,40 +2577,55 @@
         </div>
 
 
-                <!-- 1. CONSULTA RÁPIDA RENIEC EN MÓDULO 1 (TRIAJE FISIOLÓGICO) -->
-        <div class="reniec-consulta-card" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:14px 16px; margin-bottom:16px;">
+                <!-- 1. IDENTIFICACIÓN Y CONSULTA RENIEC EN MÓDULO 1 (TRIAJE FISIOLÓGICO) -->
+        <div class="reniec-consulta-card" style="background:#ffffff; border:2px solid #0284c7; border-radius:12px; padding:16px 18px; margin-bottom:18px; box-shadow:0 2px 8px rgba(2,132,199,0.08);">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-            <div style="font-size:0.86rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
-              <span>🔍</span>
-              <span>Identificación Rápida del Paciente — Consulta RENIEC (Módulo 1):</span>
+            <div style="font-size:0.92rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.2rem;">🔍</span>
+              <span>Identificación del Paciente — Consulta RENIEC (Módulo 1):</span>
             </div>
-            <span style="font-size:0.72rem; color:#64748b; font-weight:600;">Sincroniza en vivo con Módulo 2 y Módulo 4</span>
+            <span style="font-size:0.74rem; color:#0284c7; background:#e0f2fe; padding:3px 10px; border-radius:9999px; font-weight:700; border:1px solid #bae6fd;">
+              🔒 Bloquea y transfiere a Módulo 2
+            </span>
+          </div>
+
+          <div style="font-size:0.78rem; color:#475569; margin-bottom:12px; line-height:1.45;">
+            Autentique la identidad del paciente en la puerta de entrada. Si realiza la consulta aquí, los datos se sincronizan y se bloquean automáticamente en el Módulo 2 para garantizar la inalterabilidad médico-legal.
           </div>
 
           <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <div style="flex:1; min-width:200px;">
-              <input type="text" id="dni_mod1" class="input-full" placeholder="Ingrese 8 dígitos de DNI del paciente" maxlength="15" onkeydown="if(event.key==='Enter') consultarReniecMod1()">
+            <div style="flex:1; min-width:220px;">
+              <input type="text" id="dni_mod1" class="input-full" placeholder="Ingrese 8 dígitos de DNI para consulta en Módulo 1..." maxlength="15" onkeydown="if(event.key==='Enter') consultarReniecMod1()">
             </div>
-            <button type="button" class="btn-full-primary" style="padding:9px 18px; font-weight:700;" onclick="consultarReniecMod1()">
+            <button type="button" id="btn_reniec_mod1" class="btn-full-primary" style="padding:10px 20px; font-weight:800;" onclick="consultarReniecMod1()">
               🔍 Consultar RENIEC
             </button>
-            <button type="button" class="btn-full-secondary" style="padding:9px 14px;" onclick="limpiarIdentificacionPaciente()">
+            <button type="button" class="btn-full-secondary" style="padding:10px 16px; font-weight:700;" onclick="limpiarIdentificacionPaciente()">
               🔄 Limpiar
             </button>
           </div>
 
+          <!-- ESTADO DE CARGA RENIEC EN MÓDULO 1 -->
+          <div id="m1_reniec_loading" style="display:none; margin-top:10px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; color:#1e40af; font-size:0.82rem; font-weight:700;">
+            ⏳ Consultando Padrón Nacional RENIEC en tiempo real... Por favor espere.
+          </div>
+
           <!-- TARJETA DE RESULTADO RENIEC EN MÓDULO 1 -->
-          <div id="m1_reniec_result_card" style="display:none; margin-top:10px; padding:10px 14px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px;">
+          <div id="m1_reniec_result_card" style="display:none; margin-top:12px; padding:12px 16px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
               <div>
-                <span style="font-size:0.7rem; font-weight:800; color:#15803d; text-transform:uppercase;">PACIENTE IDENTIFICADO:</span>
-                <div id="m1_disp_nombre" style="font-size:0.98rem; font-weight:900; color:#0f172a;">—</div>
+                <span style="font-size:0.72rem; font-weight:800; color:#15803d; text-transform:uppercase; letter-spacing:0.5px;">✅ PACIENTE AUTENTICADO EN RENIEC:</span>
+                <div id="m1_disp_nombre" style="font-size:1.05rem; font-weight:900; color:#0f172a; margin-top:2px;">—</div>
               </div>
-              <div style="display:flex; gap:12px; font-size:0.78rem; color:#334155; flex-wrap:wrap;">
-                <div><strong>DNI:</strong> <span id="m1_disp_dni">—</span></div>
-                <div><strong>Sexo:</strong> <span id="m1_disp_sexo">—</span></div>
+              <div style="display:flex; gap:16px; font-size:0.8rem; color:#334155; flex-wrap:wrap;">
+                <div><strong>DNI:</strong> <span id="m1_disp_dni" style="font-weight:700; color:#0f172a;">—</span></div>
+                <div><strong>Sexo:</strong> <span id="m1_disp_sexo" style="font-weight:700; color:#0f172a;">—</span></div>
                 <div><strong>Historia Clínica:</strong> <span id="m1_disp_hc" style="color:#0284c7; font-weight:800;">—</span></div>
               </div>
+            </div>
+            <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #bbf7d0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; font-size:0.74rem; color:#166534;">
+              <span>🔒 <strong>Trazabilidad:</strong> Datos sincronizados y bloqueados en Módulo 2 (Admisión).</span>
+              <span style="background:#dcfce7; padding:2px 8px; border-radius:4px; font-weight:800; color:#15803d;">Padrón Nacional RENIEC Válido</span>
             </div>
           </div>
         </div>
@@ -2673,17 +2752,7 @@
           </div>
         </div>
 
-        <!-- 2. BOTONES DE ACCESO INMEDIATO: SHOCK TRAUMA & QUIRÓFANO DIRECTO (LEY N° 27604) -->
-        <div class="panico-actions-grid">
-          <button type="button" class="btn-panico-shock" onclick="activarPanicoShockTrauma()" style="background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);">
-            <span>🚨 ADMITIR EMERGENCIA SHOCK TRAUMA (P-I)</span>
-            <span class="subtext">Paro Cardiorrespiratorio / Falla Vital Inminente (P-I). Admisión en regularización paralela.</span>
-          </button>
-          <button type="button" class="btn-panico-shock" onclick="activarIngresoDirectoQuirofano()" style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%); box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);">
-            <span>🏥 ADMITIR EMERGENCIA QUIRÓFANO SOP (P-I)</span>
-            <span class="subtext">Cirugía de Control de Daños / Hemorragia Masiva. Salta Triaje y Admisión (Ley N° 27604).</span>
-          </button>
-        </div>
+
 
         <!-- 3. MOTIVO DE CONSULTA -->
         <div class="form-field">
@@ -2888,7 +2957,7 @@
         </div>
         <span class="toggle-arrow" id="arrow_mod2">▼</span>
       </div>
-      <div class="module-section-body" id="body_mod2">
+      <div class="module-section-body" id="body_mod2" style="display: none;">
 
         <div class="norma-pill-banner" style="background:#eff6ff; border-color:#93c5fd; color:#1e40af;">
           <span class="norma-tag" style="background:#1d4ed8;">Ley N° 27604 Art. 3°</span>
@@ -2914,9 +2983,14 @@
               <input type="text" id="ident_full" class="input-full" placeholder="Ingrese 8 dígitos de DNI o apellidos completos" oninput="procesarIdentificadorFull()">
               <div id="hc_sugerencias_dropdown" style="display:none; position:absolute; top:100%; left:0; width:100%; background:#ffffff; border:1.5px solid #0284c7; border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.15); z-index:100; max-height:220px; overflow-y:auto;"></div>
             </div>
+            <!-- AVISO DE IDENTIFICACIÓN BLOQUEADA SI SE CONSULTÓ EN MÓDULO 1 -->
+            <div id="mod2_reniec_locked_notice" style="display:none; margin-top:6px; padding:6px 12px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; color:#1e40af; font-size:0.75rem; font-weight:700; align-items:center; gap:8px;">
+              <span>🔒 Identificación bloqueada: Autenticado y sincronizado desde Módulo 1 (Triaje Fisiológico).</span>
+              <button type="button" onclick="desbloquearIdentificacionMod2()" style="margin-left:auto; background:none; border:none; color:#2563eb; text-decoration:underline; cursor:pointer; font-size:0.72rem; font-weight:800;">🔓 Modificar</button>
+            </div>
           </div>
           <div class="reniec-buttons-group">
-            <button type="button" class="btn-full-primary" style="flex:1;" onclick="consultarReniec()">
+            <button type="button" id="btn_reniec_mod2" class="btn-full-primary" style="flex:1;" onclick="consultarReniec()">
               🔍 Consultar RENIEC
             </button>
             <button type="button" class="btn-full-secondary" style="flex:1;" onclick="abrirModalConsultaHC()">
@@ -3023,7 +3097,7 @@
         </div>
         <span class="toggle-arrow" id="arrow_mod3">▼</span>
       </div>
-      <div class="module-section-body" id="body_mod3">
+      <div class="module-section-body" id="body_mod3" style="display: none;">
 
         <!-- RAMA A: PESTAÑA EXCLUSIVA SOAT (ACCIDENTE DE TRÁNSITO) -->
         <div id="seccion_soat_wrapper" style="display:none; margin-bottom:20px;">
@@ -3232,7 +3306,7 @@
         </div>
         <span class="toggle-arrow" id="arrow_mod4">▼</span>
       </div>
-      <div class="module-section-body" id="body_mod4">
+      <div class="module-section-body" id="body_mod4" style="display: none;">
 
         <div class="norma-pill-banner">
           <span class="norma-tag">NTS N° 139-MINSA</span>
@@ -3324,7 +3398,7 @@
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
             <div style="font-size:0.88rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
               <span>💊</span>
-              <span>Kardex de Farmacia y Medicamentos de Urgencia:</span>
+              <span>Kardex de Farmacia y Medicamentos de Emergencia:</span>
             </div>
             <span style="font-size:0.75rem; color:#64748b; background:#f1f5f9; padding:4px 8px; border-radius:6px;">
               NTS N° 139-MINSA · Solo se factura con verificación de administración
@@ -3500,7 +3574,7 @@
         </div>
         <span class="toggle-arrow" id="arrow_mod5">▼</span>
       </div>
-      <div class="module-section-body" id="body_mod5">
+      <div class="module-section-body" id="body_mod5" style="display: none;">
 
         <div class="norma-pill-banner">
           <span class="norma-tag">NTS N° 042-MINSA</span>
@@ -3671,7 +3745,7 @@
         </div>
         <span class="toggle-arrow" id="arrow_mod6">▼</span>
       </div>
-      <div class="module-section-body" id="body_mod6">
+      <div class="module-section-body" id="body_mod6" style="display: none;">
 
         <div class="norma-pill-banner">
           <span class="norma-tag">NTS N° 031-MINSA</span>
@@ -3721,10 +3795,10 @@
 
             <div id="card_sop2" style="background:#f8fafc; border:2px solid #cbd5e1; border-radius:10px; padding:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <strong style="font-size:0.85rem; color:#0f172a;">Quirófano 2 (SOP 2 - Urgencias)</strong>
+                <strong style="font-size:0.85rem; color:#0f172a;">Quirófano 2 (SOP 2 - Emergencias Quirúrgicas)</strong>
                 <span id="badge_sop2" style="background:#dcfce7; color:#15803d; font-size:0.72rem; font-weight:800; padding:2px 8px; border-radius:9999px;">🟢 Disponible</span>
               </div>
-              <div style="font-size:0.74rem; color:#64748b; margin-bottom:8px;">Equipado para Apendicectomías, Cesáreas de urgencia y Cirugía General.</div>
+              <div style="font-size:0.74rem; color:#64748b; margin-bottom:8px;">Equipado para Apendicectomías, Cesáreas de emergencia y Cirugía General.</div>
               <button type="button" class="btn-full-secondary" style="width:100%; font-size:0.78rem; font-weight:700;" onclick="asignarQuirofanoEspecifico(2)">
                 🏥 Asignar Quirófano SOP 2
               </button>
@@ -3742,7 +3816,7 @@
             </div>
           </div>
 
-          <!-- SELECTOR DE CIRUGÍA DE URGENCIA A REALIZAR -->
+          <!-- SELECTOR DE CIRUGÍA DE EMERGENCIA A REALIZAR -->
           <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
             <div style="font-size:0.82rem; font-weight:800; color:#0f172a; margin-bottom:8px;">
               🔪 Indicar Intervención Quirúrgica de Emergencia:
@@ -3752,7 +3826,7 @@
                 <label for="select_cirugia_catalogo">Tipo de Procedimiento Quirúrgico:</label>
                 <select id="select_cirugia_catalogo" class="input-full" style="font-weight:700;">
                   <option value="Laparotomía Exploratoria y Cirugía de Control de Daños|850">Laparotomía Exploratoria y Cirugía de Control de Daños</option>
-                  <option value="Apendicectomía de Emergencia por Peritonitis|650">Apendicectomía de Urgencia por Peritonitis Aguda</option>
+                  <option value="Apendicectomía de Emergencia por Peritonitis|650">Apendicectomía de Emergencia por Peritonitis Aguda</option>
                   <option value="Toracotomía de Urgencia / Drenaje Torácico Sellado|720">Toracotomía de Emergencia / Drenaje Torácico (S/. 720.00)</option>
                   <option value="Cesárea de Emergencia por Sufrimiento Fetal|780">Cesárea de Emergencia por Sufrimiento Fetal Agudo</option>
                   <option value="Craneotomía Descompresiva por Hematoma Epidural/Subdural|1200">Craneotomía Descompresiva por Hematoma Epidural (S/. 1,200.00)</option>
@@ -3897,7 +3971,7 @@
         </div>
         <span class="toggle-arrow" id="arrow_mod7">▼</span>
       </div>
-      <div class="module-section-body" id="body_mod7">
+      <div class="module-section-body" id="body_mod7" style="display: none;">
 
         <div class="norma-pill-banner">
           <span class="norma-tag">Código Procesal Penal Art. 195°</span>
@@ -4065,7 +4139,7 @@
         </div>
         <span class="toggle-arrow" id="arrow_mod8">▼</span>
       </div>
-      <div class="module-section-body" id="body_mod8">
+      <div class="module-section-body" id="body_mod8" style="display: none;">
 
         <!-- ALERTA LEGAL OFICIAL LEY 27604 Y D.S. 016-2002-SA -->
         <div class="norma-pill-banner" style="background:#f0fdf4; border-color:#86efac; color:#166534; padding:16px;">
@@ -4105,6 +4179,56 @@
               <strong id="m8_disp_seguro" style="color:#15803d;">Sin acreditar</strong>
             </div>
           </div>
+
+                  <!-- TABLA DE RESUMEN CONTABLE AUDITADA (NORMATIVA SUSALUD / SITEDS PERÚ) -->
+        <div id="panel_resumen_contable_susalud" style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:18px; margin:16px 0; box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px; border-bottom:1.5px solid #e2e8f0; padding-bottom:10px;">
+            <div style="font-weight:800; font-size:0.92rem; color:#0f172a; display:flex; align-items:center; gap:8px;">
+              <span>📊</span>
+              <span>LIQUIDACIÓN CONTABLE AUDITADA (NORMATIVA SUSALUD / SITEDS PERÚ):</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span id="badge_susalud_factura" style="font-size:0.72rem; font-weight:800; padding:3px 10px; border-radius:6px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">—</span>
+              <span id="badge_sector_factura" style="font-size:0.72rem; font-weight:800; padding:3px 10px; border-radius:6px; background:#f0fdf4; color:#166534; border:1px solid #86efac;">Sector: Modo Público</span>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:10px; margin-bottom:14px;">
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.70rem; color:#64748b; font-weight:700; text-transform:uppercase;">Condición en SUSALUD:</div>
+              <strong id="liq_condicion_susalud" style="color:#0f172a; font-size:0.84rem;">—</strong>
+            </div>
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.70rem; color:#64748b; font-weight:700; text-transform:uppercase;">Cobertura Aplicada en este Sector:</div>
+              <strong id="liq_cobertura_sector" style="color:#0284c7; font-size:0.84rem;">—</strong>
+            </div>
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.70rem; color:#64748b; font-weight:700; text-transform:uppercase;">Copago Fijo:</div>
+              <strong id="liq_copago_fijo" style="color:#0f172a; font-size:0.84rem;">S/. 0.00</strong>
+            </div>
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.70rem; color:#64748b; font-weight:700; text-transform:uppercase;">% Coaseguro:</div>
+              <strong id="liq_pct_coaseguro" style="color:#0f172a; font-size:0.84rem;">0%</strong>
+            </div>
+          </div>
+
+          <!-- TOTALES Y REPARTO FINANCIERO -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px; padding:14px 18px;">
+            <div>
+              <span style="font-size:0.72rem; color:#15803d; font-weight:800; text-transform:uppercase;">Monto Cubierto por Seguro / Estado:</span>
+              <div id="liq_monto_cubierto" style="font-size:1.35rem; font-weight:900; color:#166534;">S/. 0.00</div>
+              <span style="font-size:0.70rem; color:#15803d;">Financiado vía FUA / AUT EsSalud / IAFAS EPS</span>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:0.72rem; color:#b91c1c; font-weight:800; text-transform:uppercase;">Monto a Pagar por Paciente (en Caja):</span>
+              <div id="liq_monto_paciente" style="font-size:1.45rem; font-weight:900; color:#dc2626;">S/. 0.00</div>
+              <span id="liq_monto_paciente_sub" style="font-size:0.70rem; color:#991b1b;">Copago + Coaseguro o Cargo Particular 100%</span>
+            </div>
+          </div>
+
+          <!-- ALERTA DE RECHAZO O EXCLUSIÓN SI APLICA -->
+          <div id="liq_alerta_sectorial" style="display:none; margin-top:10px; padding:10px 14px; border-radius:8px; font-size:0.8rem; font-weight:700;"></div>
+        </div>
 
           <!-- BOTÓN PRINCIPAL DESTACADO: ENLACE A FACTURACION.HTML -->
           <div style="background:linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border:2px solid #38bdf8; border-radius:10px; padding:20px; text-align:center; margin:16px 0;">
