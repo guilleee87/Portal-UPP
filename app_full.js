@@ -1325,7 +1325,30 @@ function clasificarYBuscarEnBD(identificador) {
 // 3. ESTADO GLOBAL DEL SIMULADOR
 // ---------------------------------------------------------------------------
 const STATE = {
-  // Módulo 1
+  // Origen del Evento (Norma NTS N° 042-MINSA & Ley N° 27604)
+  tipoOrigenEvento: "comun", // "comun" o "transito"
+  esAccidenteTransito: false,
+  panicoShockTrauma: false,
+
+  // Módulo 1: Triaje Fisiológico
+  spo2: null, fc: null, pasSistolica: null, paDiastolica: null,
+  fr: null, temperatura: null, glucosa: null, glasgow: null, eva: 0,
+  hemoglucotest: null,
+  antecedentes: false,
+  motivoConsulta: "",
+  prioridad: null, // "I", "II", "III", "IV", "V"
+  colorPrioridad: null,
+  codigoInfarto: false,
+  codigoIctus: false,
+  codigoSepsis: false,
+  esGestante: false,
+  semanasGestacion: null,
+  lcf: null,
+  claveObstetrica: "ninguna",
+  esPediatrico: false,
+  aislamientoEpidemiologico: "ninguno",
+
+  // Módulo 2: Admisión
   modalidadIngreso: "A pie",
   identificador: "",
   estadoRegistrado: "Por confirmar",
@@ -1337,38 +1360,52 @@ const STATE = {
   horaLlegada: null,
   turno: null,
 
-
-  // Módulo 2
-  tipoSeguro: null,
+  // Módulo 3: Acreditación PIDE-SUSALUD & SOAT
+  tipoSeguro: "Particular",
   validacionManual: null,
   numerFua: null,
   acreditadoEsSalud: null,
   porcentajeCopago: null,
+  soatOpcion: "placa", // "placa", "fuga"
+  soatPlaca: "",
+  soatAseguradora: "Pacífico Compañía de Seguros y Reaseguros",
+  soatPoliza: "SOAT-2026-981245",
+  soatEstado: "ACTIVO / VIGENTE (APESEG)",
+  soatVehiculoFuga: false,
+  soatTopeLegal: 27500, // 5 UIT
+  soatConsumido: 0,
+  soatDisponible: 27500,
 
+  // Módulo 4: Médico y Tópicos
+  cie10Codigo: "R10.4",
+  cie10Descripcion: "Dolor abdominal no especificado",
+  medicoTratante: "Dr. Roberto Mendoza Silva (CMP 48215 / RNE 24108)",
+  kardexAdministrados: [],
+  destinoPostTopico: "observacion",
 
-  // Módulo 3
-  spo2: null, fc: null, pasSistolica: null, paDiastolica: null,
-  fr: null, temperatura: null, glucosa: null, glasgow: null, eva: 0,
-  antecedentes: false,
-  motivoConsulta: "",
-  prioridad: null, // número romano: "I", "II", "III", "IV", "V"
-  colorPrioridad: null,
+  // Módulo 5: Sala de Observación
+  horasObservacion: 6,
+  balanceIngresosMl: 1000,
+  balanceEgresosMl: 400,
+  balanceNetoMl: 600,
+  decisionPostObs: "alta",
 
+  // Módulo 6: Camas & Áreas Críticas
+  camaAsignada: "Obs-02 (Cama Observación Adultos)",
+  prioridadUci: 2,
+  desempateScore: 0,
+  boardingActivo: false,
 
-  // Módulo 4
-  camaAsignada: null,
-
-
-  // Factura
-  items_factura: [],
-
-
-  // Módulo 7
+  // Módulo 7: Egreso & Auditoría Legal
+  modalidadEgreso: "alta_medica",
+  bloqueoSinadef: false,
   rutaActual: 0,
-  estadoSalida: null,
-  firmante: null,
+  estadoSalida: "Alta Médica / Domicilio",
+  firmante: "Dr. Roberto Mendoza Silva — CMP 48215",
   firmaTiempo: null,
 
+  // Módulo 8: Facturación
+  items_factura: [],
 
   // Timestamps por módulo
   ts: {},
@@ -2686,7 +2723,7 @@ function imprimirAlertaNN() {
         <tr><td class="lbl">Historia Clínica Temporal:</td><td><strong style="color:#0284c7; font-size:1rem;">${STATE.historiaClinica || "HC-TEMP-EMG-001"}</strong></td></tr>
         <tr><td class="lbl">Ticket de Urgencia:</td><td><strong>${STATE.turno || 'T-NN-01'}</strong></td></tr>
         <tr><td class="lbl">Condición de Identidad:</td><td><strong style="color:#b91c1c;">NO IDENTIFICADO (NN)</strong></td></tr>
-        <tr><td class="lbl">Modalidad de Ingreso:</td><td>${STATE.modalidadIngreso || 'Ambulancia SAMU / Patrullero PNP / Transeúntes'}</td></tr>
+        <tr><td class="lbl">Modalidad de Ingreso:</td><td>${STATE.modalidadIngreso || 'Ambulancia / Patrullero PNP / Transeúntes'}</td></tr>
         <tr><td class="lbl">Prioridad Clínica Evaluada:</td><td>${STATE.prioridad ? `Prioridad ${STATE.prioridad} (${PRIORIDADES[STATE.prioridad].nombre})` : 'En evaluación clínica de triaje'}</td></tr>
         <tr><td class="lbl">Cama / Área Asignada:</td><td>${STATE.camaAsignada || 'Tópico de Emergencia / Shock Trauma'}</td></tr>
         <tr><td class="lbl">Servicio Social:</td><td>Notificación formal emitida simultáneamente</td></tr>
@@ -2862,17 +2899,17 @@ const RANGOS_BIOLOGICOS = {
     errId: "error_spo2_full"
   },
   fc: {
-    min: 20,
-    max: 260,
+    min: 0,
+    max: 280,
     nombre: "Frecuencia Cardíaca",
-    unidad: "bpm",
+    unidad: "lpm",
     elId: "fc_full",
     cardId: "card_fc",
     errId: "error_fc_full"
   },
   pas: {
-    min: 40,
-    max: 280,
+    min: 0,
+    max: 300,
     nombre: "PA Sistólica",
     unidad: "mmHg",
     elId: "pas_full",
@@ -2880,8 +2917,8 @@ const RANGOS_BIOLOGICOS = {
     errId: "error_pas_full"
   },
   pad: {
-    min: 20,
-    max: 160,
+    min: 0,
+    max: 200,
     nombre: "PA Diastólica",
     unidad: "mmHg",
     elId: "pad_full",
@@ -2889,8 +2926,8 @@ const RANGOS_BIOLOGICOS = {
     errId: "error_pad_full"
   },
   fr: {
-    min: 4,
-    max: 60,
+    min: 0,
+    max: 80,
     nombre: "Frecuencia Respiratoria",
     unidad: "rpm",
     elId: "fr_full",
@@ -2898,8 +2935,8 @@ const RANGOS_BIOLOGICOS = {
     errId: "error_fr_full"
   },
   temp: {
-    min: 32.0,
-    max: 43.0,
+    min: 25.0,
+    max: 45.0,
     nombre: "Temperatura Corporal",
     unidad: "°C",
     elId: "temp_full",
@@ -2907,8 +2944,8 @@ const RANGOS_BIOLOGICOS = {
     errId: "error_temp_full"
   },
   glucosa: {
-    min: 20,
-    max: 600,
+    min: 10,
+    max: 800,
     nombre: "Glucosa Capilar",
     unidad: "mg/dL",
     elId: "glucosa_full",
@@ -2937,54 +2974,53 @@ const RANGOS_BIOLOGICOS = {
 
 
 /**
- * Valida en tiempo real que ningún signo vital sobrepase los rangos biológicos.
- * Si algún valor está fuera de límites, lo resalta en rojo y bloquea el flujo.
+ * Validación Biológica de Dos Niveles (Normativa NTS N° 042-MINSA & Ley N° 27604)
+ * Nivel 1 — Error de Digitación (Bloqueante): Valores físicamente imposibles.
+ * Nivel 2 — Signos de Paro / Agonía (No Bloqueante): PAS=0, FC=0, FR=0, Glasgow=3 activa Código Rojo Shock Trauma.
  */
 function validarSignosVitalesEnVivo() {
   const errores = [];
   let primerElementoInvalido = null;
+  let esParoOAgonia = false;
 
-
-  // 1. Validar cada parámetro individual
+  // 1. Validar cada parámetro biológico
   for (const [clave, def] of Object.entries(RANGOS_BIOLOGICOS)) {
     const el = document.getElementById(def.elId);
     const card = document.getElementById(def.cardId);
     const errBox = document.getElementById(def.errId);
 
-
     if (!el) continue;
-
 
     const raw = String(el.value || "").trim();
     if (raw === "") {
-      // Campo opcional no ingresado: limpiar error
       el.classList.remove("is-invalid");
       if (card) card.classList.remove("has-error");
       if (errBox) { errBox.style.display = "none"; errBox.innerHTML = ""; }
       continue;
     }
 
-
     const val = parseFloat(raw.replace(",", "."));
-
-
     if (isNaN(val)) {
-      const msg = `${def.nombre}: Valor inválido (ingrese un número).`;
+      const msg = `${def.nombre}: Ingrese un valor numérico válido.`;
       marcarCampoError(el, card, errBox, msg);
       errores.push(msg);
       if (!primerElementoInvalido) primerElementoInvalido = el;
       continue;
     }
 
-
+    // Nivel 1: Error de digitación física
     if (val < def.min || val > def.max) {
-      const msg = `${def.nombre} = ${val} ${def.unidad} fuera de rango biológico (${def.min} a ${def.max} ${def.unidad}).`;
+      const msg = `${def.nombre} = ${val} ${def.unidad} fuera del límite biológico posible (${def.min} a ${def.max} ${def.unidad}).`;
       marcarCampoError(el, card, errBox, msg);
       errores.push(msg);
       if (!primerElementoInvalido) primerElementoInvalido = el;
       continue;
     }
 
+    // Nivel 2: Detección de Paro Cardiorrespiratorio o Inestabilidad Extrema
+    if ((clave === "fc" && val === 0) || (clave === "pas" && val === 0) || (clave === "fr" && val === 0) || (clave === "glasgow" && val === 3)) {
+      esParoOAgonia = true;
+    }
 
     // Parámetro correcto
     el.classList.remove("is-invalid");
@@ -2992,20 +3028,18 @@ function validarSignosVitalesEnVivo() {
     if (errBox) { errBox.style.display = "none"; errBox.innerHTML = ""; }
   }
 
-
-  // 2. Validación cruzada de Presión Arterial: PAD < PAS
+  // Validación de Presión Arterial: PAD < PAS
   const elPas = document.getElementById("pas_full");
   const elPad = document.getElementById("pad_full");
   const cardPad = document.getElementById("card_pad");
   const errPad = document.getElementById("error_pad_full");
 
-
   if (elPas && elPad && elPas.value.trim() !== "" && elPad.value.trim() !== "") {
     const pas = parseFloat(elPas.value.trim().replace(",", "."));
     const pad = parseFloat(elPad.value.trim().replace(",", "."));
-    if (!isNaN(pas) && !isNaN(pad) && pas >= 40 && pas <= 280 && pad >= 20 && pad <= 160) {
+    if (!isNaN(pas) && !isNaN(pad) && pas > 0 && pad > 0) {
       if (pad >= pas) {
-        const msg = `PA Diastólica (${pad} mmHg) no puede ser mayor o igual a la Sistólica (${pas} mmHg).`;
+        const msg = `PA Diastólica (${pad} mmHg) no puede ser mayor o igual a Sistólica (${pas} mmHg).`;
         marcarCampoError(elPad, cardPad, errPad, msg);
         errores.push(msg);
         if (!primerElementoInvalido) primerElementoInvalido = elPad;
@@ -3013,267 +3047,231 @@ function validarSignosVitalesEnVivo() {
     }
   }
 
+  // Gestión de Alerta Nivel 2: Paro Cardiorrespiratorio
+  const bannerParo = document.getElementById("banner_paro_agonia");
+  if (esParoOAgonia) {
+    if (bannerParo) bannerParo.style.display = "block";
+    STATE.panicoShockTrauma = true;
+    STATE.prioridad = "I";
+    STATE.colorPrioridad = "ROJO";
+    const chipLive = document.getElementById("chipPrioLive");
+    if (chipLive) {
+      chipLive.textContent = "P-I ROJO (PARO / SHOCK TRAUMA)";
+      chipLive.className = "top-prio-chip prio-I";
+    }
+  } else {
+    if (bannerParo) bannerParo.style.display = "none";
+  }
 
-  // 3. Actualizar UI de banner superior y botón de evaluación
+  // Banner Nivel 1 de Error de Digitación
   const banner = document.getElementById("banner_error_vitales");
   const bannerDetalles = document.getElementById("banner_error_vitales_detalles");
   const btnEval = document.getElementById("btn_evaluar_full");
 
-
   const esValido = (errores.length === 0);
-
 
   if (!esValido) {
     if (banner) {
       banner.classList.add("visible");
       if (bannerDetalles) {
         bannerDetalles.innerHTML = `<ul style="margin:4px 0 0 16px;padding:0;color:#991b1b;font-weight:700;">` +
-          errores.map(e => `<li>⚠️ ${e}</li>`).join("") + `</ul>`;
+          errores.map(e => `<li>${e}</li>`).join("") + `</ul>`;
       }
     }
     if (btnEval) {
-      btnEval.classList.add("blocked-by-error");
-      btnEval.innerHTML = "⛔ Triaje Bloqueado (Valores Fuera de Rango)";
+      btnEval.disabled = true;
+      btnEval.style.opacity = "0.5";
+      btnEval.title = "Corrija los valores biológicamente imposibles antes de evaluar.";
     }
   } else {
-    if (banner) banner.classList.remove("visible");
+    if (banner) {
+      banner.classList.remove("visible");
+      if (bannerDetalles) bannerDetalles.innerHTML = "";
+    }
     if (btnEval) {
-      btnEval.classList.remove("blocked-by-error");
-      btnEval.innerHTML = "⚡ Evaluar Triaje Completo";
+      btnEval.disabled = false;
+      btnEval.style.opacity = "1";
+      btnEval.title = "Evaluar y clasificar según NTS N° 042-MINSA";
     }
   }
 
-
-  return { esValido, errores, primerCampoInvalido: primerElementoInvalido };
+  return { esValido, errores, esParoOAgonia, primerElementoInvalido };
 }
-
 
 function marcarCampoError(el, card, errBox, mensaje) {
   if (el) el.classList.add("is-invalid");
   if (card) card.classList.add("has-error");
   if (errBox) {
-    errBox.style.display = "flex";
-    errBox.innerHTML = `<span>⚠️</span><span>${mensaje}</span>`;
+    errBox.style.display = "block";
+    errBox.innerHTML = `⚠️ ${mensaje}`;
   }
 }
-
 
 function mostrarErrorBiologicoEnPrioridad(errores) {
   const pd = document.getElementById("prioridad_display");
   if (!pd) return;
-  pd.className = "prioridad-display visible";
-  pd.style.background = "#fff1f2";
-  pd.style.borderColor = "#ef4444";
-  pd.style.borderWidth = "3px";
-
-
-  document.getElementById("prio_numero").textContent = "❌";
-  document.getElementById("prio_numero").className = "prioridad-numero";
-  document.getElementById("prio_numero").style.color = "#dc2626";
-
-
-  document.getElementById("prio_color_name").textContent = "PARÁMETRO INVÁLIDO";
-  document.getElementById("prio_color_name").style.color = "#dc2626";
-
-
-  document.getElementById("prio_tipo").textContent = "⛔ ERROR DE VALIDACIÓN BIOLÓGICA";
-  document.getElementById("prio_tipo").style.color = "#dc2626";
-
-
-  document.getElementById("prio_desc").innerHTML = `
-    <strong>El flujo de triaje está bloqueado preventivamente por seguridad clínica.</strong><br>
-    Se ingresaron valores fuera del rango fisiológico compatible con la vida o de medición de instrumentos:<br>
-    <ul style="margin: 6px 0 0 18px; padding: 0; color: #991b1b; font-size: 0.85rem;">
-      ${errores.map(e => `<li>${e}</li>`).join("")}
-    </ul>
-    <span style="display:inline-block; margin-top:6px; font-weight:700; color:#b91c1c;">
-      Corrija los campos en rojo para desbloquear la asignación de prioridad, camas y facturación.
-    </span>
+  pd.style.background = "#fee2e2";
+  pd.style.borderColor = "#dc2626";
+  pd.innerHTML = `
+    <div style="color:#991b1b;font-weight:800;font-size:16px;">
+      ⛔ EVALUACIÓN BLOQUEADA: DIGITACIÓN BIOLÓGICAMENTE IMPOSIBLE
+    </div>
+    <div style="color:#7f1d1d;font-size:13px;margin-top:6px;text-align:left;">
+      Corrija los campos señalados en rojo para habilitar el algoritmo de Triaje:
+      <ul style="margin:4px 0 0 16px;">
+        ${errores.map(e => `<li>${e}</li>`).join("")}
+      </ul>
+    </div>
   `;
-
-
-  document.getElementById("prio_destino").textContent = "⛔ FLUJO HOSPITALARIO DETENIDO";
-  document.getElementById("prio_destino").style.color = "#dc2626";
-
-
-  const ley = document.getElementById("ley27604_banner");
-  if (ley) ley.classList.remove("visible");
-
-
-  STATE.prioridad = null;
-  STATE.colorPrioridad = "Inválido";
 }
-
 
 function cargarPresetVitales(tipo) {
-  if (tipo === "normal") {
-    document.getElementById("spo2_full").value = "98";
-    document.getElementById("fc_full").value = "76";
-    document.getElementById("pas_full").value = "120";
-    document.getElementById("pad_full").value = "80";
-    document.getElementById("fr_full").value = "16";
-    document.getElementById("temp_full").value = "36.6";
-    document.getElementById("glucosa_full").value = "95";
-    document.getElementById("glasgow_full").value = "15";
-    syncEva(1);
-    document.getElementById("motivo_full").value = "Cefalea leve matutina sin signos de alarma";
-    document.getElementById("ant_cardio").checked = false;
-    document.getElementById("ant_resp").checked = false;
-    document.getElementById("ant_diab").checked = false;
-    document.getElementById("ant_neuro").checked = false;
-  } else if (tipo === "critico") {
-    document.getElementById("spo2_full").value = "86";
-    document.getElementById("fc_full").value = "142";
-    document.getElementById("pas_full").value = "75";
-    document.getElementById("pad_full").value = "45";
-    document.getElementById("fr_full").value = "32";
-    document.getElementById("temp_full").value = "39.8";
-    document.getElementById("glucosa_full").value = "48";
-    document.getElementById("glasgow_full").value = "10";
-    syncEva(9);
-    document.getElementById("motivo_full").value = "Insuficiencia respiratoria aguda y shock séptico";
-    document.getElementById("ant_cardio").checked = true;
-    document.getElementById("ant_resp").checked = true;
-  } else if (tipo === "invalido") {
-    // Caso de prueba docente para demostrar la detección de error biológico y bloqueo de flujo
-    document.getElementById("spo2_full").value = "130";  // > 100%
-    document.getElementById("fc_full").value = "350";    // > 260 bpm
-    document.getElementById("pas_full").value = "110";
-    document.getElementById("pad_full").value = "140";   // PAD > PAS
-    document.getElementById("fr_full").value = "85";     // > 60 rpm
-    document.getElementById("temp_full").value = "48.5"; // > 43.0 °C
-    document.getElementById("glucosa_full").value = "850"; // > 600 mg/dL
-    document.getElementById("glasgow_full").value = "20"; // > 15 pts
-    syncEva(10);
-    document.getElementById("motivo_full").value = "Simulación de artefacto y parámetros fuera de límites biológicos";
+  const presets = {
+    normal: { spo2: 98, fc: 72, pas: 120, pad: 80, fr: 16, temp: 36.6, glucosa: 95, glasgow: 15, eva: 0 },
+    critico: { spo2: 84, fc: 142, pas: 75, pad: 45, fr: 34, temp: 39.8, glucosa: 48, glasgow: 8, eva: 9 },
+    urgente: { spo2: 93, fc: 108, pas: 165, pad: 98, fr: 24, temp: 38.6, glucosa: 190, glasgow: 14, eva: 7 },
+    paro: { spo2: 45, fc: 0, pas: 0, pad: 0, fr: 0, temp: 35.0, glucosa: 70, glasgow: 3, eva: 0 }
+  };
+  const d = presets[tipo] || presets.normal;
+  const map = {
+    spo2_full: d.spo2, fc_full: d.fc, pas_full: d.pas, pad_full: d.pad,
+    fr_full: d.fr, temp_full: d.temp, glucosa_full: d.glucosa, glasgow_full: d.glasgow, eva_full: d.eva
+  };
+  for (const [id, val] of Object.entries(map)) {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
   }
+  actualizarEVA(d.eva);
+  validarSignosVitalesEnVivo();
   recalcularPrioridad();
 }
 
-
-function syncEva(val, fromNum = false) {
-  document.getElementById("eva_range").value = val;
-  document.getElementById("eva_full").value = val;
-  const labels = ["Sin dolor", "Leve", "Leve", "Leve", "Moderado", "Moderado",
-    "Moderado", "Severo", "Severo", "Severo", "Máximo"];
-  document.getElementById("eva_label").textContent = labels[Math.round(val)] || "";
-  STATE.eva = parseInt(val) || 0;
-  recalcularPrioridad();
+function syncEva(val) {
+  actualizarEVA(val);
 }
-
 
 function recalcularPrioridad() {
-  // 1. Validar estrictamente los signos vitales antes de cualquier cálculo clínico
   const validacion = validarSignosVitalesEnVivo();
   if (!validacion.esValido) {
     mostrarErrorBiologicoEnPrioridad(validacion.errores);
     return;
   }
 
+  // Si se activó botón de pánico o signo de paro
+  if (STATE.panicoShockTrauma || validacion.esParoOAgonia) {
+    STATE.prioridad = "I";
+    STATE.colorPrioridad = PRIORIDADES["I"].nombre;
+    mostrarPrioridad("I");
+    renderizarRutaClinica("I");
+    const chipLive = document.getElementById("chipPrioLive");
+    if (chipLive) {
+      chipLive.textContent = "P-I ROJO (PARO / SHOCK TRAUMA)";
+      chipLive.className = "top-prio-chip prio-I";
+    }
+    return;
+  }
 
   // Leer valores
-  const spo2 = parseFloat(document.getElementById("spo2_full").value) || null;
-  const fc = parseFloat(document.getElementById("fc_full").value) || null;
-  const pas = parseFloat(document.getElementById("pas_full").value) || null;
-  const pad = parseFloat(document.getElementById("pad_full").value) || null;
-  const fr = parseFloat(document.getElementById("fr_full").value) || null;
-  const temp = parseFloat(document.getElementById("temp_full").value) || null;
-  const glucosa = parseFloat(document.getElementById("glucosa_full").value) || null;
-  const glasgow = parseFloat(document.getElementById("glasgow_full").value) || null;
-  const eva = parseInt(document.getElementById("eva_full").value) || 0;
-  const motivo = document.getElementById("motivo_full").value.toLowerCase();
+  const spo2 = parseFloat(document.getElementById("spo2_full")?.value) || null;
+  const fc = parseFloat(document.getElementById("fc_full")?.value) || null;
+  const pas = parseFloat(document.getElementById("pas_full")?.value) || null;
+  const pad = parseFloat(document.getElementById("pad_full")?.value) || null;
+  const fr = parseFloat(document.getElementById("fr_full")?.value) || null;
+  const temp = parseFloat(document.getElementById("temp_full")?.value) || null;
+  const glucosa = parseFloat(document.getElementById("glucosa_full")?.value) || null;
+  const glasgow = parseFloat(document.getElementById("glasgow_full")?.value) || null;
+  const eva = parseInt(document.getElementById("eva_full")?.value) || 0;
+  const motivo = (document.getElementById("motivo_full")?.value || "").toLowerCase();
 
-
-  const antCardio = document.getElementById("ant_cardio").checked;
-  const antResp = document.getElementById("ant_resp").checked;
-  const antDiab = document.getElementById("ant_diab").checked;
-  const antNeuro = document.getElementById("ant_neuro").checked;
+  const antCardio = document.getElementById("ant_cardio")?.checked || false;
+  const antResp = document.getElementById("ant_resp")?.checked || false;
+  const antDiab = document.getElementById("ant_diab")?.checked || false;
+  const antNeuro = document.getElementById("ant_neuro")?.checked || false;
   const antecedentes = antCardio || antResp || antDiab || antNeuro;
-
 
   STATE.spo2 = spo2; STATE.fc = fc; STATE.pasSistolica = pas;
   STATE.paDiastolica = pad; STATE.fr = fr; STATE.temperatura = temp;
   STATE.glucosa = glucosa; STATE.glasgow = glasgow; STATE.eva = eva;
   STATE.antecedentes = antecedentes;
-  STATE.motivoConsulta = document.getElementById("motivo_full").value;
+  STATE.motivoConsulta = document.getElementById("motivo_full")?.value || "";
 
-
-  // Determinar prioridad (I → V en orden)
+  // Determinar Prioridad I a V según NTS N° 042-MINSA
   let prio = null;
-
-
   const tieneDatos = spo2 !== null || fc !== null || pas !== null || glasgow !== null;
 
+  // Criterios Prioridad I — ROJO (Emergencia Vital con Riesgo Inminente)
+  const esCritico = (
+    (spo2 !== null && spo2 < 92) ||
+    (fc !== null && (fc >= 130 || fc < 40)) ||
+    (pas !== null && pas < 90) ||
+    (pas !== null && pas >= 160 && (motivo.includes("torác") || motivo.includes("pecho") || STATE.codigoInfarto)) ||
+    (glasgow !== null && glasgow <= 12) ||
+    (glucosa !== null && glucosa < 54) ||
+    (glucosa !== null && glucosa > 400 && glasgow !== null && glasgow < 15) ||
+    STATE.codigoInfarto || STATE.codigoIctus || STATE.codigoSepsis ||
+    (STATE.esGestante && (STATE.claveObstetrica === "roja" || STATE.claveObstetrica === "azul" || STATE.claveObstetrica === "amarilla")) ||
+    (antecedentes && spo2 !== null && spo2 < 94) ||
+    (antecedentes && fc !== null && fc > 110)
+  );
+  if (esCritico) { prio = "I"; }
 
-  if (tieneDatos || antecedentes) {
-    // PRIORIDAD I — ROJO (Emergencia Vital)
-    const esCritico = (
-      (spo2 !== null && spo2 < 92) ||
-      (fc !== null && (fc >= 130 || fc < 40)) ||
-      (pas !== null && pas < 90) ||
-      (pas !== null && pas >= 160 && (motivo.includes("torác") || motivo.includes("pecho"))) ||
-      (glasgow !== null && glasgow <= 12) ||
-      (glucosa !== null && glucosa < 50) ||
-      (antecedentes && spo2 !== null && spo2 < 94) ||
-      (antecedentes && fc !== null && fc > 110)
+  // Criterios Prioridad II — NARANJA (Urgencia Mayor)
+  if (!prio) {
+    const esUrgente = (
+      eva >= 8 ||
+      (fr !== null && fr > 25) ||
+      (temp !== null && temp > 39.5) ||
+      (spo2 !== null && spo2 >= 92 && spo2 < 95) ||
+      (pas !== null && pas >= 160) ||
+      (glucosa !== null && glucosa < 70) ||
+      (glucosa !== null && glucosa > 300)
     );
-    if (esCritico) { prio = "I"; }
-
-
-    // PRIORIDAD II — NARANJA (Urgencia Mayor)
-    if (!prio) {
-      const esUrgente = (
-        eva >= 8 ||
-        (fr !== null && fr > 25) ||
-        (temp !== null && temp > 39.5) ||
-        (spo2 !== null && spo2 >= 92 && spo2 < 95) ||
-        (pas !== null && pas >= 160) ||
-        (glucosa !== null && glucosa < 70)
-      );
-      if (esUrgente) { prio = "II"; }
-    }
-
-
-    // PRIORIDAD III — AMARILLO (Urgencia Menor / Compatible con Caso 6)
-    if (!prio) {
-      const esModerado = (
-        (spo2 !== null && spo2 >= 92) ||
-        antecedentes ||
-        (eva >= 4 && eva < 8) ||
-        (motivo.includes("dolor") && motivo.length > 5)
-      );
-      if (esModerado) { prio = "III"; }
-    }
-
-
-    // PRIORIDAD IV — VERDE (Urgencia Leve)
-    if (!prio) {
-      const esLeve = (
-        (spo2 !== null && spo2 >= 97) ||
-        eva <= 4
-      );
-      if (esLeve) { prio = "IV"; }
-    }
+    if (esUrgente) { prio = "II"; }
   }
 
+  // Criterios Prioridad III — AMARILLO (Urgencia Menor)
+  if (!prio) {
+    const esModerado = (
+      (spo2 !== null && spo2 >= 92) ||
+      antecedentes ||
+      (eva >= 4 && eva < 8) ||
+      (motivo.includes("dolor") && motivo.length > 5)
+    );
+    if (esModerado) { prio = "III"; }
+  }
 
-  // Si no hay datos suficientes → PRIORIDAD V
+  // Criterios Prioridad IV — VERDE (Urgencia Leve)
+  if (!prio) {
+    const esLeve = (
+      (spo2 !== null && spo2 >= 97) ||
+      eva <= 3
+    );
+    if (esLeve) { prio = "IV"; }
+  }
+
   if (!prio) { prio = tieneDatos ? "IV" : "V"; }
-
-
-  // Si hay datos básicos (spo2 y antecedentes) pero no hay más → mantener lógica base P1/P3
   if (!tieneDatos && antecedentes) { prio = "I"; }
-
 
   STATE.prioridad = prio;
   STATE.colorPrioridad = PRIORIDADES[prio].nombre;
 
-
   mostrarPrioridad(prio);
   renderizarRutaClinica(prio);
   registrarTimestamp("M3_triage");
-}
 
+  // Actualizar Live Chip en Top Steps Navbar
+  const chipLive = document.getElementById("chipPrioLive");
+  if (chipLive) {
+    const nombres = { "I": "P-I ROJO", "II": "P-II NARANJA", "III": "P-III AMARILLO", "IV": "P-IV VERDE", "V": "P-V AZUL" };
+    chipLive.textContent = nombres[prio] || `P-${prio}`;
+    chipLive.className = `top-prio-chip prio-${prio}`;
+  }
+
+  // Actualizar puntaje ABCDE de Módulo 6
+  calcularPuntajePrelacionABCDE();
+  // Actualizar liquidación financiera de Módulo 8
+  actualizarFactura();
+}
 
 function mostrarPrioridad(prio) {
   const pd = document.getElementById("prioridad_display");
@@ -3864,24 +3862,15 @@ function registrarFacturaItem(servicio, costo, categoria = "General") {
 // ---------------------------------------------------------------------------
 function calcularLiquidacionSeguro() {
   const seguro = String(STATE.tipoSeguro || "").trim().toLowerCase();
-  const esPublico = seguro.includes("essalud") || seguro.includes("sis") || seguro.includes("soat") || seguro.includes("minsa");
-  const esEpsPrivado = seguro.includes("eps") || seguro.includes("privad") || seguro.includes("rimac") || 
-                       seguro.includes("pacifico") || seguro.includes("pacífico") || seguro.includes("sanitas") || 
-                       seguro.includes("mapfre") || seguro.includes("positiva") || seguro.includes("clinica");
-  const esParticular = !esPublico && !esEpsPrivado;
-
-
-  // Clasificación médica: Emergencia (P-I o P-II) vs Urgencia (P-III, P-IV, P-V)
-  const esEmergencia = (STATE.prioridad === "I" || STATE.prioridad === "II");
-  const esUrgencia = !esEmergencia; // P-III, IV, V o pendiente
-
-
+  const esAccidente = STATE.esAccidenteTransito;
+  const esFuga = STATE.soatVehiculoFuga;
   const totalBruto = STATE.items_factura.reduce((s, i) => s + (parseFloat(i.costo) || 0), 0);
   const subtotalFarmacia = STATE.items_factura
     .filter(i => (i.categoria || "").toLowerCase().includes("farmacia"))
     .reduce((s, i) => s + (parseFloat(i.costo) || 0), 0);
   const subtotalServicios = Math.max(0, totalBruto - subtotalFarmacia);
-
+  const esEmergencia = (STATE.prioridad === "I" || STATE.prioridad === "II");
+  const esUrgencia = !esEmergencia;
 
   let lugarAtencion = "Hospital Regional Docente UPP (Red Asistencial Pública / MINSA / EsSalud)";
   let coberturaSeguro = 0;
@@ -3890,48 +3879,94 @@ function calcularLiquidacionSeguro() {
   let totalPaciente = 0;
   let motivoLiquidacion = "";
   let etiquetaRegimen = "";
+  let coberturaSoatAplicada = 0;
+  let saldoSoatRestante = STATE.soatTopeLegal;
 
-
-  if (esPublico) {
-    // REGLA 1: EsSalud o SIS -> EL COBRO ES 0 EN TODO (medicina, cama, laboratorio, imágenes, etc.)
-    lugarAtencion = "Hospital Regional Docente UPP (Red Pública / MINSA / EsSalud)";
+  // ESCENARIO 1: Accidente de Tránsito con SOAT Activo (Placa identificada)
+  if (esAccidente && !esFuga) {
+    lugarAtencion = "Servicio de Emergencia Especializado SOAT — D.S. N° 024-2002-MTC";
+    etiquetaRegimen = "🚗 SOAT Ley D.S. N° 024-2002-MTC (Tope 5 UIT = S/. 27,500)";
+    const topeSoat = STATE.soatTopeLegal; // S/. 27,500.00
+    if (totalBruto <= topeSoat) {
+      coberturaSeguro = totalBruto;
+      totalPaciente = 0.00; // PAGO CERO TOTAL
+      coberturaSoatAplicada = totalBruto;
+      saldoSoatRestante = topeSoat - totalBruto;
+      motivoLiquidacion = `COBERTURA TOTAL POR SOAT ACTIVO (D.S. N° 024-2002-MTC). Póliza ${STATE.soatPoliza} de ${STATE.soatAseguradora} (Placa: ${STATE.soatPlaca || 'Identificada'}). Total facturado S/. ${totalBruto.toFixed(2)} cubierto al 100% dentro del tope legal de 5 UIT (S/. 27,500.00). Saldo SOAT remanente disponible: S/. ${saldoSoatRestante.toFixed(2)}. Paciente paga: S/. 0.00.`;
+    } else {
+      coberturaSeguro = topeSoat;
+      totalPaciente = totalBruto - topeSoat;
+      coberturaSoatAplicada = topeSoat;
+      saldoSoatRestante = 0.00;
+      motivoLiquidacion = `TOPE SOAT AGOTADO (5 UIT = S/. 27,500.00). El SOAT cubrió el límite legal máximo de S/. 27,500.00. El excedente acumulado de S/. ${totalPaciente.toFixed(2)} pasa a responsabilidad del paciente o seguro complementario.`;
+    }
+  }
+  // ESCENARIO 2: Accidente de Tránsito con Chofer en Fuga (Sin Placa)
+  else if (esAccidente && esFuga) {
+    lugarAtencion = "Servicio de Emergencia — Accidente de Tránsito Chofer en Fuga (Art. 31 D.S. 024-2002-MTC)";
+    etiquetaRegimen = "🚨 Chofer en Fuga (Art. 31 D.S. 024-2002-MTC / Cobro Particular)";
+    coberturaSeguro = 0.00;
+    coaseguroFarmacia = subtotalFarmacia;
+    copagoUrgencia = 0.00;
+    totalPaciente = totalBruto; // Paciente paga el 100%
+    motivoLiquidacion = "VEHÍCULO EN FUGA / NO IDENTIFICADO (Art. 31 D.S. N° 024-2002-MTC). Al no existir placa o póliza identificada en el punto de atención, no aplica débito directo a aseguradora privada. La totalidad de la cuenta es asumida temporalmente por el paciente o sus familiares, con expedición de comprobante y peritaje oficial para su posterior reembolso ante el Fondo de Compensación del SOAT (FONSAT/MTC).";
+  }
+  // ESCENARIO 3: MINSA con SIS Activo
+  else if (seguro.includes("sis") || seguro.includes("minsa")) {
+    lugarAtencion = "Hospital Regional Docente UPP (Red Asistencial MINSA)";
+    etiquetaRegimen = "SIS Gratuito Integral (MINSA / FUA Ley N° 27604)";
     coberturaSeguro = totalBruto;
     coaseguroFarmacia = 0.00;
     copagoUrgencia = 0.00;
     totalPaciente = 0.00; // PAGO CERO TOTAL
-    etiquetaRegimen = seguro.includes("essalud") ? "EsSalud (Asegurado Regular)" : (seguro.includes("soat") ? "SOAT (Fondo de Accidentes)" : "SIS Gratuito (MINSA)");
-    motivoLiquidacion = "COBERTURA TOTAL INTEGRAL 100% (PAGO CERO). Por seguro estatal activo (" + (seguro.includes("essalud") ? "EsSalud" : "SIS") + "), el cobro es S/. 0.00 en todos los rubros: medicinas, cama, laboratorio, imágenes y procedimientos. El seguro asume la totalidad de la cuenta.";
-  } else if (esEpsPrivado) {
-    // REGLA 2: Seguro Privado o EPS
+    motivoLiquidacion = "COBERTURA TOTAL INTEGRAL 100% (SIS - PAGO CERO). Paciente acreditado en SIS Gratuito. Todos los conceptos (consulta, procedimientos, cama, farmacia, imágenes y laboratorio) están 100% financiados por el Estado mediante Formato Único de Atención (FUA). Paciente paga: S/. 0.00.";
+  }
+  // ESCENARIO 4: EsSalud con EsSalud Activo
+  else if (seguro.includes("essalud")) {
+    lugarAtencion = "Red Prestacional EsSalud (Seguro Social de Salud del Perú)";
+    etiquetaRegimen = "EsSalud (Asegurado Titular / Derechohabiente ESSI)";
+    coberturaSeguro = totalBruto;
+    coaseguroFarmacia = 0.00;
+    copagoUrgencia = 0.00;
+    totalPaciente = 0.00; // PAGO CERO TOTAL
+    motivoLiquidacion = "COBERTURA TOTAL INTEGRAL 100% (EsSalud - PAGO CERO). Paciente cuenta con acreditación regular vigente en el sistema ESSI de EsSalud. La institución asume la totalidad de la atención de emergencia, estancia, medicamentos e insumos. Paciente paga: S/. 0.00.";
+  }
+  // ESCENARIO 5: Seguro Privado o EPS
+  else if (seguro.includes("eps") || seguro.includes("privad") || seguro.includes("rimac") || 
+           seguro.includes("pacifico") || seguro.includes("pacífico") || seguro.includes("sanitas") || 
+           seguro.includes("mapfre") || seguro.includes("positiva")) {
     lugarAtencion = "Clínica Privada Especializada (Red Prestacional Privada EPS)";
     if (esEmergencia) {
-      // 2A: Si es Emergencia (P-I o P-II) -> Cobro 0 en atención/cama/lab, medicina paga solo el 10% del total.
+      // 5A: Emergencia (P-I o P-II): Cobro 0 en cama/lab/servicios, Farmacia paga 10% coaseguro
       copagoUrgencia = 0.00;
-      coaseguroFarmacia = subtotalFarmacia * 0.10; // 10% del total de medicina
+      coaseguroFarmacia = subtotalFarmacia * 0.10;
       coberturaSeguro = subtotalServicios + (subtotalFarmacia * 0.90);
-      totalPaciente = coaseguroFarmacia; // Solo paga el 10% de medicina
+      totalPaciente = coaseguroFarmacia;
       etiquetaRegimen = "Clínica Privada EPS · Emergencia Médica (P-I / P-II)";
       motivoLiquidacion = "EMERGENCIA MÉDICA EN CLÍNICA PRIVADA EPS (P-I / P-II). El cobro por atención clínica, cama, procedimientos y exámenes de laboratorio/imágenes es S/. 0.00 (cubierto por la aseguradora). En la receta médica de farmacia, el paciente asume únicamente el 10% del total (coaseguro).";
     } else {
-      // 2B: Si se cataloga como Urgencia (P-III, IV, V) -> Se cobra como consulta 80 soles y la medicina solo paga el 10% del valor total.
-      copagoUrgencia = 80.00; // Consulta S/. 80.00 soles
-      coaseguroFarmacia = subtotalFarmacia * 0.10; // 10% del total de medicina
-      totalPaciente = copagoUrgencia + coaseguroFarmacia; // 80 soles + 10% medicina
+      // 5B: Urgencia (P-III, IV, V): Consulta S/. 80.00 + Farmacia paga 10% coaseguro
+      copagoUrgencia = 80.00;
+      coaseguroFarmacia = subtotalFarmacia * 0.10;
+      totalPaciente = copagoUrgencia + coaseguroFarmacia;
       coberturaSeguro = Math.max(0, subtotalServicios + (subtotalFarmacia * 0.90) - copagoUrgencia);
       etiquetaRegimen = "Clínica Privada EPS · Consulta de Urgencia (P-III / IV / V)";
       motivoLiquidacion = "ATENCIÓN DE URGENCIA EN CLÍNICA PRIVADA EPS. Al ser catalogado como urgencia, aplica un cobro fijo de consulta de S/. 80.00 soles. En la receta médica de medicamentos, el paciente asume únicamente el 10% del valor total (coaseguro). Exámenes, procedimientos y cama están cubiertos por EPS.";
     }
-  } else {
-    // REGLA 3: Sin seguro (Particular) -> Paga todo lo facturado.
+  }
+  // ESCENARIO 6: Sin Cobertura / Particular
+  else {
     lugarAtencion = "Hospital Regional Docente UPP — Atención Particular";
+    etiquetaRegimen = "Particular (Sin Cobertura Activa)";
     coberturaSeguro = 0.00;
     coaseguroFarmacia = subtotalFarmacia;
     copagoUrgencia = 0.00;
-    totalPaciente = totalBruto; // PAGA TODO LO FACTURADO
-    etiquetaRegimen = "Particular (Sin Seguro Activo)";
-    motivoLiquidacion = "PACIENTE PARTICULAR / SIN SEGURO. No cuenta con cobertura aseguradora activa. El paciente asume el 100% de todo lo facturado (consulta, cama, exámenes de diagnóstico y medicamentos).";
+    totalPaciente = totalBruto;
+    motivoLiquidacion = "PACIENTE PARTICULAR / SIN SEGURO ACTIVO. No cuenta con cobertura activa en este establecimiento. El paciente asume el 100% de todo lo facturado (consulta, cama, exámenes de diagnóstico y medicamentos).";
   }
 
+  STATE.soatConsumido = coberturaSoatAplicada;
+  STATE.soatDisponible = saldoSoatRestante;
 
   return {
     lugarAtencion,
@@ -3944,154 +3979,162 @@ function calcularLiquidacionSeguro() {
     totalPaciente,
     motivoLiquidacion,
     etiquetaRegimen,
-    esEpsPrivado,
-    esPublico,
-    esParticular,
     esEmergencia,
-    esUrgencia
+    esUrgencia,
+    coberturaSoatAplicada,
+    saldoSoatRestante
   };
 }
-
-
-function confirmarFarmacia() {
-  const checks = document.querySelectorAll("#farmaciaGrid input:checked");
-  if (checks.length === 0) {
-    alert("⚠️ Por favor seleccione al menos un medicamento del catálogo para despachar.");
-    return;
-  }
-  let itemsAgregados = 0;
-  checks.forEach(ch => {
-    const nom = ch.getAttribute("data-nombre");
-    const costo = parseFloat(ch.getAttribute("data-costo")) || 0;
-    registrarFacturaItem(nom, costo, "Farmacia");
-    itemsAgregados++;
-  });
-  alert(`✅ ${itemsAgregados} medicamento(s) confirmado(s) por el Servicio de Farmacia y cargado(s) formalmente a la cuenta del paciente.`);
-  registrarTimestamp("M6_farmacia");
-  avanzarRuta(1);
-}
-
 
 function actualizarFactura() {
   const container = document.getElementById("factura_items");
   const totalEl = document.getElementById("factura_total_num");
   const miniEl = document.getElementById("factura_total_mini");
   const leyBanner = document.getElementById("factura_ley27604");
-  if (!container) return;
-
 
   const liq = calcularLiquidacionSeguro();
 
-
-  // Actualizar indicador mini en la cabecera superior
-  if (miniEl) {
-    if (liq.totalPaciente === 0) {
-      miniEl.innerHTML = `<span style="color:#22c55e;font-weight:900;">0.00 (PAGO CERO)</span>`;
-    } else {
-      miniEl.innerHTML = `<span style="color:#38bdf8;font-weight:900;">S/. ${liq.totalPaciente.toFixed(2)}</span>`;
-    }
+  // Actualizar acumulador en Top Steps Navbar
+  const navMontoEl = document.getElementById("navFacturaMonto");
+  if (navMontoEl) {
+    navMontoEl.textContent = `S/. ${liq.totalPaciente.toFixed(2)}`;
   }
 
+  // Actualizar medidor SOAT
+  actualizarMedidorSoat(liq);
+
+  if (!container) return;
 
   if (STATE.items_factura.length === 0) {
     container.innerHTML = `
-      <div style="font-size:0.75rem;color:#0284c7;font-weight:700;margin-bottom:4px;">🏥 ${liq.lugarAtencion}</div>
-      <div style="text-align:center;color:#64748b;font-size:0.8rem;padding:12px 0;">Sin servicios registrados aún en el episodio.</div>
+      <div style="text-align:center;padding:32px 16px;color:#94a3b8;">
+        <span style="font-size:36px;display:block;margin-bottom:8px;">🧾</span>
+        <strong>Sin cargos clínicos activos en la cuenta.</strong>
+        <p style="font-size:12px;margin-top:4px;">Los medicamentos administrados en Kardex y procedimientos se liquidarán acumulativamente aquí.</p>
+      </div>
     `;
-    if (totalEl) {
-      totalEl.innerHTML = liq.totalPaciente === 0
-        ? `<span style="color:#16a34a;font-weight:900;">S/. 0.00 (PAGO CERO ASUMIDO POR SEGURO)</span>`
-        : `<span style="color:#0284c7;font-weight:900;">S/. 0.00</span>`;
+    if (totalEl) totalEl.textContent = "0.00";
+    if (miniEl) miniEl.textContent = "S/. 0.00";
+    return;
+  }
+
+  // Renderizar items facturados
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;">
+    <thead>
+      <tr style="background:#f1f5f9;color:#475569;border-bottom:2px solid #cbd5e1;">
+        <th style="padding:10px 12px;">Concepto Asistencial</th>
+        <th style="padding:10px 12px;width:120px;">Servicio</th>
+        <th style="padding:10px 12px;width:90px;text-align:right;">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  STATE.items_factura.forEach(item => {
+    html += `
+      <tr style="border-bottom:1px solid #e2e8f0;">
+        <td style="padding:8px 12px;font-weight:600;color:#1e293b;">${item.nombre}</td>
+        <td style="padding:8px 12px;color:#64748b;font-size:12px;"><span style="background:#f8fafc;padding:2px 6px;border-radius:4px;border:1px solid #e2e8f0;">${item.categoria || 'Clínica'}</span></td>
+        <td style="padding:8px 12px;text-align:right;font-weight:700;color:#0f172a;">S/. ${(parseFloat(item.costo)||0).toFixed(2)}</td>
+      </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+
+  // Actualizar números de liquidación
+  if (totalEl) totalEl.textContent = liq.totalPaciente.toFixed(2);
+  if (miniEl) miniEl.textContent = `S/. ${liq.totalPaciente.toFixed(2)}`;
+
+  // Actualizar desglose detallado en Módulo 8
+  const detalleEl = document.getElementById("liquidacion_detalle_box");
+  if (detalleEl) {
+    detalleEl.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:14px;margin-top:14px;font-size:13px;">
+        <div style="font-weight:800;color:#0f172a;margin-bottom:8px;font-size:14px;">📊 Desglose de Auditoría Financiera — Ley N° 29414 (SUSALUD)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px;">
+          <div><span style="color:#64748b;">Régimen:</span> <strong>${liq.etiquetaRegimen}</strong></div>
+          <div><span style="color:#64748b;">Total Bruto Generado:</span> <strong>S/. ${liq.totalBruto.toFixed(2)}</strong></div>
+          <div><span style="color:#64748b;">Cobertura Aseguradora:</span> <strong style="color:#15803d;">S/. ${liq.coberturaSeguro.toFixed(2)}</strong></div>
+          <div><span style="color:#64748b;">Total a Pagar Paciente:</span> <strong style="color:#0284c7;font-size:15px;">S/. ${liq.totalPaciente.toFixed(2)}</strong></div>
+        </div>
+        <div style="background:#ffffff;border-left:4px solid #0284c7;padding:8px 12px;border-radius:4px;color:#334155;font-size:12px;line-height:1.4;">
+          <strong>Dictamen de Auditoría:</strong> ${liq.motivoLiquidacion}
+        </div>
+      </div>
+    `;
+  }
+}
+
+function actualizarMedidorSoat(liq) {
+  if (!liq) liq = calcularLiquidacionSeguro();
+  const container = document.getElementById("soatMeterContainer");
+  const badgeNav = document.getElementById("navSoatBadge");
+  const saldoNav = document.getElementById("navSoatSaldo");
+  const miniBadge = document.getElementById("mini_soat_badge");
+  const cardMod3 = document.getElementById("soat_meter_card");
+  const saldoMod3 = document.getElementById("soat_saldo_display");
+  const fillMod3 = document.getElementById("soat_progress_fill");
+  const factMod3 = document.getElementById("soat_facturado_lbl");
+
+  if (!STATE.esAccidenteTransito) {
+    if (container) container.style.display = "none";
+    if (badgeNav) badgeNav.style.display = "none";
+    if (miniBadge) miniBadge.style.display = "none";
+    if (cardMod3) cardMod3.style.display = "none";
+    return;
+  }
+
+  // Si es Accidente de Tránsito SIN PLACA / EN FUGA:
+  if (STATE.soatVehiculoFuga) {
+    if (container) container.style.display = "none";
+    if (badgeNav) badgeNav.style.display = "none";
+    if (cardMod3) cardMod3.style.display = "none";
+    if (miniBadge) {
+      miniBadge.style.display = "inline-flex";
+      miniBadge.style.background = "#fee2e2";
+      miniBadge.style.color = "#991b1b";
+      miniBadge.style.borderColor = "#fca5a5";
+      miniBadge.textContent = "🚨 SOAT: Sin Placa (Sin Seguro / Cargo Completo)";
     }
     return;
   }
 
+  // Si es Accidente con PLACA IDENTIFICADA:
+  if (badgeNav) badgeNav.style.display = "inline-flex";
+  if (container) container.style.display = "block";
+  if (cardMod3) cardMod3.style.display = "block";
 
-  let htmlItems = `
-    <div style="padding:6px 10px;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;margin-bottom:8px;font-size:0.75rem;">
-      <div style="font-weight:800;color:#166534;">🏥 ${liq.lugarAtencion}</div>
-      <div style="color:#15803d;font-weight:600;margin-top:2px;">Régimen: ${liq.etiquetaRegimen}</div>
-    </div>
-  `;
+  const consumido = liq.coberturaSoatAplicada || 0;
+  const saldo = liq.saldoSoatRestante !== undefined ? liq.saldoSoatRestante : Math.max(0, 27500 - consumido);
+  const pct = Math.min(100, (consumido / 27500) * 100);
 
-
-  STATE.items_factura.forEach(item => {
-    htmlItems += `
-      <div class="factura-item" style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #e2e8f0;font-size:0.78rem;">
-        <span class="factura-item-name" style="color:#334155;">${item.servicio} <em style="color:#64748b;font-size:0.7rem;">(${item.categoria})</em></span>
-        <span class="factura-item-costo" style="font-weight:700;color:#0f172a;">S/. ${item.costo.toFixed(2)}</span>
-      </div>
-    `;
-  });
-
-
-  // Desglose de liquidación financiera
-  htmlItems += `
-    <div style="margin-top:10px;padding-top:8px;border-top:1.5px solid #cbd5e1;font-size:0.78rem;">
-      <div style="display:flex;justify-content:space-between;color:#475569;margin-bottom:3px;">
-        <span>Subtotal Facturado (Bruto):</span>
-        <span style="font-weight:700;">S/. ${liq.totalBruto.toFixed(2)}</span>
-      </div>
-  `;
-
-
-  if (liq.esPublico) {
-    htmlItems += `
-      <div style="display:flex;justify-content:space-between;color:#15803d;font-weight:700;margin-bottom:3px;">
-        <span>Cobertura Seguro Estatal (100% de todo):</span>
-        <span>- S/. ${liq.coberturaSeguro.toFixed(2)}</span>
-      </div>
-    `;
-  } else if (liq.esEpsPrivado) {
-    htmlItems += `
-      <div style="display:flex;justify-content:space-between;color:#0284c7;font-weight:700;margin-bottom:3px;">
-        <span>Cobertura Plan EPS / Privado:</span>
-        <span>- S/. ${liq.coberturaSeguro.toFixed(2)}</span>
-      </div>
-    `;
-    if (liq.copagoUrgencia > 0) {
-      htmlItems += `
-        <div style="display:flex;justify-content:space-between;color:#b45309;margin-bottom:3px;">
-          <span>Cobro Consulta de Urgencia (P-III/IV/V):</span>
-          <span style="font-weight:700;">+ S/. ${liq.copagoUrgencia.toFixed(2)}</span>
-        </div>
-      `;
-    }
-    if (liq.subtotalFarmacia > 0) {
-      htmlItems += `
-        <div style="display:flex;justify-content:space-between;color:#b45309;margin-bottom:3px;">
-          <span>Coaseguro Farmacia EPS (10% de S/. ${liq.subtotalFarmacia.toFixed(2)}):</span>
-          <span style="font-weight:700;">+ S/. ${liq.coaseguroFarmacia.toFixed(2)}</span>
-        </div>
-      `;
-    }
+  if (saldoNav) saldoNav.textContent = `S/. ${saldo.toFixed(2)}`;
+  if (miniBadge) {
+    miniBadge.style.display = "inline-flex";
+    miniBadge.style.background = "#fff7ed";
+    miniBadge.style.color = "#c2410c";
+    miniBadge.style.borderColor = "#fb923c";
+    miniBadge.textContent = `🚗 SOAT Saldo: S/. ${saldo.toFixed(2)}`;
   }
 
-
-  htmlItems += `
-      <div style="margin-top:6px;padding:8px 10px;background:${liq.totalPaciente === 0 ? "#dcfce7" : "#fef3c7"};border-radius:6px;font-size:0.74rem;line-height:1.45;color:${liq.totalPaciente === 0 ? "#14532d" : "#78350f"};">
-        ℹ️ ${liq.motivoLiquidacion}
-      </div>
-    </div>
-  `;
-
-
-  container.innerHTML = htmlItems;
-
-
-  if (totalEl) {
-    if (liq.totalPaciente === 0) {
-      totalEl.innerHTML = `<span style="color:#16a34a;font-weight:900;font-size:1.15rem;">S/. 0.00 (PAGO CERO ASUMIDO POR SEGURO)</span>`;
-    } else {
-      totalEl.innerHTML = `<span style="color:#0284c7;font-weight:900;font-size:1.15rem;">S/. ${liq.totalPaciente.toFixed(2)}</span>`;
-    }
+  if (saldoMod3) saldoMod3.textContent = `Saldo Disponible: S/. ${saldo.toFixed(2)}`;
+  if (fillMod3) {
+    fillMod3.style.width = `${pct}%`;
+    fillMod3.style.background = pct > 85 ? "#dc2626" : (pct > 50 ? "#ea580c" : "#16a34a");
   }
+  if (factMod3) factMod3.textContent = `S/. ${consumido.toFixed(2)}`;
 
+  const consEl = document.getElementById("soatMeterConsumido");
+  const salEl = document.getElementById("soatMeterSaldo");
+  const barEl = document.getElementById("soatMeterBar");
 
-  // Ley 27604 banner
-  if (leyBanner) leyBanner.style.display = liq.esEmergencia ? "block" : "none";
+  if (consEl) consEl.textContent = `S/. ${consumido.toFixed(2)}`;
+  if (salEl) salEl.textContent = `S/. ${saldo.toFixed(2)}`;
+  if (barEl) {
+    barEl.style.width = `${pct}%`;
+    barEl.style.background = pct > 85 ? "#dc2626" : (pct > 50 ? "#ea580c" : "#0284c7");
+  }
 }
-
 
 function generarFacturaPDF() {
   const validacion = validarSignosVitalesEnVivo();
@@ -4546,7 +4589,23 @@ async function grabarAtencionCompleta() {
     cobertura_info: liq.totalPaciente === 0 ? `Cubierto 100% por ${STATE.tipoSeguro || "Seguro"} (Pago Cero)` : `Copago paciente: S/. ${liq.totalPaciente.toFixed(2)}`,
     estado_salida: STATE.estadoSalida || "En observación hospitalaria",
     firmante: STATE.firmante || "Lic. Enfermería de Turno — UPP",
-    liquidacion: liq
+    liquidacion: liq,
+    origen_evento: STATE.tipoOrigenEvento,
+    es_accidente_transito: STATE.esAccidenteTransito,
+    soat_placa: STATE.soatPlaca,
+    soat_aseguradora: STATE.soatAseguradora,
+    soat_poliza: STATE.soatPoliza,
+    soat_fuga: STATE.soatVehiculoFuga,
+    cie10_codigo: STATE.cie10Codigo,
+    cie10_descripcion: STATE.cie10Descripcion,
+    destino_post_topico: STATE.destinoPostTopico,
+    horas_observacion: STATE.horasObservacion,
+    balance_hidrico_neto: STATE.balanceNetoMl,
+    prioridad_uci: STATE.prioridadUci,
+    puntaje_abcde: STATE.desempateScore,
+    modalidad_egreso: STATE.modalidadEgreso,
+    bloqueo_sinadef: STATE.bloqueoSinadef,
+    auditoria_normativa: "Cumple NTS N° 042-MINSA, Ley N° 27604, Ley N° 29414, D.S. 024-2002-MTC y CPP Art. 195"
   };
   // 1. Guardar en memoria local global (Historial de Episodios UPP)
   try {
@@ -4805,16 +4864,13 @@ let moduloActivoActual = 1;
 function irAModulo(num) {
   moduloActivoActual = num;
 
-
-  // 1. Actualizar estados de botones en Navbar Superior, Stepper de Drawer y Canvas
+  // 1. Actualizar estados de botones en Navbar Superior, Stepper y Canvas
   for (let i = 1; i <= 8; i++) {
     const btnDrawer = document.getElementById(`btnStepDrawer_${i}`);
     if (btnDrawer) btnDrawer.classList.toggle("active", i === num);
 
-
     const btnTop = document.getElementById(`btnStepTop_${i}`);
     if (btnTop) btnTop.classList.toggle("active", i === num);
-
 
     const canvasNode = document.getElementById(`full_step_${i}`);
     if (canvasNode) {
@@ -4823,28 +4879,40 @@ function irAModulo(num) {
     }
   }
 
+  // 2. Ejecutar ganchos específicos por módulo
+  if (num === 5) {
+    try { actualizarEstanciaObservacion(STATE.horasObservacion || 6); } catch(e){}
+    try { calcularBalanceHidrico(); } catch(e){}
+  }
+  if (num === 6) {
+    try { calcularPuntajePrelacionABCDE(); } catch(e){}
+    try { renderizarStockCamas(); } catch(e){}
+  }
+  if (num === 7) {
+    try { verificarCandadoLegalSinadef(); } catch(e){}
+  }
+  if (num === 8) {
+    try { actualizarFactura(); } catch(e){}
+  }
 
-  // 2. Abrir el módulo correspondiente en el Drawer Operativo
-    // Garantizar renderizado de componentes dinámicos
-  if (num === 4) try { renderizarStockCamas(); } catch(e){}
-  if (num === 5) try { renderizarLaboratorio(); } catch(e){}
-  if (num === 6) try { renderizarFarmacia(); } catch(e){}
-
-
+  // 3. Abrir y desplazar hacia el módulo objetivo
+  const targetSec = document.getElementById(`sec_mod${num}`);
   const targetBody = document.getElementById(`body_mod${num}`);
   const targetArrow = document.getElementById(`arrow_mod${num}`);
+
   if (targetBody) {
     targetBody.style.display = "";
     targetBody.classList.add("open");
     if (targetArrow) targetArrow.classList.add("open");
+  }
 
-
-    // Desplazar el Drawer Operativo SUAVEMENTE hacia el módulo activo (SIN desorientar la pantalla)
+  if (targetSec) {
     try {
-      const headerEl = targetBody.previousElementSibling;
-      if (headerEl) {
-        headerEl.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      targetSec.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (e) {}
+  } else if (targetBody && targetBody.previousElementSibling) {
+    try {
+      targetBody.previousElementSibling.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e) {}
   }
 }
@@ -4899,3 +4967,685 @@ if (document.readyState === "loading") {
 } else {
   initScrollSpySteps();
 }
+
+
+// ==============================================================================
+// 23. SUITE DE FUNCIONES DE AUDITORÍA Y NORMATIVA PERUANA (MÓDULOS 1 AL 8)
+// Sustentos: Ley 26842, Ley 27604, Ley 29414, NTS 042-MINSA, D.S. 024-2002-MTC
+// Autores: Luis Guillermo Vásquez Valdivieso & Rodrigo Alonso Añazgo Farro
+// ==============================================================================
+
+// --- MÓDULO 1: ENFERMERÍA DE TRIAJE ---
+function cambiarOrigenEvento(tipo) {
+  STATE.tipoOrigenEvento = tipo;
+  STATE.esAccidenteTransito = (tipo === "transito");
+
+  const btnComun = document.getElementById("btn_origen_comun");
+  const btnTransito = document.getElementById("btn_origen_transito");
+  const bannerTransito = document.getElementById("banner_origen_transito");
+  const navSoatBadge = document.getElementById("navSoatBadge");
+  const soatWrapper = document.getElementById("seccion_soat_wrapper");
+  const pideWrapper = document.getElementById("seccion_pide_wrapper");
+
+  if (tipo === "transito") {
+    if (btnTransito) { btnTransito.classList.add("active"); btnTransito.style.background = "#dc2626"; btnTransito.style.color = "#ffffff"; }
+    if (btnComun) { btnComun.classList.remove("active"); btnComun.style.background = "#f1f5f9"; btnComun.style.color = "#334155"; }
+    if (bannerTransito) bannerTransito.style.display = "block";
+    if (navSoatBadge) navSoatBadge.style.display = "inline-flex";
+
+    // Mostrar sección SOAT y ocultar PIDE común
+    if (soatWrapper) soatWrapper.style.display = "block";
+    if (pideWrapper) pideWrapper.style.display = "none";
+
+    // Activar candado SINADEF
+    STATE.bloqueoSinadef = true;
+    cambiarOpcionSoat("identificado");
+  } else {
+    if (btnComun) { btnComun.classList.add("active"); btnComun.style.background = "#0284c7"; btnComun.style.color = "#ffffff"; }
+    if (btnTransito) { btnTransito.classList.remove("active"); btnTransito.style.background = "#f1f5f9"; btnTransito.style.color = "#334155"; }
+    if (bannerTransito) bannerTransito.style.display = "none";
+    if (navSoatBadge) navSoatBadge.style.display = "none";
+
+    // Ocultar sección SOAT y mostrar PIDE común
+    if (soatWrapper) soatWrapper.style.display = "none";
+    if (pideWrapper) pideWrapper.style.display = "block";
+
+    STATE.bloqueoSinadef = false;
+    STATE.soatVehiculoFuga = false;
+    STATE.tipoSeguro = "Particular";
+  }
+
+  actualizarFactura();
+}
+
+function activarPanicoShockTrauma() {
+  STATE.panicoShockTrauma = true;
+  STATE.prioridad = "I";
+  STATE.colorPrioridad = "ROJO";
+
+  // Banner Paro / Agonía
+  const bannerParo = document.getElementById("banner_paro_agonia");
+  if (bannerParo) bannerParo.style.display = "block";
+
+  const chipLive = document.getElementById("chipPrioLive");
+  if (chipLive) {
+    chipLive.textContent = "P-I ROJO (PARO / SHOCK TRAUMA)";
+    chipLive.className = "top-prio-chip prio-I";
+  }
+
+  alert("🚨 ACTIVACIÓN DE INGRESO DIRECTO A SHOCK TRAUMA (PRIORIDAD I) — LEY N° 27604.\n\n" +
+        "Paciente en inestabilidad hemodinámica extrema o paro cardiorrespiratorio.\n" +
+        "Pase inmediato a Shock Trauma (Módulo 4). Módulos 2 y 3 quedan en estado: Regularización paralela por Admisión.");
+
+  irAModulo(4);
+}
+
+function actualizarEVA(val) {
+  const v = parseInt(val) || 0;
+  STATE.eva = v;
+  const inputEl = document.getElementById("eva_full");
+  if (inputEl) inputEl.value = v;
+
+  const labels = [
+    "0 - Sin Dolor",
+    "1 - Dolor Mínimo",
+    "2 - Dolor Leve",
+    "3 - Dolor Leve Moderado",
+    "4 - Dolor Moderado",
+    "5 - Dolor Moderado Molesto",
+    "6 - Dolor Intenso",
+    "7 - Dolor Muy Intenso",
+    "8 - Dolor Severo (Urgente)",
+    "9 - Dolor Desesperante",
+    "10 - Dolor Máximo Insupportable"
+  ];
+  const lblEl = document.getElementById("eva_full_val") || document.getElementById("eva_label");
+  if (lblEl) lblEl.textContent = labels[v] || `${v}/10`;
+
+  recalcularPrioridad();
+  calcularPuntajePrelacionABCDE();
+}
+
+function toggleCodigoTiempo(tipo, chk) {
+  if (tipo === "infarto") STATE.codigoInfarto = chk;
+  if (tipo === "ictus") STATE.codigoIctus = chk;
+  if (tipo === "sepsis") STATE.codigoSepsis = chk;
+
+  if (chk) {
+    alert(`🚨 ACTIVACIÓN PROTOCOLO CÓDIGO TIEMPO-DEPENDIENTE: ${tipo.toUpperCase()}\nPrioridad clínica elevada automáticamente y activación de orden prioritaria.`);
+  }
+  recalcularPrioridad();
+}
+
+function toggleGestante(chk) {
+  STATE.esGestante = chk;
+  const card = document.getElementById("campos_gestante");
+  if (card) card.style.display = chk ? "block" : "none";
+  calcularPuntajePrelacionABCDE();
+  recalcularPrioridad();
+}
+
+function togglePediatrico(chk) {
+  STATE.esPediatrico = chk;
+  const card = document.getElementById("campos_pediatrico");
+  if (card) card.style.display = chk ? "block" : "none";
+  calcularPuntajePrelacionABCDE();
+  recalcularPrioridad();
+}
+
+
+// --- MÓDULO 3: SOAT Y ACREDITACIÓN PIDE ---
+function consultarSoatApeseg() {
+  const placaEl = document.getElementById("soat_placa") || document.getElementById("soat_placa_input");
+  const placa = (placaEl?.value || "").trim().toUpperCase();
+
+  if (!placa || placa.length < 5) {
+    alert("⚠️ Por favor ingrese un número de placa vehicular válido (ej. ABC-123 o A1B-234).");
+    return;
+  }
+
+  STATE.soatPlaca = placa;
+  STATE.soatVehiculoFuga = false;
+  STATE.tipoSeguro = "SOAT";
+  STATE.soatAseguradora = "Pacífico Compañía de Seguros y Reaseguros";
+  STATE.soatPoliza = `SOAT-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+  STATE.soatEstado = "ACTIVO / VIGENTE (APESEG)";
+
+  const polizaInput = document.getElementById("soat_poliza");
+  if (polizaInput) polizaInput.value = STATE.soatPoliza;
+
+  const aseguSelect = document.getElementById("soat_aseguradora");
+  if (aseguSelect) aseguSelect.value = "Pacífico Seguros";
+
+  const estadoSelect = document.getElementById("soat_estado");
+  if (estadoSelect) estadoSelect.value = "ACTIVO";
+
+  alert(`✅ SOAT verificado exitosamente ante APESEG para la placa ${placa}. Cobertura legal activada hasta 5 UIT (S/. 27,500.00).`);
+  actualizarFactura();
+}
+
+function cambiarOpcionSoat(opcion) {
+  STATE.soatOpcion = opcion;
+  const esFuga = (opcion === "fuga" || opcion === "sin_placa");
+  STATE.soatVehiculoFuga = esFuga;
+
+  const rbIdent = document.getElementById("rb_soat_identificado");
+  const rbFuga = document.getElementById("rb_soat_fuga");
+  const boxCampos = document.getElementById("box_soat_campos");
+  const meterCard = document.getElementById("soat_meter_card");
+  const boxFugaAlert = document.getElementById("box_soat_fuga_alert");
+  const navSoatBadge = document.getElementById("navSoatBadge");
+  const miniSoatBadge = document.getElementById("mini_soat_badge");
+
+  if (esFuga) {
+    if (rbFuga) rbFuga.checked = true;
+    if (rbIdent) rbIdent.checked = false;
+    if (boxCampos) boxCampos.style.display = "none";
+    if (meterCard) meterCard.style.display = "none";
+    if (boxFugaAlert) boxFugaAlert.style.display = "block";
+    if (navSoatBadge) navSoatBadge.style.display = "none";
+    if (miniSoatBadge) miniSoatBadge.style.display = "none";
+
+    STATE.soatPlaca = "NO IDENTIFICADO (SIN PLACA)";
+    STATE.tipoSeguro = "Particular (Accidente de Tránsito sin Placa / En Fuga)";
+  } else {
+    if (rbIdent) rbIdent.checked = true;
+    if (rbFuga) rbFuga.checked = false;
+    if (boxCampos) boxCampos.style.display = "grid";
+    if (meterCard) meterCard.style.display = "block";
+    if (boxFugaAlert) boxFugaAlert.style.display = "none";
+    if (navSoatBadge) navSoatBadge.style.display = "inline-flex";
+    if (miniSoatBadge) miniSoatBadge.style.display = "inline-flex";
+
+    STATE.tipoSeguro = "SOAT";
+  }
+
+  actualizarFactura();
+}
+
+
+// --- MÓDULO 4: MÉDICO Y KARDEX DE ENFERMERÍA ---
+function seleccionarCIE10(codigo, desc) {
+  STATE.cie10Codigo = codigo;
+  STATE.cie10Descripcion = desc;
+  const input = document.getElementById("cie10_input");
+  if (input) input.value = `${codigo} - ${desc}`;
+}
+
+function abrirCatalogoRapidoKardex(cat) {
+  alert(`📋 Abriendo subcatálogo de ${cat}. Puede seleccionar las indicaciones para el Kardex de Enfermería.`);
+}
+
+function administrarKardexItem(idx, nombre, costo, cat, btnEl) {
+  if (!btnEl) return;
+  const yaAdm = btnEl.getAttribute("data-administrado") === "true";
+  const now = new Date();
+  const horaStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  if (!yaAdm) {
+    btnEl.setAttribute("data-administrado", "true");
+    btnEl.innerHTML = `✅ Administrado (${horaStr})`;
+    btnEl.style.background = "#15803d";
+    btnEl.style.color = "#ffffff";
+    registrarFacturaItem(nombre, costo, cat);
+    if (!STATE.kardexAdministrados.includes(nombre)) {
+      STATE.kardexAdministrados.push(nombre);
+    }
+  } else {
+    btnEl.setAttribute("data-administrado", "false");
+    btnEl.innerHTML = `[ ✓ Administrado por Enf. ]`;
+    btnEl.style.background = "#e0f2fe";
+    btnEl.style.color = "#0369a1";
+    const itemIdx = STATE.items_factura.findIndex(i => i.nombre === nombre);
+    if (itemIdx !== -1) {
+      STATE.items_factura.splice(itemIdx, 1);
+    }
+    STATE.kardexAdministrados = STATE.kardexAdministrados.filter(n => n !== nombre);
+    actualizarFactura();
+  }
+}
+
+function seleccionarDestinoPostTopico(ruta) {
+  STATE.destinoPostTopico = ruta;
+  document.querySelectorAll(".btn-destino-topico").forEach(b => b.classList.remove("active"));
+  const btn = document.getElementById(`btn_destino_${ruta}`);
+  if (btn) btn.classList.add("active");
+
+  if (ruta === "alta") {
+    alert("🩺 Destino Post-Tópico: Alta Médica Directa con Receta y Epicrisis. Derivando al Módulo 7.");
+    irAModulo(7);
+  } else if (ruta === "observacion") {
+    alert("🩺 Destino Post-Tópico: Pase a Sala de Observación de Emergencia (2 a 24 horas). Derivando al Módulo 5.");
+    irAModulo(5);
+  } else if (ruta === "quirofano_uci") {
+    alert("🩺 Destino Post-Tópico: Requiere Quirófano (SOP) o Cama Crítica UCI/UCIN. Derivando al Módulo 6.");
+    irAModulo(6);
+  }
+}
+
+
+// --- MÓDULO 5: SALA DE OBSERVACIÓN ---
+function setEstanciaHoras(horas) {
+  const input = document.getElementById("horas_observacion_input");
+  if (input) input.value = horas;
+  actualizarEstanciaObservacion(horas);
+}
+
+function actualizarEstanciaObservacion(horas) {
+  const h = parseFloat(horas) || 0;
+  STATE.horasObservacion = h;
+  const badge = document.getElementById("obs_cronometro_badge");
+  const alertBox = document.getElementById("obs_cronometro_alerta");
+  if (!badge) return;
+
+  if (h <= 12) {
+    badge.textContent = `⏱️ ${h} Horas (Estancia Normal — NTS N° 042-MINSA)`;
+    badge.style.background = "#dcfce7";
+    badge.style.color = "#15803d";
+    badge.style.borderColor = "#86efac";
+    if (alertBox) alertBox.innerHTML = `✅ <strong>Estancia dentro del periodo estándar (0 a 12 horas):</strong> Paciente en monitorización de respuesta terapéutica.`;
+  } else if (h <= 24) {
+    badge.textContent = `⚠️ ${h} Horas (Límite Máximo de Estancia — NTS N° 042-MINSA)`;
+    badge.style.background = "#fef9c3";
+    badge.style.color = "#854d0e";
+    badge.style.borderColor = "#fde047";
+    if (alertBox) alertBox.innerHTML = `⚠️ <strong>Estancia límite (12 a 24 horas):</strong> Requiere reevaluación médica inmediata para definir Alta o Hospitalización.`;
+  } else {
+    badge.textContent = `🚨 ${h} Horas (DESBORDE NORMATIVO — SUPERA 24 HORAS)`;
+    badge.style.background = "#fee2e2";
+    badge.style.color = "#991b1b";
+    badge.style.borderColor = "#fca5a5";
+    if (alertBox) alertBox.innerHTML = `🚨 <strong>ALERTA CRÍTICA DE AUDITORÍA (NTS N° 042-MINSA):</strong> El paciente ha superado las 24 horas en Observación. Es mandatorio gestionar cama en Hospitalización o activar REFCON.`;
+  }
+}
+
+function calcularBalanceHidrico() {
+  const ingEl = document.getElementById("balance_ingresos");
+  const egEl = document.getElementById("balance_egresos");
+  const dispEl = document.getElementById("balance_neto_display");
+  const interpEl = document.getElementById("balance_interpretacion");
+
+  const ing = parseFloat(ingEl?.value) || 0;
+  const eg = parseFloat(egEl?.value) || 0;
+  const neto = ing - eg;
+
+  STATE.balanceIngresosMl = ing;
+  STATE.balanceEgresosMl = eg;
+  STATE.balanceNetoMl = neto;
+
+  if (dispEl) {
+    dispEl.textContent = `${neto >= 0 ? '+' : ''}${neto} ml`;
+    dispEl.style.color = neto > 0 ? '#0284c7' : (neto < 0 ? '#ea580c' : '#15803d');
+  }
+  if (interpEl) {
+    if (neto > 500) {
+      interpEl.innerHTML = `<span style="color:#0284c7;font-weight:700;">Balance Positivo Significativo (+${neto} ml):</span> Vigilar sobrecarga de volumen cardiovascular.`;
+    } else if (neto < -300) {
+      interpEl.innerHTML = `<span style="color:#ea580c;font-weight:700;">Balance Negativo (-${Math.abs(neto)} ml):</span> Evaluar reposición hídrica parenteral endovenosa.`;
+    } else {
+      interpEl.innerHTML = `<span style="color:#15803d;font-weight:700;">Balance Hídrico Equilibrado (${neto >= 0 ? '+' : ''}${neto} ml):</span> Homeostasis estable según NTS N° 139-MINSA.`;
+    }
+  }
+}
+
+function decisionObservacion(tipo) {
+  STATE.decisionPostObs = tipo;
+  if (tipo === "alta") {
+    alert("🩺 Paciente estabilizado favorablemente. Pasando al Módulo 7 para generar Epicrisis y Alta Médica Definitiva.");
+    irAModulo(7);
+  } else if (tipo === "cama_sop") {
+    alert("🏥 Paciente requiere pase a Cama Hospitalaria / UCI o Quirófano SOP. Pasando al Módulo 6.");
+    irAModulo(6);
+  }
+}
+
+
+// --- MÓDULO 6: GESTIÓN DE CAMAS & DESEMPATE ABCDE ---
+function actualizarPrioridadUCI(val) {
+  const p = parseInt(val) || 2;
+  STATE.prioridadUci = p;
+  const descEl = document.getElementById("uci_prioridad_desc");
+  const descripciones = {
+    1: "Prioridad 1 (NTS N° 031-MINSA): Paciente crítico inestable que requiere soporte vital avanzado y monitoreo invasivo intensivo con alta probabilidad de recuperación.",
+    2: "Prioridad 2 (NTS N° 031-MINSA): Paciente que requiere monitoreo intensivo continuo y potencialmente puede requerir intervención inmediata.",
+    3: "Prioridad 3 (NTS N° 031-MINSA): Paciente crítico inestable pero con reducida probabilidad de recuperación por enfermedad subyacente severa.",
+    4: "Prioridad 4 (NTS N° 031-MINSA): Paciente no apropiado para UCI (enfermedad terminal o beneficio mínimo comprobado)."
+  };
+  if (descEl) descEl.textContent = descripciones[p] || "";
+  calcularPuntajePrelacionABCDE();
+}
+
+function calcularPuntajePrelacionABCDE() {
+  const spo2 = STATE.spo2 || parseFloat(document.getElementById("spo2_full")?.value) || 98;
+  const glasgow = STATE.glasgow || parseFloat(document.getElementById("glasgow_full")?.value) || 15;
+  const fc = STATE.fc || parseFloat(document.getElementById("fc_full")?.value) || 80;
+  const pas = STATE.pasSistolica || parseFloat(document.getElementById("pas_full")?.value) || 120;
+  const eva = STATE.eva || parseInt(document.getElementById("eva_full")?.value) || 0;
+
+  // Fórmula ABCDE:
+  // [(100 - SpO2) * 1.5] + [(15 - Glasgow) * 3] + [(FC / PAS) * 15] + EVA
+  const relFcPas = pas > 0 ? (fc / pas) : 1;
+  let score = ((100 - spo2) * 1.5) + ((15 - glasgow) * 3) + (relFcPas * 15) + eva;
+
+  let bonificaciones = [];
+  if (STATE.esGestante) {
+    score += 10;
+    bonificaciones.push("+10 pts Gestante (Ley N° 27408)");
+  }
+  if (STATE.codigoInfarto || STATE.codigoIctus || STATE.codigoSepsis || STATE.claveObstetrica !== "ninguna") {
+    score += 6;
+    bonificaciones.push("+6 pts Código Tiempo-Dependiente");
+  }
+  const edad = parseInt(STATE.edad || document.getElementById("edad_full")?.value) || 30;
+  if (edad < 14 || edad >= 65 || STATE.esPediatrico) {
+    score += 3;
+    bonificaciones.push("+3 pts Atención Preferente Poblacional");
+  }
+
+  STATE.desempateScore = Math.round(score * 10) / 10;
+
+  const scoreEl = document.getElementById("abcde_score_display");
+  const detalleEl = document.getElementById("desempate_detalle");
+
+  if (scoreEl) scoreEl.textContent = `${STATE.desempateScore} Puntos`;
+  if (detalleEl) {
+    detalleEl.innerHTML = `<strong>Desglose Algorítmico ABCDE:</strong> SpO2: ${spo2}% | Glasgow: ${glasgow}/15 | FC/PAS: ${relFcPas.toFixed(2)} | EVA: ${eva}/10` +
+      (bonificaciones.length > 0 ? `<br><span style="color:#0369a1;font-weight:700;">Bonificaciones Ley 27408: ${bonificaciones.join(", ")}</span>` : '');
+  }
+}
+
+function activarBoardingCritico() {
+  STATE.boardingActivo = true;
+  alert("⚠️ PROTOCOLO DE CONTINGENCIA ACTIVADO: BOARDING CRÍTICO EN SALA DE OBSERVACIÓN (NTS N° 042-MINSA).\n\n" +
+        "Al no existir disponibilidad inmediata en Cama Hospitalaria/UCI, el paciente permanece en cama de observación bajo monitorización invasiva continua con activación paralela de solicitud REFCON / SUSALUD.");
+}
+
+
+// --- MÓDULO 7: EGRESO CLÍNICO & AUDITORÍA LEGAL ---
+function seleccionarModalidadEgreso(modalidad) {
+  STATE.modalidadEgreso = modalidad;
+  document.querySelectorAll(".card-egreso-sub").forEach(c => c.style.display = "none");
+  document.querySelectorAll(".btn-modalidad-egreso").forEach(b => b.classList.remove("active"));
+  const btn = document.getElementById(`btn_egreso_${modalidad}`);
+  if (btn) btn.classList.add("active");
+
+  const targetCard = document.getElementById(`card_sub_${modalidad}`);
+  if (targetCard) targetCard.style.display = "block";
+
+  if (modalidad === "defuncion") {
+    verificarCandadoLegalSinadef();
+  }
+}
+
+function verificarCandadoLegalSinadef() {
+  const esTransito = STATE.esAccidenteTransito;
+  const horas = STATE.horasObservacion || 6;
+  const motivo = (document.getElementById("motivo_full")?.value || "").toLowerCase();
+  const esCausaViolenta = motivo.includes("arma") || motivo.includes("bala") || motivo.includes("asfixia") || motivo.includes("trauma") || motivo.includes("violenc");
+  const menosDe24h = horas < 24;
+
+  const candadoActivo = esTransito || esCausaViolenta || menosDe24h;
+  STATE.bloqueoSinadef = candadoActivo;
+
+  const bannerBloqueo = document.getElementById("banner_sinadef_bloqueado");
+  const btnSinadef = document.getElementById("btn_imprimir_sinadef");
+  const btnFiscalia = document.getElementById("btn_imprimir_oficio_fiscalia");
+
+  if (candadoActivo) {
+    if (bannerBloqueo) {
+      bannerBloqueo.style.display = "block";
+      bannerBloqueo.innerHTML = `⛔ <strong>CANDADO LEGAL BLOQUEANTE (Art. 195° y 196° Código Procesal Penal):</strong><br>` +
+        `Prohibido emitir Certificado de Defunción General (SINADEF) por tratarse de ${esTransito ? 'un 🚗 Accidente de Tránsito' : (esCausaViolenta ? 'presunta causa violenta/trauma' : 'fallecimiento en menos de 24h de ingreso sin diagnóstico previo consolidado')}.<br>` +
+        `<strong>Disposición Legal Obligatoria:</strong> Remisión formal e inmediata a la <strong>Fiscalía Provincial Penal de Turno</strong> y a la <strong>División de Medicina Legal (Morgue)</strong> para Necropsia de Ley.`;
+    }
+    if (btnSinadef) {
+      btnSinadef.disabled = true;
+      btnSinadef.style.opacity = "0.4";
+      btnSinadef.style.cursor = "not-allowed";
+      btnSinadef.title = "Bloqueado por mandato del Código Procesal Penal Arts. 195 y 196";
+    }
+    if (btnFiscalia) {
+      btnFiscalia.style.display = "inline-flex";
+    }
+  } else {
+    if (bannerBloqueo) bannerBloqueo.style.display = "none";
+    if (btnSinadef) {
+      btnSinadef.disabled = false;
+      btnSinadef.style.opacity = "1";
+      btnSinadef.style.cursor = "pointer";
+    }
+    if (btnFiscalia) {
+      btnFiscalia.style.display = "none";
+    }
+  }
+}
+
+function imprimirEpicrisisReceta() {
+  const w = window.open("", "_blank");
+  if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
+  const fecha = new Date().toLocaleString();
+  const nombre = STATE.nombreReniec || STATE.identificador || "PACIENTE NO IDENTIFICADO";
+  const cie = `${STATE.cie10Codigo} - ${STATE.cie10Descripcion}`;
+  w.document.write(`
+    <html><head><title>Epicrisis y Receta Médica - Hospital Regional UPP</title>
+    <style>body{font-family:Arial,sans-serif;padding:30px;font-size:13px;line-height:1.5;}h2,h3{color:#0f172a;margin:0 0 8px 0;}.box{border:1px solid #cbd5e1;padding:12px;border-radius:6px;margin-bottom:14px;}</style>
+    </head><body>
+      <h2>HOSPITAL REGIONAL DOCENTE UPP — SERVICIO DE EMERGENCIA</h2>
+      <h3>EPICRISIS MÉDICA DE ALTA (NTS N° 139-MINSA/2018/DGAIN)</h3>
+      <div class="box">
+        <strong>Paciente:</strong> ${nombre} | <strong>HC:</strong> ${STATE.historiaClinica} | <strong>DNI:</strong> ${STATE.identificador}<br>
+        <strong>Fecha/Hora de Egreso:</strong> ${fecha} | <strong>Médico:</strong> ${STATE.medicoTratante}<br>
+        <strong>Diagnóstico de Egreso (CIE-10):</strong> ${cie}
+      </div>
+      <div class="box">
+        <strong>RESUMEN DE ESTANCIA Y EVOLUCIÓN:</strong><br>
+        Paciente ingresó por triaje de emergencia, evaluado clínicamente. Estancia en sala de observación por ${STATE.horasObservacion} horas. Balance hídrico neto: ${STATE.balanceNetoMl} ml. Presenta mejoría sintomática, signos vitales estables, tolerancia oral adecuada y deambulación conservada.
+      </div>
+      <div class="box">
+        <strong>RECETA MÉDICA Y PLAN TERAPÉUTICO DOMICILIARIO:</strong><br>
+        1. Reposo relativo por 48 horas.<br>
+        2. Hidratación oral adecuada y dieta blanda fraccionada.<br>
+        3. Tratamiento farmacológico prescrito en Kardex.<br>
+        4. Signos de Alarma: Reconsultar de inmediato ante fiebre persistente, disnea o dolor intratable.
+      </div>
+      <div style="margin-top:40px;display:flex;justify-content:space-between;text-align:center;">
+        <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Firma y Sello Médico Tratante<br>CMP / RNE</div>
+        <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Firma del Paciente / Familiar<br>Conformidad de Alta</div>
+      </div>
+    </body></html>
+  `);
+  w.document.close();
+  w.print();
+}
+
+function imprimirFormatoRefcon() {
+  const w = window.open("", "_blank");
+  if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
+  const fecha = new Date().toLocaleString();
+  const nombre = STATE.nombreReniec || STATE.identificador || "PACIENTE";
+  w.document.write(`
+    <html><head><title>Formato Oficial REFCON - MINSA</title>
+    <style>body{font-family:Arial,sans-serif;padding:30px;font-size:12px;line-height:1.4;}table{width:100%;border-collapse:collapse;margin-top:10px;}th,td{border:1px solid #333;padding:6px;text-align:left;}</style>
+    </head><body>
+      <h2 style="margin:0;">SISTEMA NACIONAL DE REFERENCIA Y CONTRAREFERENCIA (REFCON)</h2>
+      <h3 style="margin:0 0 10px 0;">HOJA DE REFERENCIA DE EMERGENCIA — MINSA / SUSALUD</h3>
+      <table>
+        <tr><th>Establecimiento Origen:</th><td>Hospital Regional Docente UPP (Nivel III-1)</td><th>Fecha/Hora:</th><td>${fecha}</td></tr>
+        <tr><th>Paciente:</th><td>${nombre}</td><th>DNI / HC:</th><td>${STATE.identificador} / ${STATE.historiaClinica}</td></tr>
+        <tr><th>Prioridad Clínica:</th><td>Prioridad ${STATE.prioridad}</td><th>Tipo Ambulancia:</th><td>Tipo II / III (Soporte Vital Avanzado)</td></tr>
+        <tr><th>Diagnóstico CIE-10:</th><td colspan="3">${STATE.cie10Codigo} - ${STATE.cie10Descripcion}</td></tr>
+        <tr><th>Motivo de Referencia:</th><td colspan="3">Falta de capacidad resolutiva quirúrgica / cupo en UCI especializada.</td></tr>
+      </table>
+      <div style="margin-top:40px;display:flex;justify-content:space-between;text-align:center;">
+        <div style="border-top:1px solid #000;width:200px;padding-top:4px;">Médico que Refiere</div>
+        <div style="border-top:1px solid #000;width:200px;padding-top:4px;">Médico de Ambulancia / Traslado</div>
+      </div>
+    </body></html>
+  `);
+  w.document.close();
+  w.print();
+}
+
+function imprimirActaAltaVoluntaria() {
+  const w = window.open("", "_blank");
+  if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
+  const fecha = new Date().toLocaleString();
+  const nombre = STATE.nombreReniec || STATE.identificador || "PACIENTE";
+  w.document.write(`
+    <html><head><title>Acta de Alta Voluntaria - Ley N° 26842</title>
+    <style>body{font-family:Arial,sans-serif;padding:30px;font-size:13px;line-height:1.6;}</style>
+    </head><body>
+      <h2>ACTA DE RETIRO VOLUNTARIO / ALTA VOLUNTARIA</h2>
+      <h3>Amparo Legal: Artículo 4° de la Ley N° 26842 (Ley General de Salud)</h3>
+      <p>En la ciudad de Lima, con fecha y hora <strong>${fecha}</strong>, en el Servicio de Emergencia del Hospital Regional Docente UPP, el/la paciente <strong>${nombre}</strong> identificado con DNI/Documento <strong>${STATE.identificador}</strong>, (o su representante legal debidamente acreditado), manifiesta de forma libre, consciente y voluntaria su decisión irrevocable de <strong>RETIRARSE DEL ESTABLECIMIENTO DE SALUD</strong> en contra de la indicación médica expresa.</p>
+      <p><strong>Constancia Médica:</strong> Se deja constancia de que el médico tratante ha informado detalladamente al paciente y sus familiares respecto a su estado clínico, el diagnóstico presuntivo (${STATE.cie10Codigo} - ${STATE.cie10Descripcion}) y los riesgos graves de complicaciones, secuelas permanentes o riesgo vital derivados de la interrupción del tratamiento hospitalario.</p>
+      <p>El firmante exonera de toda responsabilidad penal, civil o administrativa al cuerpo médico, asistencial y directivo del establecimiento de salud.</p>
+      <div style="margin-top:50px;display:flex;justify-content:space-between;text-align:center;">
+        <div style="border-top:1px solid #000;width:240px;padding-top:4px;">Firma / Huella del Paciente o Familiar<br>DNI N°:</div>
+        <div style="border-top:1px solid #000;width:240px;padding-top:4px;">Firma y Sello del Médico Tratante<br>CMP / RNE:</div>
+      </div>
+    </body></html>
+  `);
+  w.document.close();
+  w.print();
+}
+
+function imprimirCertificadoSinadef() {
+  if (STATE.bloqueoSinadef) {
+    alert("⛔ CANDADO LEGAL BLOQUEANTE (Art. 195/196 CPP): No se puede emitir SINADEF en este caso. Debe emitir el Oficio Fiscal para Necropsia de Ley.");
+    return;
+  }
+  const w = window.open("", "_blank");
+  if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
+  w.document.write(`
+    <html><head><title>Certificado de Defunción - SINADEF</title>
+    <style>body{font-family:Arial,sans-serif;padding:30px;font-size:13px;}</style>
+    </head><body>
+      <h2>SISTEMA INFORMÁTICO NACIONAL DE DEFUNCIONES (SINADEF)</h2>
+      <h3>CERTIFICADO DE DEFUNCIÓN GENERAL — DIRECTIVA N° 216-MINSA</h3>
+      <p>Fallecido: ${STATE.nombreReniec || STATE.identificador} | DNI: ${STATE.identificador}</p>
+      <p>Diagnóstico de Causa Básica: ${STATE.cie10Codigo} - ${STATE.cie10Descripcion}</p>
+      <p>Fallecimiento en sala hospitalaria tras más de 24 horas de internamiento continuo por causa médica natural debidamente documentada.</p>
+      <div style="margin-top:40px;border-top:1px solid #000;width:250px;padding-top:4px;">Médico Certificante (CMP / RNE)</div>
+    </body></html>
+  `);
+  w.document.close();
+  w.print();
+}
+
+function imprimirOficioFiscaliaLevantamiento() {
+  const w = window.open("", "_blank");
+  if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
+  const fecha = new Date().toLocaleString();
+  const nombre = STATE.nombreReniec || STATE.identificador || "CADÁVER NO IDENTIFICADO (NN)";
+  w.document.write(`
+    <html><head><title>Oficio Fiscal - Art. 195 Código Procesal Penal</title>
+    <style>body{font-family:Arial,sans-serif;padding:30px;font-size:13px;line-height:1.6;}</style>
+    </head><body>
+      <h3 style="margin:0;">HOSPITAL REGIONAL DOCENTE UPP — DIRECCIÓN MÉDICA</h3>
+      <h4 style="margin:0 0 16px 0;">SERVICIO DE EMERGENCIA Y ASUNTOS JURÍDICOS</h4>
+      <p><strong>OFICIO N° ${Math.floor(100 + Math.random()*900)}-2026-HR-UPP/EMERGENCIA</strong></p>
+      <p><strong>A:</strong> SEÑOR(A) FISCAL PROVINCIAL PENAL DE TURNO DE LIMA<br>
+         <strong>ASUNTO:</strong> Notificación de Fallecimiento por Causa Violenta / Accidente de Tránsito / Muerte Sospechosa de Criminalidad (Art. 195° y 196° del Código Procesal Penal).<br>
+         <strong>FECHA Y HORA:</strong> ${fecha}</p>
+      <p>Tengo el deber legal de poner en su conocimiento el fallecimiento ocurrido en las instalaciones de este Servicio de Emergencia del paciente <strong>${nombre}</strong>, documento <strong>${STATE.identificador}</strong>, historia clínica <strong>${STATE.historiaClinica}</strong>.</p>
+      <p><strong>Circunstancia del Evento:</strong> ${STATE.esAccidenteTransito ? '🚗 Accidente de Tránsito con implicancia vial (D.S. N° 024-2002-MTC / Ley SOAT).' : 'Causa externa violenta o fallecimiento en menos de 24 horas sin diagnóstico consolidado.'}</p>
+      <p>En estricto cumplimiento del Artículo 195° del Código Procesal Penal y la Directiva N° 216-MINSA, este establecimiento médico <strong>NO HA EMITIDO CERTIFICADO DE DEFUNCIÓN GENERAL (SINADEF)</strong>, quedando el cuerpo en custodia física en el Tópico de Cadáveres de Emergencia, a disposición del Ministerio Público y de los Peritos de la División de Medicina Legal para la diligencia de <strong>Levantamiento de Cadáver y Necropsia de Ley</strong>.</p>
+      <div style="margin-top:60px;display:flex;justify-content:space-between;text-align:center;">
+        <div style="border-top:1px solid #000;width:240px;padding-top:4px;">Médico Emergenciólogo de Guardia<br>CMP / RNE</div>
+        <div style="border-top:1px solid #000;width:240px;padding-top:4px;">Comisaría PNP de la Jurisdicción<br>Recepción y Notificación</div>
+      </div>
+    </body></html>
+  `);
+  w.document.close();
+  w.print();
+}
+
+function imprimirFacturaOficial() {
+  const liq = calcularLiquidacionSeguro();
+  const w = window.open("", "_blank");
+  if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
+  const fecha = new Date().toLocaleString();
+  const nombre = STATE.nombreReniec || STATE.identificador || "PACIENTE";
+
+  let itemsHtml = "";
+  STATE.items_factura.forEach((item, idx) => {
+    itemsHtml += `
+      <tr>
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;">${idx + 1}</td>
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;font-weight:600;">${item.nombre}</td>
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;">${item.categoria || 'Clínica'}</td>
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;text-align:right;">S/. ${(parseFloat(item.costo)||0).toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+  w.document.write(`
+    <html><head><title>Liquidación Hospitalaria Oficial - Ley N° 29414</title>
+    <style>body{font-family:Arial,sans-serif;padding:30px;font-size:12px;line-height:1.4;}table{width:100%;border-collapse:collapse;margin-top:12px;}th{background:#f1f5f9;border:1px solid #cbd5e1;padding:8px 10px;text-align:left;}</style>
+    </head><body>
+      <h2 style="margin:0;color:#0f172a;">HOSPITAL REGIONAL DOCENTE UPP — COMPROBANTE DE LIQUIDACIÓN DE ATENCIÓN</h2>
+      <h4 style="margin:0 0 10px 0;color:#475569;">AUDITORÍA FINANCIERA Y TRANSPARENCIA ASISTENCIAL (LEY N° 29414 - SUSALUD)</h4>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:10px;border-radius:6px;">
+        <strong>Paciente:</strong> ${nombre} | <strong>Identificador:</strong> ${STATE.identificador} | <strong>HC:</strong> ${STATE.historiaClinica}<br>
+        <strong>Régimen Prestacional:</strong> ${liq.etiquetaRegimen} | <strong>Fecha de Liquidación:</strong> ${fecha}<br>
+        <strong>Lugar de Prestación:</strong> ${liq.lugarAtencion}
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th>Concepto / Procedimiento / Medicamento</th>
+            <th style="width:140px;">Servicio</th>
+            <th style="width:100px;text-align:right;">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml || '<tr><td colspan="4" style="text-align:center;padding:12px;">Sin items facturados</td></tr>'}
+        </tbody>
+      </table>
+      <div style="margin-top:14px;background:#f8fafc;border:1px solid #cbd5e1;padding:12px;border-radius:6px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Total Bruto Facturado:</span><strong>S/. ${liq.totalBruto.toFixed(2)}</strong></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#15803d;"><span>Cobertura Asumida por Aseguradora:</span><strong>- S/. ${liq.coberturaSeguro.toFixed(2)}</strong></div>
+        <div style="display:flex;justify-content:space-between;border-top:2px solid #0f172a;padding-top:6px;font-size:15px;color:#0f172a;"><span>TOTAL NETO A PAGAR PACIENTE:</span><strong>S/. ${liq.totalPaciente.toFixed(2)}</strong></div>
+        <div style="font-size:11px;color:#475569;margin-top:8px;"><strong>Fundamento Auditoría:</strong> ${liq.motivoLiquidacion}</div>
+      </div>
+      <div style="margin-top:50px;display:flex;justify-content:space-between;text-align:center;">
+        <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Cuentas Corrientes y Facturación</div>
+        <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Auditoría Médica UPP</div>
+      </div>
+    </body></html>
+  `);
+  w.document.close();
+  w.print();
+}
+
+// Exportar globalmente al objeto window para máxima compatibilidad
+window.cambiarOrigenEvento = cambiarOrigenEvento;
+window.activarPanicoShockTrauma = activarPanicoShockTrauma;
+window.actualizarEVA = actualizarEVA;
+window.toggleCodigoTiempo = toggleCodigoTiempo;
+window.toggleGestante = toggleGestante;
+window.togglePediatrico = togglePediatrico;
+window.consultarSoatApeseg = consultarSoatApeseg;
+window.cambiarOpcionSoat = cambiarOpcionSoat;
+window.actualizarMedidorSoat = actualizarMedidorSoat;
+window.seleccionarCIE10 = seleccionarCIE10;
+window.abrirCatalogoRapidoKardex = abrirCatalogoRapidoKardex;
+window.administrarKardexItem = administrarKardexItem;
+window.seleccionarDestinoPostTopico = seleccionarDestinoPostTopico;
+window.actualizarEstanciaObservacion = actualizarEstanciaObservacion;
+window.setEstanciaHoras = setEstanciaHoras;
+window.calcularBalanceHidrico = calcularBalanceHidrico;
+window.decisionObservacion = decisionObservacion;
+window.actualizarPrioridadUCI = actualizarPrioridadUCI;
+window.calcularPuntajePrelacionABCDE = calcularPuntajePrelacionABCDE;
+window.activarBoardingCritico = activarBoardingCritico;
+window.seleccionarModalidadEgreso = seleccionarModalidadEgreso;
+window.verificarCandadoLegalSinadef = verificarCandadoLegalSinadef;
+window.imprimirEpicrisisReceta = imprimirEpicrisisReceta;
+window.imprimirFormatoRefcon = imprimirFormatoRefcon;
+window.imprimirActaAltaVoluntaria = imprimirActaAltaVoluntaria;
+window.imprimirCertificadoSinadef = imprimirCertificadoSinadef;
+window.imprimirOficioFiscaliaLevantamiento = imprimirOficioFiscaliaLevantamiento;
+window.imprimirFacturaOficial = imprimirFacturaOficial;
