@@ -1376,11 +1376,23 @@ const STATE = {
   soatConsumido: 0,
   soatDisponible: 27500,
 
-  // Módulo 4: Médico y Tópicos
+  // Módulo 4: Médico, Tópicos, Kardex, Laboratorio e Imágenes
   cie10Codigo: "R10.4",
   cie10Descripcion: "Dolor abdominal no especificado",
-  medicoTratante: "Dr. Roberto Mendoza Silva (CMP 48215 / RNE 24108)",
+  medicoTratante: "Médico de Turno 1 (Emergenciólogo / CMP 0001)",
+  kardexItems: [
+    { nombre: "Cloruro de Sodio 0.9% 1000ml (Frasco EV)", dosis: "1000ml EV a chorro", horario: "Stat", costo: 12, cat: "Farmacia", administrado: false, horaAdmin: null },
+    { nombre: "Analgesia EV (Ketorolaco / Metamizol)", dosis: "1 ampolla EV diluida", horario: "Stat", costo: 18, cat: "Farmacia", administrado: false, horaAdmin: null },
+    { nombre: "Omeprazol 40mg Frasco Ampolla EV", dosis: "40mg EV diluido lento", horario: "Stat", costo: 16, cat: "Farmacia", administrado: false, horaAdmin: null }
+  ],
   kardexAdministrados: [],
+  ordenesLaboratorio: [
+    { nombre: "Hemograma Completo + Plaquetas Automatizado", prioridad: "🚨 Urgente (30 min)", costo: 25, estado: "⏳ En proceso de análisis" },
+    { nombre: "Perfil Renal (Urea y Creatinina Sérica)", prioridad: "🚨 Urgente (30 min)", costo: 28, estado: "⏳ En proceso de análisis" }
+  ],
+  ordenesImagenes: [
+    { nombre: "Rx Tórax AP y Lateral (Portátil)", indicacion: "Evaluación cardiotorácica de emergencia", costo: 55, estado: "⏳ Estudio en ejecución" }
+  ],
   destinoPostTopico: "observacion",
 
   // Módulo 5: Sala de Observación
@@ -4445,101 +4457,302 @@ function evaluarPacienteCompleto() {
 // ---------------------------------------------------------------------------
 // 18. IMPRIMIR BRAZALETE
 // ---------------------------------------------------------------------------
+/**
+ * Impresión de Brazalete Térmico Hospitalario de Identificación del Paciente
+ * Basado en Metas Internacionales de Seguridad del Paciente, NTS N° 042-MINSA y NTS N° 139-MINSA
+ * Colores normativos:
+ *   - Blanco/Estándar: Identificación unívoca.
+ *   - Rojo: ALERGIA CONOCIDA (Alerta crítica obligatoria).
+ *   - Amarillo: RIESGO DE CAÍDAS (Adulto mayor >=65a, pediátrico o sensorio alterado).
+ *   - Banda de Triaje: Color de categorización I (Rojo), II (Naranja), III (Amarillo), IV (Verde), V (Azul).
+ */
 function imprimirBrazalete() {
-  const tienePrio = Boolean(STATE.prioridad);
-  const colores = { "I": "#dc2626", "II": "#ea580c", "III": "#ca8a04", "IV": "#16a34a", "V": "#2563eb" };
-  const color = tienePrio ? (colores[STATE.prioridad] || "#0f172a") : "#0284c7";
-  const nombres = { 
-    "I": "ROJO (CRÍTICO - EMERGENCIA VITAL)", 
-    "II": "NARANJA (EMERGENCIA - URGENCIA MAYOR)", 
-    "III": "AMARILLO (URGENCIA MENOR)", 
-    "IV": "VERDE (URGENCIA LEVE)", 
-    "V": "AZUL (NO URGENTE)" 
+  const prio = STATE.prioridad || "III";
+  const coloresPrio = { "I": "#dc2626", "II": "#ea580c", "III": "#ca8a04", "IV": "#16a34a", "V": "#2563eb" };
+  const nombresPrio = { 
+    "I": "P-I ROJO (SHOCK TRAUMA / VITAL)", 
+    "II": "P-II NARANJA (URGENCIA MAYOR)", 
+    "III": "P-III AMARILLO (URGENCIA)", 
+    "IV": "P-IV VERDE (URGENCIA MENOR)", 
+    "V": "P-V AZUL (NO URGENTE)" 
   };
-
+  const colorBanda = coloresPrio[prio] || "#0284c7";
+  const nombrePrio = nombresPrio[prio] || `PRIORIDAD ${prio}`;
 
   const alergiasInput = document.getElementById("alergias_full")?.value?.trim() || STATE.alergias || "";
   const tieneAlergias = alergiasInput && !alergiasInput.toLowerCase().includes("niega") && !alergiasInput.toLowerCase().includes("ninguna");
 
+  const edadNum = parseInt(STATE.edad || document.getElementById("edad_full")?.value) || 30;
+  const glasgowNum = parseFloat(STATE.glasgow || document.getElementById("glasgow_full")?.value) || 15;
+  const esRiesgoCaidas = (edadNum >= 65 || edadNum <= 10 || glasgowNum < 15 || STATE.esPediatrico);
 
-  const spo2Val = document.getElementById("spo2_full")?.value || "—";
-  const fcVal = document.getElementById("fc_full")?.value || "—";
-  const paVal = (document.getElementById("pas_full") && document.getElementById("pad_full")) 
-    ? `${document.getElementById("pas_full").value}/${document.getElementById("pad_full").value}` 
-    : "—";
+  const esNN = (STATE.identificador && STATE.identificador.startsWith("NN-")) || STATE.alertaPnpSs;
 
+  const fechaActual = new Date().toLocaleDateString();
+  const horaActual = STATE.horaLlegada || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  const liq = calcularLiquidacionSeguro();
-
-
-  const html = `
-    <html><head><title>Brazalete Hospitalario — ${STATE.historiaClinica || "HC"}</title><style>
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f8fafc; }
-      .brazalete { width: 360px; border: 5px solid ${color}; border-radius: 20px; padding: 22px; text-align: center; background: #ffffff; box-shadow: 0 12px 30px rgba(0,0,0,0.12); }
-      .inst-title { font-size: 0.82rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid ${color}; padding-bottom: 6px; margin-bottom: 10px; }
-      .prio-num { font-size: 4rem; font-weight: 900; color: ${color}; line-height: 1; }
-      .prio-label { font-size: 1.05rem; font-weight: 800; color: ${color}; text-transform: uppercase; margin-bottom: 8px; }
-      .paciente-nombre { font-size: 1.15rem; font-weight: 900; color: #0f172a; margin: 8px 0 4px; }
-      .hc-tag { font-size: 0.95rem; color: #0369a1; font-family: monospace; font-weight: 900; background: #e0f2fe; padding: 4px 10px; border-radius: 6px; display: inline-block; margin-bottom: 8px; }
-      .alergia-box { padding: 8px 10px; border-radius: 8px; font-weight: 900; font-size: 0.85rem; margin: 8px 0; text-transform: uppercase; }
-      .alergia-danger { background: #fee2e2; border: 2px solid #ef4444; color: #991b1b; }
-      .alergia-ok { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
-      .consideraciones-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; font-size: 0.74rem; color: #334155; margin: 8px 0; text-align: left; line-height: 1.4; }
-      .meta-info { font-size: 0.76rem; color: #475569; line-height: 1.5; margin-top: 6px; }
-      .barcode-fake { height: 35px; background: repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 4px, #000 4px, #000 7px, #fff 7px, #fff 9px); margin-top: 12px; border-radius: 4px; }
-    </style></head>
-    <body>
-      <div class="brazalete">
-        <div class="inst-title">PULSERA DE ATENCIÓN Y PRIORIDAD · EMERGENCIA</div>
-        
-
-        ${tienePrio 
-          ? `<div class="prio-num">P-${STATE.prioridad}</div><div class="prio-label">${nombres[STATE.prioridad] || ""}</div>` 
-          : `<div style="padding:10px 0;"><span style="background:#e0f2fe;color:#0369a1;padding:6px 14px;border-radius:9999px;font-weight:800;font-size:0.85rem;">ADMISIÓN &amp; IDENTIFICACIÓN</span></div>`}
-        
-
-        <div class="paciente-nombre">${STATE.nombreReniec || STATE.identificador || "PACIENTE POR IDENTIFICAR"}</div>
-        <div class="hc-tag">${STATE.historiaClinica || "HC-PROVISIONAL"}</div>
-
-
-        <!-- ALERGIAS -->
-        <div class="alergia-box ${tieneAlergias ? "alergia-danger" : "alergia-ok"}">
-          ${tieneAlergias ? `⚠️ ALERGIA: ${alergiasInput.toUpperCase()}` : `✓ ALERGIAS: NIEGA / NINGUNA REPORTADA`}
-        </div>
-
-
-        <!-- DATOS CLÍNICOS A CONSIDERAR -->
-        <div class="consideraciones-box">
-          <strong>📋 DATOS A CONSIDERAR EN ATENCIÓN:</strong><br>
-          • <strong>Signos Vitales:</strong> SpO2: ${spo2Val}% | FC: ${fcVal} lpm | PA: ${paVal} mmHg<br>
-          • <strong>Destino Clínico:</strong> ${tienePrio ? (PRIORIDADES[STATE.prioridad]?.destino || "Área Crítica") : "Triaje General"}<br>
-          • <strong>Establecimiento:</strong> ${liq.lugarAtencion}
-        </div>
-
-
-        <div class="meta-info">
-          <div><strong>Ticket:</strong> ${STATE.turno || "T-01"} | <strong>Hora:</strong> ${STATE.horaLlegada || new Date().toLocaleTimeString()}</div>
-          <div><strong>Régimen:</strong> ${liq.etiquetaRegimen} | <strong>Modalidad:</strong> ${STATE.modalidadIngreso || "A pie"}</div>
-        </div>
-
-
-        <div class="barcode-fake"></div>
-        <div style="font-size:0.66rem;color:#94a3b8;margin-top:4px;">BRAZALETE MÉDICO OFICIAL IDENTIFICADO EN HIS HOSPITALARIO</div>
-      </div>
-    </body></html>
-  `;
-
+  const nombrePaciente = (STATE.nombreReniec || STATE.identificador || "PACIENTE POR IDENTIFICAR").toUpperCase();
+  const hcPaciente = STATE.historiaClinica || "HC-PROVISIONAL";
+  const docPaciente = STATE.identificador || "S/D";
+  const sexoPaciente = STATE.sexo || document.getElementById("sexo_full")?.value || "M";
 
   const w = window.open("", "_blank");
-  w.document.write(html);
+  if (!w) { alert("Permita las ventanas emergentes para imprimir la pulsera."); return; }
+
+  w.document.write(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <title>Brazalete Hospitalario — ${hcPaciente}</title>
+      <style>
+        @page { size: landscape; margin: 0; }
+        body {
+          font-family: Arial, Helvetica, sans-serif;
+          margin: 0;
+          padding: 24px;
+          background: #e2e8f0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+        }
+        .instruction-box {
+          margin-bottom: 16px;
+          font-size: 13px;
+          color: #475569;
+          text-align: center;
+        }
+        /* FORMATO DE PULSERA TÉRMICA ESTÁNDAR (28 cm x 2.8 cm simulado) */
+        .wristband-strip {
+          width: 820px;
+          height: 135px;
+          background: #ffffff;
+          border: 2px solid #94a3b8;
+          border-radius: 12px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+          display: flex;
+          position: relative;
+          overflow: hidden;
+        }
+        /* BANDA LATERAL DE TRIAJE */
+        .band-triage {
+          width: 65px;
+          background: ${colorBanda};
+          color: #ffffff;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          font-weight: 900;
+          text-align: center;
+          padding: 4px;
+          box-sizing: border-box;
+          border-right: 2px solid rgba(0,0,0,0.15);
+        }
+        .band-triage .prio-code {
+          font-size: 26px;
+          line-height: 1;
+        }
+        .band-triage .prio-desc {
+          font-size: 9px;
+          writing-mode: vertical-rl;
+          transform: rotate(180deg);
+          letter-spacing: 1px;
+          margin-top: 6px;
+          text-transform: uppercase;
+        }
+        /* CUERPO CENTRAL DE IDENTIFICACIÓN */
+        .wristband-body {
+          flex: 1;
+          padding: 10px 14px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          border-right: 2px dashed #cbd5e1;
+        }
+        .inst-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid #cbd5e1;
+          padding-bottom: 4px;
+        }
+        .inst-name {
+          font-size: 11px;
+          font-weight: 800;
+          color: #0f172a;
+          letter-spacing: 0.5px;
+        }
+        .service-name {
+          font-size: 10px;
+          font-weight: 700;
+          color: #0284c7;
+        }
+        .patient-main {
+          margin: 4px 0;
+        }
+        .patient-name {
+          font-size: 17px;
+          font-weight: 900;
+          color: #0f172a;
+          line-height: 1.1;
+          letter-spacing: 0.2px;
+        }
+        .patient-details {
+          display: flex;
+          gap: 16px;
+          font-size: 11px;
+          color: #334155;
+          margin-top: 4px;
+          font-weight: 600;
+        }
+        .hc-badge {
+          background: #0f172a;
+          color: #ffffff;
+          padding: 1px 6px;
+          border-radius: 4px;
+          font-family: monospace;
+          font-size: 11px;
+          font-weight: 800;
+        }
+        /* BANDAS DE RIESGO SANITARIO */
+        .risk-bars {
+          display: flex;
+          gap: 8px;
+          margin-top: 4px;
+        }
+        .bar-allergy {
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 10px;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+        .bar-allergy.danger {
+          background: #dc2626;
+          color: #ffffff;
+          animation: pulse 1.5s infinite;
+        }
+        .bar-allergy.ok {
+          background: #f1f5f9;
+          color: #475569;
+          border: 1px solid #cbd5e1;
+        }
+        .bar-falls {
+          background: #eab308;
+          color: #713f12;
+          font-size: 10px;
+          font-weight: 900;
+          padding: 2px 8px;
+          border-radius: 4px;
+        }
+        .bar-nn {
+          background: #7f1d1d;
+          color: #fecaca;
+          font-size: 10px;
+          font-weight: 900;
+          padding: 2px 8px;
+          border-radius: 4px;
+        }
+        /* CÓDIGOS DE BARRAS Y QR */
+        .wristband-barcode-area {
+          width: 145px;
+          padding: 8px 10px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: #fafafa;
+        }
+        .barcode-lines {
+          width: 120px;
+          height: 48px;
+          background: repeating-linear-gradient(90deg, #000 0, #000 2px, #fff 2px, #fff 4px, #000 4px, #000 7px, #fff 7px, #fff 9px, #000 9px, #000 13px, #fff 13px, #fff 15px);
+          border-radius: 2px;
+        }
+        .barcode-text {
+          font-family: monospace;
+          font-size: 9px;
+          color: #334155;
+          margin-top: 3px;
+          font-weight: 700;
+        }
+        .seal-minsa {
+          font-size: 8px;
+          color: #64748b;
+          text-align: center;
+          margin-top: 4px;
+        }
+        @media print {
+          body { background: #ffffff; padding: 0; }
+          .instruction-box { display: none; }
+          .wristband-strip { box-shadow: none; border: 1px solid #000; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="instruction-box">
+        <strong>PULSERA TÉRMICA OFICIAL DE IDENTIFICACIÓN DE PACIENTE — NTS N° 042 / NTS N° 139-MINSA</strong><br>
+        Imprima y coloque inmediatamente en la muñeca dominante del paciente. No retirar durante su estancia hospitalaria.
+      </div>
+
+      <div class="wristband-strip">
+        <!-- BANDA LATERAL CON COLOR DE TRIAJE -->
+        <div class="band-triage">
+          <div class="prio-code">P-${prio}</div>
+          <div class="prio-desc">${nombrePrio}</div>
+        </div>
+
+        <!-- DATOS DEL PACIENTE -->
+        <div class="wristband-body">
+          <div class="inst-header">
+            <span class="inst-name">HOSPITAL REGIONAL DOCENTE UPP</span>
+            <span class="service-name">SERVICIO DE EMERGENCIA · NIVEL III-1</span>
+          </div>
+
+          <div class="patient-main">
+            <div class="patient-name">${nombrePaciente}</div>
+            <div class="patient-details">
+              <span><strong>HC:</strong> <span class="hc-badge">${hcPaciente}</span></span>
+              <span><strong>DOC / DNI:</strong> ${docPaciente}</span>
+              <span><strong>EDAD:</strong> ${edadNum} años</span>
+              <span><strong>SEXO:</strong> ${sexoPaciente}</span>
+              <span><strong>INGRESO:</strong> ${fechaActual} ${horaActual}</span>
+            </div>
+          </div>
+
+          <!-- SISTEMA DE ALERTAS POR COLOR (METAS DE SEGURIDAD MINSA) -->
+          <div class="risk-bars">
+            <div class="bar-allergy ${tieneAlergias ? 'danger' : 'ok'}">
+              ${tieneAlergias ? `🔴 ALERGIA CRÍTICA: ${alergiasInput.toUpperCase()}` : `⚪ ALERGIAS: NIEGA`}
+            </div>
+
+            ${esRiesgoCaidas ? `<div class="bar-falls">🟡 RIESGO DE CAÍDAS (ALTO)</div>` : ''}
+            ${esNN ? `<div class="bar-nn">🚨 PACIENTE NN (ALERTA POLICIAL D.S. 016-2002-SA)</div>` : ''}
+            ${STATE.esAccidenteTransito ? `<div style="background:#ea580c;color:#fff;font-size:10px;font-weight:900;padding:2px 8px;border-radius:4px;">🚗 SOAT ACTIVO</div>` : ''}
+          </div>
+        </div>
+
+        <!-- CÓDIGO DE BARRAS DE TRAZABILIDAD -->
+        <div class="wristband-barcode-area">
+          <div class="barcode-lines"></div>
+          <div class="barcode-text">*${hcPaciente}*</div>
+          <div class="seal-minsa">MINSA · METAS SEGURIDAD</div>
+        </div>
+      </div>
+
+      <script>
+        window.onload = function() {
+          setTimeout(function() { window.print(); }, 350);
+        };
+      </script>
+    </body>
+    </html>
+  `);
   w.document.close();
-  w.print();
 }
-
-
-// ---------------------------------------------------------------------------
-// 17. GRABACIÓN COMPLETA Y VINCULACIÓN A HISTORIA CLÍNICA
-// ---------------------------------------------------------------------------
 async function grabarAtencionCompleta() {
   if (!STATE.identificador || STATE.identificador.length < 2) {
     alert("⚠️ Por favor ingrese o seleccione un paciente antes de grabar la atención.");
@@ -5704,3 +5917,302 @@ window.imprimirActaAltaVoluntaria = imprimirActaAltaVoluntaria;
 window.imprimirCertificadoSinadef = imprimirCertificadoSinadef;
 window.imprimirOficioFiscaliaLevantamiento = imprimirOficioFiscaliaLevantamiento;
 window.imprimirFacturaOficial = imprimirFacturaOficial;
+
+
+// ==============================================================================
+// 24. GESTIÓN INTEGRAL DE MÓDULO 4: MÉDICO, KARDEX, LABORATORIO E IMÁGENES
+// ==============================================================================
+
+// A. ASIGNACIÓN DE MÉDICO DE GUARDIA SEGÚN DISPONIBILIDAD Y ESPECIALIDAD
+function asignarMedicoDisponible() {
+  const select = document.getElementById("medico_responsable_select");
+  if (!select) return;
+
+  // Lógica clínica inteligente de asignación según el motivo y contexto del paciente:
+  let indexAsignado = 0; // Default: Médico 1 (Emergenciólogo)
+
+  const edadNum = parseInt(STATE.edad || document.getElementById("edad_full")?.value) || 30;
+  const motivo = (STATE.motivoConsulta || document.getElementById("motivo_full")?.value || "").toLowerCase();
+
+  if (STATE.esPediatrico || edadNum < 14) {
+    indexAsignado = 3; // Médico 4: Pediatra de Turno
+  } else if (STATE.esGestante || (STATE.claveObstetrica && STATE.claveObstetrica !== "ninguna")) {
+    indexAsignado = 4; // Médico 5: Ginecólogo Obstetra
+  } else if (STATE.esAccidenteTransito || motivo.includes("fractura") || motivo.includes("trauma") || motivo.includes("caída")) {
+    indexAsignado = 5; // Médico 6: Traumatólogo de Guardia
+  } else if (STATE.prioridad === "I") {
+    indexAsignado = 0; // Médico 1: Emergenciólogo (Shock Trauma)
+  } else if (motivo.includes("abdomen") || motivo.includes("apéndice") || motivo.includes("herida")) {
+    indexAsignado = 1; // Médico 2: Cirujano de Guardia
+  } else {
+    // Rota al siguiente médico disponible en el rol de guardia
+    indexAsignado = (select.selectedIndex + 1) % select.options.length;
+  }
+
+  select.selectedIndex = indexAsignado;
+  const medicoElegido = select.options[indexAsignado].value;
+  actualizarMedicoAsignado(medicoElegido);
+
+  alert(`🩺 Médico Asignado según Rol de Guardia y Disponibilidad:\n${medicoElegido}\nEstado: 🟢 Activo / Disponible en Servicio.`);
+}
+
+function asignarMedicoAzar() {
+  asignarMedicoDisponible();
+}
+
+function actualizarMedicoAsignado(val) {
+  STATE.medicoTratante = val;
+  STATE.firmante = val;
+}
+
+// B. INICIALIZAR Y POBLAR SELECTORES DEL CATÁLOGO MÉDICO
+function inicializarSelectoresCatalogo() {
+  // 1. Selector de Farmacia
+  const selFarm = document.getElementById("select_farmacia_catalogo");
+  if (selFarm && FARMACIA && selFarm.options.length <= 1) {
+    selFarm.innerHTML = "";
+    FARMACIA.forEach((item, idx) => {
+      const opt = document.createElement("option");
+      opt.value = idx;
+      opt.textContent = `${item.nombre} (S/. ${item.costo.toFixed(2)})`;
+      selFarm.appendChild(opt);
+    });
+  }
+
+  // 2. Selector de Laboratorio
+  const selLab = document.getElementById("select_laboratorio_catalogo");
+  if (selLab && LABORATORIO && selLab.options.length <= 1) {
+    selLab.innerHTML = "";
+    LABORATORIO.forEach((item, idx) => {
+      const opt = document.createElement("option");
+      opt.value = idx;
+      opt.textContent = `${item.nombre} (S/. ${item.costo.toFixed(2)})`;
+      selLab.appendChild(opt);
+    });
+  }
+
+  // 3. Selector de Imágenes
+  const selImg = document.getElementById("select_imagenes_catalogo");
+  if (selImg && IMAGENES && selImg.options.length <= 1) {
+    selImg.innerHTML = "";
+    IMAGENES.forEach((item, idx) => {
+      const opt = document.createElement("option");
+      opt.value = idx;
+      opt.textContent = `${item.nombre} (S/. ${item.costo.toFixed(2)})`;
+      selImg.appendChild(opt);
+    });
+  }
+
+  renderizarKardex();
+  renderizarOrdenesLaboratorio();
+  renderizarOrdenesImagenes();
+}
+
+// C. KARDEX DE ENFERMERÍA DINÁMICO
+function agregarMedicamentoAKardex() {
+  const selFarm = document.getElementById("select_farmacia_catalogo");
+  const dosisInput = document.getElementById("input_dosis_kardex");
+  const horarioInput = document.getElementById("input_horario_kardex");
+
+  const idx = parseInt(selFarm?.value) || 0;
+  const item = FARMACIA[idx];
+  if (!item) return;
+
+  const dosis = (dosisInput?.value || "Dosis terapéutica EV").trim();
+  const horario = (horarioInput?.value || "Stat").trim();
+
+  if (!Array.isArray(STATE.kardexItems)) STATE.kardexItems = [];
+  STATE.kardexItems.push({
+    nombre: item.nombre,
+    dosis: `${dosis} (${horario})`,
+    costo: item.costo,
+    cat: "Farmacia",
+    administrado: false,
+    horaAdmin: null
+  });
+
+  renderizarKardex();
+  alert(`💊 Medicamento indicado y añadido al Kardex de Enfermería: ${item.nombre}. Recuerde que solo se facturará cuando Enfermería marque [ ✓ Administrado ].`);
+}
+
+function renderizarKardex() {
+  const tbody = document.getElementById("kardex_items_body");
+  if (!tbody) return;
+
+  if (!Array.isArray(STATE.kardexItems) || STATE.kardexItems.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:12px;color:#94a3b8;">Sin medicamentos prescritos en el Kardex. Seleccione un fármaco arriba para indicar.</td></tr>`;
+    return;
+  }
+
+  let html = "";
+  STATE.kardexItems.forEach((k, idx) => {
+    const isAdm = k.administrado;
+    html += `
+      <tr style="border-bottom:1px solid #e2e8f0;">
+        <td style="padding:8px 10px;font-weight:600;color:#0f172a;">${k.nombre}</td>
+        <td style="padding:8px 10px;color:#475569;">${k.dosis}</td>
+        <td style="padding:8px 10px;text-align:right;font-weight:700;color:#0f172a;">S/. ${k.costo.toFixed(2)}</td>
+        <td style="padding:8px 10px;text-align:center;">
+          <button type="button" 
+                  class="btn-kardex-admin"
+                  data-administrado="${isAdm ? 'true' : 'false'}"
+                  style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;border:none;background:${isAdm ? '#15803d' : '#e0f2fe'};color:${isAdm ? '#ffffff' : '#0369a1'};"
+                  onclick="administrarKardexItem(${idx}, '${k.nombre.replace(/'/g, "\'")}', ${k.costo}, 'Farmacia', this)">
+            ${isAdm ? `✅ Administrado (${k.horaAdmin || 'Registrado'})` : '[ ✓ Administrado por Enf. ]'}
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+  tbody.innerHTML = html;
+}
+
+function administrarKardexItem(idx, nombre, costo, cat, btnEl) {
+  if (!Array.isArray(STATE.kardexItems) || !STATE.kardexItems[idx]) return;
+  const k = STATE.kardexItems[idx];
+  const yaAdm = k.administrado;
+  const now = new Date();
+  const horaStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  if (!yaAdm) {
+    k.administrado = true;
+    k.horaAdmin = horaStr;
+    registrarFacturaItem(nombre, costo, cat);
+    if (!STATE.kardexAdministrados.includes(nombre)) {
+      STATE.kardexAdministrados.push(nombre);
+    }
+  } else {
+    k.administrado = false;
+    k.horaAdmin = null;
+    const itemIdx = STATE.items_factura.findIndex(i => i.nombre === nombre);
+    if (itemIdx !== -1) {
+      STATE.items_factura.splice(itemIdx, 1);
+    }
+    STATE.kardexAdministrados = STATE.kardexAdministrados.filter(n => n !== nombre);
+    actualizarFactura();
+  }
+
+  renderizarKardex();
+}
+
+// D. ÓRDENES DE LABORATORIO CLÍNICO
+function solicitarExamenLaboratorio() {
+  const selLab = document.getElementById("select_laboratorio_catalogo");
+  const prioSel = document.getElementById("select_prioridad_lab");
+
+  const idx = parseInt(selLab?.value) || 0;
+  const item = LABORATORIO[idx];
+  if (!item) return;
+
+  const prioridad = prioSel?.value || "🚨 Urgente (30 min)";
+
+  if (!Array.isArray(STATE.ordenesLaboratorio)) STATE.ordenesLaboratorio = [];
+  STATE.ordenesLaboratorio.push({
+    nombre: item.nombre,
+    prioridad: prioridad,
+    costo: item.costo,
+    estado: "⏳ En proceso de análisis"
+  });
+
+  // Agregar cargo directo a factura por orden de laboratorio emitida
+  registrarFacturaItem(item.nombre, item.costo, "Laboratorio");
+  renderizarOrdenesLaboratorio();
+  alert(`🧪 Análisis de Laboratorio solicitado: ${item.nombre}. Orden transmitida a Toma de Muestras y cargada a cuenta hospitalaria.`);
+}
+
+function renderizarOrdenesLaboratorio() {
+  const tbody = document.getElementById("tabla_ordenes_lab_body");
+  if (!tbody) return;
+
+  if (!Array.isArray(STATE.ordenesLaboratorio) || STATE.ordenesLaboratorio.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:12px;color:#94a3b8;">Sin análisis de laboratorio solicitados. Seleccione una prueba arriba para ordenar.</td></tr>`;
+    return;
+  }
+
+  let html = "";
+  STATE.ordenesLaboratorio.forEach(o => {
+    html += `
+      <tr style="border-bottom:1px solid #e2e8f0;">
+        <td style="padding:8px 10px;font-weight:600;color:#0f172a;">${o.nombre}</td>
+        <td style="padding:8px 10px;color:#475569;font-size:11px;">${o.prioridad}</td>
+        <td style="padding:8px 10px;text-align:right;font-weight:700;color:#0f172a;">S/. ${o.costo.toFixed(2)}</td>
+        <td style="padding:8px 10px;text-align:center;">
+          <span style="background:#ecfeff;color:#0891b2;border:1px solid #a5f3fc;padding:3px 8px;border-radius:9999px;font-size:10px;font-weight:800;">
+            ${o.estado}
+          </span>
+        </td>
+      </tr>
+    `;
+  });
+  tbody.innerHTML = html;
+}
+
+// E. ÓRDENES DE DIAGNÓSTICO POR IMÁGENES Y PROCEDIMIENTOS
+function solicitarEstudioImagen() {
+  const selImg = document.getElementById("select_imagenes_catalogo");
+  const indInput = document.getElementById("input_indicacion_img");
+
+  const idx = parseInt(selImg?.value) || 0;
+  const item = IMAGENES[idx];
+  if (!item) return;
+
+  const indicacion = (indInput?.value || "Evaluación de emergencia").trim();
+
+  if (!Array.isArray(STATE.ordenesImagenes)) STATE.ordenesImagenes = [];
+  STATE.ordenesImagenes.push({
+    nombre: item.nombre,
+    indicacion: indicacion,
+    costo: item.costo,
+    estado: "⏳ Estudio en ejecución"
+  });
+
+  // Agregar cargo directo a factura por orden de imagen/estudio
+  registrarFacturaItem(item.nombre, item.costo, "Imágenes");
+  renderizarOrdenesImagenes();
+  alert(`🩻 Estudio Radiológico / Imagen solicitado: ${item.nombre}. Orden transmitida al Servicio de Imágenes de Emergencia.`);
+}
+
+function renderizarOrdenesImagenes() {
+  const tbody = document.getElementById("tabla_ordenes_img_body");
+  if (!tbody) return;
+
+  if (!Array.isArray(STATE.ordenesImagenes) || STATE.ordenesImagenes.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:12px;color:#94a3b8;">Sin estudios radiológicos solicitados. Seleccione un estudio arriba para ordenar.</td></tr>`;
+    return;
+  }
+
+  let html = "";
+  STATE.ordenesImagenes.forEach(o => {
+    html += `
+      <tr style="border-bottom:1px solid #e2e8f0;">
+        <td style="padding:8px 10px;font-weight:600;color:#0f172a;">${o.nombre}</td>
+        <td style="padding:8px 10px;color:#475569;font-size:11px;">${o.indicacion}</td>
+        <td style="padding:8px 10px;text-align:right;font-weight:700;color:#0f172a;">S/. ${o.costo.toFixed(2)}</td>
+        <td style="padding:8px 10px;text-align:center;">
+          <span style="background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;padding:3px 8px;border-radius:9999px;font-size:10px;font-weight:800;">
+            ${o.estado}
+          </span>
+        </td>
+      </tr>
+    `;
+  });
+  tbody.innerHTML = html;
+}
+
+// Exportar globalmente
+window.asignarMedicoDisponible = asignarMedicoDisponible;
+window.asignarMedicoAzar = asignarMedicoAzar;
+window.actualizarMedicoAsignado = actualizarMedicoAsignado;
+window.inicializarSelectoresCatalogo = inicializarSelectoresCatalogo;
+window.agregarMedicamentoAKardex = agregarMedicamentoAKardex;
+window.renderizarKardex = renderizarKardex;
+window.solicitarExamenLaboratorio = solicitarExamenLaboratorio;
+window.renderizarOrdenesLaboratorio = renderizarOrdenesLaboratorio;
+window.solicitarEstudioImagen = solicitarEstudioImagen;
+window.renderizarOrdenesImagenes = renderizarOrdenesImagenes;
+window.imprimirBrazalete = imprimirBrazalete;
+
+// Inicializar selectores cuando el DOM esté listo
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(inicializarSelectoresCatalogo, 150);
+});

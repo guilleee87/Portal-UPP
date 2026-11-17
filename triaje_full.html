@@ -1211,7 +1211,7 @@
           <span class="module-num-badge">4</span>
           <div>
             <div>Módulo 4: Shock Trauma, Tópicos de Emergencia &amp; Kardex</div>
-            <div class="module-section-subtitle">NTS N° 042-MINSA · NTS N° 139-MINSA · Kardex de Enfermería con confirmación de administración</div>
+            <div class="module-section-subtitle">NTS N° 042-MINSA · NTS N° 139-MINSA · Kardex de Enfermería, Laboratorio Clínico e Imágenes</div>
           </div>
         </div>
         <span class="toggle-arrow open" id="arrow_mod4">▼</span>
@@ -1220,17 +1220,17 @@
 
         <div class="norma-pill-banner">
           <span class="norma-tag">NTS N° 139-MINSA</span>
-          <span><strong>Kardex de Enfermería Auditable:</strong> Solo los fármacos y exámenes efectivamente administrados por Enfermería se acumulan en la cuenta del paciente, evitando glosas en auditoría.</span>
+          <span><strong>Órdenes Asistenciales y Kardex Auditable:</strong> Prescripción de fármacos, analítica de laboratorio y estudios radiológicos de emergencia. Solo los medicamentos efectivamente administrados por Enfermería se debitan en la cuenta del paciente.</span>
         </div>
 
-        <!-- AMBIENTE ASIGNADO SEGÚN PRIORIDAD -->
-        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px; margin-bottom:14px; font-size:0.84rem;">
-          <strong>Ambiente Asignado por Triaje:</strong>
-          <span id="topico_asignado_lbl" style="font-weight:800; color:#0f172a; margin-left:6px;">Tópico de Emergencia General</span>
-        </div>
-
-        <!-- REGISTRO MÉDICO Y CIE-10 OBLIGATORIO -->
-        <div class="form-grid-3">
+        <!-- AMBIENTE ASIGNADO Y MÉDICO DE GUARDIA -->
+        <div class="form-grid-3" style="margin-bottom:14px;">
+          <div class="form-field">
+            <label>Ambiente Asignado por Triaje:</label>
+            <div style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:8px; padding:9px 12px; font-weight:800; color:#0f172a;" id="topico_asignado_lbl">
+              Tópico de Emergencia General
+            </div>
+          </div>
           <div class="form-field">
             <label for="cie10_select">Diagnóstico CIE-10 (Obligatorio para Cobertura):</label>
             <select id="cie10_select" class="input-full" onchange="seleccionarCIE10(this.value)">
@@ -1246,67 +1246,168 @@
             </select>
           </div>
           <div class="form-field">
-            <label for="tiempo_enfermedad_input">Tiempo de Enfermedad:</label>
-            <input type="text" id="tiempo_enfermedad_input" class="input-full" placeholder="Ej. 2 horas / Súbito">
-          </div>
-          <div class="form-field">
-            <label for="medico_responsable_input">Médico Asistencial de Guardia:</label>
-            <input type="text" id="medico_responsable_input" class="input-full" value="Dr. L. Vásquez Valdivieso (CMP 62910)">
+            <label for="medico_responsable_select">Médico Asistencial de Guardia:</label>
+            <div style="display:flex; gap:6px;">
+              <select id="medico_responsable_select" class="input-full" onchange="actualizarMedicoAsignado(this.value)" style="font-weight:700;">
+                <option value="Médico de Turno 1 (Emergenciólogo / CMP 0001)">Médico de Turno 1 (Emergenciólogo) — 🟢 Disponible</option>
+                <option value="Médico de Turno 2 (Cirujano de Guardia / CMP 0002)">Médico de Turno 2 (Cirujano de Guardia) — 🟢 Disponible</option>
+                <option value="Médico de Turno 3 (Médico Internista / CMP 0003)">Médico de Turno 3 (Médico Internista) — 🟢 Disponible</option>
+                <option value="Médico de Turno 4 (Pediatra de Turno / CMP 0004)">Médico de Turno 4 (Pediatra de Turno) — 🟢 Disponible</option>
+                <option value="Médico de Turno 5 (Ginecólogo Obstetra / CMP 0005)">Médico de Turno 5 (Ginecólogo Obstetra) — 🟢 Disponible</option>
+                <option value="Médico de Turno 6 (Traumatólogo de Guardia / CMP 0006)">Médico de Turno 6 (Traumatólogo de Guardia) — 🟢 Disponible</option>
+              </select>
+              <button type="button" class="btn-full-primary" style="white-space:nowrap; padding:0 14px; font-weight:700; background:#0284c7; display:flex; align-items:center; gap:6px;" onclick="asignarMedicoDisponible()" title="Verificar rol de guardia y asignar médico disponible según especialidad">
+                🩺 Asignar Disponible
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- KARDEX DE ENFERMERÍA AUDITABLE (MEDICAMENTOS Y PROCEDIMIENTOS) -->
-        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:14px; margin-top:14px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <div style="font-size:0.84rem; font-weight:800; color:#0f172a;">
-              💊 Kardex de Enfermería — Administración de Fármacos y Exámenes:
+        <!-- SECCIÓN 4.1: KARDEX DE MEDICAMENTOS Y FLUIDOTERAPIA -->
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <div style="font-size:0.88rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+              <span>💊</span>
+              <span>Kardex de Farmacia y Medicamentos de Urgencia:</span>
             </div>
-            <button type="button" class="btn-full-secondary" style="font-size:0.75rem;" onclick="abrirCatalogoRapidoKardex()">
-              + Indicar Nuevo Fármaco / Examen
-            </button>
+            <span style="font-size:0.75rem; color:#64748b; background:#f1f5f9; padding:4px 8px; border-radius:6px;">
+              NTS N° 139-MINSA · Solo se factura con verificación de administración
+            </span>
           </div>
-          <table class="kardex-table" id="tabla_kardex_enfermeria">
+
+          <!-- SELECTOR DINÁMICO DE MEDICAMENTO DEL CATÁLOGO -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:10px; align-items:end;">
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="select_farmacia_catalogo">Seleccionar Medicamento / Solución EV:</label>
+                <select id="select_farmacia_catalogo" class="input-full" style="font-weight:600;">
+                  <!-- Se llena dinámicamente con los fármacos de FARMACIA -->
+                </select>
+              </div>
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="input_dosis_kardex">Dosis / Vía de Administración:</label>
+                <input type="text" id="input_dosis_kardex" class="input-full" placeholder="Ej. 1 gr EV diluido cada 12h" value="Dosis terapéutica EV">
+              </div>
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="input_horario_kardex">Frecuencia / Horario:</label>
+                <input type="text" id="input_horario_kardex" class="input-full" placeholder="Horario" value="Stat (Inmediato)">
+              </div>
+              <button type="button" class="btn-full-primary" style="height:38px; white-space:nowrap; background:#0284c7;" onclick="agregarMedicamentoAKardex()">
+                + Agregar al Kardex
+              </button>
+            </div>
+          </div>
+
+          <table class="kardex-table" id="tabla_kardex_enfermeria" style="width:100%; border-collapse:collapse; font-size:12px;">
             <thead>
-              <tr>
-                <th>Ítem / Prescripción</th>
-                <th>Dosis / Vía</th>
-                <th>Costo</th>
-                <th>Estado de Administración (Kardex)</th>
+              <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+                <th style="padding:8px 10px; text-align:left;">Ítem / Fármaco Prescrito</th>
+                <th style="padding:8px 10px; text-align:left;">Dosis / Vía / Horario</th>
+                <th style="padding:8px 10px; text-align:right; width:80px;">Costo</th>
+                <th style="padding:8px 10px; text-align:center; width:210px;">Acción de Enfermería (Kardex)</th>
               </tr>
             </thead>
             <tbody id="kardex_items_body">
-              <tr>
-                <td>Cloruro de Sodio 0.9% 1000ml (Frasco EV)</td>
-                <td>1000ml EV a chorro</td>
-                <td>S/. 12.00</td>
-                <td>
-                  <button type="button" class="btn-kardex-admin" onclick="administrarKardexItem(0, 'Cloruro de Sodio 0.9% 1000ml', 12, 'Farmacia', this)">
-                    ✓ Administrado por Enfermería
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>Hemograma Completo + Bioquímica de Urgencia</td>
-                <td>Muestra sanguínea</td>
-                <td>S/. 45.00</td>
-                <td>
-                  <button type="button" class="btn-kardex-admin" onclick="administrarKardexItem(1, 'Hemograma Completo + Bioquímica', 45, 'Laboratorio', this)">
-                    ✓ Administrado por Enfermería
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>Analgesia EV (Ketorolaco / Metamizol según alergias)</td>
-                <td>Ampolla EV diluida</td>
-                <td>S/. 18.00</td>
-                <td>
-                  <button type="button" class="btn-kardex-admin" onclick="administrarKardexItem(2, 'Analgesia EV de Urgencia', 18, 'Farmacia', this)">
-                    ✓ Administrado por Enfermería
-                  </button>
-                </td>
-              </tr>
+              <!-- Renderizado dinámico -->
             </tbody>
           </table>
+        </div>
+
+        <!-- SECCIÓN 4.2: ÓRDENES DE EXÁMENES DE LABORATORIO CLÍNICO -->
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <div style="font-size:0.88rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+              <span>🧪</span>
+              <span>Laboratorio Clínico de Emergencia (Órdenes Analíticas):</span>
+            </div>
+            <span style="font-size:0.75rem; color:#64748b; background:#f1f5f9; padding:4px 8px; border-radius:6px;">
+              Toma de muestra y procesamiento estat
+            </span>
+          </div>
+
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 3fr 1fr auto; gap:10px; align-items:end;">
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="select_laboratorio_catalogo">Seleccionar Prueba de Laboratorio:</label>
+                <select id="select_laboratorio_catalogo" class="input-full" style="font-weight:600;">
+                  <!-- Se llena dinámicamente con los exámenes de LABORATORIO -->
+                </select>
+              </div>
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="select_prioridad_lab">Prioridad Analítica:</label>
+                <select id="select_prioridad_lab" class="input-full">
+                  <option value="Urgente (30 min)">🚨 Urgente / Emergencia (30 min)</option>
+                  <option value="Rutina (2 horas)">Rutina Hospitalaria (2 horas)</option>
+                </select>
+              </div>
+              <button type="button" class="btn-full-primary" style="height:38px; white-space:nowrap; background:#0891b2;" onclick="solicitarExamenLaboratorio()">
+                + Solicitar Análisis
+              </button>
+            </div>
+          </div>
+
+          <div id="contenedor_ordenes_lab">
+            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+              <thead>
+                <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+                  <th style="padding:8px 10px; text-align:left;">Prueba Analítica Solicitada</th>
+                  <th style="padding:8px 10px; text-align:left; width:160px;">Prioridad / Muestra</th>
+                  <th style="padding:8px 10px; text-align:right; width:80px;">Costo</th>
+                  <th style="padding:8px 10px; text-align:center; width:160px;">Estado de Procesamiento</th>
+                </tr>
+              </thead>
+              <tbody id="tabla_ordenes_lab_body">
+                <!-- Se llena con las órdenes de laboratorio activas -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 4.3: ÓRDENES DE DIAGNÓSTICO POR IMÁGENES Y PROCEDIMIENTOS -->
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <div style="font-size:0.88rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+              <span>🩻</span>
+              <span>Diagnóstico por Imágenes &amp; Procedimientos de Emergencia:</span>
+            </div>
+            <span style="font-size:0.75rem; color:#64748b; background:#f1f5f9; padding:4px 8px; border-radius:6px;">
+              Radiología, Tomografía, Ecografía FAST y Procedimientos
+            </span>
+          </div>
+
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 3fr 1fr auto; gap:10px; align-items:end;">
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="select_imagenes_catalogo">Seleccionar Estudio Radiológico / Imagen:</label>
+                <select id="select_imagenes_catalogo" class="input-full" style="font-weight:600;">
+                  <!-- Se llena dinámicamente con los estudios de IMAGENES -->
+                </select>
+              </div>
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="input_indicacion_img">Indicación Clínica:</label>
+                <input type="text" id="input_indicacion_img" class="input-full" placeholder="Ej. Descarte neumotórax / TEC" value="Evaluación de emergencia">
+              </div>
+              <button type="button" class="btn-full-primary" style="height:38px; white-space:nowrap; background:#4f46e5;" onclick="solicitarEstudioImagen()">
+                + Solicitar Estudio
+              </button>
+            </div>
+          </div>
+
+          <div id="contenedor_ordenes_img">
+            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+              <thead>
+                <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+                  <th style="padding:8px 10px; text-align:left;">Estudio Radiológico / Procedimiento</th>
+                  <th style="padding:8px 10px; text-align:left; width:160px;">Indicación Médica</th>
+                  <th style="padding:8px 10px; text-align:right; width:80px;">Costo</th>
+                  <th style="padding:8px 10px; text-align:center; width:160px;">Estado de Realización</th>
+                </tr>
+              </thead>
+              <tbody id="tabla_ordenes_img_body">
+                <!-- Se llena con las órdenes de imágenes activas -->
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- SELECTOR OBLIGATORIO DE DESTINO POST-TÓPICO -->
@@ -1316,25 +1417,22 @@
           </div>
           <div style="display:flex; flex-direction:column; gap:8px;">
             <label style="display:flex; align-items:center; gap:8px; font-weight:700; cursor:pointer;">
-              <input type="radio" name="destino_post_topico" value="alta_directa" onchange="seleccionarDestinoPostTopico('alta_directa')">
+              <input type="radio" name="destino_post_topico" id="btn_destino_alta" value="alta_directa" onchange="seleccionarDestinoPostTopico('alta')">
               <span>Ruta 1 — Alta Directa desde Tópico / Consultorio (Salta Módulos 5 y 6 directo al Módulo 7 de Egreso — Obligatorio para P-IV y P-V)</span>
             </label>
             <label style="display:flex; align-items:center; gap:8px; font-weight:700; cursor:pointer;">
-              <input type="radio" name="destino_post_topico" value="observacion" checked onchange="seleccionarDestinoPostTopico('observacion')">
+              <input type="radio" name="destino_post_topico" id="btn_destino_observacion" value="observacion" checked onchange="seleccionarDestinoPostTopico('observacion')">
               <span>Ruta 2 — Pase a Sala de Observación de Emergencia (Habilita el Módulo 5 para monitoreo de 12 a 24 horas)</span>
             </label>
             <label style="display:flex; align-items:center; gap:8px; font-weight:700; cursor:pointer;">
-              <input type="radio" name="destino_post_topico" value="sop_uci" onchange="seleccionarDestinoPostTopico('sop_uci')">
+              <input type="radio" name="destino_post_topico" id="btn_destino_quirofano_uci" value="sop_uci" onchange="seleccionarDestinoPostTopico('quirofano_uci')">
               <span>Ruta 3 — Pase Directo a Quirófano (SOP) o UCI/Hospitalización (Salta al Módulo 6 para soporte crítico o cirugía urgente)</span>
             </label>
           </div>
         </div>
 
       </div>
-    </section>
-
-
-    <!-- ======================================================================
+    </section><!-- ======================================================================
          MÓDULO 5: SALA DE OBSERVACIÓN DE EMERGENCIA & REEVALUACIÓN MÉDICA
          Sustento: NTS N° 042-MINSA/DGSP-V.01 (Estancia de 12 a 24 horas)
          ====================================================================== -->
