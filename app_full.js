@@ -7819,3 +7819,605 @@ function cargarCasoPreset(prioNum) {
     setTimeout(() => { msgToast.style.display = "none"; }, 4000);
   }
 }
+
+
+// ==============================================================================
+// 26. MOTOR DE ATENCIÓN SIMULTÁNEA Y GESTIÓN DE COLA DE URGENCIAS (NTS N° 042-MINSA)
+// Autores: Luis Guillermo Vásquez Valdivieso & Rodrigo Alonso Añazgo Farro
+// ==============================================================================
+
+let PACIENTES_COLA = [];
+let pacienteActivoId = null;
+let contadorSecuencialPx = 1;
+let intervalCronometrosCola = null;
+
+const ORDEN_PRIORIDADES = { "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, null: 99 };
+const COLORES_PRIORIDAD = {
+  "I": { bg: "#fee2e2", border: "#dc2626", text: "#991b1b", label: "P-I ROJO" },
+  "II": { bg: "#ffedd5", border: "#ea580c", text: "#9a3412", label: "P-II NARANJA" },
+  "III": { bg: "#fef9c3", border: "#ca8a04", text: "#854d0e", label: "P-III AMARILLO" },
+  "IV": { bg: "#dcfce7", border: "#16a34a", text: "#166534", label: "P-IV VERDE" },
+  "V": { bg: "#dbeafe", border: "#2563eb", text: "#1e40af", label: "P-V AZUL" },
+  null: { bg: "#f1f5f9", border: "#94a3b8", text: "#475569", label: "POR EVALUAR" }
+};
+
+function generarIdPaciente() {
+  return "PX-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 1000).toString(36);
+}
+
+function crearRegistroPaciente(datos = {}) {
+  const ahora = new Date();
+  const horaStr = ahora.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const num = datos.numero || contadorSecuencialPx++;
+  const id = datos.id || generarIdPaciente();
+  
+  return {
+    id: id,
+    numero: num,
+    identificador: datos.identificador || `Paciente #${num}`,
+    nombre: datos.nombre || `Paciente #${num} (En espera)`,
+    dni: datos.dni || "",
+    edad: datos.edad || null,
+    sexo: datos.sexo || "M",
+    horaLlegada: datos.horaLlegada || horaStr,
+    timestampLlegada: datos.timestampLlegada || ahora.getTime(),
+    modalidad: datos.modalidad || "A pie",
+    prioridad: datos.prioridad || null,
+    motivo: datos.motivo || "",
+    estadoAtencion: datos.estadoAtencion || "En Triaje",
+    camaId: datos.camaId || null,
+    camaNombre: datos.camaNombre || null,
+    esNN: Boolean(datos.esNN),
+    stateSnapshot: datos.stateSnapshot ? JSON.parse(JSON.stringify(datos.stateSnapshot)) : null,
+    formSnapshot: datos.formSnapshot ? JSON.parse(JSON.stringify(datos.formSnapshot)) : null
+  };
+}
+
+function capturarFormularioActual() {
+  const inputs = {};
+  const ids = [
+    "ident_full", "dni_reniec_input", "motivo_full", "spo2_full", "fc_full",
+    "pas_full", "pad_full", "fr_full", "temp_full", "glasgow_full", "glucosa_full",
+    "eva_full", "eva_range", "edad_full", "sexo_full", "fecha_nac_full",
+    "check_cod_infarto", "check_cod_ictus", "check_cod_sepsis",
+    "chk_gestante_full", "chk_pediatrico_full"
+  ];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      inputs[id] = (el.type === "checkbox") ? el.checked : el.value;
+    }
+  });
+  return inputs;
+}
+
+function aplicarFormulario(inputs) {
+  if (!inputs) return;
+  Object.keys(inputs).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (el.type === "checkbox") {
+        el.checked = Boolean(inputs[id]);
+      } else {
+        el.value = inputs[id];
+      }
+    }
+  });
+  const evaVal = inputs["eva_full"] !== undefined ? parseInt(inputs["eva_full"], 10) : 0;
+  if (!isNaN(evaVal) && typeof actualizarEVA === "function") {
+    actualizarEVA(evaVal);
+  }
+}
+
+function guardarEstadoPacienteActivo() {
+  if (!pacienteActivoId) return;
+  const p = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
+  if (!p) return;
+
+  p.stateSnapshot = JSON.parse(JSON.stringify(STATE));
+  p.formSnapshot = capturarFormularioActual();
+  p.prioridad = STATE.prioridad;
+  p.identificador = STATE.identificador || p.identificador;
+  p.nombre = STATE.nombreReniec || p.nombre;
+  p.dni = STATE.numDni || p.dni;
+  p.motivo = STATE.motivoConsulta || p.motivo;
+  p.camaId = STATE.camaAsignadaId;
+  p.camaNombre = STATE.camaAsignada;
+}
+
+function ordenarColaPacientes() {
+  PACIENTES_COLA.sort((a, b) => {
+    const pA = ORDEN_PRIORIDADES[a.prioridad] || 99;
+    const pB = ORDEN_PRIORIDADES[b.prioridad] || 99;
+    if (pA !== pB) return pA - pB;
+    return a.timestampLlegada - b.timestampLlegada;
+  });
+}
+
+function formatearTiempoEspera(ms) {
+  const diffSeg = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  const min = Math.floor(diffSeg / 60);
+  const seg = diffSeg % 60;
+  return `${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}`;
+}
+
+function renderizarTableroColaPacientes() {
+  const container = document.getElementById("activePatientsCardsList");
+  const countBadge = document.getElementById("lbl_total_px_activos");
+  if (!container) return;
+
+  ordenarColaPacientes();
+
+  if (countBadge) {
+    countBadge.textContent = `${PACIENTES_COLA.length} ${PACIENTES_COLA.length === 1 ? 'Paciente en atención' : 'Pacientes en simultáneo'}`;
+  }
+
+  container.innerHTML = "";
+
+  PACIENTES_COLA.forEach(p => {
+    const prioCfg = COLORES_PRIORIDAD[p.prioridad] || COLORES_PRIORIDAD[null];
+    const esActivo = (p.id === pacienteActivoId);
+    const tiempoEspera = formatearTiempoEspera(p.timestampLlegada);
+
+    const card = document.createElement("div");
+    card.className = `patient-queue-card ${esActivo ? 'active-card' : ''}`;
+    card.style.borderLeft = `5px solid ${prioCfg.border}`;
+    card.onclick = () => cambiarPacienteActivo(p.id);
+
+    card.innerHTML = `
+      <div class="card-top-row">
+        <span class="card-prio-badge" style="background:${prioCfg.bg}; color:${prioCfg.text}; border:1px solid ${prioCfg.border};">
+          ${prioCfg.label}
+        </span>
+        <span class="card-timer" id="timer_px_${p.id}" title="Tiempo desde su ingreso">⏱️ ${tiempoEspera}</span>
+      </div>
+      <div class="card-name" title="${p.nombre}">
+        ${p.esNN ? '🚨 ' : ''}${p.nombre}
+      </div>
+      <div class="card-meta">
+        <span>${p.modalidad || 'A pie'}</span>
+        <span style="font-weight:700; color:${p.camaNombre ? '#15803d' : '#64748b'};">
+          ${p.camaNombre ? ('🛏️ ' + p.camaNombre) : (p.estadoAtencion || 'En Triaje')}
+        </span>
+      </div>
+      <button type="button" class="btn-close-card" onclick="cerrarAtencionPaciente('${p.id}', event)" title="Finalizar atención / Dar de alta">&times;</button>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+function cambiarPacienteActivo(nuevoId) {
+  if (nuevoId === pacienteActivoId) return;
+
+  guardarEstadoPacienteActivo();
+
+  const nuevoPx = PACIENTES_COLA.find(x => x.id === nuevoId);
+  if (!nuevoPx) return;
+
+  pacienteActivoId = nuevoId;
+
+  if (nuevoPx.stateSnapshot) {
+    Object.assign(STATE, JSON.parse(JSON.stringify(nuevoPx.stateSnapshot)));
+  } else {
+    limpiarFormularioCompletoState();
+    STATE.identificador = nuevoPx.identificador;
+    STATE.nombreReniec = nuevoPx.nombre;
+    STATE.numDni = nuevoPx.dni;
+    STATE.prioridad = nuevoPx.prioridad;
+  }
+
+  if (nuevoPx.formSnapshot) {
+    aplicarFormulario(nuevoPx.formSnapshot);
+  } else {
+    const elIdent = document.getElementById("ident_full");
+    if (elIdent) elIdent.value = nuevoPx.identificador || "";
+    const elDni = document.getElementById("dni_reniec_input");
+    if (elDni) elDni.value = nuevoPx.dni || "";
+    const elMotivo = document.getElementById("motivo_full");
+    if (elMotivo) elMotivo.value = nuevoPx.motivo || "";
+  }
+
+  const hcDisp = document.getElementById("hc_code_display");
+  if (hcDisp) hcDisp.textContent = STATE.historiaClinica || "—";
+  const badgeEstado = document.getElementById("hc_badge_estado");
+  if (badgeEstado) {
+    badgeEstado.textContent = STATE.estadoRegistrado || (nuevoPx.esNN ? "🚨 Paciente NN" : "Por confirmar");
+    badgeEstado.className = nuevoPx.esNN ? "badge-estado badge-warning" : "badge-estado";
+  }
+
+  if (STATE.prioridad && typeof mostrarPrioridad === "function") {
+    mostrarPrioridad(STATE.prioridad, {
+      tipo: PRIORIDADES[STATE.prioridad]?.nombre || "Prioridad Asignada",
+      desc: nuevoPx.motivo || "Atención activa en curso",
+      destino: STATE.camaAsignada || (STATE.prioridad === 'I' ? 'Shock Trauma' : (STATE.prioridad === 'II' ? 'Tópico de Emergencia' : 'Observación / Espera'))
+    });
+  } else {
+    limpiarPrioridadUI();
+  }
+
+  renderizarTableroColaPacientes();
+  mostrarToastCola(`🔄 Paciente activo: <strong>${nuevoPx.nombre}</strong>`);
+}
+
+function limpiarFormularioCompletoState() {
+  STATE.spo2 = null; STATE.fc = null; STATE.pasSistolica = null; STATE.paDiastolica = null;
+  STATE.fr = null; STATE.temperatura = null; STATE.glucosa = null; STATE.glasgow = null; STATE.eva = 0;
+  STATE.motivoConsulta = ""; STATE.prioridad = null; STATE.colorPrioridad = null;
+  STATE.codigoInfarto = false; STATE.codigoIctus = false; STATE.codigoSepsis = false;
+  STATE.identificador = ""; STATE.numDni = null; STATE.nombreReniec = null;
+  STATE.historiaClinica = "—"; STATE.camaAsignada = null; STATE.camaAsignadaId = null;
+
+  const inputsIds = [
+    "ident_full", "dni_reniec_input", "motivo_full", "spo2_full", "fc_full",
+    "pas_full", "pad_full", "fr_full", "temp_full", "glasgow_full", "glucosa_full",
+    "eva_full", "eva_range", "edad_full", "sexo_full", "fecha_nac_full"
+  ];
+  inputsIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  if (typeof actualizarEVA === "function") actualizarEVA(0);
+  limpiarPrioridadUI();
+}
+
+function limpiarPrioridadUI() {
+  const pDisp = document.getElementById("prioridad_display");
+  if (pDisp) pDisp.style.display = "none";
+  const pCard = document.getElementById("prio_result_card");
+  if (pCard) pCard.style.display = "none";
+  const miniPrio = document.getElementById("mini_prioridad_badge");
+  if (miniPrio) {
+    miniPrio.textContent = "🚦 Triaje: Por evaluar";
+    miniPrio.style.background = "";
+    miniPrio.style.color = "";
+  }
+}
+
+function crearNuevoPacienteEnBlanco() {
+  guardarEstadoPacienteActivo();
+  const nuevoPx = crearRegistroPaciente();
+  PACIENTES_COLA.push(nuevoPx);
+  pacienteActivoId = nuevoPx.id;
+  limpiarFormularioCompletoState();
+  renderizarTableroColaPacientes();
+  mostrarToastCola(`➕ Ficha en blanco creada: <strong>${nuevoPx.nombre}</strong>`);
+}
+
+function cerrarAtencionPaciente(id, event) {
+  if (event) event.stopPropagation();
+  const px = PACIENTES_COLA.find(x => x.id === id);
+  if (!px) return;
+
+  if (!confirm(`¿Desea cerrar la atención y dar salida a ${px.nombre}?`)) return;
+
+  if (px.camaId && typeof liberarCamaRecurso === "function") {
+    liberarCamaRecurso(px.camaId, "Alta de Urgencia");
+  }
+
+  PACIENTES_COLA = PACIENTES_COLA.filter(x => x.id !== id);
+
+  if (PACIENTES_COLA.length === 0) {
+    const defaultPx = crearRegistroPaciente();
+    PACIENTES_COLA.push(defaultPx);
+    pacienteActivoId = defaultPx.id;
+    limpiarFormularioCompletoState();
+  } else if (pacienteActivoId === id) {
+    pacienteActivoId = PACIENTES_COLA[0].id;
+    cambiarPacienteActivo(pacienteActivoId);
+  }
+
+  renderizarTableroColaPacientes();
+  mostrarToastCola(`✅ Atención finalizada: <strong>${px.nombre}</strong>`);
+}
+
+function abrirModalAdmisionRapidaNN() {
+  const m = document.getElementById("modalAdmisionNN");
+  if (m) m.style.display = "flex";
+}
+
+function cerrarModalAdmisionNN() {
+  const m = document.getElementById("modalAdmisionNN");
+  if (m) m.style.display = "none";
+}
+
+function ejecutarAdmisionRapidaNN(event) {
+  if (event) event.preventDefault();
+  const rbs = document.getElementsByName("nn_sexo");
+  let sexo = "M";
+  for (let r of rbs) { if (r.checked) { sexo = r.value; break; } }
+
+  const edad = parseInt(document.getElementById("nn_edad_input")?.value || "30", 10);
+  const modalidad = document.getElementById("nn_modalidad_input")?.value || "Ambulancia SAMU / Bomberos";
+  const motivo = document.getElementById("nn_estado_input")?.value || "Inconsciente / Politraumatizado";
+
+  const ahora = new Date();
+  const fechaCod = ahora.toISOString().slice(0, 10).replace(/-/g, "");
+  const numSec = String(PACIENTES_COLA.filter(x => x.esNN).length + 1).padStart(2, "0");
+  const codigoNN = `NN-${sexo === 'M' ? 'MASC' : 'FEM'}-${fechaCod}-${numSec}`;
+  const nombreNN = `NN (${sexo === 'M' ? 'Masculino' : 'Femenino'} ~${edad}a) — Indocumentado`;
+
+  guardarEstadoPacienteActivo();
+
+  const pxNN = crearRegistroPaciente({
+    identificador: codigoNN,
+    nombre: nombreNN,
+    dni: "",
+    edad: edad,
+    sexo: sexo,
+    modalidad: modalidad,
+    motivo: motivo,
+    prioridad: "I",
+    esNN: true,
+    estadoAtencion: "Shock Trauma Inmediato"
+  });
+
+  PACIENTES_COLA.push(pxNN);
+  pacienteActivoId = pxNN.id;
+
+  limpiarFormularioCompletoState();
+  STATE.identificador = codigoNN;
+  STATE.nombreReniec = nombreNN;
+  STATE.numDni = "";
+  STATE.tipoSeguro = "SIS Gratuito";
+  STATE.modalidadIngreso = modalidad;
+  STATE.motivoConsulta = motivo;
+  STATE.prioridad = "I";
+  STATE.historiaClinica = `HC-NN-${fechaCod}-${numSec}`;
+
+  const elIdent = document.getElementById("ident_full");
+  if (elIdent) elIdent.value = `${nombreNN} [${codigoNN}]`;
+  const elMotivo = document.getElementById("motivo_full");
+  if (elMotivo) elMotivo.value = motivo;
+  const hcDisp = document.getElementById("hc_code_display");
+  if (hcDisp) hcDisp.textContent = STATE.historiaClinica;
+  const badgeEstado = document.getElementById("hc_badge_estado");
+  if (badgeEstado) {
+    badgeEstado.textContent = "🚨 NN Registrado (Ley 27604)";
+    badgeEstado.className = "badge-estado badge-warning";
+  }
+
+  if (typeof mostrarPrioridad === "function") {
+    mostrarPrioridad("I", {
+      tipo: "Prioridad I — ROJO (Resucitación / Shock Trauma)",
+      desc: `Paciente indocumentado (${codigoNN}) en riesgo vital. Atención inmediata garantizada por Ley N° 27604.`,
+      destino: "Shock Trauma ST-01 / ST-02"
+    });
+  }
+
+  cerrarModalAdmisionNN();
+  renderizarTableroColaPacientes();
+  mostrarToastCola(`🚨 <strong>Paciente NN Admitido:</strong> ${codigoNN} ingresado a Shock Trauma.`);
+}
+
+function abrirModalPreTriageSTART() {
+  const m = document.getElementById("modalPreTriageSTART");
+  if (m) {
+    m.style.display = "flex";
+    avanzarPasoSTART(1);
+  }
+}
+
+function cerrarModalPreTriageSTART() {
+  const m = document.getElementById("modalPreTriageSTART");
+  if (m) m.style.display = "none";
+}
+
+function avanzarPasoSTART(numPaso) {
+  for (let i = 1; i <= 4; i++) {
+    const paso = document.getElementById(`start_step_${i}`);
+    if (paso) paso.style.display = (i === numPaso) ? "block" : "none";
+  }
+}
+
+function completarPreTriageSTART(prio, motivo) {
+  cerrarModalPreTriageSTART();
+  guardarEstadoPacienteActivo();
+
+  const num = contadorSecuencialPx++;
+  const ticket = `T-START-${String(num).padStart(3, '0')}`;
+  const nombrePx = `Paciente ${ticket} (Pre-Triage Cola)`;
+
+  const px = crearRegistroPaciente({
+    numero: num,
+    identificador: ticket,
+    nombre: nombrePx,
+    prioridad: prio,
+    motivo: `Pre-Triage START: ${motivo}`,
+    modalidad: "A pie",
+    estadoAtencion: prio === 'I' ? "Shock Trauma" : (prio === 'II' ? "Tópico Inmediato" : "En Espera")
+  });
+
+  PACIENTES_COLA.push(px);
+  pacienteActivoId = px.id;
+
+  limpiarFormularioCompletoState();
+  STATE.identificador = ticket;
+  STATE.nombreReniec = nombrePx;
+  STATE.prioridad = prio;
+  STATE.motivoConsulta = `Pre-Triage START: ${motivo}`;
+  STATE.historiaClinica = `HC-2026-${ticket}`;
+
+  const elIdent = document.getElementById("ident_full");
+  if (elIdent) elIdent.value = ticket;
+  const elMotivo = document.getElementById("motivo_full");
+  if (elMotivo) elMotivo.value = STATE.motivoConsulta;
+
+  if (typeof mostrarPrioridad === "function") {
+    mostrarPrioridad(prio, {
+      tipo: PRIORIDADES[prio]?.nombre || `Prioridad P-${prio}`,
+      desc: motivo,
+      destino: prio === 'I' ? 'Shock Trauma' : (prio === 'II' ? 'Tópico de Emergencia' : 'Sala de Espera')
+    });
+  }
+
+  renderizarTableroColaPacientes();
+  mostrarToastCola(`⚡ <strong>Pre-Triage START Completado:</strong> ${ticket} asignado a <strong>P-${prio}</strong>.`);
+}
+
+function simularLlegadaMasiva() {
+  guardarEstadoPacienteActivo();
+
+  const casosMasivos = [
+    {
+      identificador: "NN-MASC-CHOQUE-01",
+      nombre: "NN Conductor (Masc ~35a) — Politrauma",
+      dni: "",
+      edad: 35,
+      sexo: "M",
+      modalidad: "Ambulancia SAMU",
+      prioridad: "I",
+      motivo: "Choque frontal a alta velocidad. Politraumatizado, shock hipovolémico, volet costal derecho, pérdida de conocimiento.",
+      estadoAtencion: "Shock Trauma ST-01",
+      camaNombre: "Shock Trauma ST-01",
+      esNN: true,
+      vitals: { spo2: 82, fc: 142, pas: 70, pad: 40, fr: 32, temp: 35.5, glasgow: 7, glucosa: 70, eva: 0 }
+    },
+    {
+      identificador: "10203040",
+      nombre: "CARLOS MENDOZA ROJAS (Copiloto)",
+      dni: "10203040",
+      edad: 48,
+      sexo: "M",
+      modalidad: "Ambulancia Bomberos",
+      prioridad: "II",
+      motivo: "Fractura expuesta de fémur derecho con sangrado profuso activo controlado con torniquete, dolor 9/10, crisis hipertensiva.",
+      estadoAtencion: "Tópico de Cirugía / SOP",
+      camaNombre: null,
+      esNN: false,
+      vitals: { spo2: 96, fc: 108, pas: 185, pad: 115, fr: 22, temp: 36.8, glasgow: 14, glucosa: 110, eva: 9 }
+    },
+    {
+      identificador: "70809010",
+      nombre: "MARIA TORRES SILVA (Pasajera)",
+      dni: "70809010",
+      edad: 39,
+      sexo: "F",
+      modalidad: "Patrullero PNP",
+      prioridad: "III",
+      motivo: "Contusión torácica leve por cinturón de seguridad, dolor lumbar moderado, taquicardia reactiva por crisis de ansiedad.",
+      estadoAtencion: "Tópico de Medicina / Espera",
+      camaNombre: null,
+      esNN: false,
+      vitals: { spo2: 98, fc: 92, pas: 130, pad: 85, fr: 18, temp: 37.0, glasgow: 15, glucosa: 98, eva: 6 }
+    },
+    {
+      identificador: "45678901",
+      nombre: "JORGE QUISPE RAMOS (Peatón)",
+      dni: "45678901",
+      edad: 26,
+      sexo: "M",
+      modalidad: "A pie / Serenazgo",
+      prioridad: "IV",
+      motivo: "Excoriaciones dermoepidérmicas superficiales múltiples en miembros superiores y rodillas. Deambula por sus propios medios.",
+      estadoAtencion: "Tópico de Curaciones / Ambulatorio",
+      camaNombre: null,
+      esNN: false,
+      vitals: { spo2: 99, fc: 76, pas: 118, pad: 76, fr: 16, temp: 36.6, glasgow: 15, glucosa: 92, eva: 3 }
+    }
+  ];
+
+  PACIENTES_COLA = [];
+  casosMasivos.forEach(c => {
+    const px = crearRegistroPaciente({
+      identificador: c.identificador,
+      nombre: c.nombre,
+      dni: c.dni,
+      edad: c.edad,
+      sexo: c.sexo,
+      modalidad: c.modalidad,
+      prioridad: c.prioridad,
+      motivo: c.motivo,
+      estadoAtencion: c.estadoAtencion,
+      camaNombre: c.camaNombre,
+      esNN: c.esNN,
+      formSnapshot: {
+        ident_full: c.nombre,
+        dni_reniec_input: c.dni,
+        motivo_full: c.motivo,
+        spo2_full: c.vitals.spo2,
+        fc_full: c.vitals.fc,
+        pas_full: c.vitals.pas,
+        pad_full: c.vitals.pad,
+        fr_full: c.vitals.fr,
+        temp_full: c.vitals.temp,
+        glasgow_full: c.vitals.glasgow,
+        glucosa_full: c.vitals.glucosa,
+        eva_full: c.vitals.eva,
+        eva_range: c.vitals.eva,
+        edad_full: c.edad,
+        sexo_full: c.sexo
+      }
+    });
+    PACIENTES_COLA.push(px);
+  });
+
+  ordenarColaPacientes();
+
+  const pxCritico = PACIENTES_COLA[0];
+  pacienteActivoId = pxCritico.id;
+  cambiarPacienteActivo(pxCritico.id);
+
+  mostrarToastCola(`💥 <strong>Llegada Masiva Simulada (4 Pacientes):</strong> Priorizados por severidad según NTS N° 042-MINSA. Caso crítico cargado.`);
+}
+
+function mostrarToastCola(htmlMsg) {
+  let toast = document.getElementById("toast_cola_msg");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "toast_cola_msg";
+    toast.style.cssText = "position:fixed; top:54px; right:20px; z-index:99999; background:#0f172a; color:#ffffff; padding:12px 18px; border-radius:10px; border-left:4px solid #0284c7; box-shadow:0 8px 24px rgba(0,0,0,0.3); font-size:0.85rem; max-width:420px; transition:all 0.3s ease;";
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = htmlMsg;
+  toast.style.display = "block";
+  toast.style.opacity = "1";
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => {
+    toast.style.opacity = "0";
+    setTimeout(() => { toast.style.display = "none"; }, 300);
+  }, 4500);
+}
+
+function inicializarTableroColaPacientes() {
+  if (PACIENTES_COLA.length === 0) {
+    const p1 = crearRegistroPaciente();
+    PACIENTES_COLA.push(p1);
+    pacienteActivoId = p1.id;
+  }
+  renderizarTableroColaPacientes();
+
+  if (!intervalCronometrosCola) {
+    intervalCronometrosCola = setInterval(() => {
+      PACIENTES_COLA.forEach(p => {
+        const elTimer = document.getElementById(`timer_px_${p.id}`);
+        if (elTimer) {
+          elTimer.textContent = `⏱️ ${formatearTiempoEspera(p.timestampLlegada)}`;
+        }
+      });
+    }, 1000);
+  }
+}
+
+// Exponer en window para acceso universal
+window.PACIENTES_COLA = PACIENTES_COLA;
+window.abrirModalAdmisionRapidaNN = abrirModalAdmisionRapidaNN;
+window.cerrarModalAdmisionNN = cerrarModalAdmisionNN;
+window.ejecutarAdmisionRapidaNN = ejecutarAdmisionRapidaNN;
+window.abrirModalPreTriageSTART = abrirModalPreTriageSTART;
+window.cerrarModalPreTriageSTART = cerrarModalPreTriageSTART;
+window.avanzarPasoSTART = avanzarPasoSTART;
+window.completarPreTriageSTART = completarPreTriageSTART;
+window.crearNuevoPacienteEnBlanco = crearNuevoPacienteEnBlanco;
+window.cambiarPacienteActivo = cambiarPacienteActivo;
+window.cerrarAtencionPaciente = cerrarAtencionPaciente;
+window.simularLlegadaMasiva = simularLlegadaMasiva;
+window.inicializarTableroColaPacientes = inicializarTableroColaPacientes;
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(inicializarTableroColaPacientes, 200);
+  });
+} else {
+  setTimeout(inicializarTableroColaPacientes, 200);
+}

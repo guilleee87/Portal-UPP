@@ -965,6 +965,244 @@
     .preset-prio-5 { border-left: 4px solid #2563eb; }
     .preset-prio-5 .preset-prio-tag { background: #dbeafe; color: #1e40af; }
 
+  
+    /* ===== TABLERO DE ATENCIÓN SIMULTÁNEA Y GESTIÓN DE COLA (NTS N° 042-MINSA) ===== */
+    .active-patients-panel {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+    }
+    .active-patients-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .badge-active-count {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #0369a1;
+      background: #e0f2fe;
+      padding: 3px 8px;
+      border-radius: 9999px;
+    }
+    .active-patients-btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn-caos-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-caos-action:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .btn-nn-action {
+      background: #dc2626;
+      color: #ffffff;
+    }
+    .btn-start-action {
+      background: #0284c7;
+      color: #ffffff;
+    }
+    .btn-newpx-action {
+      background: #f1f5f9;
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+    }
+    .active-patients-cards-wrapper {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      scroll-snap-type: x mandatory;
+    }
+    .active-patients-cards-wrapper::-webkit-scrollbar {
+      height: 6px;
+    }
+    .active-patients-cards-wrapper::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .patient-queue-card {
+      flex: 0 0 240px;
+      scroll-snap-align: start;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .patient-queue-card:hover {
+      background: #ffffff;
+      border-color: #94a3b8;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+    }
+    .patient-queue-card.active-card {
+      background: #ffffff;
+      border: 2px solid #0284c7;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2), 0 4px 12px rgba(2, 132, 199, 0.1);
+    }
+    .card-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-prio-badge {
+      font-size: 0.68rem;
+      font-weight: 900;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .card-timer {
+      font-size: 0.72rem;
+      font-family: monospace;
+      color: #64748b;
+      font-weight: 700;
+    }
+    .card-name {
+      font-size: 0.84rem;
+      font-weight: 800;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-meta {
+      font-size: 0.72rem;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+    }
+    .btn-close-card {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
+    }
+    .btn-close-card:hover {
+      color: #dc2626;
+    }
+
+    /* Modal Pre-Triage START */
+    .start-options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .btn-start-choice {
+      border: 2px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 16px 12px;
+      text-align: center;
+      background: #ffffff;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-start-choice:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .btn-start-green { border-color: #22c55e; background: #f0fdf4; color: #15803d; }
+    .btn-start-red { border-color: #ef4444; background: #fef2f2; color: #b91c1c; }
+    .btn-start-orange { border-color: #f97316; background: #fff7ed; color: #c2410c; }
+    .btn-start-yellow { border-color: #eab308; background: #fefce8; color: #854d0e; }
+    .btn-start-next { border-color: #0284c7; background: #f0f9ff; color: #0369a1; }
+    .start-step-num { font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+    .start-step-question { font-size: 1.05rem; font-weight: 800; color: #0f172a; line-height: 1.35; }
+
+    /* Banner Sandbox */
+    .sandbox-top-banner {
+      background: linear-gradient(90deg, #4c1d95 0%, #6d28d9 100%);
+      color: #ffffff;
+      padding: 10px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.8rem;
+      border-bottom: 2px solid #a78bfa;
+      position: sticky;
+      top: 0;
+      z-index: 1001;
+    }
+    .sandbox-badge {
+      background: #fef08a;
+      color: #854d0e;
+      font-weight: 900;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      letter-spacing: 0.5px;
+    }
+    .btn-sandbox-exit {
+      background: #ffffff;
+      color: #4c1d95;
+      text-decoration: none;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.76rem;
+      transition: all 0.2s;
+    }
+    .btn-sandbox-exit:hover {
+      background: #f1f5f9;
+      transform: translateY(-1px);
+    }
+    .btn-masivo-action {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: #ffffff;
+      border: 1.5px solid #fca5a5;
+      font-weight: 800;
+      padding: 7px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      transition: all 0.2s;
+    }
+    .btn-masivo-action:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+    }
+
   </style>
 </head>
 <body>
@@ -1021,6 +1259,10 @@
       </a>
 
       <div class="navbar-mini-stats">
+        <a href="simulacion.html" target="_blank" class="mini-chip" id="btn_nav_simulacion" style="background:#7c3aed; color:#ffffff; text-decoration:none; font-weight:800; cursor:pointer;" title="Acceder al Entorno de Simulación, Casos de Prueba y Sandbox">
+          🧪 Casos Simulados (Sandbox) ↗
+        </a>
+
         <button type="button" class="mini-chip" id="mini_camas_sop_badge" onclick="abrirModalTableroCamas()" title="Ver Disponibilidad en Tiempo Real de Camas y Quirófanos" style="cursor:pointer; background:#f0fdf4; color:#166534; border:1px solid #86efac; font-weight:700;">
           🛏️ Camas &amp; Quirófanos: <span id="lbl_navbar_dispo_resumen">15/15 Libres</span>
         </button>
@@ -1039,6 +1281,37 @@
   <main class="main-app-container">
 
     <!-- ======================================================================
+         TABLERO DE ATENCIÓN SIMULTÁNEA DE URGENCIAS & GESTIÓN DE CAOS
+         Sustento: NTS N° 042-MINSA (Triaje por severidad clínica, no por llegada)
+         ====================================================================== -->
+    <section class="active-patients-panel" id="activePatientsPanel">
+      <div class="active-patients-top-bar">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="widget-beacon-dot" style="display:inline-block; width:10px; height:10px; background:#16a34a; border-radius:50%; box-shadow:0 0 0 3px rgba(34,197,94,0.3);"></span>
+          <strong style="color:#0f172a; font-size:0.92rem;">TABLERO DE ATENCIÓN SIMULTÁNEA &amp; COLA DE URGENCIAS</strong>
+          <span class="badge-active-count" id="lbl_total_px_activos">1 Paciente en atención</span>
+        </div>
+        <div class="active-patients-btn-group">
+          <button type="button" class="btn-caos-action btn-nn-action" onclick="abrirModalAdmisionRapidaNN()" title="Admisión Rápida de Paciente Inconsciente o Sin DNI (Ley N° 27604)">
+            🚨 Admisión Rápida NN
+          </button>
+          <button type="button" class="btn-caos-action btn-start-action" onclick="abrirModalPreTriageSTART()" title="Pre-Triage de Cola en 15 segundos (Método START/Manchester)">
+            ⚡ Pre-Triage de Cola (15s)
+          </button>
+          <button type="button" class="btn-caos-action btn-newpx-action" onclick="crearNuevoPacienteEnBlanco()" title="Crear Ficha de Nuevo Paciente en Espera">
+            ➕ Nuevo Paciente
+          </button>
+        </div>
+      </div>
+
+      <!-- Carrusel de Pacientes en Curso -->
+      <div class="active-patients-cards-wrapper" id="activePatientsCardsList">
+        <!-- Renderizado dinámicamente -->
+      </div>
+    </section>
+
+
+    <!-- ======================================================================
          MÓDULO 1: ENFERMERÍA DE TRIAJE (PUERTA DE ENTRADA UNIVERSAL)
          Sustento: NTS N° 042-MINSA/DGSP-V.01 y Ley N° 27604
          ====================================================================== -->
@@ -1055,47 +1328,21 @@
       </div>
       <div class="module-section-body open" id="body_mod1">
 
+        
         <div class="norma-pill-banner">
           <span class="norma-tag">NTS N° 042-MINSA</span>
           <span><strong>Puerta de Entrada Universal Obligatoria:</strong> Ningún paciente puede ser derivado a admisión ni condicionado a pago o trámite sin haber sido evaluado previamente por Enfermería de Triaje.</span>
         </div>
 
-        <!-- BOTONERA DE CASOS CLÍNICOS RÁPIDOS DE 1 CLIC (IDEAL PARA DEMO Y SUSTENTACIÓN) -->
-        <div class="preset-casos-card" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-            <div style="display:flex; align-items:center; gap:8px; font-weight:800; font-size:0.88rem; color:#0f172a;">
-              <span style="font-size:1.15rem;">⚡</span>
-              <span>SIMULADOR DE CASOS CLÍNICOS RÁPIDOS (1 CLIC):</span>
-            </div>
-            <span style="font-size:0.74rem; font-weight:700; color:#0369a1; background:#e0f2fe; padding:2px 8px; border-radius:6px;">
-              Carga Signos Vitales y Evalúa al Instante
-            </span>
+        <!-- ACCESO A ENTORNO DE PRUEBAS / SANDBOX (PROFESIONAL Y DISCRETO) -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; margin-bottom:18px;">
+          <div style="font-size:0.8rem; color:#475569;">
+            🩺 <strong>Sistema en Blanco para Operación Real:</strong> Registre la atención o use la botonera de admisión rápida (NN / Pre-Triage de Cola).
           </div>
-
-          <div class="preset-btn-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:8px;">
-            <button type="button" class="btn-preset-caso preset-prio-1" id="btn_preset_1" onclick="cargarCasoPreset(1)">
-              <div class="preset-prio-tag">P-I ROJO</div>
-              <div class="preset-prio-title">Paro / Shock Politrauma</div>
-            </button>
-            <button type="button" class="btn-preset-caso preset-prio-2" id="btn_preset_2" onclick="cargarCasoPreset(2)">
-              <div class="preset-prio-tag">P-II NARANJA</div>
-              <div class="preset-prio-title">Infarto / Dolor Torácico</div>
-            </button>
-            <button type="button" class="btn-preset-caso preset-prio-3" id="btn_preset_3" onclick="cargarCasoPreset(3)">
-              <div class="preset-prio-tag">P-III AMARILLO</div>
-              <div class="preset-prio-title">Cólico Renal Agudo</div>
-            </button>
-            <button type="button" class="btn-preset-caso preset-prio-4" id="btn_preset_4" onclick="cargarCasoPreset(4)">
-              <div class="preset-prio-tag">P-IV VERDE</div>
-              <div class="preset-prio-title">Faringitis / Fiebre</div>
-            </button>
-            <button type="button" class="btn-preset-caso preset-prio-5" id="btn_preset_5" onclick="cargarCasoPreset(5)">
-              <div class="preset-prio-tag">P-V AZUL</div>
-              <div class="preset-prio-title">Retiro de Puntos / Curación</div>
-            </button>
-          </div>
-
-          <div id="toast_preset_msg" style="display:none; margin-top:10px; padding:8px 12px; border-radius:6px; background:#f0fdf4; border:1px solid #86efac; font-size:0.8rem; color:#15803d;"></div>
+          <a href="simulacion.html" target="_blank" style="font-size:0.75rem; font-weight:800; color:#7c3aed; text-decoration:none; display:flex; align-items:center; gap:6px;">
+            <span>¿Desea probar casos de prueba o accidente masivo?</span>
+            <span style="background:#f5f3ff; border:1px solid #ddd6fe; padding:3px 9px; border-radius:6px;">Abrir Sandbox ↗</span>
+          </a>
         </div>
 
 
@@ -2884,6 +3131,161 @@
       <span id="widget_drawer_arrow" style="color:#22c55e; font-size:0.85rem; transition:transform 0.25s ease;">▲</span>
     </div>
 
+  </div>
+
+
+  <!-- ==========================================================================
+       MODAL DE ADMISIÓN RÁPIDA NN (INDOCUMENTADO / LEY N° 27604)
+       ========================================================================== -->
+  <div class="modal-hc-overlay" id="modalAdmisionNN" style="display:none;" onclick="if(event.target===this) cerrarModalAdmisionNN()">
+    <div class="modal-hc-container" style="max-width: 520px;">
+      <div class="modal-hc-header" style="background:#dc2626; color:#ffffff;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.4rem;">🚨</span>
+          <div>
+            <strong style="font-size:1rem;">Admisión Rápida de Paciente Indocumentado / NN</strong>
+            <div style="font-size:0.75rem; opacity:0.9;">Ley N° 27604: Prohibición absoluta de condicionar o demorar la emergencia</div>
+          </div>
+        </div>
+        <button type="button" onclick="cerrarModalAdmisionNN()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-hc-body" style="padding:16px;">
+        <form id="form_admision_nn" onsubmit="ejecutarAdmisionRapidaNN(event)">
+          <div style="margin-bottom:12px;">
+            <label style="font-weight:700; font-size:0.82rem; display:block; margin-bottom:6px;">Sexo Aparente:</label>
+            <div style="display:flex; gap:10px;">
+              <label style="flex:1; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px; display:flex; align-items:center; gap:8px; cursor:pointer;" id="lbl_nn_sexo_m">
+                <input type="radio" name="nn_sexo" value="M" checked> <strong>Masculino</strong>
+              </label>
+              <label style="flex:1; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px; display:flex; align-items:center; gap:8px; cursor:pointer;" id="lbl_nn_sexo_f">
+                <input type="radio" name="nn_sexo" value="F"> <strong>Femenino</strong>
+              </label>
+            </div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-weight:700; font-size:0.82rem; display:block; margin-bottom:6px;">Edad Estimada (Aprox.):</label>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="chip-filtro-recurso" onclick="document.getElementById('nn_edad_input').value='20'">~20a</button>
+              <button type="button" class="chip-filtro-recurso" onclick="document.getElementById('nn_edad_input').value='35'">~35a</button>
+              <button type="button" class="chip-filtro-recurso" onclick="document.getElementById('nn_edad_input').value='50'">~50a</button>
+              <button type="button" class="chip-filtro-recurso" onclick="document.getElementById('nn_edad_input').value='70'">~70a</button>
+              <input type="number" id="nn_edad_input" value="30" min="1" max="110" style="width:70px; padding:6px; border:1.5px solid #cbd5e1; border-radius:6px; font-weight:700; text-align:center;">
+            </div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="font-weight:700; font-size:0.82rem; display:block; margin-bottom:6px;">Modalidad de Llegada:</label>
+            <select id="nn_modalidad_input" style="width:100%; padding:8px; border:1.5px solid #cbd5e1; border-radius:8px;">
+              <option value="Ambulancia SAMU / Bomberos" selected>Ambulancia SAMU / Bomberos (Clínico Crítico)</option>
+              <option value="Patrullero PNP / Serenazgo">Patrullero PNP / Serenazgo (Vía Pública / Accidente)</option>
+              <option value="A pie / Traído por terceros">Traído por transeúntes / terceros</option>
+            </select>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-weight:700; font-size:0.82rem; display:block; margin-bottom:6px;">Sospecha / Estado Inicial:</label>
+            <input type="text" id="nn_estado_input" value="Inconsciente / Politraumatizado / Sin Respuesta Verbal" style="width:100%; padding:8px; border:1.5px solid #cbd5e1; border-radius:8px;">
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button type="button" onclick="cerrarModalAdmisionNN()" class="btn-full-secondary" style="flex:1;">Cancelar</button>
+            <button type="submit" class="btn-full-primary" style="flex:2; background:#dc2626; border-color:#b91c1c; font-weight:800;">
+              ⚡ Admitir de Urgencia (P-I)
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL DE PRE-TRIAGE DE COLA START (15 SEGUNDOS)
+       ========================================================================== -->
+  <div class="modal-hc-overlay" id="modalPreTriageSTART" style="display:none;" onclick="if(event.target===this) cerrarModalPreTriageSTART()">
+    <div class="modal-hc-container" style="max-width: 600px;">
+      <div class="modal-hc-header" style="background:#0284c7; color:#ffffff;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.4rem;">⚡</span>
+          <div>
+            <strong style="font-size:1rem;">Pre-Triage de Cola Rápido (Método START/Manchester — 15s)</strong>
+            <div style="font-size:0.75rem; opacity:0.9;">Tamizaje veloz para descongestionar la fila en emergencias saturadas</div>
+          </div>
+        </div>
+        <button type="button" onclick="cerrarModalPreTriageSTART()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-hc-body" style="padding:16px;">
+        <div id="start_step_container">
+          <!-- Paso 1 -->
+          <div class="start-step-card" id="start_step_1">
+            <div class="start-step-num">Paso 1 de 4: Deambulación</div>
+            <div class="start-step-question">¿El paciente camina por sus propios medios?</div>
+            <div class="start-options-grid">
+              <button type="button" class="btn-start-choice btn-start-green" onclick="completarPreTriageSTART('IV', 'Paciente deambula solo — Prioridad IV (Verde)')">
+                <span style="font-size:1.5rem;">🚶</span>
+                <strong>SÍ, CAMINA SOLO</strong>
+                <small>Asignar P-IV Verde (Leve / Espera diferida)</small>
+              </button>
+              <button type="button" class="btn-start-choice btn-start-next" onclick="avanzarPasoSTART(2)">
+                <span style="font-size:1.5rem;">🛌</span>
+                <strong>NO PUEDE CAMINAR</strong>
+                <small>Requiere camilla o silla $\rightarrow$ Evaluar respiración</small>
+              </button>
+            </div>
+          </div>
+
+          <!-- Paso 2 -->
+          <div class="start-step-card" id="start_step_2" style="display:none;">
+            <div class="start-step-num">Paso 2 de 4: Respiración</div>
+            <div class="start-step-question">¿Cómo se encuentra la ventilación del paciente?</div>
+            <div class="start-options-grid">
+              <button type="button" class="btn-start-choice btn-start-red" onclick="completarPreTriageSTART('I', 'Apnea o Taquipnea severa >30 rpm — Prioridad I (Rojo)')">
+                <span style="font-size:1.5rem;">🫁</span>
+                <strong>APNEA o $>30$ rpm</strong>
+                <small>Insuficiencia respiratoria aguda $\rightarrow$ P-I Rojo Inmediato</small>
+              </button>
+              <button type="button" class="btn-start-choice btn-start-next" onclick="avanzarPasoSTART(3)">
+                <span style="font-size:1.5rem;">✅</span>
+                <strong>RESPIRA (10 a 29 rpm)</strong>
+                <small>Frecuencia aceptable $\rightarrow$ Evaluar perfusión</small>
+              </button>
+            </div>
+          </div>
+
+          <!-- Paso 3 -->
+          <div class="start-step-card" id="start_step_3" style="display:none;">
+            <div class="start-step-num">Paso 3 de 4: Perfusión / Circulación</div>
+            <div class="start-step-question">¿Pulso radial palpable y llenado capilar?</div>
+            <div class="start-options-grid">
+              <button type="button" class="btn-start-choice btn-start-red" onclick="completarPreTriageSTART('I', 'Pulso ausente o llenado > 2 seg — Prioridad I (Rojo)')">
+                <span style="font-size:1.5rem;">💔</span>
+                <strong>DÉBIL / LLENADO $> 2$ seg</strong>
+                <small>Signo de shock circulatorio $\rightarrow$ P-I Rojo Inmediato</small>
+              </button>
+              <button type="button" class="btn-start-choice btn-start-next" onclick="avanzarPasoSTART(4)">
+                <span style="font-size:1.5rem;">🩸</span>
+                <strong>PULSO PRESENTE (Llenado $\le 2$s)</strong>
+                <small>Circulación mantenida $\rightarrow$ Evaluar consciencia</small>
+              </button>
+            </div>
+          </div>
+
+          <!-- Paso 4 -->
+          <div class="start-step-card" id="start_step_4" style="display:none;">
+            <div class="start-step-num">Paso 4 de 4: Estado Mental</div>
+            <div class="start-step-question">¿El paciente obedece órdenes sencillas ("abra los ojos", "mueva la mano")?</div>
+            <div class="start-options-grid">
+              <button type="button" class="btn-start-choice btn-start-orange" onclick="completarPreTriageSTART('II', 'No obedece órdenes o desorientado — Prioridad II (Naranja)')">
+                <span style="font-size:1.5rem;">🧠</span>
+                <strong>NO OBEDECE / CONFUSO</strong>
+                <small>Compromiso neurológico severo $\rightarrow$ P-II Naranja</small>
+              </button>
+              <button type="button" class="btn-start-choice btn-start-yellow" onclick="completarPreTriageSTART('III', 'Obedece órdenes, hemodinamia estable — Prioridad III (Amarillo)')">
+                <span style="font-size:1.5rem;">👌</span>
+                <strong>SÍ OBEDECE ÓRDENES</strong>
+                <small>Hemodinámicamente estable $\rightarrow$ P-III Amarillo</small>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
 </body>
