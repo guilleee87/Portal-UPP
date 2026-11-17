@@ -3070,27 +3070,36 @@ function recalcularPrioridad() {
     if (esUrgente) { prio = "II"; }
   }
 
-  // Criterios Prioridad III — AMARILLO (Urgencia Menor)
+  // Criterios Prioridad III — AMARILLO (Urgencia Menor / Moderada)
   if (!prio) {
     const esModerado = (
-      (spo2 !== null && spo2 >= 92) ||
-      antecedentes ||
+      (temp !== null && temp >= 38.0 && temp <= 39.5 && eva >= 4) ||
+      (fc !== null && fc > 100 && fc <= 110) ||
+      (fr !== null && fr > 20 && fr <= 25) ||
+      (pas !== null && pas >= 140 && pas < 160) ||
+      (pad !== null && pad >= 90 && pad < 100) ||
       (eva >= 4 && eva < 8) ||
-      (motivo.includes("dolor") && motivo.length > 5)
+      (antecedentes && eva >= 4) ||
+      (motivo.includes("dolor") && eva >= 4)
     );
     if (esModerado) { prio = "III"; }
   }
 
-  // Criterios Prioridad IV — VERDE (Urgencia Leve)
+  // Criterios Prioridad IV — VERDE (Urgencia Leve / Sin compromiso vital)
   if (!prio) {
     const esLeve = (
-      (spo2 !== null && spo2 >= 97) ||
-      eva <= 3
+      (eva >= 2 && eva < 4) ||
+      (temp !== null && temp >= 37.5 && temp < 38.5) ||
+      motivo.includes("faringitis") || motivo.includes("resfrío") || motivo.includes("odinofagia") ||
+      /\btos\b/i.test(motivo) || motivo.includes("garganta")
     );
     if (esLeve) { prio = "IV"; }
   }
 
-  if (!prio) { prio = tieneDatos ? "IV" : "V"; }
+  // Criterios Prioridad V — AZUL (No Urgencia / Ambulatorio / Procedimientos)
+  if (!prio) {
+    prio = (motivo.includes("retiro") || motivo.includes("punto") || motivo.includes("curacion") || motivo.includes("curación") || eva <= 1) ? "V" : "IV";
+  }
   if (!tieneDatos && antecedentes) { prio = "I"; }
 
   STATE.prioridad = prio;
@@ -3128,10 +3137,16 @@ function mostrarPrioridad(prio) {
                  seguro.includes("sanitas") || seguro.includes("mapfre") || seguro.includes("positiva"));
   const esEmergencia = (prio === "I" || prio === "II");
 
-  document.getElementById("prio_numero").textContent = prio;
-  document.getElementById("prio_numero").className = `prioridad-numero ${def.clase}`;
-  document.getElementById("prio_color_name").textContent = `● ${["Rojo","Naranja","Amarillo","Verde","Azul"][["I","II","III","IV","V"].indexOf(prio)]}`;
-  document.getElementById("prio_color_name").style.color = def.hex;
+  const elPrioNum = document.getElementById("prio_numero");
+  if (elPrioNum) {
+    elPrioNum.textContent = prio;
+    elPrioNum.className = `prioridad-numero ${def.clase}`;
+  }
+  const elColorName = document.getElementById("prio_color_name");
+  if (elColorName) {
+    elColorName.textContent = `● ${["Rojo","Naranja","Amarillo","Verde","Azul"][["I","II","III","IV","V"].indexOf(prio)]}`;
+    elColorName.style.color = def.hex;
+  }
 
   // LÓGICA DE CATEGORIZACIÓN: EN CLÍNICA PRIVADA EPS, SI NO ES EMERGENCIA SE COLOCA AUTOMÁTICAMENTE COMO URGENCIA
   if (esEps && !esEmergencia) {
@@ -7692,3 +7707,115 @@ window.renderizarMonitorObservacionModulo5 = renderizarMonitorObservacionModulo5
 window.autoGuardarCambioEnHistoriaClinica = autoGuardarCambioEnHistoriaClinica;
 window.toggleDrawerFlotante = toggleDrawerFlotante;
 window.actualizarWidgetFlotanteCamas = actualizarWidgetFlotanteCamas;
+
+
+// ==============================================================================
+// PRESETS DE CASOS CLÍNICOS RÁPIDOS DE 1 CLIC (EXPOSICIÓN & AUDITORÍA ASISTENCIAL)
+// ==============================================================================
+function cargarCasoPreset(prioNum) {
+  // Limpiar códigos de tiempo previos
+  const chkInfarto = document.getElementById("check_cod_infarto");
+  if (chkInfarto) { chkInfarto.checked = false; toggleCodigoTiempo('infarto', false); }
+  const chkIctus = document.getElementById("check_cod_ictus");
+  if (chkIctus) { chkIctus.checked = false; toggleCodigoTiempo('ictus', false); }
+  const chkSepsis = document.getElementById("check_cod_sepsis");
+  if (chkSepsis) { chkSepsis.checked = false; toggleCodigoTiempo('sepsis', false); }
+
+  const elMotivo = document.getElementById("motivo_full");
+  const elSpo2 = document.getElementById("spo2_full");
+  const elFc = document.getElementById("fc_full");
+  const elPas = document.getElementById("pas_full");
+  const elPad = document.getElementById("pad_full");
+  const elFr = document.getElementById("fr_full");
+  const elTemp = document.getElementById("temp_full");
+  const elGlasgow = document.getElementById("glasgow_full");
+  const elGlucosa = document.getElementById("glucosa_full");
+  const elEva = document.getElementById("eva_full");
+  const elEvaRange = document.getElementById("eva_range");
+  const elIdent = document.getElementById("ident_full");
+
+  const casos = {
+    1: {
+      titulo: "Caso 1: Shock Hipovolémico / Politrauma (P-I)",
+      motivo: "Politraumatismo severo por atropello con hemorragia masiva activa y shock circulatorio",
+      spo2: 82, fc: 142, pas: 70, pad: 40, fr: 32, temp: 35.5, glasgow: 7, glucosa: 60, eva: 0,
+      dni: "44418504", nombre: "LUIS GUILLERMO VASQUEZ VALDIVIESO"
+    },
+    2: {
+      titulo: "Caso 2: Crisis Hipertensiva / Urgencia Mayor (P-II)",
+      motivo: "Cefalea pulsátil intensa, mareos y dolor precordial opresivo sin shock",
+      spo2: 96, fc: 98, pas: 180, pad: 110, fr: 22, temp: 36.8, glasgow: 15, glucosa: 110, eva: 7,
+      dni: "10203040", nombre: "CARLOS MENDOZA ROJAS"
+    },
+    3: {
+      titulo: "Caso 3: Cólico Renal Agudo / Urgencia Menor (P-III)",
+      motivo: "Dolor lumbar unilateral tipo cólico agudo moderado irradiado a fosa ilíaca",
+      spo2: 98, fc: 84, pas: 130, pad: 85, fr: 18, temp: 37.1, glasgow: 15, glucosa: 100, eva: 5,
+      dni: "70809010", nombre: "HERMELINDA ANTONIO VILLANUEVA"
+    },
+    4: {
+      titulo: "Caso 4: Faringoamigdalitis Aguda / Urgencia Leve (P-IV)",
+      motivo: "Odinofagia intensa, disfagia y alza térmica de 48 horas de evolución",
+      spo2: 99, fc: 78, pas: 115, pad: 75, fr: 16, temp: 38.0, glasgow: 15, glucosa: 95, eva: 3,
+      dni: "45678901", nombre: "RONY ALEXANDER ARENAS HUAMANCHUMO"
+    },
+    5: {
+      titulo: "Caso 5: Retiro de Puntos / No Urgencia (P-V)",
+      motivo: "Paciente acude para retiro de puntos de sutura y curación de herida operatoria",
+      spo2: 99, fc: 72, pas: 120, pad: 80, fr: 16, temp: 36.5, glasgow: 15, glucosa: 90, eva: 0,
+      dni: "12345678", nombre: "DEMO PACIENTE AMBULATORIO"
+    }
+  };
+  const c = casos[prioNum];
+  if (!c) return;
+
+  if (elMotivo) { elMotivo.value = c.motivo; STATE.motivoConsulta = c.motivo; }
+  if (elSpo2) elSpo2.value = c.spo2;
+  if (elFc) elFc.value = c.fc;
+  if (elPas) elPas.value = c.pas;
+  if (elPad) elPad.value = c.pad;
+  if (elFr) elFr.value = c.fr;
+  if (elTemp) elTemp.value = c.temp;
+  if (elGlasgow) elGlasgow.value = c.glasgow;
+  if (elGlucosa) elGlucosa.value = c.glucosa;
+  if (elEva) elEva.value = c.eva;
+  if (elEvaRange) elEvaRange.value = c.eva;
+  actualizarEVA(c.eva);
+
+  if (c.codigo === "infarto" && chkInfarto) {
+    chkInfarto.checked = true;
+    toggleCodigoTiempo('infarto', true);
+  }
+
+  // Si no hay identificación previa, autocompletar identificación del paciente demo
+  if (elIdent && (!elIdent.value || elIdent.value.length < 2)) {
+    elIdent.value = `${c.nombre} (DNI ${c.dni})`;
+    STATE.numDni = c.dni;
+    STATE.nombreReniec = c.nombre;
+    STATE.identificador = `${c.nombre} (DNI ${c.dni})`;
+    STATE.historiaClinica = `HC-2026-${c.dni.slice(-4)}`;
+    const hcDisp = document.getElementById("hc_code_display");
+    if (hcDisp) hcDisp.textContent = STATE.historiaClinica;
+    const badgeEstado = document.getElementById("hc_badge_estado");
+    if (badgeEstado) {
+      badgeEstado.textContent = "✅ Identificado";
+      badgeEstado.className = "badge-estado badge-si";
+    }
+  }
+
+  // Destacar visualmente el botón seleccionado
+  document.querySelectorAll('.btn-preset-caso').forEach(b => b.classList.remove('active-preset'));
+  const btnAct = document.getElementById(`btn_preset_${prioNum}`);
+  if (btnAct) btnAct.classList.add('active-preset');
+
+  // Ejecutar evaluación inmediata en el algoritmo de triaje
+  evaluarPacienteCompleto();
+
+  // Feedback visual rápido
+  const msgToast = document.getElementById("toast_preset_msg");
+  if (msgToast) {
+    msgToast.style.display = "block";
+    msgToast.innerHTML = `⚡ <strong>Cargado con éxito:</strong> ${c.titulo} — Evaluado en el algoritmo en tiempo real.`;
+    setTimeout(() => { msgToast.style.display = "none"; }, 4000);
+  }
+}

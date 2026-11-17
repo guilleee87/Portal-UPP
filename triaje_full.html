@@ -917,6 +917,54 @@
       }
     }
 
+  
+    /* ===== BOTONERA DE CASOS CLÍNICOS RÁPIDOS (1 CLIC) ===== */
+    .btn-preset-caso {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .btn-preset-caso:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .btn-preset-caso.active-preset {
+      border-width: 2px;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+    }
+    .preset-prio-tag {
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      width: fit-content;
+    }
+    .preset-prio-title {
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.25;
+    }
+    .preset-prio-1 { border-left: 4px solid #dc2626; }
+    .preset-prio-1 .preset-prio-tag { background: #fee2e2; color: #991b1b; }
+    .preset-prio-2 { border-left: 4px solid #ea580c; }
+    .preset-prio-2 .preset-prio-tag { background: #ffedd5; color: #9a3412; }
+    .preset-prio-3 { border-left: 4px solid #ca8a04; }
+    .preset-prio-3 .preset-prio-tag { background: #fef9c3; color: #854d0e; }
+    .preset-prio-4 { border-left: 4px solid #16a34a; }
+    .preset-prio-4 .preset-prio-tag { background: #dcfce7; color: #166534; }
+    .preset-prio-5 { border-left: 4px solid #2563eb; }
+    .preset-prio-5 .preset-prio-tag { background: #dbeafe; color: #1e40af; }
+
   </style>
 </head>
 <body>
@@ -1011,6 +1059,45 @@
           <span class="norma-tag">NTS N° 042-MINSA</span>
           <span><strong>Puerta de Entrada Universal Obligatoria:</strong> Ningún paciente puede ser derivado a admisión ni condicionado a pago o trámite sin haber sido evaluado previamente por Enfermería de Triaje.</span>
         </div>
+
+        <!-- BOTONERA DE CASOS CLÍNICOS RÁPIDOS DE 1 CLIC (IDEAL PARA DEMO Y SUSTENTACIÓN) -->
+        <div class="preset-casos-card" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; font-weight:800; font-size:0.88rem; color:#0f172a;">
+              <span style="font-size:1.15rem;">⚡</span>
+              <span>SIMULADOR DE CASOS CLÍNICOS RÁPIDOS (1 CLIC):</span>
+            </div>
+            <span style="font-size:0.74rem; font-weight:700; color:#0369a1; background:#e0f2fe; padding:2px 8px; border-radius:6px;">
+              Carga Signos Vitales y Evalúa al Instante
+            </span>
+          </div>
+
+          <div class="preset-btn-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:8px;">
+            <button type="button" class="btn-preset-caso preset-prio-1" id="btn_preset_1" onclick="cargarCasoPreset(1)">
+              <div class="preset-prio-tag">P-I ROJO</div>
+              <div class="preset-prio-title">Paro / Shock Politrauma</div>
+            </button>
+            <button type="button" class="btn-preset-caso preset-prio-2" id="btn_preset_2" onclick="cargarCasoPreset(2)">
+              <div class="preset-prio-tag">P-II NARANJA</div>
+              <div class="preset-prio-title">Infarto / Dolor Torácico</div>
+            </button>
+            <button type="button" class="btn-preset-caso preset-prio-3" id="btn_preset_3" onclick="cargarCasoPreset(3)">
+              <div class="preset-prio-tag">P-III AMARILLO</div>
+              <div class="preset-prio-title">Cólico Renal Agudo</div>
+            </button>
+            <button type="button" class="btn-preset-caso preset-prio-4" id="btn_preset_4" onclick="cargarCasoPreset(4)">
+              <div class="preset-prio-tag">P-IV VERDE</div>
+              <div class="preset-prio-title">Faringitis / Fiebre</div>
+            </button>
+            <button type="button" class="btn-preset-caso preset-prio-5" id="btn_preset_5" onclick="cargarCasoPreset(5)">
+              <div class="preset-prio-tag">P-V AZUL</div>
+              <div class="preset-prio-title">Retiro de Puntos / Curación</div>
+            </button>
+          </div>
+
+          <div id="toast_preset_msg" style="display:none; margin-top:10px; padding:8px 12px; border-radius:6px; background:#f0fdf4; border:1px solid #86efac; font-size:0.8rem; color:#15803d;"></div>
+        </div>
+
 
         <!-- 1. SELECTOR OBLIGATORIO DE ORIGEN DEL EVENTO EN SERVICIO DE EMERGENCIA -->
         <div class="origen-evento-card" style="border: 2px solid #0284c7; background: #f0f9ff; border-radius: 12px; padding: 16px; margin-bottom: 18px;">
@@ -2596,7 +2683,7 @@
   <div class="brazalete-print" id="brazalete_print_area" style="display:none;"></div>
 
   <!-- SCRIPT MAESTRO DE LÓGICA Y REGLAS DE NEGOCIO -->
-  <script src="app_full.js?v=20261117_03"></script>
+  <script src="app_full.js"></script>
 
   <!-- ======================================================================
        MODAL: REGULARIZACIÓN ADMINISTRATIVA POST-ESTABILIZACIÓN (LEY N° 27604)
