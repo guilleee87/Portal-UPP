@@ -483,6 +483,110 @@
     .estancia-ambar { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
     .estancia-rojo { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
 
+    
+    /* ===== TABLERO DE RECURSOS, CAMAS Y QUIRÓFANOS EN TIEMPO REAL ===== */
+    .recurso-card {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      position: relative;
+    }
+    .recurso-card.disponible {
+      border-left: 5px solid #16a34a;
+    }
+    .recurso-card.ocupada {
+      border-left: 5px solid #dc2626;
+      background: #fffafa;
+    }
+    .recurso-card.alerta-ambar {
+      border-left: 5px solid #d97706;
+      background: #fffdf5;
+    }
+    .recurso-card.alerta-roja {
+      border-left: 5px solid #991b1b;
+      background: #fef2f2;
+    }
+    .recurso-tipo-badge {
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .recurso-tipo-quirofano { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .recurso-tipo-observacion { background: #fefce8; color: #854d0e; border: 1px solid #fef08a; }
+    .recurso-tipo-shock_trauma { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .recurso-tipo-urpa { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .recurso-tipo-uci { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+
+    .timer-display-box {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 1.15rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f8fafc;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      margin: 6px 0;
+    }
+    .timer-pulsing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #dc2626;
+      display: inline-block;
+      animation: pulseTimer 1s infinite alternate;
+    }
+    @keyframes pulseTimer {
+      from { opacity: 0.3; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1.2); }
+    }
+    .recurso-progress-track {
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin: 4px 0 8px 0;
+    }
+    .recurso-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #16a34a, #eab308, #dc2626);
+      transition: width 0.5s ease;
+    }
+    .chip-filtro-recurso {
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .chip-filtro-recurso:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+    .chip-filtro-recurso.active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+    }
+
     /* ===== PRELACIÓN CLÍNICA ABCDE ===== */
     .desempate-box {
       background: #f0fdf4;
@@ -645,6 +749,9 @@
       </a>
 
       <div class="navbar-mini-stats">
+        <button type="button" class="mini-chip" id="mini_camas_sop_badge" onclick="abrirModalTableroCamas()" title="Ver Disponibilidad en Tiempo Real de Camas y Quirófanos" style="cursor:pointer; background:#f0fdf4; color:#166534; border:1px solid #86efac; font-weight:700;">
+          🛏️ Camas &amp; Quirófanos: <span id="lbl_navbar_dispo_resumen">11/15 Libres</span>
+        </button>
         <span class="mini-chip" id="mini_prioridad_badge">🚦 Triaje: Por evaluar</span>
         <span class="mini-chip" id="mini_soat_badge" style="display:none; background:#fff7ed; color:#c2410c; border-color:#fb923c;">
           🚗 SOAT Saldo: S/. 27,500.00
@@ -1561,23 +1668,110 @@
           <span><strong>Límite de Estancia en Observación:</strong> Máximo de 12 a 24 horas. Pacientes que excedan las 24 horas constituyen falta de auditoría médica hospitalaria.</span>
         </div>
 
-        <!-- 1. CRONÓMETRO NORMATIVO DE ESTANCIA EN OBSERVACIÓN -->
-        <div class="estancia-meter-card">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <strong style="font-size:0.85rem; color:#0f172a;">⏱️ Cronómetro de Permanencia en Sala de Observación:</strong>
-            <span class="estancia-badge estancia-verde" id="estancia_estado_badge">0 a 12h: Monitoreo Normal</span>
+        <!-- 1. MONITOR EN TIEMPO REAL DE OBSERVACIÓN (NTS N° 042-MINSA) -->
+        <div class="estancia-meter-card" id="card_monitor_observacion_m5" style="border: 2px solid #0284c7; background: #f0f9ff; padding: 14px; margin-bottom: 14px; border-radius: 12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:24px;">⏱️</span>
+              <div>
+                <strong style="font-size:0.92rem; color:#0369a1;">Contador Activo de Estancia en Sala de Observación</strong>
+                <div style="font-size:0.75rem; color:#0284c7;">Control de liberación automática según NTS N° 042-MINSA/DGSP-V.01 (Estancia estándar máx. 12 horas)</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="estancia-badge estancia-verde" id="estancia_estado_badge">0 a 12h: Monitoreo Normal</span>
+              <button type="button" class="btn-full-secondary" style="font-size:0.72rem; padding:3px 8px; border-color:#0284c7; color:#0284c7; background:#ffffff;" onclick="irAModulo(6); filtrarTableroRecursos('observacion');">
+                🛏️ Ver Camas OBS
+              </button>
+            </div>
           </div>
-          <div style="display:flex; align-items:center; gap:12px; margin-top:10px;">
-            <input type="range" id="slider_estancia_horas" min="0" max="36" value="4" style="flex:1;" oninput="actualizarEstanciaObservacion(this.value)">
-            <span style="font-weight:900; font-size:1.1rem; color:#0f172a; width:80px; text-align:right;" id="lbl_estancia_horas">4 horas</span>
+
+          <!-- DETALLES DE CAMA ASIGNADA Y SELECTOR NORMATIVO -->
+          <div style="background:#ffffff; border:1px solid #bae6fd; border-radius:10px; padding:12px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px; align-items:center;">
+              <div>
+                <span style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase;">Cama de Observación Asignada:</span>
+                <div style="font-size:0.95rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px; margin-top:2px;">
+                  <span id="lbl_m5_cama_nombre">🛏️ Cama OBS-01 (Adultos Varones)</span>
+                  <span id="lbl_m5_cama_estado" style="background:#fee2e2; color:#991b1b; font-size:0.7rem; padding:1px 6px; border-radius:4px; font-weight:800;">OCUPADA</span>
+                </div>
+                <div style="font-size:0.74rem; color:#475569; margin-top:3px;" id="lbl_m5_paciente_info">
+                  Paciente: Luis Guillermo Vásquez Valdivieso (DNI 44418504)
+                </div>
+              </div>
+
+              <div>
+                <label for="select_m5_patologia_horas" style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase; display:block; margin-bottom:3px;">
+                  Condición Clínica &amp; Horas Normativas (NTS N° 042-MINSA):
+                </label>
+                <select id="select_m5_patologia_horas" class="input-full" style="font-size:0.8rem; font-weight:700;" onchange="aplicarNormaHorasObservacion(this.value)">
+                  <option value="6|Dolor Abdominal Agudo en estudio (Descarte apendicitis / ecografía)">6h — Dolor Abdominal Agudo (Evaluación seriada / NTS 042)</option>
+                  <option value="8|Traumatismo Encéfalo-Craneano (TEC) Leve con riesgo / Moderado">8h — TEC Leve-Moderado (Glasgow horario / Neuro-monitoreo)</option>
+                  <option value="4|Crisis Asmática / Broncoespasmo Agudo">4h — Crisis Asmática (Nebulizaciones seriadas / Saturometría)</option>
+                  <option value="6|Deshidratación Moderada / Intoxicación Aguda no letal">6h — Deshidratación / Intoxicación (Hidratación parenteral)</option>
+                  <option value="6|Síndrome Coronario Agudo Descartado / Dolor Torácico">6h — Dolor Torácico Atípico (Curva de Troponinas 0h-6h)</option>
+                  <option value="12|Límite Máximo Estándar en Observación de Emergencia">12h — Límite Estándar de Observación (NTS N° 042-MINSA)</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div style="display:flex; gap:6px; margin-top:8px;">
-            <button type="button" class="btn-full-secondary" style="font-size:0.72rem; padding:3px 8px;" onclick="setEstanciaHoras(4)">4h (Ingreso)</button>
-            <button type="button" class="btn-full-secondary" style="font-size:0.72rem; padding:3px 8px;" onclick="setEstanciaHoras(14)">14h (Alerta Ámbar)</button>
-            <button type="button" class="btn-full-secondary" style="font-size:0.72rem; padding:3px 8px;" onclick="setEstanciaHoras(26)">26h (Infracción Roja)</button>
+
+          <!-- CONTADOR EN VIVO (HH:MM:SS) Y CONTROLES DEMO -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
+            <div>
+              <span style="font-size:0.75rem; color:#475569; font-weight:700;">TIEMPO RESTANTE PARA LIBERACIÓN AUTOMÁTICA:</span>
+              <div class="timer-display-box" style="margin-top:2px;">
+                <span class="timer-pulsing-dot"></span>
+                <span id="lbl_m5_tiempo_restante" style="color:#dc2626; font-size:1.4rem;">05:59:58</span>
+                <span style="font-size:0.74rem; color:#64748b; font-family:sans-serif; font-weight:600;" id="lbl_m5_tiempo_total_info">(De 6 horas programadas)</span>
+              </div>
+            </div>
+
+            <div style="text-align:right;">
+              <span style="font-size:0.72rem; color:#64748b; font-weight:700; display:block;">CONTROLES DE DEMO / SIMULACIÓN:</span>
+              <div style="display:flex; gap:6px; margin-top:4px;">
+                <button type="button" class="btn-full-secondary" style="font-size:0.72rem; padding:4px 8px; background:#ffffff;" onclick="acelerarTiempoDemoObservacion()" title="Acelera 1 hora para probar el avance">
+                  ⚡ Avanzar 1h (Demo)
+                </button>
+                <button type="button" class="btn-full-secondary" style="font-size:0.72rem; padding:4px 8px; background:#fff1f2; color:#be123c; border-color:#fecdd3;" onclick="finalizarTiempoDemoObservacion()" title="Fuerza al contador a 0 para ver la liberación">
+                  ⏩ Probar Fin de Tiempo (00:00)
+                </button>
+              </div>
+            </div>
           </div>
+
+          <!-- BARRA DE PROGRESO DE ESTANCIA -->
+          <div class="recurso-progress-track">
+            <div id="bar_m5_progreso_estancia" class="recurso-progress-bar" style="width: 2%;"></div>
+          </div>
+
+          <!-- SECCIÓN DE AMPLIACIÓN DE HORAS (REQUERIMIENTO CLAVE) -->
+          <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; margin-top:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div>
+                <strong style="font-size:0.8rem; color:#0f172a;">➕ Ampliar Horas de Observación Médica:</strong>
+                <div style="font-size:0.72rem; color:#64748b;">Aumenta el tiempo si la evolución del paciente requiere mayor monitoreo clínico.</div>
+              </div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button type="button" class="btn-full-secondary" style="font-size:0.74rem; font-weight:700; padding:4px 10px; border-color:#0284c7; color:#0369a1;" onclick="ampliarHorasCamaActual(2, 'Reevaluación de dolor abdominal y signos vitales')">
+                  +2 Horas (Reevaluación)
+                </button>
+                <button type="button" class="btn-full-secondary" style="font-size:0.74rem; font-weight:700; padding:4px 10px; border-color:#d97706; color:#b45309;" onclick="ampliarHorasCamaActual(4, 'Espera de ecografía y analítica seriada')">
+                  +4 Horas (Exámenes)
+                </button>
+                <button type="button" class="btn-full-secondary" style="font-size:0.74rem; font-weight:700; padding:4px 10px; border-color:#dc2626; color:#991b1b;" onclick="ampliarHorasCamaActual(6, 'Ampliación máxima dentro de límite normativo 12h')">
+                  +6 Horas (Límite 12h)
+                </button>
+                <button type="button" class="btn-full-secondary" style="font-size:0.74rem; font-weight:700; padding:4px 10px; border-color:#16a34a; color:#166534;" onclick="liberarCamaActualManual()">
+                  🔓 Liberar Cama Ahora (Alta)
+                </button>
+              </div>
+            </div>
+            <div id="lbl_m5_ampliaciones_log" style="font-size:0.72rem; color:#0369a1; margin-top:6px; display:none;"></div>
+          </div>
+
           <div id="alerta_infraccion_estancia" style="display:none; color:#991b1b; font-weight:800; font-size:0.78rem; margin-top:8px;">
-            🚨 INFRACCIÓN NORMATIVA NTS N° 042-MINSA: El paciente supera las 24 horas en Observación. Debe definirse su internamiento en Hospitalización o su referencia inmediata.
+            🚨 INFRACCIÓN NORMATIVA NTS N° 042-MINSA: El paciente supera las 24 horas en Observación. Debe definirse su internamiento en Hospitalización o su referencia inmediata vía REFCON.
           </div>
         </div>
 
@@ -1735,12 +1929,43 @@
           </div>
         </div>
 
-        <!-- STOCK EN TIEMPO REAL INCLUYENDO ÁREAS CRÍTICAS -->
-        <div style="font-size:0.84rem; font-weight:800; color:#0f172a; margin-bottom:8px;">
-          🛏️ Disponibilidad de Áreas Hospitalarias en Tiempo Real:
-        </div>
-        <div id="camas_stock_grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:16px;">
-          <!-- Generado dinámicamente -->
+        <!-- TABLERO MAESTRO EN TIEMPO REAL: CAMAS Y QUIRÓFANOS (TOTALMENTE FUNCIONAL) -->
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:16px; margin-bottom:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:10px;">
+            <div>
+              <div style="font-size:0.95rem; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                <span>🛏️</span>
+                <span>Tablero Central de Disponibilidad de Camas &amp; Quirófanos en Tiempo Real</span>
+              </div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">
+                Control automatizado de ocupación, contadores regresivos de estancia y liberación programada (NTS N° 042-MINSA &amp; NTS N° 031-MINSA)
+              </div>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span id="badge_resumen_recursos_total" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.78rem; font-weight:800; padding:4px 10px; border-radius:9999px;">
+                🟢 11 de 15 Disponibles
+              </span>
+              <button type="button" class="btn-full-secondary" style="font-size:0.75rem; padding:4px 10px;" onclick="renderizarTableroCamasYQuirofanos()">
+                🔄 Actualizar
+              </button>
+            </div>
+          </div>
+
+          <!-- FILTROS DE ÁREA -->
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;" id="filtros_recursos_container">
+            <button type="button" class="chip-filtro-recurso active" onclick="filtrarTableroRecursos('todos', this)">Todos (15)</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroRecursos('quirofano', this)">🔪 Quirófanos SOP (3)</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroRecursos('observacion', this)">🛏️ Sala Observación (6)</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroRecursos('shock_trauma', this)">⚡ Shock Trauma (2)</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroRecursos('urpa', this)">🛌 URPA Recuperación (2)</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroRecursos('uci', this)">🏥 UCI / UCIN (2)</button>
+          </div>
+
+          <!-- GRID REACTIVO DE CAMAS Y QUIRÓFANOS -->
+          <div id="camas_stock_grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; margin-bottom:12px;">
+            <!-- Renderizado dinámicamente con contadores en vivo, estados y botones -->
+          </div>
         </div>
 
         <!-- FILTRO DE PRIORIZACIÓN DE CAMAS UCI (NTS N° 031-MINSA) -->
@@ -2274,5 +2499,42 @@
       </div>
     </div>
   </div>
+
+  <!-- ==========================================================================
+       MODAL FLOTANTE DE DISPONIBILIDAD DE CAMAS Y QUIRÓFANOS EN TIEMPO REAL
+       ========================================================================== -->
+  <div class="modal-hc-overlay" id="modalTableroCamasOverlay" onclick="if(event.target===this) cerrarModalTableroCamas()">
+    <div class="modal-hc-container" style="max-width: 1050px;">
+      <div class="modal-hc-header" style="background:#0f172a; color:#ffffff;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:22px;">🛏️</span>
+          <div>
+            <div style="font-weight:900; font-size:1rem;">Mapa Hospitalario de Camas y Quirófanos en Tiempo Real</div>
+            <div style="font-size:0.75rem; color:#94a3b8;">Monitoreo en vivo de estancias, contadores normativos NTS N° 042-MINSA y disponibilidad</div>
+          </div>
+        </div>
+        <button type="button" onclick="cerrarModalTableroCamas()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-hc-body" style="padding:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;" id="filtros_modal_container">
+            <button type="button" class="chip-filtro-recurso active" onclick="filtrarTableroModal('todos', this)">Todos</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroModal('quirofano', this)">🔪 Quirófanos</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroModal('observacion', this)">🛏️ Observación</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroModal('shock_trauma', this)">⚡ Shock Trauma</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroModal('urpa', this)">🛌 URPA</button>
+            <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroModal('uci', this)">🏥 UCI</button>
+          </div>
+          <span id="badge_modal_dispo_resumen" style="font-size:0.8rem; font-weight:800; color:#15803d; background:#dcfce7; padding:4px 10px; border-radius:9999px;">
+            11 / 15 Libres
+          </span>
+        </div>
+        <div id="modal_camas_stock_grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:12px;">
+          <!-- Grid dinámico sincronizado -->
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
