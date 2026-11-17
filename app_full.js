@@ -6608,17 +6608,14 @@ function renderizarMonitorObservacionModulo5() {
     return;
   }
 
-  const elNom = document.getElementById("lbl_m5_cama_nombre");
   if (elNom) elNom.textContent = `🛏️ ${rec.nombre}`;
 
-  const elEstado = document.getElementById("lbl_m5_cama_estado");
   if (elEstado) {
     elEstado.textContent = rec.estado === "ocupada" ? "OCUPADA" : "DISPONIBLE";
     elEstado.style.background = rec.estado === "ocupada" ? "#fee2e2" : "#dcfce7";
     elEstado.style.color = rec.estado === "ocupada" ? "#991b1b" : "#15803d";
   }
 
-  const elPac = document.getElementById("lbl_m5_paciente_info");
   if (elPac) {
     if (rec.estado === "ocupada" && rec.paciente) {
       elPac.textContent = `Paciente: ${rec.paciente.nombre} (DNI ${rec.paciente.dni}) | Diagnóstico: ${rec.paciente.diagnostico}`;
@@ -6627,7 +6624,6 @@ function renderizarMonitorObservacionModulo5() {
     }
   }
 
-  const elTotalInfo = document.getElementById("lbl_m5_tiempo_total_info");
   if (elTotalInfo) {
     elTotalInfo.textContent = `(De ${rec.duracionHoras} horas programadas)`;
   }
