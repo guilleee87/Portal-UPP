@@ -3079,6 +3079,126 @@ function recalcularPrioridad() {
   actualizarFactura();
 }
 
+
+// ---------------------------------------------------------------------------
+// ACTUALIZACIÓN DEL PIPELINE ASISTENCIAL DE 8 PASOS Y MONITOR DINÁMICO
+// ---------------------------------------------------------------------------
+function actualizarPipelineFull(prio) {
+  // 1. Actualizar insignias de los 8 pasos
+  const elB1 = document.getElementById("full_badge_1");
+  const elS1 = document.getElementById("full_step_1");
+  if (elB1 && elS1) {
+    if (STATE.identificador) {
+      elB1.textContent = "✓ Completado";
+      elS1.className = "pipeline-step completed";
+    } else {
+      elB1.textContent = "En curso";
+      elS1.className = "pipeline-step active";
+    }
+  }
+
+  const elB2 = document.getElementById("full_badge_2");
+  const elS2 = document.getElementById("full_step_2");
+  if (elB2 && elS2) {
+    if (STATE.tipoSeguro) {
+      elB2.textContent = `✓ ${STATE.tipoSeguro.split(" ")[0]}`;
+      elS2.className = "pipeline-step completed";
+    } else {
+      elB2.textContent = "Pendiente";
+      elS2.className = "pipeline-step";
+    }
+  }
+
+  const elB3 = document.getElementById("full_badge_3");
+  const elS3 = document.getElementById("full_step_3");
+  if (elB3 && elS3) {
+    elB3.textContent = `✓ P-${prio}`;
+    elS3.className = "pipeline-step completed";
+  }
+
+  const elB4 = document.getElementById("full_badge_4");
+  const elS4 = document.getElementById("full_step_4");
+  if (elB4 && elS4) {
+    elB4.textContent = (prio === "I" || prio === "II") ? "Trauma Shock" : "Observación";
+    elS4.className = "pipeline-step active";
+  }
+
+  const elB5 = document.getElementById("full_badge_5");
+  const elS5 = document.getElementById("full_step_5");
+  if (elB5 && elS5) {
+    const stockTs = (typeof STOCK_CAMAS !== "undefined" && STOCK_CAMAS["Trauma Shock"]) ? STOCK_CAMAS["Trauma Shock"].disponible : 1;
+    elB5.textContent = stockTs > 0 ? "1 Libre" : "Saturado";
+    elS5.className = "pipeline-step active";
+  }
+
+  // 2. Actualizar monitor dinámico de áreas y ramificación
+  const tituloRamif = document.getElementById("full_ramificacion_titulo");
+  const badgeLegal = document.getElementById("full_regla_financiera_badge");
+  const chipsContainer = document.getElementById("full_areas_chips");
+
+  if (!tituloRamif || !badgeLegal || !chipsContainer) return;
+
+  const esCritico = (prio === "I" || prio === "II");
+
+  if (esCritico) {
+    tituloRamif.textContent = `🚨 RUTA CRÍTICA ACTIVA (Prioridad ${prio} — Emergencia Vital)`;
+    tituloRamif.style.color = "#dc2626";
+
+    badgeLegal.textContent = "⚖️ Ley N° 27604: Gratuidad y Atención Inmediata sin Pago Previo";
+    badgeLegal.style.background = "#fee2e2";
+    badgeLegal.style.color = "#991b1b";
+
+    chipsContainer.innerHTML = `
+      <span class="hospital-area-chip" style="background:#fff1f2; border:1.5px solid #f43f5e; color:#9f1239; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.8rem;">
+        🚨 Trauma Shock / Reanimación (Monitoreo Invasivo & Desfibrilador)
+      </span>
+      <span class="hospital-area-chip" style="background:#fff1f2; border:1.5px solid #f43f5e; color:#9f1239; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.8rem;">
+        🩸 Banco de Sangre STAT (Gasometría & Troponinas Urgentes)
+      </span>
+      <span class="hospital-area-chip" style="background:#fff1f2; border:1.5px solid #f43f5e; color:#9f1239; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.8rem;">
+        🏥 Quirófano de Emergencia (Intervención Cardiovascular / Cirugía)
+      </span>
+      <span class="hospital-area-chip" style="background:#fffbeb; border:1.5px solid #f59e0b; color:#b45309; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.8rem;">
+        🧠 Psicología Hospitalaria (Consentimiento Informado & Apoyo en Duelo)
+      </span>
+      <span class="hospital-area-chip" style="background:#f1f5f9; border:1.5px solid #64748b; color:#334155; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.8rem;">
+        ⚖️ Auditoría Médica & SINADEF (Acta de Defunción / Sepelio EsSalud)
+      </span>
+    `;
+  } else {
+    tituloRamif.textContent = `🟡 RUTA MODERADA ACTIVA (Prioridad ${prio} — Observación y Ambulatoria)`;
+    tituloRamif.style.color = "#d97706";
+
+    badgeLegal.textContent = "💳 Cobertura SIS/EsSalud o Verificación de Copago en Caja";
+    badgeLegal.style.background = "#fef3c7";
+    badgeLegal.style.color = "#b45309";
+
+    chipsContainer.innerHTML = `
+      <span class="hospital-area-chip" style="background:#fffbeb; border:1.5px solid #f59e0b; color:#b45309; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.8rem;">
+        🪑 Tópico de Medicina (Vigilancia de Signos Vitales c/ 30 min)
+      </span>
+      <span class="hospital-area-chip" style="background:#fffbeb; border:1.5px solid #f59e0b; color:#b45309; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.8rem;">
+        🛏️ Sala de Observación de Corta Estancia (2 a 24 horas)
+      </span>
+      <span class="hospital-area-chip" style="background:#f1f5f9; border:1.5px solid #64748b; color:#334155; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.8rem;">
+        🧪 Laboratorio Clínico de Rutina & Hemograma
+      </span>
+      <span class="hospital-area-chip" style="background:#f1f5f9; border:1.5px solid #64748b; color:#334155; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.8rem;">
+        🩺 Consultorios de Descarte / REFCON (Gastroenterología)
+      </span>
+    `;
+  }
+}
+window.actualizarPipelineFull = actualizarPipelineFull;
+
+
+function registrarFacturacionTriage(prio) {
+  if (typeof registrarFacturaItem === "function") {
+    registrarFacturaItem("Atención de Triaje Clínico", 30, "Triaje");
+  }
+}
+window.registrarFacturacionTriage = registrarFacturacionTriage;
+
 function mostrarPrioridad(prio) {
   const pd = document.getElementById("prioridad_display");
   const def = PRIORIDADES[prio];
@@ -3137,10 +3257,14 @@ function mostrarPrioridad(prio) {
   if (ley) ley.classList.toggle("visible", esEmergencia);
 
   // Actualizar pipeline asistencial de 8 módulos y monitor dinámico de áreas
-  actualizarPipelineFull(prio);
+  if (typeof actualizarPipelineFull === "function") { try { actualizarPipelineFull(prio); } catch(e){} }
 
   // Cargar costos de triage
-  registrarFacturacionTriage(prio);
+  if (typeof registrarFacturacionTriage === "function") {
+    try { registrarFacturacionTriage(prio); } catch(e){}
+  } else if (typeof registrarFacturaItem === "function") {
+    try { registrarFacturaItem("Atención de Triaje Clínico", 30, "Triaje"); } catch(e){}
+  }
 
   // Actualizar liquidación contable en Módulo 8
   actualizarFactura();
@@ -7436,41 +7560,6 @@ function actualizarWidgetFlotanteCamas() {
   setDrawerCount("hud_urpa_count", counts.urpa.disponible, counts.urpa.total);
   setDrawerCount("hud_uci_count", counts.uci.disponible, counts.uci.total);
 }
-"""
-
-if "function toggleDrawerFlotante" not in code:
-    code = code.replace(
-        "// RENDERIZADO DEL TABLERO EN MÓDULO 6",
-        widget_js_functions + "\
-\
-// RENDERIZADO DEL TABLERO EN MÓDULO 6"
-    )
-    print("1. Injected widget JS functions.")
-
-# Call actualizarWidgetFlotanteCamas in tickCronometrosCamas
-tick_target = "actualizarTelemetriaDomCronometros(camasDisponibles, camasOcupadas);"
-if "actualizarWidgetFlotanteCamas();" not in code:
-    code = code.replace(
-        tick_target,
-        tick_target + "\
-  actualizarWidgetFlotanteCamas();"
-    )
-    print("2. Added actualizarWidgetFlotanteCamas to tick loop.")
-
-# Call in DOMContentLoaded
-dom_target = "renderizarMonitorObservacionModulo5();"
-if "actualizarWidgetFlotanteCamas();" not in code[:3000]:
-    code = code.replace(
-        dom_target,
-        dom_target + "\
-  actualizarWidgetFlotanteCamas();",
-        1
-    )
-    print("3. Added actualizarWidgetFlotanteCamas to DOMContentLoaded.")
-
-# Export to window
-exports_to_add = """
-
 
 window.toggleDrawerFlotante = toggleDrawerFlotante;
 window.actualizarWidgetFlotanteCamas = actualizarWidgetFlotanteCamas;
