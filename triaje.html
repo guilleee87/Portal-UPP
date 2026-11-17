@@ -3,33 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Tailwind CSS & Inter Font (Clinical SaaS Design System) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
   <title>Simulador HIS Completo — Emergencia Nivel III-1 | UPP FCS</title>
   <style>
     :root {
-      --primary: #0f172a;
-      --primary-light: #1e293b;
-      --accent: #0284c7;
-      --accent-light: #e0f2fe;
+      --primary: #1e293b;
+      --primary-light: #334155;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-light: #eff6ff;
+      --accent-border: #bfdbfe;
       --success: #16a34a;
       --warning: #ca8a04;
       --danger: #dc2626;
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --border: #e2e8f0;
-      --text: #0f172a;
-      --text-muted: #64748b;
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
-      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
-      --radius: 12px;
+      --bg: #f8fafc; /* Gris muy claro bg-slate-50 */
+      --surface: #ffffff; /* Tarjetas blancas bg-white */
+      --border: #e2e8f0; /* border-slate-200 */
+      --text: #0f172a; /* text-slate-900 */
+      --text-heading: #1e293b; /* text-slate-800 */
+      --text-muted: #64748b; /* text-slate-500 */
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+      --radius: 0.75rem; /* rounded-xl */
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
       line-height: 1.5;
       font-size: 14px;
+      -webkit-font-smoothing: antialiased;
     }
 
     /* ===== HEADER SUPERIOR TELEMETRÍA (40px) ===== */
@@ -1598,6 +1628,233 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+  
+    /* ===== SHADCN / TAILWIND DESIGN SYSTEM PRESETS ===== */
+    .btn-full-primary {
+      background: #2563eb !important; /* bg-blue-600 */
+      color: #ffffff !important;
+      font-weight: 600;
+      border-radius: 0.5rem; /* rounded-lg */
+      padding: 9px 16px;
+      border: 1px solid transparent;
+      box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      cursor: pointer;
+    }
+    .btn-full-primary:hover {
+      background: #1d4ed8 !important; /* bg-blue-700 */
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+      transform: translateY(-1px);
+    }
+    .btn-full-primary:active {
+      transform: scale(0.98);
+    }
+
+    .btn-full-secondary {
+      background: #ffffff !important;
+      color: #334155 !important; /* text-slate-700 */
+      border: 1px solid #e2e8f0 !important; /* border-slate-200 */
+      font-weight: 500;
+      border-radius: 0.5rem; /* rounded-lg */
+      padding: 9px 16px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      cursor: pointer;
+    }
+    .btn-full-secondary:hover {
+      background: #f8fafc !important; /* bg-slate-50 */
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+      transform: translateY(-1px);
+    }
+    .btn-full-secondary:active {
+      transform: scale(0.98);
+    }
+
+    .input-full, select.input-full {
+      background: #ffffff !important;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 0.5rem !important; /* rounded-lg */
+      color: #0f172a !important;
+      font-family: inherit;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+      transition: all 0.2s ease-in-out !important;
+    }
+    .input-full:focus, select.input-full:focus {
+      outline: none !important;
+      border-color: #2563eb !important; /* border-blue-600 */
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+      background: #ffffff !important;
+    }
+
+    /* Cards con esquinas redondeadas y sombras suaves */
+    .module-section {
+      background: #ffffff !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 0.875rem !important; /* rounded-xl */
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05) !important;
+      margin-bottom: 1.5rem !important;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      overflow: hidden;
+    }
+    .module-section:hover {
+      box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -2px rgba(0, 0, 0, 0.04) !important;
+    }
+    .module-section-header {
+      background: #ffffff !important;
+      padding: 14px 18px !important;
+      border-bottom: 1px solid #f1f5f9;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s ease;
+    }
+    .module-section-header:hover {
+      background: #f8fafc !important;
+    }
+    .module-num-badge {
+      background: #eff6ff !important; /* bg-blue-50 */
+      color: #2563eb !important; /* text-blue-600 */
+      border: 1px solid #bfdbfe !important; /* border-blue-200 */
+      font-weight: 800;
+      border-radius: 0.5rem;
+    }
+    .module-section-title {
+      color: #1e293b !important; /* text-slate-800 */
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .module-section-subtitle {
+      color: #64748b !important; /* text-slate-500 */
+      font-weight: 500;
+      font-size: 0.75rem;
+    }
+
+    /* CHIPS DE PRIORIDAD SHADCN */
+    .card-prio-badge, .badge-prioridad {
+      font-weight: 700 !important;
+      border-radius: 9999px !important;
+      padding: 2px 8px !important;
+      font-size: 0.72rem !important;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .prio-chip-I, .prio-badge-I {
+      background-color: #fee2e2 !important; /* bg-red-100 */
+      color: #b91c1c !important; /* text-red-700 */
+      border: 1px solid #fecaca !important; /* border-red-200 */
+    }
+    .prio-chip-II, .prio-badge-II {
+      background-color: #ffedd5 !important; /* bg-orange-100 */
+      color: #c2410c !important; /* text-orange-700 */
+      border: 1px solid #fed7aa !important; /* border-orange-200 */
+    }
+    .prio-chip-III, .prio-badge-III {
+      background-color: #fef9c3 !important; /* bg-yellow-100 */
+      color: #a16207 !important; /* text-yellow-700 */
+      border: 1px solid #fef08a !important; /* border-yellow-200 */
+    }
+    .prio-chip-IV, .prio-badge-IV {
+      background-color: #dcfce7 !important; /* bg-emerald-100 */
+      color: #15803d !important; /* text-emerald-700 */
+      border: 1px solid #bbf7d0 !important; /* border-emerald-200 */
+    }
+    .prio-chip-V, .prio-badge-V {
+      background-color: #dbeafe !important; /* bg-blue-100 */
+      color: #1d4ed8 !important; /* text-blue-700 */
+      border: 1px solid #bfdbfe !important; /* border-blue-200 */
+    }
+
+    /* STEPPER SEGMENTADO TIPO APP (SHADCN TABS) */
+    .top-steps-navbar {
+      background: #ffffff !important;
+      border-bottom: 1px solid #e2e8f0 !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+      padding: 8px 16px !important;
+      position: sticky;
+      top: 56px;
+      z-index: 40;
+    }
+    .top-steps-scroll {
+      background: #f1f5f9; /* bg-slate-100 */
+      padding: 4px;
+      border-radius: 0.75rem; /* rounded-xl */
+      border: 1px solid #e2e8f0;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .top-step-btn {
+      background: transparent !important;
+      color: #64748b !important; /* text-slate-500 */
+      border: none !important;
+      border-radius: 0.5rem !important; /* rounded-lg */
+      padding: 6px 12px !important;
+      font-size: 0.76rem !important;
+      font-weight: 600 !important;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      white-space: nowrap;
+    }
+    .top-step-btn:hover {
+      background: rgba(255, 255, 255, 0.6) !important;
+      color: #0f172a !important;
+    }
+    .top-step-btn.active, .top-step-btn.active-step-tab {
+      background: #ffffff !important;
+      color: #2563eb !important; /* text-blue-600 */
+      font-weight: 700 !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    }
+    .top-step-btn.active .step-circle, .top-step-btn.active-step-tab .step-circle {
+      background: #2563eb !important;
+      color: #ffffff !important;
+    }
+    .step-circle {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      color: #334155;
+      font-size: 0.68rem;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    /* FOOTER DE NAVEGACIN PASO A PASO (MODO APP) */
+    .step-nav-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      margin-top: 20px;
+      border-radius: 0 0 0.875rem 0.875rem;
+    }
+    .step-counter-pill {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #475569;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      padding: 4px 12px;
+      border-radius: 9999px;
+    }
+
+    /* TRANSICIONES SUAVES */
+    .transition-all-300 {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
   </style>
 </head>
 <body>
@@ -1605,21 +1862,61 @@
   <!-- ==========================================================================
        BARRA SUPERIOR DE TELEMETRÍA (42px) — CITA NORMAS Y DESARROLLADORES
        ========================================================================== -->
-  <header class="telemetry-header">
-    <div class="telemetry-left">
-      <span class="telemetry-brand">
-        <span>🏥</span> HIS-EMG NIVEL III-1
-      </span>
-      <span class="telemetry-authors">
-        Desarrolladores: <strong>Luis Guillermo Vásquez Valdivieso & Rodrigo Alonso Añazgo Farro</strong>
-      </span>
-    </div>
-    <div class="telemetry-right">
-      <span class="cloud-status-badge">
-        <span class="cloud-pulse"></span>
-        <span id="telemetry_db_status">Supabase Cloud &amp; Local SQLite (NTS N° 139-MINSA)</span>
-      </span>
-      <span class="live-clock" id="limaClockDisplay">--:--:-- UTC-5</span>
+  <!-- ==========================================================================
+       NAVBAR SUPERIOR PRINCIPAL (CLINICAL SAAS APP-STYLE) — TRIAJE SUPP
+       ========================================================================== -->
+  <header class="w-full bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 px-4 md:px-6 py-2.5 transition-all duration-300 shadow-xs">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <!-- LOGO & BRANDING TRIAJE SUPP -->
+      <div class="flex items-center justify-between w-full md:w-auto gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-extrabold shadow-sm shadow-blue-500/20">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-base tracking-tight text-slate-900 font-sans">Triaje Supp</span>
+              <span class="px-1.5 py-0.5 text-[10px] font-extrabold rounded-md bg-blue-50 text-blue-700 border border-blue-200">HIS III-1</span>
+            </div>
+            <div class="text-[11px] text-slate-500 font-medium leading-tight">Sistema Clínico de Emergencias & Triaje Hospitalario</div>
+          </div>
+        </div>
+
+        <!-- TOGGLE MODO APP (PASO A PASO) VS VISTA CONTINUA (MÓVIL) -->
+        <button type="button" id="btn_toggle_view_mode_mobile" onclick="alternarModoVistaApp()" class="md:hidden px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+          📑 Modo App
+        </button>
+      </div>
+
+      <!-- CENTRO: AUTORÍA & NORMAS MINSA -->
+      <div class="hidden lg:flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/60">
+        <span>Desarrolladores:</span>
+        <strong class="text-slate-800 font-semibold">Luis Guillermo Vásquez Valdivieso & Rodrigo Alonso Añazgo Farro</strong>
+        <span class="text-slate-300">|</span>
+        <span class="font-medium text-slate-600">UPP FCS · NTS N° 042 / Ley 27604</span>
+      </div>
+
+      <!-- DERECHA: ACCIONES & STATUS TELEMETRÍA -->
+      <div class="flex items-center justify-between w-full md:w-auto gap-2.5">
+        <!-- BOTÓN TOGGLE MODO PASOS (DESKTOP) -->
+        <button type="button" id="btn_toggle_view_mode" onclick="alternarModoVistaApp()" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-all cursor-pointer shadow-2xs" title="Alternar entre Modo Paso a Paso (estilo App) y Vista Continua">
+          <span>📑 Modo Pasos (App)</span>
+        </button>
+
+        <a href="simulacion.html" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-all" title="Entorno de Pruebas y Simulación Masiva">
+          <span>🧪 Sandbox</span>
+        </a>
+
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="telemetry_db_status" class="hidden sm:inline">Supabase Cloud</span>
+          <span class="live-clock font-mono font-semibold" id="limaClockDisplay">--:--:--</span>
+        </div>
+      </div>
+
     </div>
   </header>
 
@@ -2052,6 +2349,13 @@
           </div>
         </div>
 
+      
+        <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
+        <div id="step_footer_mod_1" class="step-nav-footer">
+          <span></span>
+          <span class="step-counter-pill" id="step_footer_label_1">Paso 1 de 8</span>
+          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 2 (Admisión & RENIEC) →</button>
+        </div>
       </div>
     </section>
 
@@ -2180,6 +2484,13 @@
           </div>
         </div>
 
+      
+        <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
+        <div id="step_footer_mod_2" class="step-nav-footer">
+          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <span class="step-counter-pill" id="step_footer_label_2">Paso 2 de 8</span>
+          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 3 (Acreditación Seguro & SOAT) →</button>
+        </div>
       </div>
     </section>
 
@@ -2382,6 +2693,13 @@
           </div>
         </div>
 
+      
+        <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
+        <div id="step_footer_mod_3" class="step-nav-footer">
+          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <span class="step-counter-pill" id="step_footer_label_3">Paso 3 de 8</span>
+          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 4 (Shock Trauma & Kardex) →</button>
+        </div>
       </div>
     </section>
 
@@ -2774,6 +3092,13 @@
           </button>
         </div>
 
+      
+        <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
+        <div id="step_footer_mod_5" class="step-nav-footer">
+          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <span class="step-counter-pill" id="step_footer_label_5">Paso 5 de 8</span>
+          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 6 (Camas Críticas & SOP) →</button>
+        </div>
       </div>
     </section>
 
@@ -2989,6 +3314,13 @@
           </div>
         </div>
 
+      
+        <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
+        <div id="step_footer_mod_6" class="step-nav-footer">
+          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <span class="step-counter-pill" id="step_footer_label_6">Paso 6 de 8</span>
+          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 7 (Egreso & Auditoría Legal) →</button>
+        </div>
       </div>
     </section>
 
@@ -3150,6 +3482,13 @@
           </div>
         </div>
 
+      
+        <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
+        <div id="step_footer_mod_7" class="step-nav-footer">
+          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <span class="step-counter-pill" id="step_footer_label_7">Paso 7 de 8</span>
+          <button type="button" class="btn-full-primary" onclick="moduloSiguiente()">Siguiente: Paso 8 (Cierre & Facturación) →</button>
+        </div>
       </div>
     </section>
 
@@ -3240,7 +3579,15 @@
           </button>
         </div>
 
-      </div></section>
+      
+        <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
+        <div id="step_footer_mod_8" class="step-nav-footer">
+          <button type="button" class="btn-full-secondary" onclick="moduloAnterior()">← Paso Anterior</button>
+          <span class="step-counter-pill" id="step_footer_label_8">Paso 8 de 8</span>
+          <button type="button" class="btn-full-primary" onclick="grabarAtencionCompleta()">✅ Atención Completada</button>
+        </div>
+      </div>
+    </section>
 
   </main>
 

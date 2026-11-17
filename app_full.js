@@ -5123,6 +5123,10 @@ function irAModulo(num) {
     if (targetArrow) targetArrow.classList.add("open");
   }
 
+  if (typeof actualizarVistaModoTabs === "function") {
+    actualizarVistaModoTabs(num);
+  }
+
   if (targetSec) {
     try {
       targetSec.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -7990,12 +7994,12 @@ let intervalCronometrosCola = null;
 
 const ORDEN_PRIORIDADES = { "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, null: 99 };
 const COLORES_PRIORIDAD = {
-  "I": { bg: "#fee2e2", border: "#dc2626", text: "#991b1b", label: "P-I ROJO" },
-  "II": { bg: "#ffedd5", border: "#ea580c", text: "#9a3412", label: "P-II NARANJA" },
-  "III": { bg: "#fef9c3", border: "#ca8a04", text: "#854d0e", label: "P-III AMARILLO" },
-  "IV": { bg: "#dcfce7", border: "#16a34a", text: "#166534", label: "P-IV VERDE" },
-  "V": { bg: "#dbeafe", border: "#2563eb", text: "#1e40af", label: "P-V AZUL" },
-  null: { bg: "#f1f5f9", border: "#94a3b8", text: "#475569", label: "POR EVALUAR" }
+  "I": { bg: "#fee2e2", border: "#fecaca", text: "#b91c1c", label: "P-I ROJO" }, // bg-red-100 text-red-700 border-red-200
+  "II": { bg: "#ffedd5", border: "#fed7aa", text: "#c2410c", label: "P-II NARANJA" }, // bg-orange-100 text-orange-700 border-orange-200
+  "III": { bg: "#fef9c3", border: "#fef08a", text: "#a16207", label: "P-III AMARILLO" }, // bg-yellow-100 text-yellow-700 border-yellow-200
+  "IV": { bg: "#dcfce7", border: "#bbf7d0", text: "#15803d", label: "P-IV VERDE" }, // bg-emerald-100 text-emerald-700 border-emerald-200
+  "V": { bg: "#dbeafe", border: "#bfdbfe", text: "#1d4ed8", label: "P-V AZUL" }, // bg-blue-100 text-blue-700 border-blue-200
+  null: { bg: "#f1f5f9", border: "#e2e8f0", text: "#64748b", label: "POR EVALUAR" }
 };
 
 function generarIdPaciente() {
@@ -8680,3 +8684,69 @@ function actualizarGrupoSanguineo(val) {
   autoGuardarCambioEnHistoriaClinica(`Grupo sanguíneo actualizado a ${val}`);
 }
 window.actualizarGrupoSanguineo = actualizarGrupoSanguineo;
+
+// ==============================================================================
+// GESTIÓN DE VISTA APP: MODO PASOS (TABS) VS VISTA CONTINUA
+// ==============================================================================
+let modoTabsActivo = true; // Por defecto: Modo Paso a Paso (Estilo App)
+
+function alternarModoVistaApp(forzarModo) {
+  if (forzarModo !== undefined) {
+    modoTabsActivo = forzarModo;
+  } else {
+    modoTabsActivo = !modoTabsActivo;
+  }
+
+  const btnToggle = document.getElementById("btn_toggle_view_mode");
+  const btnToggleMobile = document.getElementById("btn_toggle_view_mode_mobile");
+
+  const textoBtn = modoTabsActivo ? "📑 Modo Pasos (App)" : "📜 Vista Continua";
+  const claseBtn = modoTabsActivo
+    ? "hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-all cursor-pointer shadow-2xs"
+    : "hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-all cursor-pointer shadow-2xs";
+
+  if (btnToggle) {
+    btnToggle.innerHTML = `<span>${textoBtn}</span>`;
+    btnToggle.className = claseBtn;
+  }
+  if (btnToggleMobile) {
+    btnToggleMobile.innerHTML = modoTabsActivo ? "📑 Modo App" : "📜 Vista Continua";
+  }
+
+  actualizarVistaModoTabs(moduloActivoActual || 1);
+}
+
+function actualizarVistaModoTabs(num) {
+  const n = num || moduloActivoActual || 1;
+  for (let i = 1; i <= 8; i++) {
+    const sec = document.getElementById(`sec_mod${i}`);
+    const btn = document.getElementById(`btnStepTop_${i}`);
+    if (sec) {
+      if (modoTabsActivo) {
+        sec.style.display = (i === n) ? "block" : "none";
+        if (i === n) {
+          sec.classList.add("tab-step-active");
+          const b = document.getElementById(`body_mod${i}`);
+          if (b) {
+            b.style.display = "block";
+            b.classList.add("open");
+          }
+        }
+      } else {
+        sec.style.display = "block";
+      }
+    }
+    if (btn) {
+      if (i === n) {
+        btn.classList.add("active");
+        btn.classList.add("active-step-tab");
+      } else {
+        btn.classList.remove("active");
+        btn.classList.remove("active-step-tab");
+      }
+    }
+  }
+}
+
+window.alternarModoVistaApp = alternarModoVistaApp;
+window.actualizarVistaModoTabs = actualizarVistaModoTabs;
