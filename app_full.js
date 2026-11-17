@@ -1328,6 +1328,7 @@ const STATE = {
   // Origen del Evento (Norma NTS N° 042-MINSA & Ley N° 27604)
   tipoOrigenEvento: "comun", // "comun" o "transito"
   esAccidenteTransito: false,
+  esClinicaPrivada: false, // true cuando opera en modo Clínica Privada EPS
   panicoShockTrauma: false,
 
   // Módulo 1: Triaje Fisiológico
@@ -3293,31 +3294,72 @@ function mostrarPrioridad(prio) {
   pd.style.borderColor = "";
   pd.style.borderWidth = "";
 
+  const seguro = String(STATE.tipoSeguro || "").trim().toLowerCase();
+  const esEps = (STATE.esClinicaPrivada || seguro.includes("eps") || seguro.includes("privad") || 
+                 seguro.includes("rimac") || seguro.includes("pacifico") || seguro.includes("pacífico") || 
+                 seguro.includes("sanitas") || seguro.includes("mapfre") || seguro.includes("positiva"));
+  const esEmergencia = (prio === "I" || prio === "II");
 
   document.getElementById("prio_numero").textContent = prio;
   document.getElementById("prio_numero").className = `prioridad-numero ${def.clase}`;
   document.getElementById("prio_color_name").textContent = `● ${["Rojo","Naranja","Amarillo","Verde","Azul"][["I","II","III","IV","V"].indexOf(prio)]}`;
   document.getElementById("prio_color_name").style.color = def.hex;
-  document.getElementById("prio_tipo").textContent = def.nombre;
-  document.getElementById("prio_tipo").style.color = def.hex;
-  document.getElementById("prio_desc").textContent = obtenerDescripcionPrioridad(prio);
-  document.getElementById("prio_destino").textContent = `Destino: ${def.destino}`;
-  document.getElementById("prio_destino").style.color = def.hex;
 
+  // LÓGICA DE CATEGORIZACIÓN: EN CLÍNICA PRIVADA EPS, SI NO ES EMERGENCIA SE COLOCA AUTOMÁTICAMENTE COMO URGENCIA
+  if (esEps && !esEmergencia) {
+    document.getElementById("prio_tipo").textContent = "URGENCIA (Clínica Privada EPS)";
+    document.getElementById("prio_tipo").style.color = "#ca8a04";
+    document.getElementById("prio_desc").textContent = 
+      "ATENCIÓN DE URGENCIA EN CLÍNICA PRIVADA EPS. Por normativa contractual de aseguradoras privadas EPS, al descartarse emergencia con riesgo vital o secuela inminente (P-I/II), la atención se clasifica AUTOMÁTICAMENTE COMO URGENCIA: Aplica cobro fijo de consulta de S/. 80.00 soles y coaseguro del 10% en medicamentos prescritos. Exámenes de laboratorio, imágenes diagnósticas y procedimientos cubiertos al 100% por la EPS.";
+    document.getElementById("prio_destino").textContent = "Destino: Tópico de Urgencias EPS / Consulta Médica de Urgencia";
+    document.getElementById("prio_destino").style.color = "#ca8a04";
+
+    const topicoLbl = document.getElementById("topico_asignado_lbl");
+    if (topicoLbl) topicoLbl.textContent = "Tópico de Urgencias Médicas (Clínica Privada EPS)";
+
+    const chipLive = document.getElementById("chipPrioLive");
+    if (chipLive) {
+      chipLive.textContent = `URGENCIA EPS (P-${prio})`;
+      chipLive.className = "top-prio-chip prio-III";
+    }
+  } else if (esEps && esEmergencia) {
+    document.getElementById("prio_tipo").textContent = prio === "I" ? "EMERGENCIA VITAL (P-I EPS)" : "EMERGENCIA / URGENCIA MAYOR (P-II EPS)";
+    document.getElementById("prio_tipo").style.color = def.hex;
+    document.getElementById("prio_desc").textContent = 
+      "EMERGENCIA MÉDICA EN CLÍNICA PRIVADA EPS (Ley N° 27604). Atención inmediata sin condicionamiento ni pago previo. Procedimientos críticos, tópicos, cama y exámenes auxiliares con costo S/. 0.00 para el paciente (asumidos al 100% por EPS). Medicamentos: paciente asume 10% de coaseguro.";
+    document.getElementById("prio_destino").textContent = `Destino: ${def.destino}`;
+    document.getElementById("prio_destino").style.color = def.hex;
+
+    const topicoLbl = document.getElementById("topico_asignado_lbl");
+    if (topicoLbl) topicoLbl.textContent = "Shock Trauma / Tópico Crítico (Clínica Privada EPS)";
+
+    const chipLive = document.getElementById("chipPrioLive");
+    if (chipLive) {
+      chipLive.textContent = `EMERGENCIA EPS (P-${prio})`;
+      chipLive.className = `top-prio-chip prio-${prio}`;
+    }
+  } else {
+    // Régimen público estándar (MINSA / EsSalud / Particular)
+    document.getElementById("prio_tipo").textContent = def.nombre;
+    document.getElementById("prio_tipo").style.color = def.hex;
+    document.getElementById("prio_desc").textContent = obtenerDescripcionPrioridad(prio);
+    document.getElementById("prio_destino").textContent = `Destino: ${def.destino}`;
+    document.getElementById("prio_destino").style.color = def.hex;
+
+    const topicoLbl = document.getElementById("topico_asignado_lbl");
+    if (topicoLbl) topicoLbl.textContent = def.destino;
+  }
 
   // Ley 27604
   const ley = document.getElementById("ley27604_banner");
-  ley.classList.toggle("visible", prio === "I" || prio === "II");
-
+  if (ley) ley.classList.toggle("visible", prio === "I" || prio === "II");
 
   // Actualizar pipeline asistencial de 8 módulos y monitor dinámico de áreas
   actualizarPipelineFull(prio);
 
-
   // Cargar costos de triage
   registrarFacturaItem("Atención de Triaje Clínico", 30, "Triaje");
 }
-
 
 function actualizarPipelineFull(prio) {
   // 1. Actualizar insignias de los 8 pasos
@@ -3893,6 +3935,8 @@ function calcularLiquidacionSeguro() {
   let etiquetaRegimen = "";
   let coberturaSoatAplicada = 0;
   let saldoSoatRestante = STATE.soatTopeLegal;
+  let esEpsPrivado = false;
+  let esPublico = false;
 
   // ESCENARIO 1: Accidente de Tránsito con SOAT Activo (Placa identificada)
   if (esAccidente && !esFuga) {
@@ -3904,7 +3948,7 @@ function calcularLiquidacionSeguro() {
       totalPaciente = 0.00; // PAGO CERO TOTAL
       coberturaSoatAplicada = totalBruto;
       saldoSoatRestante = topeSoat - totalBruto;
-      motivoLiquidacion = `COBERTURA TOTAL POR SOAT ACTIVO (D.S. N° 024-2002-MTC). Póliza ${STATE.soatPoliza} de ${STATE.soatAseguradora} (Placa: ${STATE.soatPlaca || 'Identificada'}). Total facturado S/. ${totalBruto.toFixed(2)} cubierto al 100% dentro del tope legal de 5 UIT (S/. 27,500.00). Saldo SOAT remanente disponible: S/. ${saldoSoatRestante.toFixed(2)}. Paciente paga: S/. 0.00.`;
+      motivoLiquidacion = `COBERTURA TOTAL POR SOAT ACTIVO (D.S. N° 024-2002-MTC). Póliza ${STATE.soatPoliza || 'Vigente'} de ${STATE.soatAseguradora || 'Aseguradora'} (Placa: ${STATE.soatPlaca || 'Identificada'}). Total facturado S/. ${totalBruto.toFixed(2)} cubierto al 100% dentro del tope legal de 5 UIT (S/. 27,500.00). Saldo SOAT remanente disponible: S/. ${saldoSoatRestante.toFixed(2)}. Paciente paga: S/. 0.00.`;
     } else {
       coberturaSeguro = topeSoat;
       totalPaciente = totalBruto - topeSoat;
@@ -3925,6 +3969,7 @@ function calcularLiquidacionSeguro() {
   }
   // ESCENARIO 3: MINSA con SIS Activo
   else if (seguro.includes("sis") || seguro.includes("minsa")) {
+    esPublico = true;
     lugarAtencion = "Hospital Regional Docente UPP (Red Asistencial MINSA)";
     etiquetaRegimen = "SIS Gratuito Integral (MINSA / FUA Ley N° 27604)";
     coberturaSeguro = totalBruto;
@@ -3935,6 +3980,7 @@ function calcularLiquidacionSeguro() {
   }
   // ESCENARIO 4: EsSalud con EsSalud Activo
   else if (seguro.includes("essalud")) {
+    esPublico = true;
     lugarAtencion = "Red Prestacional EsSalud (Seguro Social de Salud del Perú)";
     etiquetaRegimen = "EsSalud (Asegurado Titular / Derechohabiente ESSI)";
     coberturaSeguro = totalBruto;
@@ -3943,27 +3989,29 @@ function calcularLiquidacionSeguro() {
     totalPaciente = 0.00; // PAGO CERO TOTAL
     motivoLiquidacion = "COBERTURA TOTAL INTEGRAL 100% (EsSalud - PAGO CERO). Paciente cuenta con acreditación regular vigente en el sistema ESSI de EsSalud. La institución asume la totalidad de la atención de emergencia, estancia, medicamentos e insumos. Paciente paga: S/. 0.00.";
   }
-  // ESCENARIO 5: Seguro Privado o EPS
-  else if (seguro.includes("eps") || seguro.includes("privad") || seguro.includes("rimac") || 
-           seguro.includes("pacifico") || seguro.includes("pacífico") || seguro.includes("sanitas") || 
-           seguro.includes("mapfre") || seguro.includes("positiva")) {
+  // ESCENARIO 5: Seguro Privado o EPS (Clínica Privada)
+  else if (STATE.esClinicaPrivada || seguro.includes("eps") || seguro.includes("privad") || 
+           seguro.includes("rimac") || seguro.includes("pacifico") || seguro.includes("pacífico") || 
+           seguro.includes("sanitas") || seguro.includes("mapfre") || seguro.includes("positiva")) {
+    esEpsPrivado = true;
     lugarAtencion = "Clínica Privada Especializada (Red Prestacional Privada EPS)";
     if (esEmergencia) {
-      // 5A: Emergencia (P-I o P-II): Cobro 0 en cama/lab/servicios, Farmacia paga 10% coaseguro
+      // 5A: Emergencia Médica (P-I o P-II): Cobro S/. 0.00 en consulta/cama/lab/procedimientos, Farmacia paga 10% coaseguro
       copagoUrgencia = 0.00;
       coaseguroFarmacia = subtotalFarmacia * 0.10;
       coberturaSeguro = subtotalServicios + (subtotalFarmacia * 0.90);
       totalPaciente = coaseguroFarmacia;
       etiquetaRegimen = "Clínica Privada EPS · Emergencia Médica (P-I / P-II)";
-      motivoLiquidacion = "EMERGENCIA MÉDICA EN CLÍNICA PRIVADA EPS (P-I / P-II). El cobro por atención clínica, cama, procedimientos y exámenes de laboratorio/imágenes es S/. 0.00 (cubierto por la aseguradora). En la receta médica de farmacia, el paciente asume únicamente el 10% del total (coaseguro).";
+      motivoLiquidacion = "EMERGENCIA MÉDICA EN CLÍNICA PRIVADA EPS (P-I / P-II). Conforme a la Ley N° 27604, la atención médica de emergencia, procedimientos críticos, tópicos, cama y exámenes auxiliares de laboratorio e imágenes tienen costo S/. 0.00 para el asegurado (100% asumido por la EPS). En la receta médica de farmacia, el paciente asume únicamente el 10% del total de medicamentos como coaseguro.";
     } else {
-      // 5B: Urgencia (P-III, IV, V): Consulta S/. 80.00 + Farmacia paga 10% coaseguro
+      // 5B: No es Emergencia -> AUTOMÁTICAMENTE URGENCIA (P-III, IV, V):
+      // Consulta fija de S/. 80.00 + 10% del total de medicamentos. Exámenes y servicios cubiertos al 100% por EPS.
       copagoUrgencia = 80.00;
       coaseguroFarmacia = subtotalFarmacia * 0.10;
       totalPaciente = copagoUrgencia + coaseguroFarmacia;
-      coberturaSeguro = Math.max(0, subtotalServicios + (subtotalFarmacia * 0.90) - copagoUrgencia);
+      coberturaSeguro = subtotalServicios + (subtotalFarmacia * 0.90);
       etiquetaRegimen = "Clínica Privada EPS · Consulta de Urgencia (P-III / IV / V)";
-      motivoLiquidacion = "ATENCIÓN DE URGENCIA EN CLÍNICA PRIVADA EPS. Al ser catalogado como urgencia, aplica un cobro fijo de consulta de S/. 80.00 soles. En la receta médica de medicamentos, el paciente asume únicamente el 10% del valor total (coaseguro). Exámenes, procedimientos y cama están cubiertos por EPS.";
+      motivoLiquidacion = "ATENCIÓN DE URGENCIA EN CLÍNICA PRIVADA EPS. Al descartarse emergencia con riesgo vital (P-I/II), la atención se clasifica AUTOMÁTICAMENTE COMO URGENCIA conforme a la póliza privada. Aplica cobro fijo de consulta de S/. 80.00 soles. En la receta médica de farmacia, el paciente asume únicamente el 10% del total de medicamentos (coaseguro). Los exámenes de laboratorio, imágenes diagnósticas, procedimientos y estancia están cubiertos al 100% por la aseguradora EPS.";
     }
   }
   // ESCENARIO 6: Sin Cobertura / Particular
@@ -3993,6 +4041,8 @@ function calcularLiquidacionSeguro() {
     etiquetaRegimen,
     esEmergencia,
     esUrgencia,
+    esEpsPrivado,
+    esPublico,
     coberturaSoatAplicada,
     saldoSoatRestante
   };
@@ -4017,7 +4067,7 @@ function actualizarFactura() {
 
   if (!container) return;
 
-  if (STATE.items_factura.length === 0) {
+  if (STATE.items_factura.length === 0 && liq.copagoUrgencia === 0) {
     container.innerHTML = `
       <div style="text-align:center;padding:32px 16px;color:#94a3b8;">
         <span style="font-size:36px;display:block;margin-bottom:8px;">🧾</span>
@@ -4027,26 +4077,76 @@ function actualizarFactura() {
     `;
     if (totalEl) totalEl.textContent = "0.00";
     if (miniEl) miniEl.textContent = "S/. 0.00";
+    const detalleEl = document.getElementById("liquidacion_detalle_box");
+    if (detalleEl) detalleEl.innerHTML = "";
     return;
   }
 
-  // Renderizar items facturados
+  // Renderizar items facturados con desglose de cobertura
   let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;">
     <thead>
       <tr style="background:#f1f5f9;color:#475569;border-bottom:2px solid #cbd5e1;">
         <th style="padding:10px 12px;">Concepto Asistencial</th>
-        <th style="padding:10px 12px;width:120px;">Servicio</th>
-        <th style="padding:10px 12px;width:90px;text-align:right;">Subtotal</th>
+        <th style="padding:10px 12px;width:130px;">Servicio</th>
+        <th style="padding:10px 12px;width:95px;text-align:right;">Subtotal</th>
+        <th style="padding:10px 12px;width:125px;text-align:right;">Cargo Paciente</th>
       </tr>
     </thead>
     <tbody>`;
 
+  // Si aplica Copago Consulta de Urgencia (S/. 80.00 en Clínica Privada EPS)
+  if (liq.copagoUrgencia > 0) {
+    html += `
+      <tr style="border-bottom:1px solid #cbd5e1; background:#f0fdf4;">
+        <td style="padding:9px 12px;font-weight:700;color:#166534;">
+          🩺 Consulta Médica de Urgencia (Clínica Privada EPS)
+          <div style="font-size:11px;color:#15803d;font-weight:normal;">Tarifa fija por atención ambulatoria de urgencia (P-III, IV, V)</div>
+        </td>
+        <td style="padding:9px 12px;color:#166534;font-size:12px;">
+          <span style="background:#dcfce7;padding:2px 8px;border-radius:4px;font-weight:700;">Consulta / Urgencias</span>
+        </td>
+        <td style="padding:9px 12px;text-align:right;color:#64748b;font-size:12px;">S/. 80.00</td>
+        <td style="padding:9px 12px;text-align:right;font-weight:800;color:#166534;">S/. 80.00</td>
+      </tr>`;
+  }
+
   STATE.items_factura.forEach(item => {
+    const esFar = (item.categoria || "").toLowerCase().includes("farmacia");
+    let cargoPac = parseFloat(item.costo) || 0;
+    let badgeCobertura = "";
+
+    if (liq.esEpsPrivado) {
+      if (esFar) {
+        cargoPac = (parseFloat(item.costo) || 0) * 0.10;
+        badgeCobertura = `<span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;">Coaseguro 10% (EPS cubre 90%)</span>`;
+      } else {
+        cargoPac = 0.00;
+        badgeCobertura = `<span style="background:#dcfce7;color:#15803d;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;">Cubierto 100% EPS</span>`;
+      }
+    } else if (liq.esPublico) {
+      cargoPac = 0.00;
+      badgeCobertura = `<span style="background:#dcfce7;color:#15803d;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;">Cubierto 100% (Pago Cero)</span>`;
+    } else if (STATE.esAccidenteTransito && !STATE.soatVehiculoFuga) {
+      cargoPac = 0.00;
+      badgeCobertura = `<span style="background:#ffedd5;color:#9a3412;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;">Cubierto por SOAT (5 UIT)</span>`;
+    } else if (STATE.esAccidenteTransito && STATE.soatVehiculoFuga) {
+      cargoPac = parseFloat(item.costo) || 0;
+      badgeCobertura = `<span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;">🚨 Sin Placa / Cargo 100%</span>`;
+    }
+
     html += `
       <tr style="border-bottom:1px solid #e2e8f0;">
-        <td style="padding:8px 12px;font-weight:600;color:#1e293b;">${item.nombre}</td>
-        <td style="padding:8px 12px;color:#64748b;font-size:12px;"><span style="background:#f8fafc;padding:2px 6px;border-radius:4px;border:1px solid #e2e8f0;">${item.categoria || 'Clínica'}</span></td>
-        <td style="padding:8px 12px;text-align:right;font-weight:700;color:#0f172a;">S/. ${(parseFloat(item.costo)||0).toFixed(2)}</td>
+        <td style="padding:8px 12px;font-weight:600;color:#1e293b;">
+          ${item.nombre}
+          ${badgeCobertura ? `<div style="margin-top:2px;">${badgeCobertura}</div>` : ''}
+        </td>
+        <td style="padding:8px 12px;color:#64748b;font-size:12px;">
+          <span style="background:#f8fafc;padding:2px 6px;border-radius:4px;border:1px solid #e2e8f0;">${item.categoria || 'Clínica'}</span>
+        </td>
+        <td style="padding:8px 12px;text-align:right;color:#64748b;font-size:12px;">S/. ${(parseFloat(item.costo)||0).toFixed(2)}</td>
+        <td style="padding:8px 12px;text-align:right;font-weight:700;color:${cargoPac === 0 ? '#16a34a' : '#0f172a'};">
+          ${cargoPac === 0 ? 'S/. 0.00' : `S/. ${cargoPac.toFixed(2)}`}
+        </td>
       </tr>`;
   });
 
@@ -4060,15 +4160,25 @@ function actualizarFactura() {
   // Actualizar desglose detallado en Módulo 8
   const detalleEl = document.getElementById("liquidacion_detalle_box");
   if (detalleEl) {
+    const totalBrutoGenerado = liq.totalBruto + liq.copagoUrgencia;
     detalleEl.innerHTML = `
       <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:14px;margin-top:14px;font-size:13px;">
         <div style="font-weight:800;color:#0f172a;margin-bottom:8px;font-size:14px;">📊 Desglose de Auditoría Financiera — Ley N° 29414 (SUSALUD)</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px;">
-          <div><span style="color:#64748b;">Régimen:</span> <strong>${liq.etiquetaRegimen}</strong></div>
-          <div><span style="color:#64748b;">Total Bruto Generado:</span> <strong>S/. ${liq.totalBruto.toFixed(2)}</strong></div>
+          <div><span style="color:#64748b;">Régimen / Establecimiento:</span> <strong>${liq.etiquetaRegimen}</strong></div>
+          <div><span style="color:#64748b;">Total Bruto Generado:</span> <strong>S/. ${totalBrutoGenerado.toFixed(2)}</strong></div>
           <div><span style="color:#64748b;">Cobertura Aseguradora:</span> <strong style="color:#15803d;">S/. ${liq.coberturaSeguro.toFixed(2)}</strong></div>
-          <div><span style="color:#64748b;">Total a Pagar Paciente:</span> <strong style="color:#0284c7;font-size:15px;">S/. ${liq.totalPaciente.toFixed(2)}</strong></div>
+          <div><span style="color:#64748b;">Total a Pagar Paciente:</span> <strong style="color:#0284c7;font-size:16px;">S/. ${liq.totalPaciente.toFixed(2)}</strong></div>
         </div>
+        ${liq.esEpsPrivado ? `
+          <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:6px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#166534;line-height:1.5;">
+            <strong style="display:block;margin-bottom:4px;font-size:13px;">🏢 Liquidación Detallada en Clínica Privada EPS:</strong>
+            • <strong>Copago Fijo de Consulta Urgencia:</strong> S/. ${liq.copagoUrgencia.toFixed(2)}<br>
+            • <strong>Farmacia (Medicamentos Prescritos):</strong> Total S/. ${liq.subtotalFarmacia.toFixed(2)} ➔ Paciente paga 10% coaseguro (<strong>S/. ${liq.coaseguroFarmacia.toFixed(2)}</strong>) | Aseguradora EPS cubre 90% (S/. ${(liq.subtotalFarmacia * 0.90).toFixed(2)})<br>
+            • <strong>Servicios Clínicos, Procedimientos y Exámenes:</strong> Total S/. ${liq.subtotalServicios.toFixed(2)} ➔ Aseguradora EPS cubre 100% (S/. ${liq.subtotalServicios.toFixed(2)}) | Paciente paga <strong>S/. 0.00</strong><br>
+            • <strong>TOTAL NETO A PAGAR PACIENTE:</strong> <strong>S/. ${liq.totalPaciente.toFixed(2)}</strong>
+          </div>
+        ` : ''}
         <div style="background:#ffffff;border-left:4px solid #0284c7;padding:8px 12px;border-radius:4px;color:#334155;font-size:12px;line-height:1.4;">
           <strong>Dictamen de Auditoría:</strong> ${liq.motivoLiquidacion}
         </div>
@@ -5189,6 +5299,135 @@ if (document.readyState === "loading") {
 // ==============================================================================
 
 // --- MÓDULO 1: ENFERMERÍA DE TRIAJE ---
+
+// ---------------------------------------------------------------------------
+// SELECTORES DINÁMICOS DE ENTORNO ASISTENCIAL Y RÉGIMEN FINANCIADOR
+// ---------------------------------------------------------------------------
+function seleccionarEntornoEstablecimiento(entorno) {
+  STATE.esClinicaPrivada = (entorno === "clinica_eps");
+  const btnPub = document.getElementById("btn_entorno_publico");
+  const btnCli = document.getElementById("btn_entorno_clinica_eps");
+  const badge = document.getElementById("badge_entorno_actual");
+  const bannerEps = document.getElementById("banner_condicion_eps");
+
+  if (STATE.esClinicaPrivada) {
+    if (btnCli) {
+      btnCli.style.background = "#f0fdf4";
+      btnCli.style.borderColor = "#10b981";
+      btnCli.style.color = "#065f46";
+    }
+    if (btnPub) {
+      btnPub.style.background = "#ffffff";
+      btnPub.style.borderColor = "#cbd5e1";
+      btnPub.style.color = "#334155";
+    }
+    if (badge) {
+      badge.textContent = "🏢 Clínica Privada (Red EPS)";
+      badge.style.background = "#dcfce7";
+      badge.style.color = "#15803d";
+      badge.style.borderColor = "#86efac";
+    }
+    if (bannerEps) bannerEps.style.display = "block";
+
+    if (!STATE.esAccidenteTransito) {
+      STATE.tipoSeguro = "EPS";
+      actualizarSeguroConsolidado("Clínica Privada — EPS Activa (Pacífico Salud / Rímac / Mapfre)");
+    }
+  } else {
+    if (btnPub) {
+      btnPub.style.background = "#f0f9ff";
+      btnPub.style.borderColor = "#0284c7";
+      btnPub.style.color = "#0369a1";
+    }
+    if (btnCli) {
+      btnCli.style.background = "#ffffff";
+      btnCli.style.borderColor = "#cbd5e1";
+      btnCli.style.color = "#334155";
+    }
+    if (badge) {
+      badge.textContent = "🏥 Hospital Público (MINSA / EsSalud)";
+      badge.style.background = "#e0f2fe";
+      badge.style.color = "#0369a1";
+      badge.style.borderColor = "#bae6fd";
+    }
+    if (bannerEps) bannerEps.style.display = "none";
+
+    if (!STATE.esAccidenteTransito && (STATE.tipoSeguro === "EPS" || !STATE.tipoSeguro)) {
+      STATE.tipoSeguro = "EsSalud";
+      actualizarSeguroConsolidado("EsSalud — Asegurado Titular Regular");
+    }
+  }
+
+  // Recalcular triaje si hay datos y actualizar factura
+  if (typeof recalcularPrioridad === "function") {
+    try { recalcularPrioridad(); } catch(e){}
+  }
+  if (typeof actualizarFactura === "function") {
+    try { actualizarFactura(); } catch(e){}
+  }
+}
+
+function seleccionarRegimenSeguroDirecto(tipo) {
+  if (tipo === "EPS") {
+    STATE.esClinicaPrivada = true;
+    STATE.tipoSeguro = "EPS";
+    actualizarSeguroConsolidado("Clínica Privada — EPS Activa (Pacífico Salud / Rímac / Mapfre)");
+  } else if (tipo === "SIS") {
+    STATE.esClinicaPrivada = false;
+    STATE.tipoSeguro = "SIS";
+    actualizarSeguroConsolidado("SIS Gratuito Integral (MINSA / Formato FUA)");
+  } else if (tipo === "EsSalud") {
+    STATE.esClinicaPrivada = false;
+    STATE.tipoSeguro = "EsSalud";
+    actualizarSeguroConsolidado("EsSalud (Asegurado Regular ESSI / D.L. 728)");
+  } else if (tipo === "Particular") {
+    STATE.esClinicaPrivada = false;
+    STATE.tipoSeguro = "Particular";
+    actualizarSeguroConsolidado("Particular (Sin Cobertura Activa)");
+  }
+
+  // Sincronizar botones de entorno en Módulo 1
+  const btnPub = document.getElementById("btn_entorno_publico");
+  const btnCli = document.getElementById("btn_entorno_clinica_eps");
+  const badge = document.getElementById("badge_entorno_actual");
+  const bannerEps = document.getElementById("banner_condicion_eps");
+  if (STATE.esClinicaPrivada) {
+    if (btnCli) { btnCli.style.background = "#f0fdf4"; btnCli.style.borderColor = "#10b981"; btnCli.style.color = "#065f46"; }
+    if (btnPub) { btnPub.style.background = "#ffffff"; btnPub.style.borderColor = "#cbd5e1"; btnPub.style.color = "#334155"; }
+    if (badge) { badge.textContent = "🏢 Clínica Privada (Red EPS)"; badge.style.background = "#dcfce7"; badge.style.color = "#15803d"; badge.style.borderColor = "#86efac"; }
+    if (bannerEps) bannerEps.style.display = "block";
+  } else {
+    if (btnPub) { btnPub.style.background = "#f0f9ff"; btnPub.style.borderColor = "#0284c7"; btnPub.style.color = "#0369a1"; }
+    if (btnCli) { btnCli.style.background = "#ffffff"; btnCli.style.borderColor = "#cbd5e1"; btnCli.style.color = "#334155"; }
+    if (badge) { badge.textContent = "🏥 Hospital Público (MINSA / EsSalud)"; badge.style.background = "#e0f2fe"; badge.style.color = "#0369a1"; badge.style.borderColor = "#bae6fd"; }
+    if (bannerEps) bannerEps.style.display = "none";
+  }
+
+  // Resaltar botón activo en Módulo 3
+  ["eps", "sis", "essalud", "particular"].forEach(id => {
+    const b = document.getElementById(`btn_seg_${id}`);
+    if (b) {
+      if (id.toLowerCase() === tipo.toLowerCase()) {
+        b.style.background = id === "eps" ? "#ecfdf5" : "#eff6ff";
+        b.style.borderColor = id === "eps" ? "#10b981" : "#3b82f6";
+        b.style.color = id === "eps" ? "#065f46" : "#1d4ed8";
+      } else {
+        b.style.background = "#ffffff";
+        b.style.borderColor = "#cbd5e1";
+        b.style.color = "#334155";
+      }
+    }
+  });
+
+  if (typeof recalcularPrioridad === "function") {
+    try { recalcularPrioridad(); } catch(e){}
+  }
+  if (typeof actualizarFactura === "function") {
+    try { actualizarFactura(); } catch(e){}
+  }
+}
+
+
 function cambiarOrigenEvento(tipo) {
   // Aceptar tanto 'soat' como 'transito' indistintamente
   const esTransito = (tipo === "soat" || tipo === "transito");
@@ -5837,25 +6076,45 @@ function imprimirFacturaOficial() {
   const nombre = STATE.nombreReniec || STATE.identificador || "PACIENTE";
 
   let itemsHtml = "";
-  STATE.items_factura.forEach((item, idx) => {
+  let idx = 1;
+
+  if (liq.copagoUrgencia > 0) {
+    itemsHtml += `
+      <tr style="background:#f0fdf4;">
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;">${idx++}</td>
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;font-weight:700;color:#166534;">Consulta Médica de Urgencia (Clínica Privada EPS)</td>
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;">Consulta / Urgencias</td>
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;text-align:right;font-weight:700;">S/. 80.00</td>
+      </tr>
+    `;
+  }
+
+  STATE.items_factura.forEach((item) => {
+    const esFar = (item.categoria || "").toLowerCase().includes("farmacia");
+    let detalleNota = "";
+    if (liq.esEpsPrivado) {
+      detalleNota = esFar ? " (Coaseguro 10%)" : " (Cubierto 100% EPS)";
+    }
     itemsHtml += `
       <tr>
-        <td style="border:1px solid #cbd5e1;padding:6px 10px;">${idx + 1}</td>
-        <td style="border:1px solid #cbd5e1;padding:6px 10px;font-weight:600;">${item.nombre}</td>
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;">${idx++}</td>
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;font-weight:600;">${item.nombre}${detalleNota}</td>
         <td style="border:1px solid #cbd5e1;padding:6px 10px;">${item.categoria || 'Clínica'}</td>
         <td style="border:1px solid #cbd5e1;padding:6px 10px;text-align:right;">S/. ${(parseFloat(item.costo)||0).toFixed(2)}</td>
       </tr>
     `;
   });
 
+  const totalBrutoGenerado = liq.totalBruto + liq.copagoUrgencia;
+
   w.document.write(`
     <html><head><title>Liquidación Hospitalaria Oficial - Ley N° 29414</title>
     <style>body{font-family:Arial,sans-serif;padding:30px;font-size:12px;line-height:1.4;}table{width:100%;border-collapse:collapse;margin-top:12px;}th{background:#f1f5f9;border:1px solid #cbd5e1;padding:8px 10px;text-align:left;}</style>
     </head><body>
-      <h2 style="margin:0;color:#0f172a;">HOSPITAL REGIONAL DOCENTE UPP — COMPROBANTE DE LIQUIDACIÓN DE ATENCIÓN</h2>
+      <h2 style="margin:0;color:#0f172a;">${liq.lugarAtencion} — COMPROBANTE DE LIQUIDACIÓN DE ATENCIÓN</h2>
       <h4 style="margin:0 0 10px 0;color:#475569;">AUDITORÍA FINANCIERA Y TRANSPARENCIA ASISTENCIAL (LEY N° 29414 - SUSALUD)</h4>
       <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:10px;border-radius:6px;">
-        <strong>Paciente:</strong> ${nombre} | <strong>Identificador:</strong> ${STATE.identificador} | <strong>HC:</strong> ${STATE.historiaClinica}<br>
+        <strong>Paciente:</strong> ${nombre} | <strong>Identificador:</strong> ${STATE.identificador || "—"} | <strong>HC:</strong> ${STATE.historiaClinica || "—"}<br>
         <strong>Régimen Prestacional:</strong> ${liq.etiquetaRegimen} | <strong>Fecha de Liquidación:</strong> ${fecha}<br>
         <strong>Lugar de Prestación:</strong> ${liq.lugarAtencion}
       </div>
@@ -5873,14 +6132,14 @@ function imprimirFacturaOficial() {
         </tbody>
       </table>
       <div style="margin-top:14px;background:#f8fafc;border:1px solid #cbd5e1;padding:12px;border-radius:6px;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Total Bruto Facturado:</span><strong>S/. ${liq.totalBruto.toFixed(2)}</strong></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Total Bruto Facturado:</span><strong>S/. ${totalBrutoGenerado.toFixed(2)}</strong></div>
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#15803d;"><span>Cobertura Asumida por Aseguradora:</span><strong>- S/. ${liq.coberturaSeguro.toFixed(2)}</strong></div>
         <div style="display:flex;justify-content:space-between;border-top:2px solid #0f172a;padding-top:6px;font-size:15px;color:#0f172a;"><span>TOTAL NETO A PAGAR PACIENTE:</span><strong>S/. ${liq.totalPaciente.toFixed(2)}</strong></div>
         <div style="font-size:11px;color:#475569;margin-top:8px;"><strong>Fundamento Auditoría:</strong> ${liq.motivoLiquidacion}</div>
       </div>
       <div style="margin-top:50px;display:flex;justify-content:space-between;text-align:center;">
         <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Cuentas Corrientes y Facturación</div>
-        <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Auditoría Médica UPP</div>
+        <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Auditoría Médica Especializada</div>
       </div>
     </body></html>
   `);
@@ -5889,6 +6148,8 @@ function imprimirFacturaOficial() {
 }
 
 // Exportar globalmente al objeto window para máxima compatibilidad
+window.seleccionarEntornoEstablecimiento = seleccionarEntornoEstablecimiento;
+window.seleccionarRegimenSeguroDirecto = seleccionarRegimenSeguroDirecto;
 window.cambiarOrigenEvento = cambiarOrigenEvento;
 window.activarPanicoShockTrauma = activarPanicoShockTrauma;
 window.actualizarEVA = actualizarEVA;
@@ -6216,3 +6477,234 @@ window.imprimirBrazalete = imprimirBrazalete;
 document.addEventListener("DOMContentLoaded", () => {
   setTimeout(inicializarSelectoresCatalogo, 150);
 });
+
+
+// ==============================================================================
+// 25. PROTOCOLO DE PASE DIRECTO A QUIRÓFANO (SOP) Y REGULARIZACIÓN DIFERIDA (LEY N° 27604)
+// ==============================================================================
+
+function activarIngresoDirectoQuirofano() {
+  const now = new Date();
+  const horaStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).replace(':', '');
+  const idEmergencia = `NN-EMERG-${horaStr}`;
+  const hcEmergencia = `HC-SOP-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  // 1. Configurar estado prioritario absoluto
+  STATE.prioridad = "I";
+  STATE.colorPrioridad = "ROJO";
+  STATE.regularizacionDiferida = true;
+  STATE.destinoPostTopico = "sop_uci";
+
+  // Si no tenía nombre o DNI, asignar código de reanimación inmediata
+  if (!STATE.identificador || STATE.identificador.length < 2) {
+    STATE.identificador = idEmergencia;
+    STATE.nombreReniec = "PACIENTE NN (INGRESO CRÍTICO A QUIRÓFANO / LEY 27604)";
+    STATE.historiaClinica = hcEmergencia;
+    STATE.alertaPnpSs = true;
+
+    const idInput = document.getElementById("identificador_full");
+    if (idInput) idInput.value = idEmergencia;
+    const nomDisp = document.getElementById("nombre_display");
+    if (nomDisp) nomDisp.textContent = STATE.nombreReniec;
+    const hcDisp = document.getElementById("hc_display");
+    if (hcDisp) hcDisp.textContent = hcEmergencia;
+  }
+
+  // 2. Asignar Quirófano SOP 1
+  STATE.camaAsignada = "Quirófano 1 (SOP 1 - Cirugía de Control de Daños)";
+
+  // 3. Cargar paquete quirúrgico de reanimación de emergencia
+  registrarFacturaItem("Derecho de Sala de Operaciones de Emergencia (SOP 1)", 450, "Procedimientos");
+  registrarFacturaItem("Cirugía de Control de Daños / Laparotomía de Urgencia", 850, "Procedimientos");
+  registrarFacturaItem("Monitoreo Anestésico y Sedación Integral", 320, "Procedimientos");
+  registrarFacturaItem("Paquete Globular O- Transfusión de Urgencia (Banco Sangre)", 240, "Procedimientos");
+
+  // 4. Actualizar badges y telemetría
+  const chipLive = document.getElementById("chipPrioLive");
+  if (chipLive) {
+    chipLive.textContent = "P-I ROJO (QUIRÓFANO SOP 1)";
+    chipLive.className = "top-prio-chip prio-I";
+  }
+
+  const bannerSop = document.getElementById("banner_quirofano_urgente_activo");
+  if (bannerSop) bannerSop.style.display = "block";
+
+  const badgeSop1 = document.getElementById("badge_sop1");
+  if (badgeSop1) {
+    badgeSop1.textContent = "🔴 EN OPERACIÓN";
+    badgeSop1.style.background = "#fee2e2";
+    badgeSop1.style.color = "#991b1b";
+  }
+
+  // 5. Notificación oficial y navegación directa a Módulo 6
+  alert("🏥 ALERTA MÁXIMA HOSPITALARIA (LEY N° 27604):\n\n" +
+        "Pase directo a Quirófano de Emergencia (SOP 1) para Cirugía de Control de Daños.\n" +
+        "Se aplicó el principio de no condicionamiento a pago ni seguro. El paciente se encuentra en sala de operaciones.\n\n" +
+        "Al finalizar la estabilización, el personal de Admisión podrá regularizar los datos filiatorios y de cobertura con el botón [ Regularizar Datos Post-Estabilización ].");
+
+  irAModulo(6);
+}
+
+function asignarQuirofanoEspecifico(num) {
+  const nombreSop = `Quirófano ${num} (SOP ${num} - Emergencia)`;
+  STATE.camaAsignada = nombreSop;
+
+  const badge = document.getElementById(`badge_sop${num}`);
+  if (badge) {
+    badge.textContent = "🔴 EN OPERACIÓN";
+    badge.style.background = "#fee2e2";
+    badge.style.color = "#991b1b";
+  }
+
+  registrarFacturaItem(`Derecho de Sala de Operaciones (SOP ${num})`, 400, "Procedimientos");
+  alert(`🏥 Paciente ingresado a ${nombreSop}. Procedimiento quirúrgico activo.`);
+  actualizarFactura();
+}
+
+function asignarCamaURPA() {
+  STATE.camaAsignada = "Cama 1 — Sala URPA (Recuperación Post-Anestésica)";
+  const badge = document.getElementById("badge_urpa");
+  if (badge) {
+    badge.textContent = "🟡 1 Cama Ocupada";
+    badge.style.background = "#fef9c3";
+    badge.style.color = "#854d0e";
+  }
+  registrarFacturaItem("Estancia en Sala de Recuperación Post-Anestésica (URPA)", 120, "Clínica");
+  alert("🛌 Paciente trasladado exitosamente a Sala URPA para monitoreo post-quirúrgico.");
+  actualizarFactura();
+}
+
+function ejecutarOrdenQuirurgicaEmergencia() {
+  const selCirugia = document.getElementById("select_cirugia_catalogo");
+  const selSop = document.getElementById("select_sala_destino_sop");
+  const val = selCirugia?.value || "Laparotomía Exploratoria|850";
+  const parts = val.split("|");
+  const nombreCirugia = parts[0];
+  const costo = parseFloat(parts[1]) || 650;
+  const sala = selSop?.value || "Quirófano 1 (SOP 1 - Trauma Shock)";
+
+  STATE.camaAsignada = sala;
+  registrarFacturaItem(`Intervención Quirúrgica: ${nombreCirugia}`, costo, "Procedimientos");
+  registrarFacturaItem("Monitoreo Anestésico y Sedación de Urgencia", 280, "Procedimientos");
+
+  const disp = document.getElementById("status_cirugia_display");
+  if (disp) {
+    disp.innerHTML = `<span style="color:#15803d;font-weight:700;">✅ Cirugía programada en ${sala}: ${nombreCirugia} (S/. ${costo.toFixed(2)}). Procedimiento cargado formalmente.</span>`;
+  }
+
+  alert(`🔪 Orden Quirúrgica Emitida:\n${nombreCirugia}\nAsignado a: ${sala}\nCirujano: ${STATE.medicoTratante}`);
+  actualizarFactura();
+}
+
+// GESTIÓN DEL MODAL DE REGULARIZACIÓN DIFERIDA (LEY N° 27604)
+function abrirModalRegularizacionDiferida() {
+  const modal = document.getElementById("modal_regularizacion_diferida");
+  if (!modal) return;
+  modal.style.display = "flex";
+
+  const dniInput = document.getElementById("reg_dni_input");
+  const nomInput = document.getElementById("reg_nombre_input");
+  if (dniInput && STATE.identificador && !STATE.identificador.startsWith("NN-")) {
+    dniInput.value = STATE.identificador;
+  }
+  if (nomInput && STATE.nombreReniec && !STATE.nombreReniec.includes("PACIENTE NN")) {
+    nomInput.value = STATE.nombreReniec;
+  }
+}
+
+function cerrarModalRegularizacionDiferida() {
+  const modal = document.getElementById("modal_regularizacion_diferida");
+  if (modal) modal.style.display = "none";
+}
+
+function toggleRegSoat(val) {
+  const boxPlaca = document.getElementById("box_reg_soat_placa");
+  const boxSeguro = document.getElementById("box_reg_seguro");
+
+  if (val === "soat_placa") {
+    if (boxPlaca) boxPlaca.style.display = "block";
+    if (boxSeguro) boxSeguro.style.display = "none";
+  } else if (val === "soat_fuga") {
+    if (boxPlaca) boxPlaca.style.display = "none";
+    if (boxSeguro) boxSeguro.style.display = "none";
+  } else {
+    if (boxPlaca) boxPlaca.style.display = "none";
+    if (boxSeguro) boxSeguro.style.display = "block";
+  }
+}
+
+async function consultarReniecDiferida() {
+  const dniEl = document.getElementById("reg_dni_input");
+  const dni = (dniEl?.value || "").trim();
+  if (dni.length !== 8) {
+    alert("⚠️ Ingrese un DNI válido de 8 dígitos para consultar.");
+    return;
+  }
+  try {
+    const res = await fetch(`https://api.apis.net.pe/v2/reniec/dni?numero=${dni}`, {
+      headers: { "Authorization": `Bearer ${DEFAULT_APISPERU_TOKEN}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const nombreCompleto = `${data.nombres} ${data.apellidoPaterno} ${data.apellidoMaterno}`;
+      const nomInput = document.getElementById("reg_nombre_input");
+      if (nomInput) nomInput.value = nombreCompleto;
+      alert(`✅ RENIEC: Paciente identificado como: ${nombreCompleto}`);
+    } else {
+      alert("No se pudo verificar el DNI en RENIEC. Ingrese el nombre manualmente.");
+    }
+  } catch (e) {
+    alert("Error de conexión a RENIEC. Ingrese el nombre manualmente.");
+  }
+}
+
+function guardarRegularizacionDiferida() {
+  const dni = (document.getElementById("reg_dni_input")?.value || "").trim();
+  const nombre = (document.getElementById("reg_nombre_input")?.value || "").trim();
+  const origen = document.getElementById("reg_origen_select")?.value || "comun";
+  const placa = (document.getElementById("reg_placa_input")?.value || "").trim().toUpperCase();
+  const seguro = document.getElementById("reg_seguro_select")?.value || "SIS";
+
+  if (nombre.length > 2) {
+    STATE.nombreReniec = nombre;
+    STATE.identificador = dni || STATE.identificador;
+    const nomDisp = document.getElementById("nombre_display");
+    if (nomDisp) nomDisp.textContent = nombre;
+    const idInput = document.getElementById("identificador_full");
+    if (idInput) idInput.value = dni || STATE.identificador;
+  }
+
+  if (origen === "soat_placa") {
+    STATE.esAccidenteTransito = true;
+    STATE.soatVehiculoFuga = false;
+    STATE.soatPlaca = placa || "PLACA-REGULARIZADA";
+    STATE.tipoSeguro = "SOAT";
+    STATE.bloqueoSinadef = true;
+  } else if (origen === "soat_fuga") {
+    STATE.esAccidenteTransito = true;
+    STATE.soatVehiculoFuga = true;
+    STATE.soatPlaca = "SIN PLACA (FUGA)";
+    STATE.tipoSeguro = "Particular (Chofer en Fuga / Ley 27604)";
+    STATE.bloqueoSinadef = true;
+  } else {
+    STATE.esAccidenteTransito = false;
+    STATE.soatVehiculoFuga = false;
+    STATE.tipoSeguro = seguro;
+    STATE.bloqueoSinadef = false;
+  }
+
+  cerrarModalRegularizacionDiferida();
+  actualizarFactura();
+  alert("✅ Regularización Administrativa Guardada con Éxito.\nSe actualizaron la filiación, el régimen de aseguramiento y la liquidación financiera sin perder los registros quirúrgicos.");
+}
+
+// Exportaciones globales
+window.activarIngresoDirectoQuirofano = activarIngresoDirectoQuirofano;
+window.asignarQuirofanoEspecifico = asignarQuirofanoEspecifico;
+window.asignarCamaURPA = asignarCamaURPA;
+window.ejecutarOrdenQuirurgicaEmergencia = ejecutarOrdenQuirurgicaEmergencia;
+window.abrirModalRegularizacionDiferida = abrirModalRegularizacionDiferida;
+window.cerrarModalRegularizacionDiferida = cerrarModalRegularizacionDiferida;
+window.toggleRegSoat = toggleRegSoat;
+window.consultarReniecDiferida = consultarReniecDiferida;
+window.guardarRegularizacionDiferida = guardarRegularizacionDiferida;

@@ -712,6 +712,43 @@
           </div>
         </div>
 
+        <!-- SELECTOR DE ENTORNO ASISTENCIAL (HOSPITAL PÚBLICO VS CLÍNICA PRIVADA EPS) -->
+        <div style="margin-top: 14px; margin-bottom: 14px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+            <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+              <span>🏢</span>
+              <span>Entorno del Establecimiento Asistencial & Financiador:</span>
+            </div>
+            <span id="badge_entorno_actual" style="font-size: 0.74rem; padding: 3px 10px; border-radius: 9999px; background: #e0f2fe; color: #0369a1; font-weight: 800; border: 1px solid #bae6fd;">
+              🏥 Hospital Público (MINSA / EsSalud)
+            </span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px;">
+            <button type="button" id="btn_entorno_publico" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('publico')" style="border-color: #0284c7; background: #f0f9ff; color: #0369a1; font-weight: 700; font-size: 0.8rem; text-align: left; padding: 10px 14px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <span style="font-size: 20px;">🏥</span>
+              <div>
+                <strong style="display: block;">Hospital Público (MINSA / EsSalud)</strong>
+                <span style="font-size: 0.72rem; color: #0369a1; font-weight: normal;">Régimen estatal SIS / EsSalud · Triaje NTS 042-MINSA (I a V)</span>
+              </div>
+            </button>
+            <button type="button" id="btn_entorno_clinica_eps" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('clinica_eps')" style="border-color: #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; font-size: 0.8rem; text-align: left; padding: 10px 14px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <span style="font-size: 20px;">🏢</span>
+              <div>
+                <strong style="display: block;">Clínica Privada (Red EPS: Rímac, Pacífico, Mapfre)</strong>
+                <span style="font-size: 0.72rem; color: #64748b; font-weight: normal;">No emergencia = Urgencia automática (S/. 80 consulta + 10% farmacia)</span>
+              </div>
+            </button>
+          </div>
+          <div id="banner_condicion_eps" style="display: none; margin-top: 12px; background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 8px; padding: 12px 14px; font-size: 0.78rem; color: #065f46; line-height: 1.5;">
+            <div style="font-weight: 800; font-size: 0.82rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+              <span>⚖️</span>
+              <span>CONDICIONES CONTRACTUALES EN CLÍNICA PRIVADA CON EPS / SEGURO PRIVADO:</span>
+            </div>
+            • <strong>Si es Emergencia Médica o Quirúrgica (P-I / P-II):</strong> Protegido por Ley N° 27604. Consulta médica, sala de shock trauma, procedimientos, cama y exámenes S/. 0.00 (cubiertos al 100% por EPS). En medicamentos de farmacia, el paciente asume únicamente el <strong>10% de coaseguro</strong>.<br>
+            • <strong>Si NO es Emergencia (P-III / P-IV / P-V):</strong> El sistema clasifica <strong>AUTOMÁTICAMENTE COMO URGENCIA</strong>. Se cobra tarifa fija de <strong>S/. 80.00 por consulta de urgencia</strong> y el <strong>10% del total de medicamentos</strong> prescritos. Todos los exámenes de laboratorio e imágenes complementarios quedan 100% cubiertos por la EPS.
+          </div>
+        </div>
+
         <!-- BANNER DE ALERTA VISUAL CUANDO SE ACTIVA ACCIDENTE DE TRÁNSITO -->
         <div id="banner_origen_transito" style="display: none; background: #fef2f2; border: 2px solid #ef4444; border-radius: 10px; padding: 14px 16px; margin-bottom: 18px;">
           <div style="display: flex; align-items: center; gap: 10px;">
@@ -727,11 +764,15 @@
           </div>
         </div>
 
-        <!-- 2. BOTÓN DE PÁNICO SHOCK TRAUMA (PRIORIDAD I) -->
-        <div style="margin-bottom: 18px;">
-          <button type="button" class="btn-panico-shock" onclick="activarPanicoShockTrauma()">
-            <span>🚨 INGRESO DIRECTO A SHOCK TRAUMA — PARO / INESTABILIDAD EXTREMA (PRIORIDAD I)</span>
-            <span class="subtext">Ley N° 27604: Atención inmediata. Los Módulos 2 y 3 quedan en regularización paralela por Admisión.</span>
+        <!-- 2. BOTONES DE ACCESO INMEDIATO: SHOCK TRAUMA & QUIRÓFANO DIRECTO (LEY N° 27604) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
+          <button type="button" class="btn-panico-shock" onclick="activarPanicoShockTrauma()" style="background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);">
+            <span>🚨 INGRESO DIRECTO A SHOCK TRAUMA</span>
+            <span class="subtext">Paro Cardiorrespiratorio / Falla Vital Inminente (P-I). Admisión en regularización paralela.</span>
+          </button>
+          <button type="button" class="btn-panico-shock" onclick="activarIngresoDirectoQuirofano()" style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%); box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);">
+            <span>🏥 INGRESO DIRECTO A QUIRÓFANO (SOP)</span>
+            <span class="subtext">Cirugía de Control de Daños / Hemorragia Masiva. Salta Triaje y Admisión (Ley N° 27604).</span>
           </button>
         </div>
 
@@ -1164,6 +1205,44 @@
             <span>Acreditación de derechos en salud mediante plataforma unificada PIDE-SUSALUD. Cruce de datos en vivo con Supabase.</span>
           </div>
 
+          <!-- BOTONERA DE SELECCIÓN RÁPIDA DE COBERTURA / SEGURO -->
+          <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px;">
+            <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+              <span>🏛️ Acreditación Rápida de Financiador / IAFA (PIDE-SUSALUD):</span>
+              <span style="font-size: 0.72rem; color: #64748b;">Selección directa o consulta con CAPTCHA</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px;">
+              <button type="button" id="btn_seg_eps" class="btn-full-secondary" onclick="seleccionarRegimenSeguroDirecto('EPS')" style="padding: 10px 12px; font-size: 0.78rem; font-weight: 800; text-align: left; display: flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;">
+                <span style="font-size: 18px;">🏢</span>
+                <div>
+                  <strong style="display: block;">Clínica Privada / EPS</strong>
+                  <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Rímac, Pacífico, Mapfre</span>
+                </div>
+              </button>
+              <button type="button" id="btn_seg_sis" class="btn-full-secondary" onclick="seleccionarRegimenSeguroDirecto('SIS')" style="padding: 10px 12px; font-size: 0.78rem; font-weight: 800; text-align: left; display: flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;">
+                <span style="font-size: 18px;">🏛️</span>
+                <div>
+                  <strong style="display: block;">SIS Gratuito (MINSA)</strong>
+                  <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">FUA · Pago Cero 100%</span>
+                </div>
+              </button>
+              <button type="button" id="btn_seg_essalud" class="btn-full-secondary" onclick="seleccionarRegimenSeguroDirecto('EsSalud')" style="padding: 10px 12px; font-size: 0.78rem; font-weight: 800; text-align: left; display: flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;">
+                <span style="font-size: 18px;">🏥</span>
+                <div>
+                  <strong style="display: block;">EsSalud (Seguro Social)</strong>
+                  <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Titular Regular ESSI</span>
+                </div>
+              </button>
+              <button type="button" id="btn_seg_particular" class="btn-full-secondary" onclick="seleccionarRegimenSeguroDirecto('Particular')" style="padding: 10px 12px; font-size: 0.78rem; font-weight: 800; text-align: left; display: flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;">
+                <span style="font-size: 18px;">👤</span>
+                <div>
+                  <strong style="display: block;">Particular (Sin Seguro)</strong>
+                  <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Gasto 100% asumido por paciente</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
           <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color:white; border-radius:12px; padding:16px; margin-bottom:16px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
               <div>
@@ -1182,8 +1261,15 @@
               <div style="background:#ffffff; border-radius:6px; padding:2px 6px;">
                 <canvas id="captcha_canvas_seguro" width="135" height="36" style="cursor:pointer;" onclick="refrescarCaptchaSeguro()" title="Clic para generar nuevo código"></canvas>
               </div>
-              <input type="text" id="captcha_input_seguro" class="input-full" placeholder="Código" maxlength="6" style="width:120px; text-transform:uppercase; font-weight:800; letter-spacing:2px; text-align:center;">
-              <button type="button" class="btn-full-primary" style="background:#38bdf8; color:#0f172a;" onclick="ejecutarConsultaSeguroConCaptcha()">
+              <input type="text" id="captcha_input_seguro" class="input-full" placeholder="Código" maxlength="6" style="width:110px; text-transform:uppercase; font-weight:800; letter-spacing:2px; text-align:center;">
+              <select id="entidad_consulta_seguro" class="input-full" style="width:auto; min-width:180px; font-size:0.78rem; font-weight:700; background:#0f172a; color:#38bdf8; border:1px solid #38bdf8; height:38px;">
+                <option value="auto">🤖 Detección Auto PIDE</option>
+                <option value="eps">🏢 Clínica Privada / EPS</option>
+                <option value="sis">🏛️ SIS Gratuito (MINSA)</option>
+                <option value="essalud">🏥 EsSalud (Seguro Social)</option>
+                <option value="particular">👤 Particular (Sin Seguro)</option>
+              </select>
+              <button type="button" class="btn-full-primary" style="background:#38bdf8; color:#0f172a; height:38px;" onclick="ejecutarConsultaSeguroConCaptcha()">
                 🔍 Validar y Acreditar Cobertura
               </button>
             </div>
@@ -1531,7 +1617,104 @@
           <span><strong>Modelo de Priorización de Camas Críticas:</strong> Selección por probabilidad de recuperación (Prioridad 1 al 4) y desempate matemático fisiológico ABCDE.</span>
         </div>
 
-        <!-- STOCK EN TIEMPO REAL INCLUYENDO SOP Y URPA -->
+        <!-- BANNER DE CIRUGÍA DE CONTROL DE DAÑOS EN CURSO (SI SE ACTIVÓ PASE DIRECTO) -->
+        <div id="banner_quirofano_urgente_activo" style="display:none; background:#fff7ed; border:2px solid #ea580c; border-radius:10px; padding:14px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:28px;">🏥</span>
+              <div>
+                <strong style="color:#c2410c; font-size:0.95rem;">CIRUGÍA DE CONTROL DE DAÑOS EN CURSO (SOP 1) — LEY N° 27604</strong>
+                <div style="font-size:0.78rem; color:#9a3412;">Paciente en intervención quirúrgica de emergencia. Atención sin condicionamiento administrativo.</div>
+              </div>
+            </div>
+            <button type="button" class="btn-full-primary" style="background:#15803d; border-color:#166534; font-size:0.8rem; padding:6px 14px;" onclick="abrirModalRegularizacionDiferida()">
+              📝 Regularizar Datos Post-Estabilización (DNI / SOAT / Seguro)
+            </button>
+          </div>
+        </div>
+
+        <!-- SECCIÓN DE CENTRO QUIRÚRGICO DE EMERGENCIA (SOP & URPA) -->
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <div style="font-size:0.88rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+              <span>🏥</span>
+              <span>Centro Quirúrgico de Emergencia (SOP) &amp; Sala de Recuperación (URPA):</span>
+            </div>
+            <span style="font-size:0.75rem; color:#0369a1; background:#e0f2fe; padding:3px 8px; border-radius:6px; font-weight:700;">
+              Cirugía de Control de Daños · Cirugía General · Gineco-Obstetricia
+            </span>
+          </div>
+
+          <!-- TARJETAS DE QUIRÓFANOS -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px; margin-bottom:14px;">
+            <div id="card_sop1" style="background:#f8fafc; border:2px solid #cbd5e1; border-radius:10px; padding:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <strong style="font-size:0.85rem; color:#0f172a;">Quirófano 1 (SOP 1 - Trauma Shock)</strong>
+                <span id="badge_sop1" style="background:#dcfce7; color:#15803d; font-size:0.72rem; font-weight:800; padding:2px 8px; border-radius:9999px;">🟢 Disponible</span>
+              </div>
+              <div style="font-size:0.74rem; color:#64748b; margin-bottom:8px;">Equipado para Laparotomía de daño, toracotomía y politrauma crítico.</div>
+              <button type="button" class="btn-full-secondary" style="width:100%; font-size:0.78rem; font-weight:700;" onclick="asignarQuirofanoEspecifico(1)">
+                🏥 Asignar Quirófano SOP 1
+              </button>
+            </div>
+
+            <div id="card_sop2" style="background:#f8fafc; border:2px solid #cbd5e1; border-radius:10px; padding:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <strong style="font-size:0.85rem; color:#0f172a;">Quirófano 2 (SOP 2 - Urgencias)</strong>
+                <span id="badge_sop2" style="background:#dcfce7; color:#15803d; font-size:0.72rem; font-weight:800; padding:2px 8px; border-radius:9999px;">🟢 Disponible</span>
+              </div>
+              <div style="font-size:0.74rem; color:#64748b; margin-bottom:8px;">Equipado para Apendicectomías, Cesáreas de urgencia y Cirugía General.</div>
+              <button type="button" class="btn-full-secondary" style="width:100%; font-size:0.78rem; font-weight:700;" onclick="asignarQuirofanoEspecifico(2)">
+                🏥 Asignar Quirófano SOP 2
+              </button>
+            </div>
+
+            <div id="card_urpa" style="background:#f8fafc; border:2px solid #cbd5e1; border-radius:10px; padding:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <strong style="font-size:0.85rem; color:#0f172a;">Sala URPA (Recuperación)</strong>
+                <span id="badge_urpa" style="background:#dcfce7; color:#15803d; font-size:0.72rem; font-weight:800; padding:2px 8px; border-radius:9999px;">🟢 2 Camas Libres</span>
+              </div>
+              <div style="font-size:0.74rem; color:#64748b; margin-bottom:8px;">Monitorización post-anestésica inmediata (Escala Aldrete).</div>
+              <button type="button" class="btn-full-secondary" style="width:100%; font-size:0.78rem; font-weight:700;" onclick="asignarCamaURPA()">
+                🛌 Asignar Cama URPA
+              </button>
+            </div>
+          </div>
+
+          <!-- SELECTOR DE CIRUGÍA DE URGENCIA A REALIZAR -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
+            <div style="font-size:0.82rem; font-weight:800; color:#0f172a; margin-bottom:8px;">
+              🔪 Indicar Intervención Quirúrgica de Emergencia:
+            </div>
+            <div style="display:grid; grid-template-columns: 2fr 1fr auto; gap:10px; align-items:end;">
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="select_cirugia_catalogo">Tipo de Procedimiento Quirúrgico:</label>
+                <select id="select_cirugia_catalogo" class="input-full" style="font-weight:700;">
+                  <option value="Laparotomía Exploratoria y Cirugía de Control de Daños|850">Laparotomía Exploratoria / Control de Daños (S/. 850.00)</option>
+                  <option value="Apendicectomía de Emergencia por Peritonitis|650">Apendicectomía de Urgencia por Peritonitis (S/. 650.00)</option>
+                  <option value="Toracotomía de Urgencia / Drenaje Torácico Sellado|720">Toracotomía de Emergencia / Drenaje Torácico (S/. 720.00)</option>
+                  <option value="Cesárea de Emergencia por Sufrimiento Fetal|780">Cesárea de Emergencia por Sufrimiento Fetal (S/. 780.00)</option>
+                  <option value="Craneotomía Descompresiva por Hematoma Epidural/Subdural|1200">Craneotomía Descompresiva por Hematoma Epidural (S/. 1,200.00)</option>
+                  <option value="Reducción Quirúrgica y Fijación de Fractura Expuesta|890">Reducción Quirúrgica y Fijación de Fractura Expuesta (S/. 890.00)</option>
+                  <option value="Lavado Quirúrgico y Debridación de Trauma Complejo|420">Lavado Quirúrgico y Debridación de Trauma Complejo (S/. 420.00)</option>
+                </select>
+              </div>
+              <div class="form-field" style="margin-bottom:0;">
+                <label for="select_sala_destino_sop">Quirófano Asignado:</label>
+                <select id="select_sala_destino_sop" class="input-full">
+                  <option value="Quirófano 1 (SOP 1 - Trauma Shock)">Quirófano 1 (SOP 1 - Trauma Shock)</option>
+                  <option value="Quirófano 2 (SOP 2 - Cirugía General)">Quirófano 2 (SOP 2 - Cirugía General)</option>
+                </select>
+              </div>
+              <button type="button" class="btn-full-primary" style="height:38px; background:#ea580c; border-color:#c2410c; white-space:nowrap; font-weight:700;" onclick="ejecutarOrdenQuirurgicaEmergencia()">
+                + Ordenar Cirugía &amp; Facturar
+              </button>
+            </div>
+            <div id="status_cirugia_display" style="margin-top:8px; font-size:0.75rem; color:#475569;"></div>
+          </div>
+        </div>
+
+        <!-- STOCK EN TIEMPO REAL INCLUYENDO ÁREAS CRÍTICAS -->
         <div style="font-size:0.84rem; font-weight:800; color:#0f172a; margin-bottom:8px;">
           🛏️ Disponibilidad de Áreas Hospitalarias en Tiempo Real:
         </div>
@@ -2002,5 +2185,73 @@
 
   <!-- SCRIPT MAESTRO DE LÓGICA Y REGLAS DE NEGOCIO -->
   <script src="app_full.js"></script>
+
+  <!-- ======================================================================
+       MODAL: REGULARIZACIÓN ADMINISTRATIVA POST-ESTABILIZACIÓN (LEY N° 27604)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="modal_regularizacion_diferida" style="display:none;">
+    <div class="modal-window" style="max-width:650px;">
+      <div class="modal-header" style="background:#0f172a; color:#ffffff; display:flex; justify-content:space-between; align-items:center; padding:14px 18px;">
+        <h3 style="margin:0; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+          <span>📝</span>
+          <span>REGULARIZACIÓN ADMINISTRATIVA POST-ESTABILIZACIÓN (LEY N° 27604)</span>
+        </h3>
+        <button type="button" class="modal-close-btn" onclick="cerrarModalRegularizacionDiferida()" style="color:#ffffff; background:none; border:none; font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:18px;">
+        <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:0.8rem; color:#166534; line-height:1.4;">
+          ✅ <strong>Paciente Intervenido / Estabilizado en Quirófano o Shock Trauma:</strong><br>
+          En estricto cumplimiento del Artículo 3° de la Ley N° 27604 y el D.S. N° 016-2002-SA, la atención médico-quirúrgica ya fue brindada sin cobro previo. Ingrese los datos filiatorios y de cobertura obtenidos para consolidar la Historia Clínica y el cierre financiero de cuenta.
+        </div>
+
+        <div class="form-grid-2" style="margin-bottom:12px;">
+          <div class="form-field">
+            <label for="reg_dni_input">DNI / Documento del Paciente Identificado:</label>
+            <div style="display:flex; gap:6px;">
+              <input type="text" id="reg_dni_input" class="input-full" placeholder="DNI (8 dígitos) o dejar en blanco" maxlength="15">
+              <button type="button" class="btn-full-secondary" style="white-space:nowrap;" onclick="consultarReniecDiferida()">🔍 RENIEC</button>
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="reg_nombre_input">Nombres y Apellidos Completos:</label>
+            <input type="text" id="reg_nombre_input" class="input-full" placeholder="Nombres del paciente">
+          </div>
+        </div>
+
+        <div class="form-grid-2" style="margin-bottom:12px;">
+          <div class="form-field">
+            <label for="reg_origen_select">Origen del Evento Confirmado:</label>
+            <select id="reg_origen_select" class="input-full" onchange="toggleRegSoat(this.value)">
+              <option value="comun">Emergencia Médica / Quirúrgica Común</option>
+              <option value="soat_placa">🚗 Accidente de Tránsito con Placa (SOAT)</option>
+              <option value="soat_fuga">🚨 Accidente de Tránsito con Fuga (Sin Placa)</option>
+            </select>
+          </div>
+          <div class="form-field" id="box_reg_soat_placa" style="display:none;">
+            <label for="reg_placa_input">Placa Vehicular para APESEG/SOAT:</label>
+            <input type="text" id="reg_placa_input" class="input-full" placeholder="ABC-123" style="text-transform:uppercase;">
+          </div>
+          <div class="form-field" id="box_reg_seguro">
+            <label for="reg_seguro_select">Régimen de Aseguramiento:</label>
+            <select id="reg_seguro_select" class="input-full">
+              <option value="SIS">SIS Gratuito (MINSA / FUA)</option>
+              <option value="EsSalud">EsSalud (Asegurado Regular)</option>
+              <option value="EPS">Clínica Privada / EPS (Rímac, Pacífico, etc.)</option>
+              <option value="Particular">Particular (Sin Seguro)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn-full-secondary" onclick="cerrarModalRegularizacionDiferida()">
+            Cancelar
+          </button>
+          <button type="button" class="btn-full-primary" style="background:#15803d; border-color:#166534;" onclick="guardarRegularizacionDiferida()">
+            💾 Guardar Regularización y Actualizar Cuenta
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
