@@ -51,6 +51,140 @@ let contadorHcTemp = 1;
 
 
 // ---------------------------------------------------------------------------
+
+// ==============================================================================
+// MOTOR DE AUTO-GUARDADO REACTIVO EN HISTORIA CLÍNICA (SUPABASE CLOUD & MASTER DB)
+// Guarda de manera inmediata CADA CAMBIO clínico, administrativo y asistencial.
+// Sustentos: NTS N° 139-MINSA/DGIEM (Historia Clínica) y Ley N° 29414
+// ==============================================================================
+async function autoGuardarCambioEnHistoriaClinica(motivo = "Actualización asistencial") {
+  const cleanId = String(STATE.identificador || STATE.numDni || "").trim();
+  const fechaActual = new Date();
+  const horaStr = fechaActual.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+  // 1. Número de Historia Clínica formal
+  let nroHc = STATE.historiaClinica;
+  if (!nroHc || nroHc === "—") {
+    if (cleanId && cleanId.length >= 2) {
+      nroHc = `HC-2026-${cleanId.slice(-4)}`;
+      STATE.historiaClinica = nroHc;
+      const hcDisplay = document.getElementById("hc_display");
+      if (hcDisplay) hcDisplay.textContent = nroHc;
+    } else {
+      nroHc = "HC-EN-PROCESO";
+    }
+  }
+
+  // 2. Compilar snapshot del episodio clínico actual
+  const snapshotEpisodio = {
+    fecha_modificacion: fechaActual.toISOString(),
+    fecha_hora_texto: `${fechaActual.toLocaleDateString()}, ${horaStr}`,
+    motivo_actualizacion: motivo,
+    identificador: cleanId || "SIN_DNI",
+    historia_clinica: nroHc,
+    nombre_completo: STATE.nombreReniec || STATE.identificador || "Paciente en Atención",
+    edad: STATE.edad || document.getElementById("edad_full")?.value || null,
+    sexo: STATE.sexo || document.getElementById("sexo_full")?.value || "M",
+    tipo_seguro: STATE.tipoSeguro || "Particular",
+    prioridad: STATE.prioridad ? `P-${STATE.prioridad}` : "Por evaluar",
+    ticket: STATE.turno || "T-01",
+    cama_asignada: STATE.camaAsignada || "Ninguna asignada",
+    horas_observacion: STATE.horasObservacion || 0,
+    cie10: STATE.cie10Codigo ? `${STATE.cie10Codigo} - ${STATE.cie10Descripcion}` : "En evaluación",
+    medico_tratante: STATE.medicoTratante || "Por asignar",
+    signos_vitales: {
+      spo2: document.getElementById("spo2_full")?.value || STATE.spo2 || "—",
+      fc: document.getElementById("fc_full")?.value || STATE.fc || "—",
+      fr: document.getElementById("fr_full")?.value || STATE.fr || "—",
+      pa: `${document.getElementById("pas_full")?.value || STATE.pasSistolica || "—"}/${document.getElementById("pad_full")?.value || STATE.padDiastolica || "—"}`,
+      temp: document.getElementById("temp_full")?.value || STATE.temp || "—",
+      glucosa: document.getElementById("glucosa_full")?.value || STATE.glucosa || "—",
+      glasgow: document.getElementById("glasgow_full")?.value || STATE.glasgow || "15",
+      dolor: document.getElementById("eva_full")?.value || STATE.eva || "0"
+    },
+    kardex_count: STATE.kardexItems?.length || 0,
+    lab_count: STATE.ordenesLaboratorio?.length || 0,
+    imagenes_count: STATE.ordenesImagenes?.length || 0,
+    total_facturado: STATE.items_factura?.reduce((acc, i) => acc + (parseFloat(i.costo) || 0), 0) || 0,
+    estado_salida: STATE.estadoSalida || "En atención activa",
+    firmante: STATE.firmante || "Lic. Enfermería / Dr. Guardia UPP"
+  };
+
+  // 3. Persistir en Base de Datos Local de Pacientes Master
+  try {
+    const master = cargarPacientesMaster();
+    const idKey = cleanId || "PACIENTE_ACTUAL";
+    if (!master[idKey]) {
+      master[idKey] = {
+        identificador: cleanId,
+        historia_clinica: nroHc,
+        nombre_completo: snapshotEpisodio.nombre_completo,
+        tipo_seguro: snapshotEpisodio.tipo_seguro,
+        episodios: []
+      };
+    }
+    master[idKey].tipo_seguro = snapshotEpisodio.tipo_seguro;
+    master[idKey].historia_clinica = nroHc;
+    master[idKey].ultimo_episodio = snapshotEpisodio;
+    guardarPacientesMaster(master);
+  } catch(e) {
+    console.warn("Aviso master:", e);
+  }
+
+  // 4. Sincronizar en la Nube de Supabase (Tabla historias_clinicas)
+  if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.key && cleanId && cleanId.length >= 2) {
+    try {
+      const payloadSupabase = {
+        identificador: cleanId,
+        historia_clinica: nroHc,
+        nombre_completo: STATE.nombreReniec || cleanId,
+        tipo_seguro: STATE.tipoSeguro || "Particular",
+        estado_bd: "Si",
+        prioridad: STATE.prioridad ? `P-${STATE.prioridad}` : null,
+        ticket: STATE.turno || "T-01"
+      };
+
+      const resCheck = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/historias_clinicas?or=(identificador.eq.${encodeURIComponent(cleanId)},identificador.ilike.*${encodeURIComponent(cleanId)}*)&select=id`, {
+        headers: { "apikey": SUPABASE_CONFIG.key, "Authorization": `Bearer ${SUPABASE_CONFIG.key}` }
+      });
+      const data = await resCheck.json();
+
+      if (data && data.length > 0) {
+        await fetch(`${SUPABASE_CONFIG.url}/rest/v1/historias_clinicas?or=(identificador.eq.${encodeURIComponent(cleanId)},identificador.ilike.*${encodeURIComponent(cleanId)}*)`, {
+          method: "PATCH",
+          headers: {
+            "apikey": SUPABASE_CONFIG.key,
+            "Authorization": `Bearer ${SUPABASE_CONFIG.key}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payloadSupabase)
+        });
+      } else {
+        await fetch(`${SUPABASE_CONFIG.url}/rest/v1/historias_clinicas`, {
+          method: "POST",
+          headers: {
+            "apikey": SUPABASE_CONFIG.key,
+            "Authorization": `Bearer ${SUPABASE_CONFIG.key}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payloadSupabase)
+        });
+      }
+      console.log(`☁️ Supabase Cloud sincronizado [${motivo}] para DNI: ${cleanId}`);
+    } catch(e) {
+      console.warn("Aviso sincronización Supabase:", e);
+    }
+  }
+
+  // 5. Reflejo visual inmediato en la Barra de Telemetría Superior
+  const badgeDb = document.getElementById("telemetry_db_status");
+  if (badgeDb) {
+    badgeDb.innerHTML = `☁️ Supabase &amp; HC: <strong>Guardado '${motivo}' (${horaStr})</strong>`;
+    badgeDb.style.color = "#16a34a";
+  }
+}
+
+
 // CONFIGURACIÓN OFICIAL SUPABASE (CLOUD DATABASE)
 // ---------------------------------------------------------------------------
 const SUPABASE_CONFIG = {
@@ -1378,34 +1512,26 @@ const STATE = {
   soatConsumido: 0,
   soatDisponible: 27500,
 
-  // Módulo 4: Médico, Tópicos, Kardex, Laboratorio e Imágenes
-  cie10Codigo: "R10.4",
-  cie10Descripcion: "Dolor abdominal no especificado",
-  medicoTratante: "Médico de Turno 1 (Emergenciólogo / CMP 0001)",
-  kardexItems: [
-    { nombre: "Cloruro de Sodio 0.9% 1000ml (Frasco EV)", dosis: "1000ml EV a chorro", horario: "Stat", costo: 12, cat: "Farmacia", administrado: false, horaAdmin: null },
-    { nombre: "Analgesia EV (Ketorolaco / Metamizol)", dosis: "1 ampolla EV diluida", horario: "Stat", costo: 18, cat: "Farmacia", administrado: false, horaAdmin: null },
-    { nombre: "Omeprazol 40mg Frasco Ampolla EV", dosis: "40mg EV diluido lento", horario: "Stat", costo: 16, cat: "Farmacia", administrado: false, horaAdmin: null }
-  ],
+  // Módulo 4: Médico, Tópicos, Kardex, Laboratorio e Imágenes (INICIA TOTALMENTE EN BLANCO)
+  cie10Codigo: "",
+  cie10Descripcion: "",
+  medicoTratante: "Por asignar",
+  kardexItems: [],
   kardexAdministrados: [],
-  ordenesLaboratorio: [
-    { nombre: "Hemograma Completo + Plaquetas Automatizado", prioridad: "🚨 Urgente (30 min)", costo: 25, estado: "⏳ En proceso de análisis" },
-    { nombre: "Perfil Renal (Urea y Creatinina Sérica)", prioridad: "🚨 Urgente (30 min)", costo: 28, estado: "⏳ En proceso de análisis" }
-  ],
-  ordenesImagenes: [
-    { nombre: "Rx Tórax AP y Lateral (Portátil)", indicacion: "Evaluación cardiotorácica de emergencia", costo: 55, estado: "⏳ Estudio en ejecución" }
-  ],
-  destinoPostTopico: "observacion",
+  ordenesLaboratorio: [],
+  ordenesImagenes: [],
+  destinoPostTopico: "por_definir",
 
-  // Módulo 5: Sala de Observación
-  horasObservacion: 6,
-  balanceIngresosMl: 1000,
-  balanceEgresosMl: 400,
-  balanceNetoMl: 600,
-  decisionPostObs: "alta",
+  // Módulo 5: Sala de Observación (INICIA TOTALMENTE EN BLANCO)
+  horasObservacion: 0,
+  balanceIngresosMl: 0,
+  balanceEgresosMl: 0,
+  balanceNetoMl: 0,
+  decisionPostObs: "por_definir",
 
-  // Módulo 6: Camas & Áreas Críticas
-  camaAsignada: "Obs-02 (Cama Observación Adultos)",
+  // Módulo 6: Camas & Áreas Críticas (INICIA TOTALMENTE EN BLANCO)
+  camaAsignada: null,
+  camaAsignadaId: null,
   prioridadUci: 2,
   desempateScore: 0,
   boardingActivo: false,
@@ -5596,22 +5722,16 @@ const RECURSOS_HOSPITALARIOS = {
     area: "Centro Quirúrgico",
     categoria: "Cirugía de Urgencia",
     icono: "🔪",
-    estado: "ocupada",
-    paciente: {
-      nombre: "Carlos Mendoza Rivera",
-      dni: "09841235",
-      prioridad: "II",
-      diagnostico: "Apendicectomía de Urgencia por Peritonitis Aguda",
-      medico: "Dr. Víctor Larco Herrera (CMP 39821)"
-    },
-    inicioMs: Date.now() - (45 * 60 * 1000), // Inició hace 45 min
-    finMs: Date.now() + (75 * 60 * 1000),   // Quedan 75 min (1h 15m)
+    estado: "disponible",
+    paciente: null,
+    inicioMs: null,
+    finMs: null,
     duracionHoras: 2,
     horasAmpliadas: 0,
-    motivo: "Apendicectomía de Emergencia (En acto quirúrgico)",
+    motivo: "Apendicectomía / Colecistitis Aguda Complicada",
     norma: "NTS N° 042-MINSA",
-    tiempoFormateado: "01:15:00",
-    progresoPct: 37.5
+    tiempoFormateado: "--:--:--",
+    progresoPct: 0
   },
   "SOP-03": {
     id: "SOP-03",
@@ -5640,22 +5760,16 @@ const RECURSOS_HOSPITALARIOS = {
     area: "Sala de Observación",
     categoria: "Corta Estancia Adultos",
     icono: "🛏️",
-    estado: "ocupada",
-    paciente: {
-      nombre: "Luis Guillermo Vásquez Valdivieso",
-      dni: "44418504",
-      prioridad: "III",
-      diagnostico: "Dolor Abdominal Agudo en estudio / Descarte Apendicitis",
-      medico: "Dr. Roberto Mendoza Silva (CMP 48215)"
-    },
-    inicioMs: Date.now() - (2 * 60 * 1000), // Inició hace 2 min
-    finMs: Date.now() + (358 * 60 * 1000),  // Quedan 5h 58m de las 6h
+    estado: "disponible",
+    paciente: null,
+    inicioMs: null,
+    finMs: null,
     duracionHoras: 6,
     horasAmpliadas: 0,
-    motivo: "Dolor Abdominal Agudo en estudio (Evaluación seriada NTS 042)",
+    motivo: "Monitoreo Clínico Seriado y Reevaluación",
     norma: "NTS N° 042-MINSA (Estancia estándar máx 12h)",
-    tiempoFormateado: "05:58:00",
-    progresoPct: 0.5
+    tiempoFormateado: "--:--:--",
+    progresoPct: 0
   },
   "OBS-02": {
     id: "OBS-02",
@@ -6200,6 +6314,7 @@ Motivo: ${motivoClinico}.`);
   }
 
   // Refrescar cronómetro al instante
+  autoGuardarCambioEnHistoriaClinica(`Ampliación +${h}h en ${rec.nombre}`);
   tickCronometrosCamas();
   renderizarTableroCamasYQuirofanos();
   if (document.getElementById("modalTableroCamasOverlay")?.classList.contains("open")) {
@@ -6226,11 +6341,13 @@ function liberarCamaRecurso(idRecurso, motivoSalida = "Alta Médica") {
     STATE.camaAsignadaId = null;
   }
 
+  autoGuardarCambioEnHistoriaClinica(`Ampliación +${h}h en ${rec.nombre}`);
   tickCronometrosCamas();
   renderizarTableroCamasYQuirofanos();
   if (document.getElementById("modalTableroCamasOverlay")?.classList.contains("open")) {
     renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "modal_camas_stock_grid");
   }
+  autoGuardarCambioEnHistoriaClinica(`Liberación de ${rec.nombre}`);
   renderizarMonitorObservacionModulo5();
 
   alert(`🔓 RECURSO LIBERADO:
@@ -6261,6 +6378,7 @@ function liberarRecursoPorExpiracion(idRecurso) {
     STATE.camaAsignadaId = null;
   }
 
+  autoGuardarCambioEnHistoriaClinica(`Ampliación +${h}h en ${rec.nombre}`);
   tickCronometrosCamas();
   renderizarTableroCamasYQuirofanos();
   if (document.getElementById("modalTableroCamasOverlay")?.classList.contains("open")) {
@@ -6294,9 +6412,37 @@ function finalizarTiempoAhora(idRecurso) {
 
 // CONTROLADORES ESPECÍFICOS DE MÓDULO 5
 function renderizarMonitorObservacionModulo5() {
-  const idObs = STATE.camaAsignadaId && RECURSOS_HOSPITALARIOS[STATE.camaAsignadaId] ? STATE.camaAsignadaId : "OBS-01";
-  const rec = RECURSOS_HOSPITALARIOS[idObs];
-  if (!rec) return;
+  const idObs = STATE.camaAsignadaId && RECURSOS_HOSPITALARIOS[STATE.camaAsignadaId] ? STATE.camaAsignadaId : null;
+  const rec = idObs ? RECURSOS_HOSPITALARIOS[idObs] : null;
+
+  const elNom = document.getElementById("lbl_m5_cama_nombre");
+  const elEstado = document.getElementById("lbl_m5_cama_estado");
+  const elPac = document.getElementById("lbl_m5_paciente_info");
+  const elTotalInfo = document.getElementById("lbl_m5_tiempo_total_info");
+  const elTiempoM5 = document.getElementById("lbl_m5_tiempo_restante");
+  const elBarM5 = document.getElementById("bar_m5_progreso_estancia");
+  const elBadgeEstancia = document.getElementById("estancia_estado_badge");
+
+  if (!rec || rec.estado !== "ocupada") {
+    if (elNom) elNom.textContent = "🛏️ Ninguna cama asignada";
+    if (elEstado) {
+      elEstado.textContent = "DISPONIBLE";
+      elEstado.style.background = "#f1f5f9";
+      elEstado.style.color = "#475569";
+    }
+    if (elPac) elPac.textContent = "Complete la admisión y asigne una cama en el Módulo 4, 5 o 6 para iniciar el monitoreo.";
+    if (elTotalInfo) elTotalInfo.textContent = "(Sin cama asignada)";
+    if (elTiempoM5) {
+      elTiempoM5.textContent = "--:--:--";
+      elTiempoM5.style.color = "#64748b";
+    }
+    if (elBarM5) elBarM5.style.width = "0%";
+    if (elBadgeEstancia) {
+      elBadgeEstancia.textContent = "En espera de paciente";
+      elBadgeEstancia.className = "estancia-badge estancia-verde";
+    }
+    return;
+  }
 
   const elNom = document.getElementById("lbl_m5_cama_nombre");
   if (elNom) elNom.textContent = `🛏️ ${rec.nombre}`;
@@ -7364,3 +7510,4 @@ window.finalizarTiempoDemoObservacion = finalizarTiempoDemoObservacion;
 window.liberarCamaActualManual = liberarCamaActualManual;
 window.renderizarTableroCamasYQuirofanos = renderizarTableroCamasYQuirofanos;
 window.renderizarMonitorObservacionModulo5 = renderizarMonitorObservacionModulo5;
+window.autoGuardarCambioEnHistoriaClinica = autoGuardarCambioEnHistoriaClinica;

@@ -750,7 +750,7 @@
 
       <div class="navbar-mini-stats">
         <button type="button" class="mini-chip" id="mini_camas_sop_badge" onclick="abrirModalTableroCamas()" title="Ver Disponibilidad en Tiempo Real de Camas y Quirófanos" style="cursor:pointer; background:#f0fdf4; color:#166534; border:1px solid #86efac; font-weight:700;">
-          🛏️ Camas &amp; Quirófanos: <span id="lbl_navbar_dispo_resumen">11/15 Libres</span>
+          🛏️ Camas &amp; Quirófanos: <span id="lbl_navbar_dispo_resumen">15/15 Libres</span>
         </button>
         <span class="mini-chip" id="mini_prioridad_badge">🚦 Triaje: Por evaluar</span>
         <span class="mini-chip" id="mini_soat_badge" style="display:none; background:#fff7ed; color:#c2410c; border-color:#fb923c;">
@@ -1679,7 +1679,7 @@
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
-              <span class="estancia-badge estancia-verde" id="estancia_estado_badge">0 a 12h: Monitoreo Normal</span>
+              <span class="estancia-badge estancia-verde" id="estancia_estado_badge">En espera de paciente</span>
               <button type="button" class="btn-full-secondary" style="font-size:0.72rem; padding:3px 8px; border-color:#0284c7; color:#0284c7; background:#ffffff;" onclick="irAModulo(6); filtrarTableroRecursos('observacion');">
                 🛏️ Ver Camas OBS
               </button>
@@ -1692,11 +1692,11 @@
               <div>
                 <span style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase;">Cama de Observación Asignada:</span>
                 <div style="font-size:0.95rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px; margin-top:2px;">
-                  <span id="lbl_m5_cama_nombre">🛏️ Cama OBS-01 (Adultos Varones)</span>
-                  <span id="lbl_m5_cama_estado" style="background:#fee2e2; color:#991b1b; font-size:0.7rem; padding:1px 6px; border-radius:4px; font-weight:800;">OCUPADA</span>
+                  <span id="lbl_m5_cama_nombre">🛏️ Ninguna cama asignada</span>
+                  <span id="lbl_m5_cama_estado" style="background:#f1f5f9; color:#475569; font-size:0.7rem; padding:1px 6px; border-radius:4px; font-weight:800;">DISPONIBLE</span>
                 </div>
-                <div style="font-size:0.74rem; color:#475569; margin-top:3px;" id="lbl_m5_paciente_info">
-                  Paciente: Luis Guillermo Vásquez Valdivieso (DNI 44418504)
+                <div style="font-size:0.74rem; color:#64748b; margin-top:3px;" id="lbl_m5_paciente_info">
+                  Complete la admisión y asigne una cama en el Módulo 4, 5 o 6 para iniciar el monitoreo.
                 </div>
               </div>
 
@@ -1722,8 +1722,8 @@
               <span style="font-size:0.75rem; color:#475569; font-weight:700;">TIEMPO RESTANTE PARA LIBERACIÓN AUTOMÁTICA:</span>
               <div class="timer-display-box" style="margin-top:2px;">
                 <span class="timer-pulsing-dot"></span>
-                <span id="lbl_m5_tiempo_restante" style="color:#dc2626; font-size:1.4rem;">05:59:58</span>
-                <span style="font-size:0.74rem; color:#64748b; font-family:sans-serif; font-weight:600;" id="lbl_m5_tiempo_total_info">(De 6 horas programadas)</span>
+                <span id="lbl_m5_tiempo_restante" style="color:#64748b; font-size:1.4rem;">--:--:--</span>
+                <span style="font-size:0.74rem; color:#64748b; font-family:sans-serif; font-weight:600;" id="lbl_m5_tiempo_total_info">(Sin cama asignada)</span>
               </div>
             </div>
 
@@ -1944,7 +1944,7 @@
             
             <div style="display:flex; align-items:center; gap:8px;">
               <span id="badge_resumen_recursos_total" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.78rem; font-weight:800; padding:4px 10px; border-radius:9999px;">
-                🟢 11 de 15 Disponibles
+                🟢 15 de 15 Disponibles
               </span>
               <button type="button" class="btn-full-secondary" style="font-size:0.75rem; padding:4px 10px;" onclick="renderizarTableroCamasYQuirofanos()">
                 🔄 Actualizar
@@ -2526,7 +2526,7 @@
             <button type="button" class="chip-filtro-recurso" onclick="filtrarTableroModal('uci', this)">🏥 UCI</button>
           </div>
           <span id="badge_modal_dispo_resumen" style="font-size:0.8rem; font-weight:800; color:#15803d; background:#dcfce7; padding:4px 10px; border-radius:9999px;">
-            11 / 15 Libres
+            15 / 15 Libres
           </span>
         </div>
         <div id="modal_camas_stock_grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:12px;">
