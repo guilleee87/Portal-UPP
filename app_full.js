@@ -1894,11 +1894,18 @@ async function consultarReniec() {
       document.getElementById("hc_accion_display").textContent = `DNI ${ident} autenticado en RENIEC -> ${STATE.historiaClinica} (${nombreCompleto})`;
 
 
-      // El seguro queda pendiente hasta que el usuario resuelva el CAPTCHA en el Módulo 2
-      actualizarSeguroConsolidado("Sin consultar (Pendiente de Acreditación con CAPTCHA)");
-      STATE.tipoSeguro = null;
-      const boxPideInit = document.getElementById("pide_acreditacion_box");
-      if (boxPideInit) boxPideInit.style.display = "none";
+      // Consultar en la Base de Datos Supabase / Local si este paciente ya tiene seguro registrado
+      buscarSeguroPacienteEnBd(ident).then(seguroGuardado => {
+        if (seguroGuardado) {
+          console.log(`🧠 Memoria Base de Datos: DNI ${ident} recuperó seguro guardado:`, seguroGuardado);
+          aplicarSeleccionSeguroYEntorno(seguroGuardado, false);
+        } else {
+          actualizarSeguroConsolidado("Sin consultar (Pendiente de Acreditación con CAPTCHA)");
+          STATE.tipoSeguro = null;
+          const boxPideInit = document.getElementById("pide_acreditacion_box");
+          if (boxPideInit) boxPideInit.style.display = "none";
+        }
+      });
 
 
       // Preservar la fluidez de entrada sin robar el foco del usuario
@@ -2283,7 +2290,25 @@ async function ejecutarConsultaSeguroConCaptcha() {
 
   let tipoResuelto = entidad;
   if (!tipoResuelto || tipoResuelto === "auto") {
-    tipoResuelto = obtenerSeguroDeterministicoLocal(numDni, identLimpio);
+    // 1. PRIMERO: Buscar si el paciente ya tiene seguro en Supabase o Base de Datos Local
+    const seguroGuardado = await buscarSeguroPacienteEnBd(numDni);
+    if (seguroGuardado) {
+      const segL = seguroGuardado.toLowerCase();
+      if (segL.includes("sis") || segL.includes("minsa")) tipoResuelto = "sis";
+      else if (segL.includes("essalud")) tipoResuelto = "essalud";
+      else if (segL.includes("eps") || segL.includes("privad") || segL.includes("rimac") || segL.includes("pacifico")) tipoResuelto = "eps";
+      else if (segL.includes("soat")) tipoResuelto = "soat";
+      else tipoResuelto = "particular";
+      console.log(`🧠 Memoria Base de Datos: Paciente DNI ${numDni} recuperó seguro asignado previamente:`, tipoResuelto);
+    } else {
+      // 2. SEGUNDO: Si no existe, asignar y GUARDAR INMEDIATAMENTE en Supabase / BD
+      tipoResuelto = obtenerSeguroDeterministicoLocal(numDni, identLimpio);
+      console.log(`🎲 Asignación inicial para DNI ${numDni}:`, tipoResuelto, "-> Guardando en Base de Datos Supabase...");
+      await guardarSeguroPacienteEnBd(numDni, STATE.historiaClinica, nombrePac, tipoResuelto.toUpperCase());
+    }
+  } else {
+    // Si el usuario seleccionó una entidad explícita en el dropdown, guardar en Base de Datos
+    await guardarSeguroPacienteEnBd(numDni, STATE.historiaClinica, nombrePac, tipoResuelto.toUpperCase());
   }
 
 
@@ -2386,6 +2411,7 @@ function procesarResultadoAcreditacion(datos, ident) {
 
   if (datos.tipo_seguro === "EsSalud") {
     STATE.tipoSeguro = "EsSalud";
+    seleccionarEntornoEstablecimiento("essalud", false);
     STATE.acreditadoEsSalud = true;
     titulo.textContent = "ACREDITACIÓN PIDE — EsSalud (Seguro Social de Salud)";
     badgeEstado.textContent = "ACREDITADO ACTIVO";
@@ -2448,6 +2474,7 @@ function procesarResultadoAcreditacion(datos, ident) {
 
   if (datos.tipo_seguro === "SIS") {
     STATE.tipoSeguro = "SIS";
+    seleccionarEntornoEstablecimiento("minsa_sis", false);
     const numFua = datos.fua || "00000412-2026-004812";
     STATE.numerFua = numFua;
     titulo.textContent = "ACREDITACIÓN PIDE — SIS (Seguro Integral de Salud)";
@@ -2568,6 +2595,7 @@ function procesarResultadoAcreditacion(datos, ident) {
 
   if (datos.tipo_seguro === "EPS") {
     STATE.tipoSeguro = "EPS";
+    seleccionarEntornoEstablecimiento("clinica_eps", false);
     const copagoPct = datos.copago_pct || 20;
     STATE.porcentajeCopago = parseFloat(copagoPct);
     titulo.textContent = "ACREDITACIÓN PIDE-SUSALUD — EPS PRIVADA";
@@ -5301,25 +5329,177 @@ if (document.readyState === "loading") {
 // --- MÓDULO 1: ENFERMERÍA DE TRIAJE ---
 
 // ---------------------------------------------------------------------------
-// SELECTORES DINÁMICOS DE ENTORNO ASISTENCIAL Y RÉGIMEN FINANCIADOR
+// SELECTORES DINÁMICOS DE ENTORNO ASISTENCIAL Y PERSISTENCIA EN BASE DE DATOS (SUPABASE)
 // ---------------------------------------------------------------------------
-function seleccionarEntornoEstablecimiento(entorno) {
+async function buscarSeguroPacienteEnBd(identificador) {
+  if (!identificador) return null;
+  const cleanId = String(identificador).trim().toLowerCase();
+  const dniMatch = cleanId.match(/\d{8}/);
+  const numDni = dniMatch ? dniMatch[0] : cleanId;
+
+  // 1. Consultar en Supabase historias_clinicas
+  if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.key) {
+    try {
+      const res = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/historias_clinicas?or=(identificador.eq.${encodeURIComponent(numDni)},identificador.eq.${encodeURIComponent(cleanId)})&select=*`, {
+        headers: {
+          "apikey": SUPABASE_CONFIG.key,
+          "Authorization": `Bearer ${SUPABASE_CONFIG.key}`
+        }
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        if (rows && rows.length > 0 && rows[0].tipo_seguro) {
+          console.log(`☁️ Supabase: Seguro recordado para DNI ${numDni}:`, rows[0].tipo_seguro);
+          return rows[0].tipo_seguro;
+        }
+      }
+    } catch (e) {
+      console.warn("Aviso: Supabase consulta seguro:", e);
+    }
+  }
+
+  // 2. Consultar en localStorage seguro_asignado_{dni}
+  try {
+    const loc = localStorage.getItem("seguro_asignado_" + numDni);
+    if (loc) return loc;
+  } catch (e) {}
+
+  // 3. Consultar en pacientes_master
+  try {
+    const master = cargarPacientesMaster();
+    if (master[numDni]?.tipo_seguro) return master[numDni].tipo_seguro;
+    if (master[cleanId]?.tipo_seguro) return master[cleanId].tipo_seguro;
+  } catch (e) {}
+
+  return null;
+}
+
+async function guardarSeguroPacienteEnBd(identificador, nroHc, nombre, tipoSeguro) {
+  if (!identificador || !tipoSeguro) return;
+  const cleanId = String(identificador).trim().toLowerCase();
+  const dniMatch = cleanId.match(/\d{8}/);
+  const numDni = dniMatch ? dniMatch[0] : cleanId;
+
+  // 1. Guardar en localStorage para persistencia inmediata en el cliente
+  try {
+    localStorage.setItem("seguro_asignado_" + numDni, tipoSeguro);
+  } catch (e) {}
+
+  // 2. Actualizar en pacientes_master
+  try {
+    const master = cargarPacientesMaster();
+    if (!master[numDni]) {
+      master[numDni] = {
+        identificador: numDni,
+        historia_clinica: nroHc || `HC-2026-${numDni.slice(-3)}`,
+        nombre_completo: nombre || numDni,
+        tipo_seguro: tipoSeguro,
+        episodios: []
+      };
+    } else {
+      master[numDni].tipo_seguro = tipoSeguro;
+      if (nombre) master[numDni].nombre_completo = nombre;
+      if (nroHc) master[numDni].historia_clinica = nroHc;
+    }
+    guardarPacientesMaster(master);
+  } catch (e) {}
+
+  // 3. Sincronizar con Supabase en la nube
+  if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.key) {
+    try {
+      await sincronizarConSupabase(numDni, nroHc || `HC-2026-${numDni.slice(-3)}`, nombre, tipoSeguro, STATE.turno, STATE.prioridad);
+      console.log(`☁️ Seguro '${tipoSeguro}' persistido con éxito en Supabase para DNI ${numDni}`);
+    } catch (e) {
+      console.warn("Aviso al persistir en Supabase:", e);
+    }
+  }
+}
+
+function aplicarSeleccionSeguroYEntorno(seguro, sincronizarBd = false) {
+  if (!seguro) return;
+  const s = String(seguro).trim().toLowerCase();
+
+  if (s.includes("sis") || s.includes("minsa")) {
+    seleccionarEntornoEstablecimiento("minsa_sis", sincronizarBd);
+  } else if (s.includes("essalud")) {
+    seleccionarEntornoEstablecimiento("essalud", sincronizarBd);
+  } else if (s.includes("eps") || s.includes("privad") || s.includes("rimac") || s.includes("pacifico") || s.includes("mapfre") || s.includes("sanitas") || s.includes("positiva")) {
+    seleccionarEntornoEstablecimiento("clinica_eps", sincronizarBd);
+  } else if (s.includes("soat")) {
+    cambiarOrigenEvento("soat");
+  } else if (s.includes("particular")) {
+    STATE.tipoSeguro = "Particular";
+    STATE.esClinicaPrivada = false;
+    actualizarSeguroConsolidado("Particular (Sin Cobertura Activa)");
+    recalcularPrioridad();
+    actualizarFactura();
+  }
+}
+
+function seleccionarEntornoEstablecimiento(entorno, sincronizarConBd = true) {
+  STATE.entornoEstablecimiento = entorno;
   STATE.esClinicaPrivada = (entorno === "clinica_eps");
-  const btnPub = document.getElementById("btn_entorno_publico");
+
+  const btnMinsa = document.getElementById("btn_entorno_minsa");
+  const btnEssalud = document.getElementById("btn_entorno_essalud");
   const btnCli = document.getElementById("btn_entorno_clinica_eps");
   const badge = document.getElementById("badge_entorno_actual");
+  const bannerMinsa = document.getElementById("banner_condicion_minsa");
+  const bannerEssalud = document.getElementById("banner_condicion_essalud");
   const bannerEps = document.getElementById("banner_condicion_eps");
 
-  if (STATE.esClinicaPrivada) {
+  [btnMinsa, btnEssalud, btnCli].forEach(b => {
+    if (b) {
+      b.style.background = "#ffffff";
+      b.style.borderColor = "#cbd5e1";
+      b.style.color = "#334155";
+    }
+  });
+  if (bannerMinsa) bannerMinsa.style.display = "none";
+  if (bannerEssalud) bannerEssalud.style.display = "none";
+  if (bannerEps) bannerEps.style.display = "none";
+
+  if (entorno === "minsa_sis") {
+    if (btnMinsa) {
+      btnMinsa.style.background = "#f0f9ff";
+      btnMinsa.style.borderColor = "#0284c7";
+      btnMinsa.style.color = "#0369a1";
+    }
+    if (badge) {
+      badge.textContent = "🏛️ Hospital MINSA (SIS)";
+      badge.style.background = "#e0f2fe";
+      badge.style.color = "#0369a1";
+      badge.style.borderColor = "#bae6fd";
+    }
+    if (bannerMinsa) bannerMinsa.style.display = "block";
+
+    if (!STATE.esAccidenteTransito) {
+      STATE.tipoSeguro = "SIS";
+      actualizarSeguroConsolidado("SIS Gratuito Integral (MINSA / Formato FUA)");
+    }
+  } else if (entorno === "essalud") {
+    if (btnEssalud) {
+      btnEssalud.style.background = "#eff6ff";
+      btnEssalud.style.borderColor = "#3b82f6";
+      btnEssalud.style.color = "#1d4ed8";
+    }
+    if (badge) {
+      badge.textContent = "🏥 Hospital EsSalud";
+      badge.style.background = "#dbeafe";
+      badge.style.color = "#1d4ed8";
+      badge.style.borderColor = "#bfdbfe";
+    }
+    if (bannerEssalud) bannerEssalud.style.display = "block";
+
+    if (!STATE.esAccidenteTransito) {
+      STATE.tipoSeguro = "EsSalud";
+      actualizarSeguroConsolidado("EsSalud (Asegurado Regular ESSI / D.L. 728)");
+    }
+  } else if (entorno === "clinica_eps") {
     if (btnCli) {
       btnCli.style.background = "#f0fdf4";
       btnCli.style.borderColor = "#10b981";
       btnCli.style.color = "#065f46";
-    }
-    if (btnPub) {
-      btnPub.style.background = "#ffffff";
-      btnPub.style.borderColor = "#cbd5e1";
-      btnPub.style.color = "#334155";
     }
     if (badge) {
       badge.textContent = "🏢 Clínica Privada (Red EPS)";
@@ -5333,81 +5513,16 @@ function seleccionarEntornoEstablecimiento(entorno) {
       STATE.tipoSeguro = "EPS";
       actualizarSeguroConsolidado("Clínica Privada — EPS Activa (Pacífico Salud / Rímac / Mapfre)");
     }
-  } else {
-    if (btnPub) {
-      btnPub.style.background = "#f0f9ff";
-      btnPub.style.borderColor = "#0284c7";
-      btnPub.style.color = "#0369a1";
-    }
-    if (btnCli) {
-      btnCli.style.background = "#ffffff";
-      btnCli.style.borderColor = "#cbd5e1";
-      btnCli.style.color = "#334155";
-    }
-    if (badge) {
-      badge.textContent = "🏥 Hospital Público (MINSA / EsSalud)";
-      badge.style.background = "#e0f2fe";
-      badge.style.color = "#0369a1";
-      badge.style.borderColor = "#bae6fd";
-    }
-    if (bannerEps) bannerEps.style.display = "none";
-
-    if (!STATE.esAccidenteTransito && (STATE.tipoSeguro === "EPS" || !STATE.tipoSeguro)) {
-      STATE.tipoSeguro = "EsSalud";
-      actualizarSeguroConsolidado("EsSalud — Asegurado Titular Regular");
-    }
   }
 
-  // Recalcular triaje si hay datos y actualizar factura
-  if (typeof recalcularPrioridad === "function") {
-    try { recalcularPrioridad(); } catch(e){}
-  }
-  if (typeof actualizarFactura === "function") {
-    try { actualizarFactura(); } catch(e){}
-  }
-}
-
-function seleccionarRegimenSeguroDirecto(tipo) {
-  if (tipo === "EPS") {
-    STATE.esClinicaPrivada = true;
-    STATE.tipoSeguro = "EPS";
-    actualizarSeguroConsolidado("Clínica Privada — EPS Activa (Pacífico Salud / Rímac / Mapfre)");
-  } else if (tipo === "SIS") {
-    STATE.esClinicaPrivada = false;
-    STATE.tipoSeguro = "SIS";
-    actualizarSeguroConsolidado("SIS Gratuito Integral (MINSA / Formato FUA)");
-  } else if (tipo === "EsSalud") {
-    STATE.esClinicaPrivada = false;
-    STATE.tipoSeguro = "EsSalud";
-    actualizarSeguroConsolidado("EsSalud (Asegurado Regular ESSI / D.L. 728)");
-  } else if (tipo === "Particular") {
-    STATE.esClinicaPrivada = false;
-    STATE.tipoSeguro = "Particular";
-    actualizarSeguroConsolidado("Particular (Sin Cobertura Activa)");
-  }
-
-  // Sincronizar botones de entorno en Módulo 1
-  const btnPub = document.getElementById("btn_entorno_publico");
-  const btnCli = document.getElementById("btn_entorno_clinica_eps");
-  const badge = document.getElementById("badge_entorno_actual");
-  const bannerEps = document.getElementById("banner_condicion_eps");
-  if (STATE.esClinicaPrivada) {
-    if (btnCli) { btnCli.style.background = "#f0fdf4"; btnCli.style.borderColor = "#10b981"; btnCli.style.color = "#065f46"; }
-    if (btnPub) { btnPub.style.background = "#ffffff"; btnPub.style.borderColor = "#cbd5e1"; btnPub.style.color = "#334155"; }
-    if (badge) { badge.textContent = "🏢 Clínica Privada (Red EPS)"; badge.style.background = "#dcfce7"; badge.style.color = "#15803d"; badge.style.borderColor = "#86efac"; }
-    if (bannerEps) bannerEps.style.display = "block";
-  } else {
-    if (btnPub) { btnPub.style.background = "#f0f9ff"; btnPub.style.borderColor = "#0284c7"; btnPub.style.color = "#0369a1"; }
-    if (btnCli) { btnCli.style.background = "#ffffff"; btnCli.style.borderColor = "#cbd5e1"; btnCli.style.color = "#334155"; }
-    if (badge) { badge.textContent = "🏥 Hospital Público (MINSA / EsSalud)"; badge.style.background = "#e0f2fe"; badge.style.color = "#0369a1"; badge.style.borderColor = "#bae6fd"; }
-    if (bannerEps) bannerEps.style.display = "none";
-  }
-
-  // Resaltar botón activo en Módulo 3
+  // Sincronizar botones de Módulo 3
   ["eps", "sis", "essalud", "particular"].forEach(id => {
     const b = document.getElementById(`btn_seg_${id}`);
     if (b) {
-      if (id.toLowerCase() === tipo.toLowerCase()) {
+      const match = (id === "eps" && entorno === "clinica_eps") ||
+                    (id === "sis" && entorno === "minsa_sis") ||
+                    (id === "essalud" && entorno === "essalud");
+      if (match) {
         b.style.background = id === "eps" ? "#ecfdf5" : "#eff6ff";
         b.style.borderColor = id === "eps" ? "#10b981" : "#3b82f6";
         b.style.color = id === "eps" ? "#065f46" : "#1d4ed8";
@@ -5419,6 +5534,11 @@ function seleccionarRegimenSeguroDirecto(tipo) {
     }
   });
 
+  // Si se solicita sincronizar con BD y tenemos un identificador activo
+  if (sincronizarConBd && STATE.identificador && STATE.tipoSeguro) {
+    guardarSeguroPacienteEnBd(STATE.identificador, STATE.historiaClinica, STATE.nombreReniec, STATE.tipoSeguro);
+  }
+
   if (typeof recalcularPrioridad === "function") {
     try { recalcularPrioridad(); } catch(e){}
   }
@@ -5427,6 +5547,24 @@ function seleccionarRegimenSeguroDirecto(tipo) {
   }
 }
 
+function seleccionarRegimenSeguroDirecto(tipo) {
+  if (tipo === "SIS") {
+    seleccionarEntornoEstablecimiento("minsa_sis", true);
+  } else if (tipo === "EsSalud") {
+    seleccionarEntornoEstablecimiento("essalud", true);
+  } else if (tipo === "EPS") {
+    seleccionarEntornoEstablecimiento("clinica_eps", true);
+  } else if (tipo === "Particular") {
+    STATE.esClinicaPrivada = false;
+    STATE.tipoSeguro = "Particular";
+    actualizarSeguroConsolidado("Particular (Sin Cobertura Activa)");
+    if (STATE.identificador) {
+      guardarSeguroPacienteEnBd(STATE.identificador, STATE.historiaClinica, STATE.nombreReniec, "Particular");
+    }
+    recalcularPrioridad();
+    actualizarFactura();
+  }
+}
 
 function cambiarOrigenEvento(tipo) {
   // Aceptar tanto 'soat' como 'transito' indistintamente
@@ -6708,3 +6846,7 @@ window.cerrarModalRegularizacionDiferida = cerrarModalRegularizacionDiferida;
 window.toggleRegSoat = toggleRegSoat;
 window.consultarReniecDiferida = consultarReniecDiferida;
 window.guardarRegularizacionDiferida = guardarRegularizacionDiferida;
+
+window.buscarSeguroPacienteEnBd = buscarSeguroPacienteEnBd;
+window.guardarSeguroPacienteEnBd = guardarSeguroPacienteEnBd;
+window.aplicarSeleccionSeguroYEntorno = aplicarSeleccionSeguroYEntorno;

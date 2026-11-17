@@ -712,34 +712,51 @@
           </div>
         </div>
 
-        <!-- SELECTOR DE ENTORNO ASISTENCIAL (HOSPITAL PÚBLICO VS CLÍNICA PRIVADA EPS) -->
+        <!-- SELECTOR DE ENTORNO ASISTENCIAL SEPARADO EN: HOSPITAL MINSA (SIS), HOSPITAL ESSALUD & CLÍNICA PRIVADA (EPS) -->
         <div style="margin-top: 14px; margin-bottom: 14px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
             <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
               <span>🏢</span>
-              <span>Entorno del Establecimiento Asistencial & Financiador:</span>
+              <span>Entorno del Establecimiento Asistencial (Selección Automática por Base de Datos):</span>
             </div>
             <span id="badge_entorno_actual" style="font-size: 0.74rem; padding: 3px 10px; border-radius: 9999px; background: #e0f2fe; color: #0369a1; font-weight: 800; border: 1px solid #bae6fd;">
-              🏥 Hospital Público (MINSA / EsSalud)
+              🏛️ Hospital MINSA (SIS)
             </span>
           </div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px;">
-            <button type="button" id="btn_entorno_publico" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('publico')" style="border-color: #0284c7; background: #f0f9ff; color: #0369a1; font-weight: 700; font-size: 0.8rem; text-align: left; padding: 10px 14px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-              <span style="font-size: 20px;">🏥</span>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+            <!-- 1. HOSPITAL MINSA (SIS) -->
+            <button type="button" id="btn_entorno_minsa" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('minsa_sis', true)" style="border-color: #0284c7; background: #f0f9ff; color: #0369a1; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <span style="font-size: 20px;">🏛️</span>
               <div>
-                <strong style="display: block;">Hospital Público (MINSA / EsSalud)</strong>
-                <span style="font-size: 0.72rem; color: #0369a1; font-weight: normal;">Régimen estatal SIS / EsSalud · Triaje NTS 042-MINSA (I a V)</span>
+                <strong style="display: block;">Hospital MINSA (SIS)</strong>
+                <span style="font-size: 0.7rem; color: #0369a1; font-weight: normal;">Régimen estatal FUA · Cobertura 100% Pago Cero</span>
               </div>
             </button>
-            <button type="button" id="btn_entorno_clinica_eps" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('clinica_eps')" style="border-color: #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; font-size: 0.8rem; text-align: left; padding: 10px 14px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <!-- 2. HOSPITAL ESSALUD -->
+            <button type="button" id="btn_entorno_essalud" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('essalud', true)" style="border-color: #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <span style="font-size: 20px;">🏥</span>
+              <div>
+                <strong style="display: block;">Hospital EsSalud</strong>
+                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Seguro Social ESSI · Cobertura 100% Pago Cero</span>
+              </div>
+            </button>
+            <!-- 3. CLÍNICA PRIVADA (EPS) -->
+            <button type="button" id="btn_entorno_clinica_eps" class="btn-full-secondary" onclick="seleccionarEntornoEstablecimiento('clinica_eps', true)" style="border-color: #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; font-size: 0.78rem; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
               <span style="font-size: 20px;">🏢</span>
               <div>
-                <strong style="display: block;">Clínica Privada (Red EPS: Rímac, Pacífico, Mapfre)</strong>
-                <span style="font-size: 0.72rem; color: #64748b; font-weight: normal;">No emergencia = Urgencia automática (S/. 80 consulta + 10% farmacia)</span>
+                <strong style="display: block;">Clínica Privada (EPS)</strong>
+                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">Pacífico, Rímac · Urgencia S/. 80 + 10% farmacia</span>
               </div>
             </button>
           </div>
-          <div id="banner_condicion_eps" style="display: none; margin-top: 12px; background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 8px; padding: 12px 14px; font-size: 0.78rem; color: #065f46; line-height: 1.5;">
+          <!-- BANNERS INFORMATIVOS DE CONDICIÓN SEGÚN EL ENTORNO -->
+          <div id="banner_condicion_minsa" style="display: block; margin-top: 10px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 10px 12px; font-size: 0.76rem; color: #166534; line-height: 1.45;">
+            <strong>🏛️ RÉGIMEN PÚBLICO MINSA (SIS GRATUITO):</strong> Paciente acreditado en SIS. Cobertura integral 100% mediante Formato Único de Atención (FUA). Consulta, procedimientos, tópicos, cama, medicamentos, imágenes y laboratorio con cobro S/. 0.00 (Pago Cero).
+          </div>
+          <div id="banner_condicion_essalud" style="display: none; margin-top: 10px; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 8px; padding: 10px 12px; font-size: 0.76rem; color: #1e40af; line-height: 1.45;">
+            <strong>🏥 RÉGIMEN SOCIAL ESSALUD (SEGURO SOCIAL):</strong> Acreditación vigente en el sistema ESSI de EsSalud. La institución asume la totalidad de la atención médica de emergencia, estancia, medicamentos e insumos (Pago Cero).
+          </div>
+          <div id="banner_condicion_eps" style="display: none; margin-top: 10px; background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 8px; padding: 10px 12px; font-size: 0.76rem; color: #065f46; line-height: 1.45;">
             <div style="font-weight: 800; font-size: 0.82rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
               <span>⚖️</span>
               <span>CONDICIONES CONTRACTUALES EN CLÍNICA PRIVADA CON EPS / SEGURO PRIVADO:</span>
