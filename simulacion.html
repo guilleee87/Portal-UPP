@@ -2248,34 +2248,73 @@
       .widget-chips-container {
         display: none !important;
       }
+      .widget-subtext-label {
+        display: none !important;
+      }
+      .widget-libres-label {
+        display: none !important;
+      }
       .widget-flotante-camas {
-        bottom: 12px !important;
-        right: 12px !important;
+        bottom: 10px !important;
+        right: 10px !important;
         left: auto !important;
-        max-width: calc(100vw - 24px) !important;
+        width: auto !important;
+        max-width: 140px !important;
         z-index: 9990 !important;
       }
       .widget-flotante-pill {
-        padding: 6px 12px !important;
-        gap: 8px !important;
-        max-width: 100% !important;
+        padding: 4px 8px !important;
+        gap: 5px !important;
+        width: auto !important;
+        max-width: 130px !important;
         border-radius: 9999px !important;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+        border-width: 1.5px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
       }
-      .widget-flotante-pill span:first-child {
-        font-size: 0.58rem !important;
-      }
-      .widget-total-count {
+      .widget-bed-icon {
         font-size: 0.85rem !important;
       }
+      .widget-beacon {
+        width: 8px !important;
+        height: 8px !important;
+      }
+      .widget-beacon-dot {
+        width: 6px !important;
+        height: 6px !important;
+      }
+      .widget-beacon-ring {
+        display: none !important;
+      }
+      .widget-total-count {
+        font-size: 0.72rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 0px !important;
+        white-space: nowrap !important;
+      }
       .widget-panel-drawer {
-        width: calc(100vw - 24px) !important;
-        max-width: 320px !important;
+        width: calc(100vw - 20px) !important;
+        max-width: 260px !important;
         right: 0 !important;
-        bottom: 60px !important;
-        padding: 12px 14px !important;
+        bottom: 44px !important;
+        padding: 8px 10px !important;
         box-sizing: border-box !important;
-        border-radius: 14px !important;
+        border-radius: 12px !important;
+        font-size: 0.75rem !important;
+      }
+      .widget-drawer-header {
+        padding-bottom: 6px !important;
+        margin-bottom: 6px !important;
+      }
+      .widget-drawer-header strong {
+        font-size: 0.78rem !important;
+      }
+      .widget-row-tipo {
+        padding: 3px 0 !important;
+        font-size: 0.70rem !important;
+      }
+      .widget-chip-tipo {
+        font-size: 0.65rem !important;
+        padding: 2px 5px !important;
       }
     }
 
@@ -2696,7 +2735,7 @@
               <span style="font-size: 20px;">🏢</span>
               <div>
                 <strong style="display: block;">Clínica Privada (EPS)</strong>
-                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: normal;">Pacífico, Rímac · Urgencia S/. 80 + 10% farmacia</span>
+                <span id="subtext_entorno_eps" style="font-size: 0.7rem; color: #94a3b8; font-weight: normal;"></span>
               </div>
             </button>
             <!-- 4. SIN SEGURO (PARTICULAR) -->
@@ -2729,8 +2768,8 @@
               <span>⚖️</span>
               <span>CONDICIONES CONTRACTUALES EN CLÍNICA PRIVADA CON EPS / SEGURO PRIVADO:</span>
             </div>
-            • <strong>Si es Emergencia Médica o Quirúrgica (P-I / P-II):</strong> Protegido por Ley N° 27604. Consulta médica, sala de shock trauma, procedimientos, cama y exámenes S/. 0.00 (cubiertos al 100% por EPS). En medicamentos de farmacia, el paciente asume únicamente el <strong>10% de coaseguro</strong>.<br>
-            • <strong>Si NO es Emergencia (P-III / P-IV / P-V):</strong> El sistema clasifica <strong>AUTOMÁTICAMENTE COMO URGENCIA</strong>. Se cobra tarifa fija de <strong>S/. 80.00 por consulta de urgencia</strong> y el <strong>10% del total de medicamentos</strong> prescritos. Todos los exámenes de laboratorio e imágenes complementarios quedan 100% cubiertos por la EPS.
+            • <strong>Si es Emergencia Médica o Quirúrgica Vital (P-I / P-II):</strong> Protegido por Ley N° 27604. Cobertura al 100% asumida por IAFAS EPS (S/. 0.00 a pagar durante la estabilización clínica).<br>
+            • <strong>Si es Urgencia / Ambulatorio (P-III / P-IV / P-V):</strong> Cobertura según la póliza y plan contratado en SITEDS (Copago fijo de consulta + % de coaseguro sobre farmacia y procedimientos).
           </div>
           <div id="banner_condicion_particular" style="display: none; margin-top: 10px; background: #fef2f2; border: 1.5px solid #f87171; border-radius: 8px; padding: 10px 12px; font-size: 0.76rem; color: #991b1b; line-height: 1.45;">
             <strong>👤 ATENCIÓN PARTICULAR (SIN NINGÚN SEGURO ACTIVO):</strong> Paciente no cuenta con cobertura activa en SIS, EsSalud ni aseguradoras privadas EPS. En todos los casos, el paciente asume el <strong>100% de la totalidad de lo facturado</strong> (consulta médica, tópicos, cama, medicamentos, laboratorio e imágenes diagnósticas). Cobertura de aseguradora: S/. 0.00.
@@ -4549,12 +4588,12 @@
         <div class="widget-beacon-dot"></div>
       </div>
       
-      <div style="display:flex; align-items:center; gap:6px;">
-        <span style="font-size:1.15rem;">🛏️</span>
+      <div style="display:flex; align-items:center; gap:5px;">
+        <span class="widget-bed-icon" style="font-size:1.05rem;">🛏️</span>
         <div style="display:flex; flex-direction:column;">
-          <span style="font-size:0.62rem; color:#94a3b8; font-weight:800; letter-spacing:0.8px; text-transform:uppercase;">DISPONIBILIDAD HOSPITALARIA</span>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span class="widget-total-count" id="hud_total_count">15/15 LIBRES</span>
+          <span class="widget-subtext-label" style="font-size:0.58rem; color:#94a3b8; font-weight:800; letter-spacing:0.6px; text-transform:uppercase;">Disponibilidad</span>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span class="widget-total-count" id="hud_total_count">15/15<span class="widget-libres-label"> LIBRES</span></span>
           </div>
         </div>
       </div>

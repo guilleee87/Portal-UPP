@@ -1,60 +1,37 @@
-# =============================================================================
-# SISTEMA DE PRIORIDAD DE ATENCION EN URGENCIAS - CASO 6
-# Modulos:
-#   - Enfermeria 1: Deteccion automatica de ID, Busqueda en BD y Creacion de HC
-#   - Enfermeria 2: Ticket automatico por hora de llegada y Cobertura/Seguro
-#   - Triage Clinico: Decisiones 1 y 2 (SpO2 y Antecedentes)
-# =============================================================================
+"""
+Sistema de Prioridad de Atencion - Caso 6: "Prioridad de atencion"
+-------------------------------------------------------------------
+Dos pacientes llegan casi simultaneamente a emergencia y solo hay
+disponibilidad inmediata para 1 evaluacion/cama. Este programa
+implementa el algoritmo (pseudocodigo y diagrama de flujo) trabajados
+previamente: registro, triage, clasificacion de prioridad (Decision 1)
+y asignacion de la unica cama disponible (Decision 2), con desempate
+por hora de llegada.
+
+Variables del modelo de datos (ver analisis del caso):
+    hora_llegada                -> str  "HH:MM"           (no critica, solo desempate)
+    spo2                        -> float 0.0 - 100.0       (DATO CRITICO 1)
+    antecedentes_registrados    -> bool                    (DATO CRITICO 2)
+    prioridad                   -> int  {1, 3}              (calculada)
+
+Reglas de validacion:
+    Regla 1 -> spo2 debe estar en el rango [0, 100]
+    Regla 2 -> prioridad solo puede ser 1 (critico) o 3 (moderado)
+"""
 
 from dataclasses import dataclass
 from datetime import datetime
-import re
-import sys
-
-if hasattr(sys.stdout, "reconfigure"):
-    try:
-        sys.stdout.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
-
-ROJO = "\033[91m"
-AMARILLO = "\033[93m"
-VERDE = "\033[92m"
-AZUL = "\033[94m"
-CIAN = "\033[96m"
-NEGRITA = "\033[1m"
-RESET = "\033[0m"
-
-# -----------------------------------------------------------------------------
-# BASE DE DATOS SIMULADA DEL HOSPITAL (DNI o Nombre Completo -> Nro de HC)
-# -----------------------------------------------------------------------------
-BASE_DATOS_HC = {
-    "px a": "HC-2025-089",
-    "px b": "HC-2026-142",
-    "10203040": "HC-2024-510",
-    "70809010": "HC-2025-332",
-    "carlos mendoza rojas": "HC-2023-115",
-    "maria torres silva": "HC-2024-890",
-}
-
-CONTADOR_HC_NUEVA = 1
-CONTADOR_HC_TEMP = 1
 
 
+# ---------------------------------------------------------------------------
+# Modelo de datos
+# ---------------------------------------------------------------------------
 @dataclass
 class Paciente:
-    # Enfermeria 1: Registro y gestion automatica de HC
-    identificador: str
-    hora_llegada: str
-    estado_registrado: str                 # "Si", "No" o "Por confirmar"
-    historia_clinica: str                  # Codigo de HC recuperado o creado
-    accion_hc: str                         # Explicacion de que hizo el sistema
-    # Enfermeria 2: Atencion administrativa no clinica
-    turno: str = None
-    datos_administrativos: str = None
-    # Triage Clinico: Datos criticos y decision
-    spo2: float = None
-    antecedentes_registrados: bool = None
+    nombre: str
+    hora_llegada: str                      # "HH:MM"
+    spo2: float = None                     # DATO CRITICO 1
+    antecedentes_registrados: bool = None  # DATO CRITICO 2
     prioridad: int = None
 
     def hora_como_tiempo(self):
@@ -62,447 +39,221 @@ class Paciente:
 
 
 class ErrorDeValidacion(Exception):
-    """Excepcion cuando un dato no cumple las reglas de validacion."""
-    pass
+    """Se lanza cuando un dato no cumple una regla de validacion del sistema."""
 
 
-# -----------------------------------------------------------------------------
-# 1. REGLAS DE VALIDACION Y DETECCION AUTOMATICA DE IDENTIDAD
-# -----------------------------------------------------------------------------
-def validar_identificador(valor):
-    if valor is None or not str(valor).strip():
-        raise ErrorDeValidacion("El identificador no puede estar vacio.")
-    valor = str(valor).strip()
-    patron = r"^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\.\-]+$"
-    if not re.match(patron, valor) or len(valor) < 2:
-        msg = "Identificador invalido. Use DNI, Nombres, un nombre o NN."
-        raise ErrorDeValidacion(msg)
+# ---------------------------------------------------------------------------
+# Reglas de validacion
+# ---------------------------------------------------------------------------
+def validar_spo2(valor):
+    """Regla 1: spo2 debe ser un numero real entre 0 y 100."""
+    try:
+        valor = float(valor)
+    except (TypeError, ValueError):
+        raise ErrorDeValidacion(f"spo2 debe ser un numero. Valor recibido: {valor!r}")
+    if not (0 <= valor <= 100):
+        raise ErrorDeValidacion(
+            f"spo2 = {valor} fuera de rango permitido (0-100). "
+            "Verifique el valor del oximetro e ingrese nuevamente."
+        )
     return valor
 
 
-def clasificar_y_buscar_en_bd(identificador):
-    """
-    Evalua el identificador ingresado:
-    - Si es DNI (8 digitos) o Nombre y Apellido (2+ palabras alfabeticas):
-      busca en BASE_DATOS_HC y devuelve "Si" o "No" (creando nueva HC).
-    - Cualquier otra alternativa (1 solo nombre, NN, codigo incompleto):
-      devuelve "Por confirmar" (creando HC temporal de emergencia).
-    """
-    global CONTADOR_HC_NUEVA, CONTADOR_HC_TEMP
-
-    limpio = " ".join(identificador.strip().split())
-    clave = limpio.lower()
-
-    # Caso especial para los identificadores del Caso 6 Oficial (Demo)
-    es_caso_demo = clave in ("px a", "px b")
-
-    # 1. Verificar si es DNI (exactamente 8 digitos numericos)
-    es_dni = bool(re.match(r"^\d{8}$", limpio))
-
-    # 2. Verificar si son Nombres y Apellidos (2 o mas palabras solo de letras,
-    #    excluyendo codigos que empiecen con "nn")
-    palabras = limpio.split()
-    solo_letras = bool(
-        re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$", limpio)
-    )
-    es_nn = palabras[0].lower() == "nn"
-    es_nombre_completo = (len(palabras) >= 2 and solo_letras and not es_nn)
-
-    # SI ES DNI O NOMBRE COMPLETO -> BUSCAR EN BASE DE DATOS
-    if es_dni or es_nombre_completo or es_caso_demo:
-        if clave in BASE_DATOS_HC:
-            nro_hc = BASE_DATOS_HC[clave]
-            estado = "Si"
-            accion = f"Encontrado en BD ({nro_hc} recuperada)"
-        else:
-            nro_hc = f"HC-NUEVA-{CONTADOR_HC_NUEVA:03d}"
-            CONTADOR_HC_NUEVA += 1
-            # Se guarda en la BD para futuras consultas en la misma sesion
-            BASE_DATOS_HC[clave] = nro_hc
-            estado = "No"
-            accion = f"No figura en BD -> Se crea {nro_hc}"
-    else:
-        # CUALQUIER OTRA ALTERNATIVA (1 solo nombre como 'guillermo', 'NN', etc)
-        nro_hc = f"HC-TEMP-EMG-{CONTADOR_HC_TEMP:03d}"
-        CONTADOR_HC_TEMP += 1
-        estado = "Por confirmar"
-        accion = f"Identidad parcial/NN -> Se abre {nro_hc}"
-
-    return estado, nro_hc, accion
+def validar_prioridad(valor):
+    """Regla 2: prioridad solo puede ser 1 (critico) o 3 (moderado)."""
+    try:
+        valor = int(valor)
+    except (TypeError, ValueError):
+        raise ErrorDeValidacion(f"prioridad debe ser entero. Valor recibido: {valor!r}")
+    if valor not in (1, 3):
+        raise ErrorDeValidacion(f"Valor de prioridad no valido: {valor}. Solo se admite 1 o 3.")
+    return valor
 
 
 def validar_hora(valor):
-    if valor is None or not str(valor).strip():
-        raise ErrorDeValidacion("La hora de llegada es obligatoria.")
-    valor = str(valor).strip()
-    if not re.match(r"^\d{1,2}:\d{2}$", valor):
-        msg = f"Hora '{valor}' invalida. Use formato HH:MM (ej. 07:15)."
-        raise ErrorDeValidacion(msg)
+    """hora_llegada debe tener formato HH:MM (24 horas)."""
     try:
-        dt = datetime.strptime(valor, "%H:%M")
-        return dt.strftime("%H:%M")
-    except ValueError:
-        raise ErrorDeValidacion("Hora fuera de rango (00:00 a 23:59).")
+        datetime.strptime(valor, "%H:%M")
+    except (TypeError, ValueError):
+        raise ErrorDeValidacion(f"hora_llegada = {valor!r} invalida. Use formato HH:MM (ej. 07:15).")
+    return valor
 
 
-def validar_booleano(valor):
+def validar_antecedentes(valor):
+    """antecedentes_registrados debe interpretarse como booleano."""
     if isinstance(valor, bool):
         return valor
+    if isinstance(valor, (int, float)):
+        return bool(valor)
     if isinstance(valor, str):
         v = valor.strip().lower()
-        if v in ("si", "sí", "s", "true", "1"):
+        if v in ("si", "sí", "s", "true", "verdadero", "1"):
             return True
-        if v in ("no", "n", "false", "0"):
+        if v in ("no", "n", "false", "falso", "0"):
             return False
-    raise ErrorDeValidacion("Respuesta invalida. Ingrese 'si' o 'no'.")
+    raise ErrorDeValidacion(f"antecedentes_registrados debe ser si/no. Valor recibido: {valor!r}")
 
 
-def validar_datos_admin(valor):
-    if valor is None or not str(valor).strip():
-        raise ErrorDeValidacion("El dato administrativo es obligatorio.")
-    v = str(valor).strip()
-    v_low = v.lower()
-    if v_low in ("si", "sí", "s", "asegurado"):
-        return "Asegurado"
-    if v_low in (
-        "no", "n", "particular", "no asegurado", "no asegurado (particular)"
-    ):
-        return "No asegurado (Particular)"
-    patron = r"^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\.\-\/\(\)]+$"
-    if not re.match(patron, v) or len(v) < 2:
-        msg = "Dato invalido. Ingrese 'si', 'no', 'Asegurado', 'SIS', etc."
-        raise ErrorDeValidacion(msg)
-    return v
+# ---------------------------------------------------------------------------
+# Pasos del algoritmo (secuencia tomada del pseudocodigo / diagrama de flujo)
+# ---------------------------------------------------------------------------
+def registrar_paciente(nombre, hora_llegada):
+    """Paso 2: registrar en sistema (verificar seguro, emitir ticket)."""
+    hora_llegada = validar_hora(hora_llegada)
+    print(f"[Registro] {nombre} registrado en sistema. Ticket de atencion emitido.")
+    return Paciente(nombre=nombre, hora_llegada=hora_llegada)
 
 
-def validar_spo2(valor):
-    if valor is None or (isinstance(valor, str) and not valor.strip()):
-        raise ErrorDeValidacion("El valor de SpO2 es obligatorio.")
-    try:
-        num = float(valor)
-    except (TypeError, ValueError):
-        raise ErrorDeValidacion("SpO2 invalido. Solo se admiten numeros.")
-    if not (0 <= num <= 100):
-        msg = f"SpO2 = {num}% fuera de rango (0-100%). Verifique el oximetro."
-        raise ErrorDeValidacion(msg)
-    return num
+def derivar_a_triage(paciente):
+    """Paso 3: derivar a Triage."""
+    print(f"[Triage]   {paciente.nombre} derivado a Triage.")
 
 
-# -----------------------------------------------------------------------------
-# 2. FUNCIONES DE CADA ETAPA DEL ALGORITMO
-# -----------------------------------------------------------------------------
-def enfermeria_1_registro(datos_px):
-    ident = datos_px["identificador"]
-    hora = datos_px["hora_llegada"]
-    estado = datos_px["estado_registrado"]
-    hc = datos_px["historia_clinica"]
-    accion = datos_px["accion_hc"]
-
-    print(
-        f"  [Enfermeria 1] ID: {ident} | Hora: {hora} | "
-        f"Registrado: {NEGRITA}{estado}{RESET} -> {accion}"
-    )
-    return Paciente(
-        identificador=ident,
-        hora_llegada=hora,
-        estado_registrado=estado,
-        historia_clinica=hc,
-        accion_hc=accion
-    )
-
-
-def asignar_turnos_por_llegada(px_a, px_b):
-    if px_a.hora_como_tiempo() <= px_b.hora_como_tiempo():
-        px_a.turno = "T-01"
-        px_b.turno = "T-02"
-    else:
-        px_b.turno = "T-01"
-        px_a.turno = "T-02"
-
-
-def enfermeria_2_atencion(paciente, datos_admin):
-    paciente.datos_administrativos = validar_datos_admin(datos_admin)
-    print(
-        f"  [Enfermeria 2] {paciente.identificador} -> "
-        f"Ticket auto: {paciente.turno} | "
-        f"Admin: {paciente.datos_administrativos}"
-    )
-
-
-def evaluar_triage(paciente, spo2, antecedentes):
+def evaluar_triage(paciente, spo2, antecedentes_registrados):
+    """Paso 4-5: HC, entrevista, signos y sintomas, y signos vitales."""
     paciente.spo2 = validar_spo2(spo2)
-    paciente.antecedentes_registrados = validar_booleano(antecedentes)
-    print(
-        f"  [Triage]       {paciente.identificador} ({paciente.historia_clinica})"
-        f" -> SpO2: {paciente.spo2}% | "
-        f"Antecedentes: {paciente.antecedentes_registrados}"
-    )
+    paciente.antecedentes_registrados = validar_antecedentes(antecedentes_registrados)
+    print(f"[Triage]   {paciente.nombre}: spo2={paciente.spo2}% | "
+          f"antecedentes_registrados={paciente.antecedentes_registrados}")
 
 
-def decision_1_prioridad(paciente):
+def decision_1_clasificar_prioridad(paciente):
+    """Decision 1: clasificacion clinica de urgencia (los 2 datos criticos)."""
     if paciente.spo2 < 92 or paciente.antecedentes_registrados:
-        paciente.prioridad = 1
-        print(
-            f"  [Decision 1]   {paciente.identificador} -> "
-            f"PRIORIDAD 1 (CRITICO)"
-        )
+        prioridad = 1   # critico
     else:
-        paciente.prioridad = 3
-        print(
-            f"  [Decision 1]   {paciente.identificador} -> "
-            f"PRIORIDAD 3 (MODERADO)"
-        )
+        prioridad = 3   # moderado
+    paciente.prioridad = validar_prioridad(prioridad)
+    print(f"[Decision 1] {paciente.nombre} -> prioridad = {paciente.prioridad} "
+          f"({'critico' if paciente.prioridad == 1 else 'moderado'})")
     return paciente.prioridad
 
 
 def decision_2_asignar_cama(px_a, px_b):
+    """Decision 2: con 1 sola cama disponible, decide a quien se asigna."""
     if px_a.prioridad < px_b.prioridad:
-        return px_a, px_b, False
+        asignado, en_espera = px_a, px_b
     elif px_b.prioridad < px_a.prioridad:
-        return px_b, px_a, False
+        asignado, en_espera = px_b, px_a
     else:
+        # Empate de prioridad: se usa hora_llegada como criterio de desempate
         if px_a.hora_como_tiempo() <= px_b.hora_como_tiempo():
-            return px_a, px_b, True
-        return px_b, px_a, True
+            asignado, en_espera = px_a, px_b
+        else:
+            asignado, en_espera = px_b, px_a
+    return asignado, en_espera
 
 
-# -----------------------------------------------------------------------------
-# 3. FLUJO PRINCIPAL Y REPORTE DE RESULTADOS
-# -----------------------------------------------------------------------------
+def iniciar_atencion(paciente):
+    """Paso final: inicio de atencion medica segun prioridad."""
+    especialidad = "Cardiologia / unidad de trauma shock" if paciente.prioridad == 1 else "Medicina general"
+    print(f"[Atencion] {paciente.nombre}: especialidad -> {especialidad}. "
+          f"Se inician tratamiento y examenes complementarios.")
+
+
+# ---------------------------------------------------------------------------
+# Flujo principal (equivalente completo al diagrama de flujo)
+# ---------------------------------------------------------------------------
 def ejecutar_triage(px_a_datos, px_b_datos):
-    print("\n" + "=" * 74)
-    print(" INICIO DEL PROTOCOLO DE TRIAGE: 2 Pacientes - 1 Cama Disponible")
-    print("=" * 74)
+    """
+    px_a_datos / px_b_datos: dict con llaves
+        nombre, hora_llegada, spo2, antecedentes_registrados
+    """
+    print("=" * 72)
+    print("INICIO: llegan 2 pacientes casi simultaneamente. Disponibilidad: 1 cama.")
+    print("=" * 72)
 
-    # 1. Enfermeria 1: Registro automatico y HC
-    px_a = enfermeria_1_registro(px_a_datos)
-    px_b = enfermeria_1_registro(px_b_datos)
-    print()
+    px_a = registrar_paciente(px_a_datos["nombre"], px_a_datos["hora_llegada"])
+    px_b = registrar_paciente(px_b_datos["nombre"], px_b_datos["hora_llegada"])
 
-    # 2. Enfermeria 2: Ticket automatico por llegada + Datos administrativos
-    asignar_turnos_por_llegada(px_a, px_b)
-    enfermeria_2_atencion(px_a, px_a_datos["datos_administrativos"])
-    enfermeria_2_atencion(px_b, px_b_datos["datos_administrativos"])
-    print()
+    for paciente, datos in ((px_a, px_a_datos), (px_b, px_b_datos)):
+        derivar_a_triage(paciente)
+        evaluar_triage(paciente, datos["spo2"], datos["antecedentes_registrados"])
+        decision_1_clasificar_prioridad(paciente)
 
-    # 3. Triage Clinico y Decision 1
-    for px, d in ((px_a, px_a_datos), (px_b, px_b_datos)):
-        evaluar_triage(px, d["spo2"], d["antecedentes_registrados"])
-        decision_1_prioridad(px)
-        print()
+    print("-" * 72)
+    asignado, en_espera = decision_2_asignar_cama(px_a, px_b)
+    print(f"[Decision 2] Unica cama disponible asignada a: {asignado.nombre} "
+          f"(prioridad {asignado.prioridad}).")
+    print(f"             {en_espera.nombre} es derivado a espera / otra area "
+          f"(prioridad {en_espera.prioridad}).")
+    print("-" * 72)
 
-    # 4. Decision 2: Asignacion de la unica cama disponible
-    asignado, espera, desempate = decision_2_asignar_cama(px_a, px_b)
-
-    if asignado.prioridad == 1:
-        esp_asig = "Cardiologia / Unidad de Trauma Shock"
-    else:
-        esp_asig = "Medicina General"
-
-    if espera.prioridad == 1:
-        esp_esp = "Area de Observacion / Monitoreo Continuo"
-    else:
-        esp_esp = "Sala de Espera Regular (Medicina General)"
-
-    if not desempate:
-        motivo = (
-            f"Mayor severidad clinica: "
-            f"Prioridad {asignado.prioridad} vs Prioridad {espera.prioridad} "
-            f"(independiente del orden de llegada)."
-        )
-    else:
-        motivo = (
-            f"Empate de prioridad (ambos P{asignado.prioridad}). "
-            f"Desempate por orden de llegada ({asignado.turno}: "
-            f"{asignado.hora_llegada} vs {espera.hora_llegada})."
-        )
-
-    p_asig = "CRITICO" if asignado.prioridad == 1 else "MODERADO"
-    a_asig = "Si" if asignado.antecedentes_registrados else "No"
-
-    print("=" * 74)
-    print(f"{ROJO}{NEGRITA} [!] ALERTA ROJA: CAMA ASIGNADA{RESET}")
-    print("=" * 74)
-    print(
-        f"  Paciente (ID):      {NEGRITA}{asignado.identificador}{RESET}"
-    )
-    print(
-        f"  Estado Registrado:  {asignado.estado_registrado} "
-        f"({asignado.accion_hc})"
-    )
-    print(
-        f"  Datos Admin.:       Ticket: {asignado.turno} | "
-        f"Seguro: {asignado.datos_administrativos} | "
-        f"Llegada: {asignado.hora_llegada}"
-    )
-    print(
-        f"  Prioridad:          {ROJO}{NEGRITA}"
-        f"PRIORIDAD {asignado.prioridad} ({p_asig}){RESET}"
-    )
-    print(f"  Especialidad:       {esp_asig}")
-    print(
-        f"  Datos Criticos:     SpO2: {asignado.spo2}% | "
-        f"Antecedentes: {a_asig}"
-    )
-    print(f"  Motivo Decision:    {motivo}")
-
-    p_esp = "CRITICO" if espera.prioridad == 1 else "MODERADO"
-    a_esp = "Si" if espera.antecedentes_registrados else "No"
-
-    print("\n" + "-" * 74)
-    print(f"{AMARILLO}{NEGRITA} [!] ALERTA AMBAR: PACIENTE EN ESPERA{RESET}")
-    print("-" * 74)
-    print(
-        f"  Paciente (ID):      {NEGRITA}{espera.identificador}{RESET}"
-    )
-    print(
-        f"  Estado Registrado:  {espera.estado_registrado} "
-        f"({espera.accion_hc})"
-    )
-    print(
-        f"  Datos Admin.:       Ticket: {espera.turno} | "
-        f"Seguro: {espera.datos_administrativos} | "
-        f"Llegada: {espera.hora_llegada}"
-    )
-    print(
-        f"  Prioridad:          {AMARILLO}{NEGRITA}"
-        f"PRIORIDAD {espera.prioridad} ({p_esp}){RESET}"
-    )
-    print(f"  Derivacion:         {esp_esp}")
-    print(
-        f"  Datos Criticos:     SpO2: {espera.spo2}% | "
-        f"Antecedentes: {a_esp}"
-    )
-    print("=" * 74 + "\n")
+    iniciar_atencion(asignado)
+    print("FIN")
+    print("=" * 72)
+    return asignado, en_espera
 
 
-# -----------------------------------------------------------------------------
-# 4. CAPTURA INTERACTIVA Y MENU
-# -----------------------------------------------------------------------------
-def pedir_dato(prompt, validador, guia):
+# ---------------------------------------------------------------------------
+# Captura de datos por consola, con reintento ante datos invalidos
+# (asi se comporta un sistema bien estructurado ante un error del usuario)
+# ---------------------------------------------------------------------------
+def pedir_hora():
     while True:
+        valor = input("  Hora de llegada (HH:MM): ").strip()
         try:
-            valor = input(f"  {prompt} ({guia}): ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\n  [!] Entrada finalizada.")
-            sys.exit(0)
+            return validar_hora(valor)
+        except ErrorDeValidacion as e:
+            print(f"  [ERROR] {e}")
+
+
+def pedir_spo2():
+    while True:
+        valor = input("  spo2 (%): ").strip()
         try:
-            return validador(valor)
-        except ErrorDeValidacion as err:
-            print(f"    {ROJO}[X] ERROR: {err}{RESET}")
+            return validar_spo2(valor)
+        except ErrorDeValidacion as e:
+            print(f"  [ERROR] {e}")
 
 
-def capturar_paciente(etiqueta):
-    print(f"\n{AZUL}{NEGRITA}=== INGRESO DE DATOS: {etiqueta} ==={RESET}")
-    print(f"{CIAN}  --- Enfermeria 1: Registro ---{RESET}")
-    identificador = pedir_dato(
-        "Identificador",
-        validar_identificador,
-        "DNI 8 digitos, Nombre Completo, un solo nombre o NN"
-    )
-    estado, hc, accion = clasificar_y_buscar_en_bd(identificador)
-    print(
-        f"  {VERDE}[Sistema BD]{RESET} Estado registrado: "
-        f"{NEGRITA}{estado}{RESET} -> {accion}"
-    )
+def pedir_antecedentes():
+    while True:
+        valor = input("  Antecedentes relevantes registrados? (si/no): ").strip()
+        try:
+            return validar_antecedentes(valor)
+        except ErrorDeValidacion as e:
+            print(f"  [ERROR] {e}")
 
-    hora = pedir_dato("Hora de llegada", validar_hora, "HH:MM, ej. 07:15")
 
-    print(f"{CIAN}  --- Enfermeria 2: Atencion Administrativa ---{RESET}")
-    print("  [*] El Turno/Ticket se asignara automaticamente segun la hora.")
-    admin = pedir_dato(
-        "Paciente asegurado / Cobertura",
-        validar_datos_admin,
-        "si/no, SIS, EsSalud, etc."
-    )
-
-    print(f"{CIAN}  --- Triage Clinico ---{RESET}")
-    spo2 = pedir_dato("Saturacion SpO2 %", validar_spo2, "0 a 100")
-    ant = pedir_dato("Antecedentes de riesgo?", validar_booleano, "si/no")
-
+def capturar_paciente_interactivo(etiqueta):
+    print(f"\n--- Datos de {etiqueta} ---")
+    nombre = input("  Nombre / identificador: ").strip() or etiqueta
+    hora_llegada = pedir_hora()
+    spo2 = pedir_spo2()
+    antecedentes = pedir_antecedentes()
     return {
-        "identificador": identificador,
-        "hora_llegada": hora,
-        "estado_registrado": estado,
-        "historia_clinica": hc,
-        "accion_hc": accion,
-        "datos_administrativos": admin,
+        "nombre": nombre,
+        "hora_llegada": hora_llegada,
         "spo2": spo2,
-        "antecedentes_registrados": ant
+        "antecedentes_registrados": antecedentes,
     }
+
+
+def modo_interactivo():
+    datos_a = capturar_paciente_interactivo("Paciente A")
+    datos_b = capturar_paciente_interactivo("Paciente B")
+    print()
+    ejecutar_triage(datos_a, datos_b)
 
 
 def modo_demo():
-    print(f"\n{NEGRITA}>>> EJECUTANDO CASO 6 OFICIAL (DEMO) <<<{RESET}")
-    est_a, hc_a, acc_a = clasificar_y_buscar_en_bd("Px A")
-    est_b, hc_b, acc_b = clasificar_y_buscar_en_bd("Px B")
-
-    datos_a = {
-        "identificador": "Px A",
-        "hora_llegada": "07:15",
-        "estado_registrado": est_a,
-        "historia_clinica": hc_a,
-        "accion_hc": acc_a,
-        "datos_administrativos": "Asegurado",
-        "spo2": 99,
-        "antecedentes_registrados": False
-    }
-    datos_b = {
-        "identificador": "Px B",
-        "hora_llegada": "07:19",
-        "estado_registrado": est_b,
-        "historia_clinica": hc_b,
-        "accion_hc": acc_b,
-        "datos_administrativos": "Asegurado",
-        "spo2": 91,
-        "antecedentes_registrados": True
-    }
+    """Ejecuta el algoritmo con los datos exactos del Caso 6."""
+    datos_a = {"nombre": "Px A", "hora_llegada": "07:15", "spo2": 99, "antecedentes_registrados": False}
+    datos_b = {"nombre": "Px B", "hora_llegada": "07:19", "spo2": 91, "antecedentes_registrados": True}
     ejecutar_triage(datos_a, datos_b)
 
 
 def main():
-    while True:
-        print("\n" + "=" * 74)
-        print(" SISTEMA DE PRIORIDAD DE ATENCION EN URGENCIAS - CASO 6")
-        print("=" * 74)
-        print("  1) Ejecutar Caso 6 Oficial (Demo automatica)")
-        print("  2) Ingresar datos manualmente (Enfermeria 1, 2 y Triage)")
-        print("  3) Salir")
-
-        try:
-            op = input("\n  Seleccione una opcion (1, 2 o 3): ").strip()
-        except (EOFError, KeyboardInterrupt):
-            modo_demo()
-            break
-
-        if op == "1":
-            modo_demo()
-        elif op == "2":
-            print(
-                "\n  [Nota BD] Pacientes ya registrados en la BD del hospital "
-                "para probar el 'Si':"
-            )
-            print(
-                "            DNI: 10203040, 70809010 | "
-                "Nombres: Carlos Mendoza Rojas, Maria Torres Silva"
-            )
-            datos_a = capturar_paciente("PACIENTE A")
-            datos_b = capturar_paciente("PACIENTE B")
-            ejecutar_triage(datos_a, datos_b)
-        elif op == "3":
-            print("\nFinalizando programa.\n")
-            break
-        else:
-            print(f"\n  {ROJO}Opcion no valida. Elija 1, 2 o 3.{RESET}")
-
-        try:
-            rep = input("\n¿Otra evaluacion? (s/n): ").strip().lower()
-        except (EOFError, KeyboardInterrupt):
-            break
-        if rep not in ("s", "si", "sí"):
-            break
+    print("SISTEMA DE PRIORIDAD DE ATENCION - Caso 6")
+    print("1) Ejecutar con los datos del caso (demo)")
+    print("2) Ingresar datos manualmente")
+    opcion = input("Seleccione una opcion (1/2): ").strip()
+    if opcion == "2":
+        modo_interactivo()
+    else:
+        modo_demo()
 
 
 if __name__ == "__main__":
     main()
-# Fin del programa

@@ -55,20 +55,8 @@ def inicializar_bd_sqlite():
                 fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        # Registros base del caso de estudio UPP
-        iniciales = [
-            ("px a", "HC-2025-089", "Paciente Demo A", "EsSalud", "Si", "T-01"),
-            ("px b", "HC-2026-142", "Paciente Demo B", "SIS Gratuito", "Si", "T-02"),
-            ("10203040", "HC-2024-510", "Carlos Mendoza Rojas", "EsSalud", "Si", "T-03"),
-            ("70809010", "HC-2025-332", "Maria Torres Silva", "SIS Gratuito", "Si", "T-04"),
-            ("carlos mendoza rojas", "HC-2023-115", "Carlos Mendoza Rojas", "EsSalud", "Si", "T-05"),
-            ("maria torres silva", "HC-2024-890", "Maria Torres Silva", "SIS Gratuito", "Si", "T-06"),
-        ]
-        for ident, hc, nom, seg, est, tck in iniciales:
-            cur.execute("""
-                INSERT OR IGNORE INTO historias_clinicas (identificador, historia_clinica, nombre_completo, tipo_seguro, estado_bd, ticket)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (ident.lower(), hc, nom, seg, est, tck))
+        # Base de datos inicializada limpia (inicio desde cero)
+        pass
         conn.commit()
         conn.close()
     except Exception as e:
@@ -388,6 +376,26 @@ class TriageAPIHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
 
         # Health check
+        # Purgar base de datos SQLite y comenzar desde cero
+        if parsed.path == "/api/hc/purgar" or parsed.path == "/api/db/reset":
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                cur = conn.cursor()
+                cur.execute("DELETE FROM historias_clinicas")
+                try:
+                    cur.execute("DELETE FROM sqlite_sequence WHERE name='historias_clinicas'")
+                except Exception:
+                    pass
+                conn.commit()
+                conn.close()
+                self._set_json_headers()
+                self.wfile.write(json.dumps({"status": "ok", "message": "Base de datos purgada a cero"}, ensure_ascii=False).encode("utf-8"))
+                return
+            except Exception as e:
+                self._set_json_headers(500)
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                return
+
         if parsed.path == "/api/health":
             self._set_json_headers()
             resp = {
@@ -508,11 +516,25 @@ class TriageAPIHandler(SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
             return
 
+        host = (self.headers.get("Host") or "").lower()
+        if host.startswith("facturacion."):
+            if parsed.path in ["", "/", "/index.html"]:
+                self.path = "/facturacion.html"
+                return super().do_GET()
+
+        if host.startswith("simulacion."):
+            if parsed.path in ["", "/", "/index.html"]:
+                self.path = "/simulacion.html"
+                return super().do_GET()
+
         if parsed.path == "/triaje":
             self.path = "/triaje.html"
 
         if parsed.path == "/facturacion":
             self.path = "/facturacion.html"
+
+        if parsed.path == "/simulacion":
+            self.path = "/simulacion.html"
 
         # Servir archivos estaticos por defecto (index.html, styles.css, app.js, etc.)
         return super().do_GET()

@@ -12,6 +12,20 @@
       "dest": "/facturacion.html"
     },
     {
+      "src": "/simulacion",
+      "dest": "/simulacion.html"
+    },
+    {
+      "has": [
+        {
+          "type": "host",
+          "value": "simulacion\\..*"
+        }
+      ],
+      "src": "/(.*)",
+      "dest": "/simulacion.html"
+    },
+    {
       "has": [
         {
           "type": "host",

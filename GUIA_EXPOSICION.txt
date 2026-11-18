@@ -1,0 +1,211 @@
+================================================================================
+   GUÍA RÁPIDA DE EXPOSICIÓN Y SUSTENTACIÓN ACADÉMICA
+   UNIVERSIDAD POLITÉCNICA DEL PERÚ (UPP)
+   FACULTAD DE CIENCIAS DE LA SALUD - ENFERMERÍA
+================================================================================
+
+AUTORES DEL PROYECTO:
+- Luis Guillermo Vásquez Valdivieso (Desarrollador)
+- Rodrigo Alonso Añazgo Farro (Desarrollador)
+
+TEMA EVALUADO:
+Caso 6: "Sistema de Prioridad de Atención en Urgencias y Asignación de Cama"
+Contexto: Dos pacientes llegan simultáneamente al servicio de emergencias
+          con restricción crítica de recursos (1 sola cama disponible).
+
+ESTRUCTURA DEL SISTEMA EN EL USB:
+  - MODO 1: Caso Piloto Oficial del PDF (triaje.html)
+            Sistema de 3 módulos: Enfermería 1, Enfermería 2 y Triage Clínico
+            (Px A y Px B simultáneos con 1 sola cama disponible).
+  - MODO 2: Simulador Hospitalario Completo HIS (triaje_full.html)
+            Sistema ampliado a 8 módulos que contempla la totalidad del flujo
+            de una Emergencia Nivel III-1 en Perú:
+            1. Admisión con validación RENIEC/APISPERU y Alerta NN (Servicio Social/PNP).
+            2. Verificación de Seguros (SUSALUD, SIS con FUA, EsSalud, SOAT 5 UIT, EPS).
+            3. Triaje Clínico Ampliado: 8 Signos Vitales, 5 Prioridades (I a V) y Ley 27604.
+            4. Gestión de Camas en Tiempo Real y Activación de REFCON si capacidad = 0.
+            5. Laboratorio Clínico, Imágenes Diagnósticas y Banco de Sangre con costeo.
+            6. Prescripción en Farmacia y acumulación en cuenta hospitalaria.
+            7. Ruta Clínica interactiva, Consentimiento Informado con firma y Estado de Salida.
+            8. Informe de Auditoría y Factura Acumulativa descargable/imprimible.
+
+================================================================================
+1. GUÍA RÁPIDA: ¿DÓNDE DAR CLIC EL DÍA DE LA PRESENTACIÓN?
+================================================================================
+
+Copia toda esta carpeta a tu memoria USB. En la computadora de la universidad:
+
+A) PARA MOSTRAR LA INTERFAZ WEB COMPLETA (Recomendado):
+   1. Abre la carpeta del USB y haz doble clic en:
+      👉 index.html
+   2. Se abrirá la Landing Page institucional de la UPP en el navegador.
+   3. En la esquina superior izquierda, haz clic en el botón "☰ Módulos":
+      - Para la exposición del Caso 6 oficial: haz clic en "⭐ Caso 6 Oficial — Triaje 3 Módulos".
+      - Para mostrar la expansión hospitalaria completa: haz clic en "🏥 Simulador HIS Completo — 8 Módulos".
+   4. ¡Listo! Ambos módulos funcionan 100% offline desde el USB, sin instalar nada.
+
+B) PARA MOSTRAR LA VERSIÓN EN CONSOLA (CMD):
+   1. Abre la carpeta del USB y haz doble clic en:
+      👉 1_ejecutar_en_consola_CMD.bat
+   2. Se abrirá la ventana de CMD lista con el menú:
+      - Presiona "1" para correr la demostración oficial del Caso 6 (Px A vs Px B).
+      - Presiona "2" para ingresar datos manualmente (Enfermería 1, 2 y Triage).
+      - Presiona "3" para salir.
+      - Presiona "4" para el Simulador Hospitalario Completo (8 módulos, signos vitales, REFCON, etc.).
+
+
+================================================================================
+2. PASO A PASO RECOMENDADO PARA EXPONER ANTE EL DOCENTE
+================================================================================
+
+Paso 1: Muestra la Landing Page
+- Explica que el portal fue diseñado como un centro de proyectos para la
+  Universidad Politécnica del Perú (Facultad de Ciencias de la Salud — Enfermería).
+- Señala a los autores: Luis Guillermo Vásquez Valdivieso y Rodrigo Alonso Añazgo Farro (Desarrolladores).
+
+Paso 2: Accede al Caso 6 desde el Menú
+- Abre el menú superior izquierdo ("☰ Módulos") y entra a "Trabajo Caso 6 - Triaje".
+
+Paso 3: Demuestra el Caso 6 Oficial (Demo)
+- Haz clic en el botón "⭐ Caso 6 Oficial (Demo)".
+- Explica cómo el sistema carga automáticamente:
+    * Paciente A: Identificador "Px A" -> HC-2025-089 recuperada de BD.
+                  Hora: 07:15 -> Turno auto T-01. Seguro: Asegurado.
+                  SpO2: 99% | Antecedentes: No -> Prioridad 3 (Moderado).
+    * Paciente B: Identificador "Px B" -> HC-2026-142 recuperada de BD.
+                  Hora: 07:19 -> Turno auto T-02. Seguro: Asegurado.
+                  SpO2: 91% | Antecedentes: Sí -> Prioridad 1 (Crítico).
+- Presiona "⚡ Evaluar Triage y Asignar Cama".
+- Muestra el resultado:
+    * 🚨 ALERTA ROJA (CAMA ASIGNADA): Paciente B (Prioridad 1 prevalece sobre P3,
+      derivado a Cardiología / Unidad de Trauma Shock).
+    * ⚠️ ALERTA ÁMBAR (PACIENTE EN ESPERA): Paciente A (Prioridad 3, derivado a
+      Sala de Espera Regular para monitoreo en Medicina General).
+
+Paso 4: Muestra la Bifurcación de Subprocesos Paralelos (Páginas 1 y 2 del PDF Oficial)
+- Debajo de los resultados de triaje, señala la nueva sección de "Bifurcación de Subprocesos":
+  * Explica la condición crítica de partida: 07:00 HRS con 1 sola cama libre (`camas_disponibles = 1`).
+  * Muestra cómo la decisión algorítmica `Prioridad_B (1) < Prioridad_A (3)` asigna la cama crítica inmediatamente al Paciente B (`camas_disponibles = 0`).
+  * Explica las dos rutas independientes que corren en paralelo:
+    - RUTA PACIENTE A (Prioridad 3 - Observación):
+      1. Silla de ruedas a zona de espera/observación en Medicina General.
+      2. Bromuro de Hioscina + Metamizol EV y exámenes complementarios normales.
+      3. Reevaluación a las 2 horas con evolución favorable (cese de dolor y arcadas).
+      4. Alta médica e indicaciones domiciliarias (Hioscina + Metamizol c/8h).
+      5. PASO CLAVE: Gestión de Interconsulta directa con Gastroenterología para cita ambulatoria.
+      6. Fin de atención en farmacia y retiro del hospital.
+    - RUTA PACIENTE B (Prioridad 1 - Trauma Shock):
+      1. Asignación inmediata de cama libre con monitor desfibrilador, ventilación y backup de epinefrina.
+      2. FASE 1 PSICOLOGÍA: Pronóstico reservado a familiares y firma de Consentimiento Informado para cirugía de marcapasos.
+      3. Intervención en Quirófano (2h 45m): Cirugía de emergencia con colapso por falla cardíaca aguda -> Declaración Oficial de Deceso.
+      4. FASE 2 PSICOLOGÍA: Soporte en duelo a familiares y activación de Seguro por Fallecimiento (sepelio).
+      5. Cierre Legal y Administrativo: Emisión de informe médico a Medicina Legal.
+      6. Cierre definitivo del registro de emergencia.
+
+Paso 5: Demuestra la Búsqueda Inteligente en Base de Datos (Módulo Enfermería 1)
+- Haz clic en el preset "🪪 Pacientes BD (10203040 vs 70809010)".
+- Muestra cómo al escribir el DNI "10203040", el sistema detecta en tiempo real que
+  está registrado en la BD y recupera su "HC-2024-510" (Carlos Mendoza).
+- Escribe un DNI que no existe (ej. "45678912"): el sistema marca "No figura en BD"
+  y genera automáticamente una nueva historia clínica: "HC-NUEVA-001".
+- Escribe un nombre incompleto o código de emergencia (ej. "NN Accidente" o "Guillermo"):
+  el sistema marca "Por confirmar" y genera una HC temporal de urgencia: "HC-TEMP-EMG-001".
+
+Paso 5: Demuestra la Emisión de Tickets Automática (Módulo Enfermería 2)
+- Modifica la hora de llegada del Paciente A a las 08:30 y del Paciente B a las 08:10.
+- Señala cómo los tickets se invierten automáticamente en vivo: Paciente B recibe
+  "T-01" por llegar antes y Paciente A recibe "T-02".
+
+Paso 6: Demuestra la Validación de Errores (Punto clave de evaluación)
+- En la casilla de SpO2, escribe "120" o "-5".
+- Muestra al docente cómo salta la alerta en vivo:
+  "SpO2 = 120% fuera de rango (0-100%). Verifique el oxímetro."
+- Demuestra que el sistema no permite evaluar hasta corregir el valor.
+
+Paso 7: Botón para Ingresar Datos desde Cero
+- Si el profesor pide evaluar datos propuestos por él:
+  Haz clic en "✨ Ingresar Datos desde Cero".
+- El formulario se limpiará por completo para tipear cualquier caso.
+
+Paso 8: Emisión del Reporte Clínico Oficial de Auditoría
+- Haz clic en "📄 Generar Reporte Clínico Oficial".
+- Se abrirá la hoja de auditoría médica formal con membrete de la UPP, los 3 módulos
+  detallados, la tabla comparativa, el dictamen de Alerta Roja/Ámbar y las firmas.
+
+
+================================================================================
+3. RESPUESTAS TÉCNICAS A PREGUNTAS DEL PROFESOR (VARIABLES Y REGLAS)
+================================================================================
+
+Si el docente pregunta por la arquitectura algorítmica:
+
+A) MÓDULO ENFERMERÍA 1 (Identificación y Registro):
+   - identificador (str): DNI (8 dígitos), Nombre Completo o NN.
+   - estado_registrado (str): "Si", "No", "Por confirmar".
+   - historia_clinica (str): Código de HC (ej. "HC-2024-510", "HC-NUEVA-001" o "HC-TEMP-EMG-001").
+   - Regla BD: DNI de 8 dígitos o 2+ palabras alfabéticas consultan en BASE_DATOS_HC.
+     Si existe -> "Si" (recupera HC). Si no existe -> "No" (crea HC-NUEVA).
+     Cualquier código parcial o NN -> "Por confirmar" (crea HC-TEMP-EMG).
+
+B) MÓDULO ENFERMERÍA 2 (Atención Administrativa):
+   - hora_llegada (str "HH:MM"): Validación de rango 00:00 a 23:59.
+   - turno (str): Asignado automáticamente. Menor hora recibe "T-01", el otro "T-02".
+   - datos_administrativos (str): Seguro/cobertura ("Asegurado", "Particular", "SIS", "EsSalud").
+
+C) MÓDULO TRIAGE CLÍNICO (Evaluación de Severidad):
+   - spo2 (float): Saturación de oxígeno. Rango válido [0.0 a 100.0%].
+     Dato crítico: si es menor a 92%, indica hipoxemia severa.
+   - antecedentes_registrados (bool): True (Sí) o False (No).
+     Dato crítico: comorbilidades cardíacas o respiratorias previas.
+
+D) VARIABLES DE SALIDA / DECISIÓN:
+   - prioridad (int {1, 3}): Resultado de la Decisión 1.
+     1 = Crítico (Riesgo vital inminente).
+     3 = Moderado (Estable).
+   - cama_asignada (Objeto Paciente): Paciente asignado a la única cama (ALERTA ROJA).
+   - paciente_en_espera (Objeto Paciente): Paciente derivado a espera (ALERTA ÁMBAR).
+   - especialidad / destino:
+     Prioridad 1 -> "Cardiología / Unidad de Trauma Shock" (o Área de Observación si espera).
+     Prioridad 3 -> "Medicina General" (o Sala de Espera Regular).
+
+
+================================================================================
+4. LAS DOS REGLAS LÓGICAS DE DECISIÓN DEL ALGORITMO
+================================================================================
+
+DECISIÓN 1: Clasificación de Urgencia Clínica
+---------------------------------------------
+Regla lógica:
+   SI (spo2 < 92) O (antecedentes_registrados == Verdadero):
+       prioridad = 1   (Crítico)
+   SINO:
+       prioridad = 3   (Moderado)
+
+Justificación: Basta con que el paciente presente hipoxemia (SpO2 < 92%) O
+antecedentes de riesgo para clasificarlo como prioridad crítica.
+
+DECISIÓN 2: Asignación de la Única Cama y Desempate
+---------------------------------------------------
+Regla lógica:
+   1. Comparación por severidad: Menor valor numérico tiene prioridad absoluta.
+      (Prioridad 1 > Prioridad 3, sin importar el orden de llegada).
+   2. En caso de EMPATE de prioridad (ambos P1 o ambos P3):
+      Se aplica el criterio de desempate por orden cronológico de llegada (Turno T-01).
+      El paciente que llegó más temprano obtiene la cama disponible.
+
+
+================================================================================
+5. CHECKLIST PARA LLEVAR EN EL USB
+================================================================================
+Asegúrate de copiar todos estos archivos en la raíz de tu USB:
+[✓] index.html                      (Landing Page oficial UPP)
+[✓] landing.css y landing.js        (Diseño tecnológico oscuro sin azul)
+[✓] triaje.html                     (Simulador interactivo con los 3 módulos)
+[✓] styles.css y app.js             (Estilos y motor de cálculo en JavaScript)
+[✓] 1_ejecutar_en_consola_CMD.bat    (Lanzador de consola CMD con doble clic)
+[✓] triage_prioridad.py             (Código fuente en Python de los 3 módulos)
+[✓] server.py                       (Servidor REST local opcional)
+[✓] GUIA_EXPOSICION.txt             (Este documento de guía de exposición)
+
+¡Muchos éxitos en tu presentación de Pensamiento Algorítmico!
+================================================================================

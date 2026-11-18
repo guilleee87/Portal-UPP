@@ -1,0 +1,77 @@
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+HTML_CONTENT = (
+    "<!DOCTYPE html>\n"
+    "<html lang='es'>\n"
+    "<head>\n"
+    "  <meta charset='UTF-8'>\n"
+    "  <title>Portal Académico — UPP</title>\n"
+    "  <style>\n"
+    "    :root { --bg-dark: #0f172a; --text-light: #f8fafc; --text-muted: #94a3b8; }\n"
+    "    body {\n"
+    "      font-family: system-ui, sans-serif;\n"
+    "      background-color: var(--bg-dark);\n"
+    "      color: var(--text-light);\n"
+    "      margin: 0; padding: 0;\n"
+    "    }\n"
+    "    .tech-navbar {\n"
+    "      padding: 1rem 2rem; border-bottom: 1px solid #1e293b;\n"
+    "      display: flex; justify-content: space-between;\n"
+    "    }\n"
+    "    .nav-brand-title { color: white; text-decoration: none; font-weight: bold; }\n"
+    "    .hero-section { padding: 4rem 2rem; text-align: center; }\n"
+    "    .hero-title { font-size: 2.5rem; margin-bottom: 1rem; }\n"
+    "    .main-wrapper { padding: 2rem; max-width: 800px; margin: 0 auto; }\n"
+    "    .project-card-single, .author-card-clean {\n"
+    "      background: #1e293b; padding: 1.5rem; border-radius: 8px;\n"
+    "      margin-bottom: 1rem;\n"
+    "    }\n"
+    "  </style>\n"
+    "</head>\n"
+    "<body>\n"
+    "  <header class='tech-navbar'>\n"
+    "    <div class='nav-inner'>\n"
+    "      <a href='/' class='nav-brand-title'>Universidad Politécnica del Perú</a>\n"
+    "    </div>\n"
+    "  </header>\n"
+    "  <section class='hero-section'>\n"
+    "    <h1 class='hero-title'>Centro de Sistemas y Modelos Computacionales</h1>\n"
+    "    <p style='color: #94a3b8;'>Plataforma académica para Ciencias de la Salud.</p>\n"
+    "  </section>\n"
+    "  <main class='main-wrapper'>\n"
+    "    <article class='project-card-single'>\n"
+    "      <h3 style='margin-top:0;'>Módulo de Simulación y Toma de Decisiones</h3>\n"
+    "      <p style='color: #94a3b8;'>Sistema para el modelado estructurado.</p>\n"
+    "    </article>\n"
+    "    <article class='author-card-clean'>\n"
+    "      <h3 style='margin:0;'>Luis Guillermo Vásquez Valdivieso</h3>\n"
+    "      <p style='color: #94a3b8; margin:0;'>Desarrollador</p>\n"
+    "    </article>\n"
+    "    <article class='author-card-clean'>\n"
+    "      <h3 style='margin:0; margin-top:10px;'>Rodrigo Alonso Añazgo Farro</h3>\n"
+    "      <p style='color: #94a3b8; margin:0;'>Desarrollador</p>\n"
+    "    </article>\n"
+    "  </main>\n"
+    "</body>\n"
+    "</html>\n"
+)
+
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html; charset=utf-8')
+        self.end_headers()
+        self.wfile.write(HTML_CONTENT.encode('utf-8'))
+
+puerto = 8080
+
+try:
+    httpd = HTTPServer(('', puerto), SimpleHTTPRequestHandler)
+    print("Servidor web iniciado.")
+    print("Revisa la pestaña 'Web' o el visualizador.")
+    httpd.serve_forever()
+except KeyboardInterrupt:
+    print("Servidor detenido.")
+except OSError as e:
+    print(f"Error de puerto: {e}")
+# Fin del archivo

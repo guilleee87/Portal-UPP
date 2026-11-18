@@ -386,15 +386,7 @@
       gap: 6px;
       transition: all 0.15s;
     }
-    .modalidad-btn {
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-      cursor: pointer !important;
-    }
-    .modalidad-btn:hover {
-      background: #f1f5f9 !important;
-      border-color: #94a3b8 !important;
-      transform: translateY(-1px);
-    }
+    /* MODALIDAD INGRESO STYLES */
     .modalidad-btn.selected,
     .btn-full-secondary.modalidad-btn.selected {
       background: #0284c7 !important;
@@ -2428,6 +2420,16 @@
           <span>🧪 Sandbox</span>
         </a>
 
+                <!-- BOTÓN LOG AUDITORÍA SUSALUD -->
+        <button type="button" id="btn_modal_audit_log" onclick="abrirModalAuditLogSusalud()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition-all cursor-pointer" title="Ver Bitácora Inmutable de Auditoría SUSALUD (audit_logs)">
+          <span>🛡️ Log SUSALUD</span>
+        </button>
+
+        <!-- BOTÓN TOGGLE VISTA CLÍNICA / CAJA -->
+        <button type="button" id="btn_toggle_vista_caja" onclick="toggleVistaClinicaCaja()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200 hover:bg-sky-100 transition-all cursor-pointer" title="Alternar Vista Clínica / Vista Caja (Confidencialidad Ley N° 29733)">
+          <span id="lbl_toggle_vista_caja">👁️ Vista: Clínica</span>
+        </button>
+
         <div class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span id="telemetry_db_status" class="hidden sm:inline">Supabase Cloud</span>
@@ -2480,7 +2482,7 @@
         <span class="mini-chip" id="mini_soat_badge" style="display:none; background:#fff7ed; color:#c2410c; border-color:#fb923c;">
           🚗 SOAT Saldo: S/. 27,500.00
         </span>
-        <a href="facturacion.html" target="_blank" class="mini-chip" id="btn_nav_facturacion" style="background:#0284c7; color:#ffffff; text-decoration:none; font-weight:800; cursor:pointer;" title="Acceder a la Unidad de Facturación Post-Estabilización (D.S. 016-2002-SA)">
+        <a href="facturacion.html" target="_blank" class="mini-chip" id="btn_nav_facturacion" onclick="sincronizarFacturacionYExportar()" style="background:#0284c7; color:#ffffff; text-decoration:none; font-weight:800; cursor:pointer;" title="Acceder a la Unidad de Facturación Post-Estabilización (D.S. 016-2002-SA)">
           🧾 Facturación Post-Estabilización ↗
         </a>
       </div>
@@ -2489,6 +2491,20 @@
 
   <!-- CONTENEDOR PRINCIPAL DE LOS 8 MÓDULOS -->
   <main class="main-app-container">
+
+    <!-- BANNER DE NOTIFICACIÓN DE BRAZALETE DE EMERGENCIA P-I GENERADO -->
+    <div id="banner_notificacion_brazalete" style="display:none; background:linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color:#ffffff; padding:10px 18px; border-radius:10px; margin-bottom:14px; box-shadow:0 4px 12px rgba(220,38,38,0.25); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.2rem;">🏷️</span>
+        <strong id="banner_brazalete_texto" style="font-size:0.86rem; letter-spacing:0.3px;">[BRAZALETE DE EMERGENCIA P-I GENERADO AUTOMÁTICAMENTE]</strong>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button type="button" onclick="imprimirBrazaleteModal()" style="background:#ffffff; color:#dc2626; border:none; padding:6px 14px; border-radius:6px; font-weight:800; font-size:0.78rem; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.2);">
+          🖨️ Ver / Imprimir Pulsera Ahora
+        </button>
+        <button type="button" onclick="document.getElementById('banner_notificacion_brazalete').style.display='none'" style="background:transparent; color:#ffffff; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
+      </div>
+    </div>
 
     <!-- ======================================================================
          SELECTOR DE ENTORNO OPERATIVO ASISTENCIAL (NORMATIVA SUSALUD / SITEDS PERÚ)
@@ -2536,11 +2552,18 @@
         <div id="entorno_sector_info_texto">
           <strong>Regla Sectorial Activa:</strong> Afiliados SIS y EsSalud gozan de cobertura al 100% (Pago S/ 0.00). Pacientes particulares o con seguro privado puro pagan 100%.
         </div>
-        <!-- MARCADOR DE CONDICIÓN TRANSVERSAL DEL EVENTO: ACCIDENTE EN FUGA -->
-        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; color:#b91c1c; font-size:0.75rem; background:#fff1f2; padding:3px 8px; border-radius:6px; border:1px solid #fecdd3;">
-          <input type="checkbox" id="chk_evento_fuga" onchange="toggleCondicionFugaTransversal(this.checked)" style="cursor:pointer;">
-          <span>🚨 Marcar Accidente en Fuga (Sin SOAT)</span>
-        </label>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <!-- MARCADOR DE CONDICIÓN TRANSVERSAL DEL EVENTO: ACCIDENTE EN FUGA -->
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; color:#b91c1c; font-size:0.75rem; background:#fff1f2; padding:3px 8px; border-radius:6px; border:1px solid #fecdd3;">
+            <input type="checkbox" id="chk_evento_fuga" onchange="toggleCondicionFugaTransversal(this.checked)" style="cursor:pointer;">
+            <span>🚨 Marcar Accidente en Fuga (Sin SOAT)</span>
+          </label>
+          <!-- MARCADOR DE EXCLUSIÓN DE PÓLIZA EPS -->
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; color:#c2410c; font-size:0.75rem; background:#fff7ed; padding:3px 8px; border-radius:6px; border:1px solid #fed7aa;">
+            <input type="checkbox" id="chk_exclusion_eps" onchange="toggleExclusionEps(this.checked)" style="cursor:pointer;">
+            <span>⚠️ Aplicar Exclusión de Póliza EPS</span>
+          </label>
+        </div>
       </div>
     </section>
 
@@ -2600,9 +2623,29 @@
         </div>
         <span class="toggle-arrow" id="arrow_mod1">▼</span>
       </div>
-      <div class="module-section-body" id="body_mod1" style="display: none;">
+      <div class="module-section-body open" id="body_mod1" style="display: block;">
 
         
+                <!-- REGISTRO DEL LICENCIADO(A) EN ENFERMERÍA DE TRIAJE (CEP) - NTS N° 042-MINSA -->
+        <div style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:10px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.1rem;">👩‍⚕️</span>
+            <div>
+              <div style="font-size:0.82rem; font-weight:800; color:#0f172a;">Profesional de Triaje (NTS N° 042-MINSA):</div>
+              <div style="font-size:0.72rem; color:#64748b;">Licenciado(a) en Enfermería Colegiado y Habilitado</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label for="enfermero_triaje_select" style="font-size:0.75rem; font-weight:700; color:#334155;">Enfermero(a) CEP:</label>
+            <select id="enfermero_triaje_select" class="form-input" style="padding:4px 8px; font-size:0.78rem; font-weight:600; border-radius:6px; min-width:240px;" onchange="actualizarEnfermeroTriaje(this.value)">
+              <option value="Lic. Roxana Paredes (CEP 45892)">Lic. Roxana Paredes (CEP 45892) — Triaje Central</option>
+              <option value="Lic. Carlos Vega (CEP 52140)">Lic. Carlos Vega (CEP 52140) — Triage Tópicos</option>
+              <option value="Lic. Maria Elena Ramos (CEP 38910)">Lic. Maria Elena Ramos (CEP 38910) — Shock Trauma</option>
+              <option value="Lic. Fernando Torres (CEP 61045)">Lic. Fernando Torres (CEP 61045) — Emergencia General</option>
+            </select>
+          </div>
+        </div>
+
         <div class="norma-pill-banner">
           <span class="norma-tag">NTS N° 042-MINSA</span>
           <span><strong>Puerta de Entrada Universal Obligatoria:</strong> Ningún paciente puede ser derivado a admisión ni condicionado a pago o trámite sin haber sido evaluado previamente por Enfermería de Triaje.</span>
@@ -2739,7 +2782,7 @@
               <span style="font-size: 20px;">🏢</span>
               <div>
                 <strong style="display: block;">Clínica Privada (EPS)</strong>
-                <span id="subtext_entorno_eps" style="font-size: 0.7rem; color: #94a3b8; font-weight: normal;"></span>
+                <span id="subtext_entorno_eps" style="font-size: 0.7rem; color: #94a3b8; font-weight: normal;">SITEDS · Ley 27604 (P-I/II 100%) y Copago Póliza</span>
               </div>
             </button>
             <!-- 4. SIN SEGURO (PARTICULAR) -->
@@ -2967,6 +3010,7 @@
             <div style="text-align:right;">
               <div style="font-size:2.8rem; font-weight:900; line-height:1; font-family:monospace;" id="prio_numero">--</div>
               <div style="font-size:0.78rem; font-weight:800; margin-top:4px;" id="prio_destino">Destino: Por evaluar</div>
+              <div id="prio_sla_display" style="font-size:0.75rem; font-weight:800; background:rgba(255,255,255,0.25); padding:3px 8px; border-radius:6px; margin-top:4px; display:inline-block;">⏱️ SLA Máximo: --</div>
             </div>
           </div>
           <div id="ley27604_banner" style="display:none; margin-top:12px; padding:8px 12px; border-radius:6px; background:rgba(0,0,0,0.25); font-size:0.76rem; font-weight:700;">
@@ -3118,8 +3162,27 @@
         </div>
 
       
+        <!-- TARJETA DE CONSENTIMIENTO DE TRATAMIENTO DE DATOS PERSONALES (LEY N° 29733) -->
+        <div id="card_consentimiento_ley29733" style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:10px; padding:12px 16px; margin:16px 0;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.1rem;">📜</span>
+              <strong style="font-size:0.82rem; color:#0f172a;">Consentimiento de Tratamiento de Datos Personales (Ley N° 29733)</strong>
+            </div>
+            <span id="badge_consentimiento_exonerado" style="display:none; font-size:0.7rem; font-weight:800; background:#fee2e2; color:#991b1b; padding:3px 8px; border-radius:6px; border:1px solid #fecdd3;">
+              🛡️ EXONERADO AUTOMÁTICAMENTE POR LEY DE EMERGENCIA N° 27604 (Riesgo Vital / Inconsciencia — Regularización Posterior)
+            </span>
+          </div>
+          <div id="box_consentimiento_checkbox" style="font-size:0.78rem; color:#334155;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
+              <input type="checkbox" id="chk_consentimiento_datos" checked style="cursor:pointer; width:16px; height:16px;">
+              <span>Paciente / Apoderado autoriza expresamente el tratamiento de sus datos personales y sensibles para fines asistenciales conforme a la Ley N° 29733.</span>
+            </label>
+          </div>
+        </div>
+
         <!-- STEP FOOTER NAVEGACIÓN PASO A PASO -->
-        <div id="step_footer_mod_2" class="step-nav-footer">
+        <div id="step_footer_mod_2"  class="step-nav-footer">
           <button type="button" class="btn-full-secondary" onclick="irAModulo(1)">← Paso Anterior</button>
           <span class="step-counter-pill" id="step_footer_label_2">Paso 2 de 8</span>
           <button type="button" class="btn-full-primary" onclick="irAModulo(3)">Siguiente: Paso 3 (Acreditación Seguro &amp; SOAT) →</button>
@@ -3383,8 +3446,25 @@
             </button>
           </div>
 
-          <!-- TARJETA DE RESULTADO RENIEC EN MÓDULO 4 -->
-          <div id="m4_reniec_result_card" style="display:none; margin-top:10px; padding:10px 14px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px;">
+          <!-- REGISTRO DE CONSENTIMIENTO INFORMADO MÉDICO (NTS N° 139-MINSA / ART. 4° LEY N° 26842) -->
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.1rem;">✍️</span>
+            <div>
+              <div style="font-size:0.82rem; font-weight:800; color:#0f172a;">Consentimiento Informado Médico (NTS N° 139-MINSA):</div>
+              <div style="font-size:0.72rem; color:#64748b;">Procedimientos invasivos, cirugía de urgencia y analgesia mayor</div>
+            </div>
+          </div>
+          <div>
+            <select id="sel_consentimiento_medico" class="form-input" style="padding:5px 10px; font-size:0.78rem; font-weight:700; border-radius:6px; background:#ffffff;">
+              <option value="firmado">[✓ Firmado por Paciente / Familiar]</option>
+              <option value="exonerado_emergencia">[⚡ Exonerado de Oficio por Emergencia Vital sin Familiar — Avalado por Médico CMP (Art. 4° Ley N° 26842)]</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- TARJETA DE RESULTADO RENIEC EN MÓDULO 4 -->
+          <div id="m4_reniec_result_card"  style="display:none; margin-top:10px; padding:10px 14px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
               <div>
                 <span style="font-size:0.7rem; font-weight:800; color:#15803d; text-transform:uppercase;">PACIENTE ASIGNADO A SHOCK TRAUMA / TÓPICO:</span>
@@ -4283,6 +4363,34 @@
 
           <!-- ALERTA DE RECHAZO O EXCLUSIÓN SI APLICA -->
           <div id="liq_alerta_sectorial" style="display:none; margin-top:10px; padding:10px 14px; border-radius:8px; font-size:0.8rem; font-weight:700;"></div>
+
+          <!-- CHECKLIST AUTOMÁTICO DE AUDITORÍA ANTI-GLOSAS (NTS N° 139-MINSA / SUSALUD) -->
+          <div id="checklist_anti_glosas_box" style="margin-top:14px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:12px 14px;">
+            <div style="font-size:0.78rem; font-weight:800; color:#0f172a; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+              <span>🛡️</span>
+              <span>CHECKLIST DE PRE-AUDITORÍA ANTI-GLOSAS (NTS N° 139-MINSA):</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:6px; font-size:0.74rem;">
+              <div id="glosa_ind_1" style="color:#16a34a; font-weight:700;">[✓] Acreditación SUSALUD / SITEDS / SOAT validada</div>
+              <div id="glosa_ind_2" style="color:#16a34a; font-weight:700;">[✓] Diagnóstico CIE-10 y procedimientos CPMS/CUM completos</div>
+              <div id="glosa_ind_3" style="color:#16a34a; font-weight:700;">[✓] Consentimientos Ley N° 29733 y NTS N° 139 conformes</div>
+              <div id="glosa_ind_4" style="color:#16a34a; font-weight:700;">[✓] Responsables colegiados registrados (Enfermería CEP + CMP)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BANNER DE CIERRE E INMUTABILIDAD DE HISTORIA CLÍNICA -->
+        <div id="banner_hc_inmutable_lock" style="display:none; background:#eff6ff; border:1.5px solid #3b82f6; border-radius:8px; padding:14px 18px; margin:14px 0; font-size:0.82rem; color:#1e40af; font-weight:700; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.3rem;">🔒</span>
+            <div>
+              <div>HISTORIA CLÍNICA CERRADA E INMUTABLE (NTS N° 139-MINSA)</div>
+              <div style="font-size:0.72rem; color:#3b82f6; font-weight:500;">Registro protegido contra alteraciones posteriores. Cualquier cambio requiere adenda legal.</div>
+            </div>
+          </div>
+          <button type="button" id="btn_abrir_adenda_legal" onclick="abrirModalAdendaLegal()" class="btn-full-secondary" style="font-size:0.75rem; padding:6px 12px; background:#ffffff; color:#1d4ed8; border-color:#93c5fd; font-weight:800;">
+            📝 + Añadir Nota Adenda Legal
+          </button>
         </div>
 
           <!-- BOTÓN PRINCIPAL DESTACADO: ENLACE A FACTURACION.HTML -->
@@ -4293,7 +4401,7 @@
             <div style="font-size:1.05rem; font-weight:900; color:#0f172a; margin-bottom:12px;">
               La atención médica ha concluido. El expediente ha sido derivado al área administrativa para liquidación de cobertura.
             </div>
-            <a href="facturacion.html" target="_blank" class="btn-full-primary" style="display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:14px 28px; font-size:1.05rem; font-weight:800; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#ffffff; text-decoration:none; border-radius:8px; box-shadow:0 6px 20px rgba(2,132,199,0.35); cursor:pointer;">
+            <a href="facturacion.html" id="btn_ir_facturacion_m8" onclick="sincronizarFacturacionYExportar()" target="_blank" class="btn-full-primary" style="display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:14px 28px; font-size:1.05rem; font-weight:800; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#ffffff; text-decoration:none; border-radius:8px; box-shadow:0 6px 20px rgba(2,132,199,0.35); cursor:pointer;">
               🧾 Abrir Portal de Facturación &amp; Liquidación Post-Estabilización ↗
             </a>
             <div style="font-size:0.75rem; color:#64748b; margin-top:8px;">
@@ -4425,14 +4533,87 @@
   <!-- BRAZALETE IMPRIMIBLE OCULTO -->
   <div class="brazalete-print" id="brazalete_print_area" style="display:none;"></div>
 
+  <!-- MODAL: VISOR / IMPRESIÓN DIRECTA DE BRAZALETE DE EMERGENCIA -->
+  <div class="modal-hc-overlay" id="modal_ver_brazalete" style="display:none;">
+    <div class="modal-hc-container" style="max-width:550px;">
+      <div style="background:#0f172a; color:#ffffff; display:flex; justify-content:space-between; align-items:center; padding:14px 18px;">
+        <h3 style="margin:0; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+          <span>🏷️</span>
+          <span>Brazalete Hospitalario de Emergencia (NTS N° 042-MINSA)</span>
+        </h3>
+        <button type="button" onclick="cerrarModalBrazalete()" style="color:#ffffff; background:none; border:none; font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+      <div style="padding:18px; text-align:center;">
+        <div id="brazalete_modal_preview" style="border:2px dashed #dc2626; border-radius:12px; padding:16px; background:#fff7ed; margin-bottom:16px; text-align:left;">
+          <!-- Contenido visual del brazalete inyectado dinámicamente -->
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn-full-secondary" onclick="cerrarModalBrazalete()">Cerrar</button>
+          <button type="button" class="btn-full-primary" onclick="imprimirBrazaleteDirecto()">🖨️ Mandar a Imprimir Pulsera</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BITÁCORA INMUTABLE DE AUDITORÍA SUSALUD (audit_logs) -->
+  <div class="modal-hc-overlay" id="modal_audit_logs_susalud" style="display:none;">
+    <div class="modal-hc-container" style="max-width:850px;">
+      <div style="background:#0f172a; color:#ffffff; display:flex; justify-content:space-between; align-items:center; padding:14px 18px;">
+        <h3 style="margin:0; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+          <span>🛡️</span>
+          <span>Bitácora Inmutable de Auditoría SUSALUD (audit_logs)</span>
+        </h3>
+        <button type="button" onclick="cerrarModalAuditLogSusalud()" style="color:#ffffff; background:none; border:none; font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+      <div style="padding:18px; max-height:70vh; overflow-y:auto;">
+        <div style="font-size:0.78rem; color:#475569; margin-bottom:12px;">
+          Registro criptográfico de trazabilidad clínica y administrativa en cumplimiento de la Ley N° 29733 y NTS N° 139-MINSA.
+        </div>
+        <div id="audit_logs_table_container">
+          <!-- Tabla inyectada por JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOTA DE ADENDA LEGAL (NTS N° 139-MINSA) -->
+  <div class="modal-hc-overlay" id="modal_adenda_legal" style="display:none;">
+    <div class="modal-hc-container" style="max-width:600px;">
+      <div style="background:#0f172a; color:#ffffff; display:flex; justify-content:space-between; align-items:center; padding:14px 18px;">
+        <h3 style="margin:0; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+          <span>📝</span>
+          <span>Añadir Nota Adenda Legal (NTS N° 139-MINSA)</span>
+        </h3>
+        <button type="button" onclick="cerrarModalAdendaLegal()" style="color:#ffffff; background:none; border:none; font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+      <div style="padding:18px;">
+        <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:0.78rem; color:#92400e;">
+          ⚠️ <strong>Principio de Inmutabilidad Documental:</strong> Esta nota aclaratoria se registrará con fecha, hora exacta y firma del facultativo, sin modificar el texto original de la atención.
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:0.78rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Texto de la Adenda Legal:</label>
+          <textarea id="adenda_legal_texto" class="input-full" rows="4" placeholder="Ingrese la aclaración médica, ampliación de anamnesis o rectificación administrativa justificada..."></textarea>
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="font-size:0.78rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Médico CMP Responsable:</label>
+          <input type="text" id="adenda_legal_medico" class="input-full" value="Dr. Carlos Mendoza CMP 54821 RNE 23901" placeholder="Nombre y CMP">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn-full-secondary" onclick="cerrarModalAdendaLegal()">Cancelar</button>
+          <button type="button" class="btn-full-primary" onclick="guardarAdendaLegal()">🔒 Firmar y Anexar Adenda</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- SCRIPT MAESTRO DE LÓGICA Y REGLAS DE NEGOCIO -->
   <script src="app_full.js"></script>
 
   <!-- ======================================================================
        MODAL: REGULARIZACIÓN ADMINISTRATIVA POST-ESTABILIZACIÓN (LEY N° 27604)
        ====================================================================== -->
-  <div class="modal-backdrop" id="modal_regularizacion_diferida" style="display:none;">
-    <div class="modal-window" style="max-width:650px;">
+  <div class="modal-hc-overlay" id="modal_regularizacion_diferida" style="display:none;">
+    <div class="modal-hc-container" style="max-width:650px;">
       <div class="modal-header" style="background:#0f172a; color:#ffffff; display:flex; justify-content:space-between; align-items:center; padding:14px 18px;">
         <h3 style="margin:0; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
           <span>📝</span>
@@ -4714,7 +4895,7 @@
               <button type="button" class="btn-start-choice btn-start-next" onclick="avanzarPasoSTART(2)">
                 <span style="font-size:1.5rem;">🛌</span>
                 <strong>NO PUEDE CAMINAR</strong>
-                <small>Requiere camilla o silla $\rightarrow$ Evaluar respiración</small>
+                <small>Requiere camilla o silla → Evaluar respiración</small>
               </button>
             </div>
           </div>
@@ -4726,13 +4907,13 @@
             <div class="start-options-grid">
               <button type="button" class="btn-start-choice btn-start-red" onclick="completarPreTriageSTART('I', 'Apnea o Taquipnea severa >30 rpm — Prioridad I (Rojo)')">
                 <span style="font-size:1.5rem;">🫁</span>
-                <strong>APNEA o $>30$ rpm</strong>
-                <small>Insuficiencia respiratoria aguda $\rightarrow$ P-I Rojo Inmediato</small>
+                <strong>APNEA o > 30 rpm</strong>
+                <small>Insuficiencia respiratoria aguda → P-I Rojo Inmediato</small>
               </button>
               <button type="button" class="btn-start-choice btn-start-next" onclick="avanzarPasoSTART(3)">
                 <span style="font-size:1.5rem;">✅</span>
                 <strong>RESPIRA (10 a 29 rpm)</strong>
-                <small>Frecuencia aceptable $\rightarrow$ Evaluar perfusión</small>
+                <small>Frecuencia aceptable → Evaluar perfusión</small>
               </button>
             </div>
           </div>
@@ -4744,13 +4925,13 @@
             <div class="start-options-grid">
               <button type="button" class="btn-start-choice btn-start-red" onclick="completarPreTriageSTART('I', 'Pulso ausente o llenado > 2 seg — Prioridad I (Rojo)')">
                 <span style="font-size:1.5rem;">💔</span>
-                <strong>DÉBIL / LLENADO $> 2$ seg</strong>
-                <small>Signo de shock circulatorio $\rightarrow$ P-I Rojo Inmediato</small>
+                <strong>DÉBIL / LLENADO > 2 seg</strong>
+                <small>Signo de shock circulatorio → P-I Rojo Inmediato</small>
               </button>
               <button type="button" class="btn-start-choice btn-start-next" onclick="avanzarPasoSTART(4)">
                 <span style="font-size:1.5rem;">🩸</span>
-                <strong>PULSO PRESENTE (Llenado $\le 2$s)</strong>
-                <small>Circulación mantenida $\rightarrow$ Evaluar consciencia</small>
+                <strong>PULSO PRESENTE (Llenado ≤ 2 seg)</strong>
+                <small>Circulación mantenida → Evaluar consciencia</small>
               </button>
             </div>
           </div>
@@ -4763,12 +4944,12 @@
               <button type="button" class="btn-start-choice btn-start-orange" onclick="completarPreTriageSTART('II', 'No obedece órdenes o desorientado — Prioridad II (Naranja)')">
                 <span style="font-size:1.5rem;">🧠</span>
                 <strong>NO OBEDECE / CONFUSO</strong>
-                <small>Compromiso neurológico severo $\rightarrow$ P-II Naranja</small>
+                <small>Compromiso neurológico severo → P-II Naranja</small>
               </button>
               <button type="button" class="btn-start-choice btn-start-yellow" onclick="completarPreTriageSTART('III', 'Obedece órdenes, hemodinamia estable — Prioridad III (Amarillo)')">
                 <span style="font-size:1.5rem;">👌</span>
                 <strong>SÍ OBEDECE ÓRDENES</strong>
-                <small>Hemodinámicamente estable $\rightarrow$ P-III Amarillo</small>
+                <small>Hemodinámicamente estable → P-III Amarillo</small>
               </button>
             </div>
           </div>
