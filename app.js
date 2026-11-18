@@ -4502,6 +4502,10 @@ function evaluarPacienteCompleto() {
  *   - Banda de Triaje: Color de categorización I (Rojo), II (Naranja), III (Amarillo), IV (Verde), V (Azul).
  */
 function imprimirBrazalete() {
+  if (typeof imprimirBrazaleteDirecto === 'function') {
+    imprimirBrazaleteDirecto();
+    return;
+  }
   const prio = STATE.prioridad || "III";
   const coloresPrio = { "I": "#dc2626", "II": "#ea580c", "III": "#ca8a04", "IV": "#16a34a", "V": "#2563eb" };
   const nombresPrio = { 
@@ -9558,56 +9562,117 @@ function sincronizarFacturacionYExportar() {
 }
 window.sincronizarFacturacionYExportar = sincronizarFacturacionYExportar;
 
-// --- 2. GENERACIÓN Y GESTIÓN DE BRAZALETE DE EMERGENCIA (BLOQUE 2.1) ---
+// --- 2. GENERACIÓN Y GESTIÓN DE BRAZALETE DE EMERGENCIA UNIFICADO (BLOQUE 2.1 & NTS 042/139) ---
+function construirHTMLBrazalete(esTemporal = false) {
+  const prio = STATE.prioridad || "I";
+  const coloresPrio = { "I": "#dc2626", "II": "#ea580c", "III": "#ca8a04", "IV": "#16a34a", "V": "#2563eb" };
+  const nombresPrio = {
+    "I": "P-I ROJO (SHOCK TRAUMA / VITAL)",
+    "II": "P-II NARANJA (URGENCIA MAYOR)",
+    "III": "P-III AMARILLO (URGENCIA)",
+    "IV": "P-IV VERDE (URGENCIA MENOR)",
+    "V": "P-V AZUL (NO URGENTE)"
+  };
+  const colorBanda = coloresPrio[prio] || "#dc2626";
+  const nombrePrio = nombresPrio[prio] || `PRIORIDAD ${prio}`;
+
+  let edadDisplay = "desconocido";
+  let generoDisplay = "desconocido";
+  let alergiasDisplay = "desconocido";
+  let alergiaClase = "ok";
+  let nombrePaciente = (STATE.nombreReniec || STATE.identificador || "PACIENTE POR IDENTIFICAR").toUpperCase();
+  let hcPaciente = STATE.historiaClinica || "HC-TEMP-NN";
+  let docPaciente = STATE.numDni || (STATE.identificador ? STATE.identificador : "S/D (INDOCUMENTADO)");
+
+  if (!esTemporal && !STATE.esNN && STATE.numDni && STATE.numDni !== "NN") {
+    // Si NO es temporal y está identificado
+    edadDisplay = STATE.edad ? `${STATE.edad} años` : (document.getElementById("edad_full")?.value ? `${document.getElementById("edad_full").value} años` : "desconocido");
+    generoDisplay = STATE.sexo || document.getElementById("sexo_full")?.value || "desconocido";
+    const alergiasInput = document.getElementById("alergias_full")?.value?.trim() || STATE.alergias || "";
+    if (alergiasInput && !alergiasInput.toLowerCase().includes("niega") && !alergiasInput.toLowerCase().includes("ninguna")) {
+      alergiasDisplay = `🔴 ALERGIA CRÍTICA: ${alergiasInput.toUpperCase()}`;
+      alergiaClase = "danger";
+    } else if (alergiasInput) {
+      alergiasDisplay = "⚪ ALERGIAS: NIEGA";
+      alergiaClase = "ok";
+    } else {
+      alergiasDisplay = "desconocido";
+      alergiaClase = "ok";
+    }
+  } else {
+    // REGLA ESTRICTA DE BOTONES DE ATENCIÓN RÁPIDA:
+    // edad: "desconocido", genero: "desconocido", alergias: "desconocido", y marcar "Temporal"
+    edadDisplay = "desconocido";
+    generoDisplay = "desconocido";
+    alergiasDisplay = "⚠️ ALERGIAS: DESCONOCIDO";
+    alergiaClase = "ok";
+    if (!hcPaciente || (hcPaciente.startsWith("HC-2026-") && STATE.esNN)) {
+      hcPaciente = "HC-TEMP-NN";
+    }
+  }
+
+  const fechaActual = new Date().toLocaleDateString('es-PE');
+  const horaActual = STATE.horaLlegada || new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  const ubicacion = STATE.camaAsignada || (prio === 'I' ? 'Shock Trauma ST-01' : 'Tópico de Emergencia');
+
+  return `
+    <div class="wristband-strip" style="width:820px; height:135px; background:#ffffff; border:2px solid #94a3b8; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.15); display:flex; position:relative; overflow:hidden; font-family:Arial, Helvetica, sans-serif; box-sizing:border-box; margin:auto;">
+      <!-- BANDA LATERAL CON COLOR DE TRIAJE -->
+      <div class="band-triage" style="width:65px; background:${colorBanda}; color:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:900; text-align:center; padding:4px; box-sizing:border-box; border-right:2px solid rgba(0,0,0,0.15);">
+        <div class="prio-code" style="font-size:26px; line-height:1;">P-${prio}</div>
+        <div class="prio-desc" style="font-size:9px; writing-mode:vertical-rl; transform:rotate(180deg); letter-spacing:1px; margin-top:6px; text-transform:uppercase;">${nombrePrio}</div>
+      </div>
+
+      <!-- CUERPO CENTRAL DE IDENTIFICACIÓN -->
+      <div class="wristband-body" style="flex:1; padding:10px 14px; display:flex; flex-direction:column; justify-content:space-between; border-right:2px dashed #cbd5e1; box-sizing:border-box;">
+        <div class="inst-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #cbd5e1; padding-bottom:4px;">
+          <span class="inst-name" style="font-size:11px; font-weight:800; color:#0f172a; letter-spacing:0.5px;">HOSPITAL REGIONAL DOCENTE UPP</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            ${esTemporal ? '<span style="background:#dc2626; color:#ffffff; font-size:10px; font-weight:900; padding:2px 8px; border-radius:4px; letter-spacing:0.5px;">🏷️ BRAZALETE TEMPORAL</span>' : '<span style="background:#16a34a; color:#ffffff; font-size:10px; font-weight:900; padding:2px 8px; border-radius:4px; letter-spacing:0.5px;">✓ OFICIAL IDENTIFICADO</span>'}
+            <span class="service-name" style="font-size:10px; font-weight:700; color:#0284c7;">SERVICIO DE EMERGENCIA · NIVEL III-1</span>
+          </div>
+        </div>
+
+        <div class="patient-main" style="margin:4px 0;">
+          <div class="patient-name" style="font-size:17px; font-weight:900; color:#0f172a; line-height:1.1; letter-spacing:0.2px;">${nombrePaciente}</div>
+          <div class="patient-details" style="display:flex; gap:14px; font-size:11px; color:#334155; margin-top:4px; font-weight:600; flex-wrap:wrap;">
+            <span><strong>HC:</strong> <span class="hc-badge" style="background:#0f172a; color:#ffffff; padding:1px 6px; border-radius:4px; font-family:monospace; font-size:11px; font-weight:800;">${hcPaciente}${esTemporal ? ' (TEMPORAL)' : ''}</span></span>
+            <span><strong>DOC / DNI:</strong> ${docPaciente}</span>
+            <span><strong>EDAD:</strong> ${edadDisplay}</span>
+            <span><strong>GÉNERO:</strong> ${generoDisplay}</span>
+            <span><strong>INGRESO:</strong> ${fechaActual} ${horaActual}</span>
+            <span><strong>UBICACIÓN:</strong> <strong style="color:#b91c1c;">${ubicacion}</strong></span>
+          </div>
+        </div>
+
+        <!-- SISTEMA DE ALERTAS POR COLOR (METAS DE SEGURIDAD MINSA) -->
+        <div class="risk-bars" style="display:flex; gap:8px; margin-top:4px; align-items:center; flex-wrap:wrap;">
+          <div class="bar-allergy" style="padding:2px 8px; border-radius:4px; font-size:10px; font-weight:900; text-transform:uppercase; ${esTemporal ? 'background:#fef3c7; color:#92400e; border:1px solid #fde68a;' : (alergiaClase === 'danger' ? 'background:#dc2626; color:#ffffff;' : 'background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;')}">
+            ${esTemporal ? '⚠️ ALERGIAS: DESCONOCIDO' : alergiasDisplay}
+          </div>
+          ${esTemporal ? '<div style="background:#7f1d1d; color:#fecaca; font-size:10px; font-weight:900; padding:2px 8px; border-radius:4px;">🚨 PACIENTE EN ESTABILIZACIÓN CRÍTICA — LEY N° 27604</div>' : ''}
+          ${STATE.esAccidenteTransito ? '<div style="background:#ea580c; color:#fff; font-size:10px; font-weight:900; padding:2px 8px; border-radius:4px;">🚗 SOAT ACTIVO</div>' : ''}
+        </div>
+      </div>
+
+      <!-- CÓDIGO DE BARRAS DE TRAZABILIDAD -->
+      <div class="wristband-barcode-area" style="width:145px; padding:8px 10px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#fafafa; box-sizing:border-box;">
+        <div class="barcode-lines" style="width:120px; height:48px; background:repeating-linear-gradient(90deg, #000 0, #000 2px, #fff 2px, #fff 4px, #000 4px, #000 7px, #fff 7px, #fff 9px, #000 9px, #000 13px, #fff 13px, #fff 15px); border-radius:2px;"></div>
+        <div class="barcode-text" style="font-family:monospace; font-size:9px; color:#334155; margin-top:3px; font-weight:700;">*${hcPaciente}*</div>
+        <div class="seal-minsa" style="font-size:8px; color:#64748b; text-align:center; margin-top:4px;">MINSA · METAS SEGURIDAD</div>
+      </div>
+    </div>
+  `;
+}
+
 function generarBrazaleteEmergencia(modo = 'temporal') {
   const printArea = document.getElementById('brazalete_print_area');
   const modalPreview = document.getElementById('brazalete_modal_preview');
   const banner = document.getElementById('banner_notificacion_brazalete');
   const bannerTexto = document.getElementById('banner_brazalete_texto');
 
-  const esReconciliado = (modo === 'reconciliado');
-  const hcCodigo = STATE.historiaClinica || (STATE.numDni ? `HC-2026-${String(STATE.numDni).slice(-4)}` : 'HC-TEMP-NN');
-  const nombre = STATE.nombreReniec || STATE.identificador || (STATE.esNN ? 'PACIENTE NN (DESCONOCIDO)' : 'PACIENTE CRÍTICO');
-  const dni = STATE.numDni || (STATE.esNN ? 'NO IDENTIFICADO (NN)' : 'POR VERIFICAR');
-  const sexo = STATE.sexo || 'M';
-  const edad = STATE.edad ? `${STATE.edad} AÑOS` : 'APARENTE ~30-40a';
-  const horaIngreso = STATE.horaLlegada || new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const ubicacion = STATE.camaAsignada || (STATE.prioridad === 'I' ? 'Shock Trauma ST-01' : 'Tópico de Emergencia');
-  const prioridadLabel = STATE.prioridad === 'I'
-    ? 'PRIORIDAD I — RIESGO VITAL INMEDIATO (LEY N° 27604)'
-    : (STATE.prioridad === 'II' ? 'PRIORIDAD II — EMERGENCIA MAYOR' : `PRIORIDAD ${STATE.prioridad || 'I'}`);
-
-  const htmlBrazalete = `
-    <div style="font-family:'Inter', sans-serif; border:3px solid ${STATE.prioridad === 'I' ? '#dc2626' : '#ea580c'}; border-radius:10px; padding:12px; background:#ffffff; color:#0f172a; max-width:480px; margin:auto; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #e2e8f0; padding-bottom:6px; margin-bottom:8px;">
-        <span style="font-size:0.75rem; font-weight:900; color:#0284c7; letter-spacing:0.5px;">HOSPITAL REGIONAL DOCENTE UPP — SERVICIO DE EMERGENCIA</span>
-        <span style="font-size:0.7rem; font-weight:800; background:${esReconciliado ? '#16a34a' : '#dc2626'}; color:#ffffff; padding:2px 8px; border-radius:4px;">
-          ${esReconciliado ? 'RECONCILIADO DNI' : 'TEMPORAL P-I'}
-        </span>
-      </div>
-      <div style="background:${STATE.prioridad === 'I' ? '#fee2e2' : '#ffedd5'}; border:1px solid ${STATE.prioridad === 'I' ? '#fca5a5' : '#fed7aa'}; color:${STATE.prioridad === 'I' ? '#991b1b' : '#9a3412'}; font-size:0.8rem; font-weight:900; text-align:center; padding:5px; border-radius:6px; margin-bottom:8px;">
-        🚨 ${prioridadLabel}
-      </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:0.78rem; margin-bottom:8px;">
-        <div><strong>HISTORIA CLÍNICA:</strong> <span style="font-family:monospace; font-size:0.95rem; font-weight:900; color:#0284c7;">${hcCodigo}</span></div>
-        <div><strong>DNI / DOC:</strong> <span style="font-weight:800;">${dni}</span></div>
-        <div style="grid-column:span 2;"><strong>PACIENTE:</strong> <span style="font-weight:900; font-size:0.85rem;">${nombre}</span></div>
-        <div><strong>SEXO / EDAD:</strong> ${sexo} / ${edad}</div>
-        <div><strong>HORA INGRESO:</strong> ${horaIngreso}</div>
-        <div style="grid-column:span 2;"><strong>CAMA / UBICACIÓN:</strong> <span style="color:#b91c1c; font-weight:800;">${ubicacion}</span></div>
-      </div>
-      <div style="border-top:1px dashed #cbd5e1; padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
-        <div style="font-family:monospace; font-size:0.65rem; color:#64748b;">
-          <div>BARCODE VERIFICATION</div>
-          <div style="font-weight:900; letter-spacing:2px; font-size:0.8rem; color:#0f172a;">||| | |||| | ||| |||| | |||</div>
-          <div>${hcCodigo}*${dni}</div>
-        </div>
-        <div style="width:40px; height:40px; border:1px solid #94a3b8; display:flex; align-items:center; justify-content:center; font-size:0.6rem; font-weight:900; background:#f8fafc;">
-          QR-HIS
-        </div>
-      </div>
-    </div>
-  `;
+  const esTemporal = (modo === 'temporal');
+  const htmlBrazalete = construirHTMLBrazalete(esTemporal);
 
   if (printArea) printArea.innerHTML = htmlBrazalete;
   if (modalPreview) modalPreview.innerHTML = htmlBrazalete;
@@ -9615,17 +9680,23 @@ function generarBrazaleteEmergencia(modo = 'temporal') {
   if (banner) {
     banner.style.display = 'flex';
     if (bannerTexto) {
-      bannerTexto.textContent = esReconciliado
-        ? '🏷️ Brazalete Reconciliado con DNI Real — Listo para Re-impresión'
-        : '🏷️ [BRAZALETE DE EMERGENCIA P-I GENERADO AUTOMÁTICAMENTE]';
+      bannerTexto.textContent = esTemporal
+        ? '🏷️ [BRAZALETE DE EMERGENCIA TEMPORAL GENERADO AUTOMÁTICAMENTE]'
+        : '🏷️ Brazalete Reconciliado con DNI Real — Listo para Re-impresión';
     }
   }
 
-  registrarLogAuditoria("Módulo 1", "GENERAR_BRAZALETE", `Brazalete generado: ${hcCodigo} (${modo})`);
+  const hcCodigo = STATE.historiaClinica || "HC-TEMP-NN";
+  registrarLogAuditoria("Módulo 1", "GENERAR_BRAZALETE", `Brazalete generado: ${hcCodigo} (Temporal: ${esTemporal})`);
 }
 
 function abrirModalBrazalete() {
   const m = document.getElementById('modal_ver_brazalete');
+  const modalPreview = document.getElementById('brazalete_modal_preview');
+  if (modalPreview && (!modalPreview.innerHTML || modalPreview.innerHTML.trim().length === 0)) {
+    const esTemporal = Boolean(STATE.esNN || !STATE.numDni || STATE.numDni === "NN");
+    modalPreview.innerHTML = construirHTMLBrazalete(esTemporal);
+  }
   if (m) {
     m.classList.add('open');
     m.style.display = 'flex';
@@ -9645,22 +9716,66 @@ function imprimirBrazaleteModal() {
 }
 
 function imprimirBrazaleteDirecto() {
-  const printArea = document.getElementById('brazalete_print_area');
-  if (!printArea || !printArea.innerHTML) {
-    generarBrazaleteEmergencia();
-  }
-  const w = window.open('', '_blank', 'width=600,height=400');
-  w.document.write(`<html><head><title>Brazalete de Emergencia</title><style>body{margin:20px;font-family:sans-serif;}</style></head><body>${printArea.innerHTML}</body></html>`);
+  const esTemporal = Boolean(STATE.esNN || !STATE.numDni || STATE.numDni === "NN");
+  const htmlBrazalete = construirHTMLBrazalete(esTemporal);
+  const hcPaciente = STATE.historiaClinica || "HC-TEMP-NN";
+
+  const w = window.open('', '_blank');
+  if (!w) { alert("Permita las ventanas emergentes para imprimir la pulsera."); return; }
+
+  w.document.write(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <title>Brazalete Hospitalario — ${hcPaciente}</title>
+      <style>
+        @page { size: landscape; margin: 0; }
+        body {
+          font-family: Arial, Helvetica, sans-serif;
+          margin: 0;
+          padding: 24px;
+          background: #e2e8f0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+        }
+        .instruction-box {
+          margin-bottom: 16px;
+          font-size: 13px;
+          color: #475569;
+          text-align: center;
+        }
+        @media print {
+          body { background: #ffffff; padding: 0; }
+          .instruction-box { display: none; }
+          .wristband-strip { box-shadow: none !important; border: 1px solid #000 !important; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="instruction-box">
+        <strong>PULSERA TÉRMICA OFICIAL DE IDENTIFICACIÓN DE PACIENTE — NTS N° 042 / NTS N° 139-MINSA</strong><br>
+        Imprima y coloque inmediatamente en la muñeca dominante del paciente. No retirar durante su estancia hospitalaria.
+      </div>
+      ${htmlBrazalete}
+    </body>
+    </html>
+  `);
   w.document.close();
   w.focus();
-  w.print();
+  setTimeout(() => { w.print(); }, 250);
 }
 
+window.construirHTMLBrazalete = construirHTMLBrazalete;
 window.generarBrazaleteEmergencia = generarBrazaleteEmergencia;
 window.abrirModalBrazalete = abrirModalBrazalete;
 window.cerrarModalBrazalete = cerrarModalBrazalete;
 window.imprimirBrazaleteModal = imprimirBrazaleteModal;
 window.imprimirBrazaleteDirecto = imprimirBrazaleteDirecto;
+
 
 // --- 3. RECONCILIACIÓN EN GUARDAR REGULARIZACIÓN DIFERIDA (BLOQUE 2.1) ---
 const orig_guardarRegularizacionDiferida = window.guardarRegularizacionDiferida;
