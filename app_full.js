@@ -2954,6 +2954,445 @@ function syncEva(val) {
   actualizarEVA(val);
 }
 
+// ===========================================================================
+// MOTOR CLÍNICO ESTANDARIZADO DE TRIAJE HOSPITALARIO
+// Estándares: NTS N° 042-MINSA/DGSP-V.01 · ESI v5 (AHRQ/ENA) · NEWS2 (RCP London) · ADA · PALS
+// ===========================================================================
+
+/**
+ * PARTE 1: LECTURA SEGURA DE DATOS (CERO FALSOS POSITIVOS)
+ * Retorna null si el campo está vacío o no es un número válido.
+ * PROHIBIDO convertir campos vacíos en 0.
+ */
+function parseVital(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const val = (typeof el.value === "string") ? el.value.trim() : "";
+  if (val === "" || val === null || val === undefined) return null;
+  const num = parseFloat(val);
+  return isNaN(num) ? null : num;
+}
+window.parseVital = parseVital;
+
+/**
+ * PARTE 2: MOTOR 1 — CÁLCULO OFICIAL NEWS2 (ADULTOS >= 14 AÑOS + PALS < 14 AÑOS)
+ * Royal College of Physicians (UK) + Rangos Pediátricos PALS
+ * Devuelve: { scoreTotal: number, maxParametroUnico: number, desglose: string[] }
+ */
+function calcularNEWS2(params = {}) {
+  const fr = params.fr ?? null;
+  const spo2 = params.spo2 ?? null;
+  const pas = params.pas ?? null;
+  const fc = params.fc ?? null;
+  const glasgow = params.glasgow ?? null;
+  const temp = params.temp ?? null;
+  const esPediatrico = Boolean(params.esPediatrico);
+  const edad = typeof params.edad === "number" ? params.edad : 30;
+
+  const desglose = [];
+  let maxParametroUnico = 0;
+  let scoreTotal = 0;
+
+  // 1. Frecuencia Respiratoria (rpm)
+  let ptsFR = 0;
+  if (fr === null || isNaN(fr)) {
+    desglose.push("FR: No registrado (+0)");
+  } else if (esPediatrico) {
+    if (edad < 3) {
+      ptsFR = (fr <= 15 || fr >= 50) ? 3 : (fr >= 41 ? 2 : (fr <= 23 ? 1 : 0));
+    } else {
+      ptsFR = (fr <= 10 || fr >= 31) ? 3 : (fr >= 26 ? 2 : (fr <= 14 ? 1 : 0));
+    }
+    desglose.push(`FR PALS: ${fr} rpm (+${ptsFR})`);
+  } else {
+    if (fr <= 8 || fr >= 25) ptsFR = 3;
+    else if (fr >= 21 && fr <= 24) ptsFR = 2;
+    else if (fr >= 9 && fr <= 11) ptsFR = 1;
+    else ptsFR = 0; // 12 a 20
+    desglose.push(`FR: ${fr} rpm (+${ptsFR})`);
+  }
+  scoreTotal += ptsFR;
+  if (ptsFR > maxParametroUnico) maxParametroUnico = ptsFR;
+
+  // 2. Saturación de Oxígeno (SpO2 %)
+  let ptsSpO2 = 0;
+  if (spo2 === null || isNaN(spo2)) {
+    desglose.push("SpO2: No registrado (+0)");
+  } else {
+    if (spo2 <= 91) ptsSpO2 = 3;
+    else if (spo2 <= 93) ptsSpO2 = 2;
+    else if (spo2 <= 95) ptsSpO2 = 1;
+    else ptsSpO2 = 0; // >= 96
+    desglose.push(`SpO2: ${spo2}% (+${ptsSpO2})`);
+  }
+  scoreTotal += ptsSpO2;
+  if (ptsSpO2 > maxParametroUnico) maxParametroUnico = ptsSpO2;
+
+  // 3. Presión Arterial Sistólica (PAS mmHg)
+  let ptsPAS = 0;
+  if (pas === null || isNaN(pas)) {
+    desglose.push("PAS: No registrado (+0)");
+  } else if (esPediatrico) {
+    const limInf = 70 + 2 * Math.max(1, edad);
+    if (pas < limInf || pas >= 135) ptsPAS = 3;
+    else if (pas < 90) ptsPAS = 2;
+    else if (pas < 100) ptsPAS = 1;
+    else ptsPAS = 0;
+    desglose.push(`PAS PALS: ${pas} mmHg (+${ptsPAS})`);
+  } else {
+    if (pas <= 90 || pas >= 220) ptsPAS = 3;
+    else if (pas <= 100) ptsPAS = 2;
+    else if (pas <= 110) ptsPAS = 1;
+    else ptsPAS = 0; // 111 a 219
+    desglose.push(`PAS: ${pas} mmHg (+${ptsPAS})`);
+  }
+  scoreTotal += ptsPAS;
+  if (ptsPAS > maxParametroUnico) maxParametroUnico = ptsPAS;
+
+  // 4. Frecuencia Cardíaca (FC lpm)
+  let ptsFC = 0;
+  if (fc === null || isNaN(fc)) {
+    desglose.push("FC: No registrado (+0)");
+  } else if (esPediatrico) {
+    if (edad < 5) {
+      ptsFC = (fc <= 60 || fc >= 161) ? 3 : (fc >= 131 ? 2 : (fc <= 79 ? 1 : 0));
+    } else {
+      ptsFC = (fc <= 50 || fc >= 141) ? 3 : (fc >= 111 ? 2 : (fc <= 59 ? 1 : 0));
+    }
+    desglose.push(`FC PALS: ${fc} lpm (+${ptsFC})`);
+  } else {
+    if (fc <= 40 || fc >= 131) ptsFC = 3;
+    else if (fc >= 111 && fc <= 130) ptsFC = 2;
+    else if ((fc >= 41 && fc <= 50) || (fc >= 91 && fc <= 110)) ptsFC = 1;
+    else ptsFC = 0; // 51 a 90
+    desglose.push(`FC: ${fc} lpm (+${ptsFC})`);
+  }
+  scoreTotal += ptsFC;
+  if (ptsFC > maxParametroUnico) maxParametroUnico = ptsFC;
+
+  // 5. Nivel de Conciencia (Glasgow Coma Scale)
+  let ptsGCS = 0;
+  if (glasgow === null || isNaN(glasgow)) {
+    desglose.push("Glasgow: No registrado (+0)");
+  } else {
+    if (glasgow <= 14) ptsGCS = 3;
+    else ptsGCS = 0; // 15
+    desglose.push(`Glasgow: ${glasgow}/15 (+${ptsGCS})`);
+  }
+  scoreTotal += ptsGCS;
+  if (ptsGCS > maxParametroUnico) maxParametroUnico = ptsGCS;
+
+  // 6. Temperatura Axilar (°C)
+  let ptsTemp = 0;
+  if (temp === null || isNaN(temp)) {
+    desglose.push("Temp: No registrado (+0)");
+  } else {
+    if (temp <= 35.0) ptsTemp = 3;
+    else if (temp >= 39.1) ptsTemp = 2;
+    else if ((temp >= 35.1 && temp <= 36.0) || (temp >= 38.1 && temp <= 39.0)) ptsTemp = 1;
+    else ptsTemp = 0; // 36.1 a 38.0
+    desglose.push(`Temp: ${temp}°C (+${ptsTemp})`);
+  }
+  scoreTotal += ptsTemp;
+  if (ptsTemp > maxParametroUnico) maxParametroUnico = ptsTemp;
+
+  return { scoreTotal, maxParametroUnico, desglose };
+}
+window.calcularNEWS2 = calcularNEWS2;
+
+/**
+ * PARTE 3: MOTOR 2 — ÁRBOL DE DECISIÓN OFICIAL ESI v5 + OVERLAY MINSA/ADA
+ * Aplica secuencialmente las 4 Compuertas Oficiales (A, B, C y D).
+ * Cumple estrictamente las 4 leyes matemáticas invariantes.
+ */
+function evaluarTriajeEstandar(datos = {}) {
+  const fr = datos.fr ?? null;
+  const spo2 = datos.spo2 ?? null;
+  const pas = datos.pas ?? null;
+  const pad = datos.pad ?? null;
+  const fc = datos.fc ?? null;
+  const glasgow = datos.glasgow ?? null;
+  const temp = datos.temp ?? null;
+  const glucosa = datos.glucosa ?? null;
+  const eva = datos.eva ?? null;
+  const esPediatrico = Boolean(datos.esPediatrico);
+  const edad = typeof datos.edad === "number" ? datos.edad : 30;
+
+  const news2 = calcularNEWS2({ fr, spo2, pas, fc, glasgow, temp, esPediatrico, edad });
+
+  const indiceShock = (fc !== null && pas !== null && pas > 0) ? (fc / pas) : null;
+  const tieneCodTiempo = Boolean(datos.codigoInfarto || datos.codigoIctus || datos.codigoSepsis);
+  const claveObst = datos.claveObstetrica || null;
+  const esGestante = Boolean(datos.esGestante);
+
+  // =========================================================================
+  // 1. COMPUERTA A (ESI 1 -> PRIORIDAD I - Rojo, SLA: Inmediato 0 min)
+  // Amenaza vital inmediata real
+  // =========================================================================
+  const amenazasA = [];
+
+  if (datos.panicoShockTrauma || datos.esParoOAgonia) {
+    amenazasA.push("Paro Cardiorrespiratorio Inminente / Botón de Pánico Shock Trauma");
+  }
+  if (news2.scoreTotal >= 7) {
+    amenazasA.push(`NEWS2 Crítico ≥ 7 pts (${news2.scoreTotal} pts - Alto Riesgo Fisiológico)`);
+  }
+  if (glasgow !== null && glasgow <= 8) {
+    amenazasA.push(`Glasgow Coma Scale ≤ 8 (${glasgow}/15 - Coma / Vía Aérea en Riesgo Inminente)`);
+  }
+  if (spo2 !== null && spo2 < 90) {
+    amenazasA.push(`Insuficiencia Respiratoria Severa SpO2 < 90% (${spo2}%)`);
+  }
+  if (pas !== null && pas < 90) {
+    amenazasA.push(`Colapso Hemodinámico / Shock PAS < 90 mmHg (${pas} mmHg)`);
+  }
+  if (indiceShock !== null && indiceShock >= 1.3) {
+    amenazasA.push(`Índice de Shock Severo ≥ 1.3 (${indiceShock.toFixed(2)})`);
+  }
+  if (glucosa !== null && glucosa < 54) {
+    amenazasA.push(`Hipoglucemia Severa Grado 3 ADA < 54 mg/dL (${glucosa} mg/dL - Neuroglucopenia)`);
+  }
+  if (glucosa !== null && glucosa > 600) {
+    amenazasA.push(`Estado Hiperosmolar Hiperglucémico Extremo ADA > 600 mg/dL (${glucosa} mg/dL)`);
+  }
+  if (glucosa !== null && glucosa > 250) {
+    const descompensado = (glasgow !== null && glasgow <= 13) ||
+                          (fr !== null && fr >= 24) ||
+                          (pas !== null && pas < 90) ||
+                          (news2.scoreTotal >= 5);
+    if (descompensado) {
+      amenazasA.push(`Crisis Hiperglucémica Descompensada ADA (Glucosa ${glucosa} mg/dL con Inestabilidad Sistémica)`);
+    }
+  }
+  if (claveObst === "roja" || claveObst === "azul") {
+    amenazasA.push(`Clave Obstétrica Crítica MINSA: Clave ${claveObst.toUpperCase()} (Hemorragia / Eclampsia)`);
+  } else if (esGestante && ((pas !== null && pas >= 160) || (pad !== null && pad >= 110))) {
+    amenazasA.push(`Gestante con Emergencia Hipertensiva Severa PA ${pas || "--"}/${pad || "--"} mmHg (Riesgo Preeclampsia Severa)`);
+  }
+  if (tieneCodTiempo) {
+    const inestabilidad = (news2.scoreTotal >= 5) ||
+                          (pas !== null && pas < 95) ||
+                          (spo2 !== null && spo2 < 92) ||
+                          (glasgow !== null && glasgow <= 13);
+    if (inestabilidad) {
+      amenazasA.push("Código Tiempo-Dependiente (Infarto/Ictus/Sepsis) con Inestabilidad Fisiológica");
+    }
+  }
+
+  if (amenazasA.length > 0) {
+    return {
+      prioridad: "I",
+      esiNivel: 1,
+      compuerta: "COMPUERTA A (Amenaza Vital Inmediata)",
+      slaNormativo: "Inmediato (0 min)",
+      news2,
+      motivos: amenazasA,
+      resumenClinico: "Riesgo vital inminente. Destino: Unidad de Shock Trauma / Reanimación."
+    };
+  }
+
+  // =========================================================================
+  // GUARDA DE INVARIANTE 1:
+  // Si NEWS2 === 0, glucosa normal, EVA 0 y sin códigos/claves -> JAMÁS P-I ni P-II
+  // =========================================================================
+  const glucosaNormal = (glucosa === null) || (glucosa >= 70 && glucosa < 180);
+  const evaCero = (eva === null || eva === 0);
+  const esFisiologicamenteIntacto = (
+    news2.scoreTotal === 0 &&
+    glucosaNormal &&
+    evaCero &&
+    !tieneCodTiempo &&
+    !claveObst &&
+    !(esGestante && ((pas !== null && pas >= 160) || (pad !== null && pad >= 110)))
+  );
+
+  // =========================================================================
+  // 2. COMPUERTA B (ESI 2 -> PRIORIDAD II - Naranja, SLA: Máx. 10 min)
+  // Alto riesgo o dolor severo
+  // =========================================================================
+  const criteriosB = [];
+
+  if (!esFisiologicamenteIntacto) {
+    if (news2.scoreTotal >= 5 && news2.scoreTotal <= 6) {
+      criteriosB.push(`NEWS2 Nivel Medio (5-6 pts: ${news2.scoreTotal} pts - Monitoreo Continuo Obligatorio)`);
+    }
+    if (news2.maxParametroUnico === 3) {
+      criteriosB.push("Parámetro Fisiológico Individual Extremo (NEWS2 = 3 pts en al menos 1 constante vital)");
+    }
+    if (glucosa !== null && (glucosa > 400 || (glucosa >= 54 && glucosa <= 69))) {
+      criteriosB.push(`Desbalance Glucémico Crítico ADA (Glucosa ${glucosa} mg/dL - Requiere Estabilización Urgente)`);
+    }
+    if ((pas !== null && pas >= 180) || (pad !== null && pad >= 120)) {
+      criteriosB.push(`Crisis Hipertensiva Sintomática / Alto Riesgo PA ${pas || "--"}/${pad || "--"} mmHg`);
+    }
+    if (eva !== null && eva >= 8) {
+      criteriosB.push(`Dolor Severo Agudo EVA ${eva}/10 (ESI Punto B)`);
+    }
+    if (tieneCodTiempo) {
+      criteriosB.push("Código Tiempo-Dependiente (Infarto / Ictus / Sepsis) en Ventana Terapéutica sin Shock");
+    }
+    if (claveObst === "amarilla") {
+      criteriosB.push("Clave Obstétrica Amarilla MINSA (Sepsis Obstétrica Inicial)");
+    }
+  }
+
+  if (criteriosB.length > 0) {
+    return {
+      prioridad: "II",
+      esiNivel: 2,
+      compuerta: "COMPUERTA B (Alto Riesgo / Dolor Severo)",
+      slaNormativo: "Máx. 10 min",
+      news2,
+      motivos: criteriosB,
+      resumenClinico: "Urgencia Mayor. Alto potencial de deterioro hemodinámico o neurológico."
+    };
+  }
+
+  // =========================================================================
+  // 3. COMPUERTA C y D (ESI 3, 4 y 5 -> PRIORIDADES III, IV y V)
+  // =========================================================================
+  
+  // Prioridad III (Amarillo, SLA: ≤ 30 min / NTS: hasta 60 min)
+  const esPrioridad3 = (
+    news2.scoreTotal >= 2 ||
+    (eva !== null && eva >= 4 && eva <= 7) ||
+    (glucosa !== null && glucosa >= 250 && glucosa <= 400) ||
+    (pas !== null && pas >= 140 && pas <= 179) ||
+    (pad !== null && pad >= 90 && pad <= 119) ||
+    (pas !== null && pas >= 180) || (pad !== null && pad >= 120) // Hipertensión aislada asintomática con NEWS2=0
+  );
+
+  if (esPrioridad3) {
+    const motivosC = [];
+    if (news2.scoreTotal >= 2) motivosC.push(`NEWS2 Leve/Moderado (${news2.scoreTotal} pts)`);
+    if (eva !== null && eva >= 4 && eva <= 7) motivosC.push(`Dolor Moderado EVA ${eva}/10`);
+    if (glucosa !== null && glucosa >= 250 && glucosa <= 400) motivosC.push(`Hiperglucemia Moderada (${glucosa} mg/dL)`);
+    if ((pas !== null && pas >= 140) || (pad !== null && pad >= 90)) motivosC.push(`Presión Arterial Elevada (${pas || "--"}/${pad || "--"} mmHg)`);
+    if (motivosC.length === 0) motivosC.push("Requiere ≥ 2 recursos diagnósticos o terapéuticos en tópico");
+
+    return {
+      prioridad: "III",
+      esiNivel: 3,
+      compuerta: "COMPUERTA C (Estabilidad Relativa / Múltiples Recursos)",
+      slaNormativo: "Máx. 30 min (NTS: ≤ 60 min)",
+      news2,
+      motivos: motivosC,
+      resumenClinico: "Urgencia Menor. Requiere laboratorio, imágenes o medicación en tópico."
+    };
+  }
+
+  // Prioridad IV (Verde, SLA: ≤ 60 min / NTS: hasta 120 min)
+  const esPrioridad4 = (
+    news2.scoreTotal === 1 ||
+    (eva !== null && eva >= 1 && eva <= 3) ||
+    (glucosa !== null && glucosa >= 180 && glucosa < 250)
+  );
+
+  if (esPrioridad4) {
+    const motivosD1 = [];
+    if (news2.scoreTotal === 1) motivosD1.push(`NEWS2 Mínimo (${news2.scoreTotal} pt)`);
+    if (eva !== null && eva >= 1 && eva <= 3) motivosD1.push(`Dolor Leve EVA ${eva}/10`);
+    if (glucosa !== null && glucosa >= 180 && glucosa < 250) motivosD1.push(`Hiperglucemia Leve (${glucosa} mg/dL)`);
+    if (motivosD1.length === 0) motivosD1.push("Requiere 1 solo recurso simple o evaluación médica general");
+
+    return {
+      prioridad: "IV",
+      esiNivel: 4,
+      compuerta: "COMPUERTA D1 (Urgencia Leve / 1 Recurso)",
+      slaNormativo: "Máx. 60 min (NTS: ≤ 120 min)",
+      news2,
+      motivos: motivosD1,
+      resumenClinico: "Urgencia Leve. Sin compromiso fisiológico. Manejo ambulatorio o tópico rápido."
+    };
+  }
+
+  // Prioridad V (Azul, SLA: ≤ 120 min / NTS: hasta 240 min)
+  return {
+    prioridad: "V",
+    esiNivel: 5,
+    compuerta: "COMPUERTA D2 (No Urgente / 0 Recursos)",
+    slaNormativo: "Máx. 120 min (NTS: ≤ 240 min)",
+    news2,
+    motivos: ["Constantes vitales normales (NEWS2 = 0 pts)", "Sin dolor o dolor EVA 0", "Sin requerimiento de recursos inmediatos de emergencia"],
+    resumenClinico: "No Urgencia. Consulta administrativa, reevaluación o retiro de puntos."
+  };
+}
+window.evaluarTriajeEstandar = evaluarTriajeEstandar;
+
+/**
+ * PARTE 4: FUZZING TEST SUITE (500 COMBINACIONES)
+ * Valida automáticamente las 4 leyes matemáticas inquebrantables.
+ */
+function ejecutarFuzzingTriaje500() {
+  let pasados = 0;
+  for (let i = 0; i < 500; i++) {
+    const d = {
+      fr: Math.random() < 0.2 ? null : Math.floor(Math.random() * 45) + 5,
+      spo2: Math.random() < 0.2 ? null : Math.floor(Math.random() * 21) + 80,
+      pas: Math.random() < 0.2 ? null : Math.floor(Math.random() * 190) + 60,
+      pad: Math.random() < 0.2 ? null : Math.floor(Math.random() * 95) + 35,
+      fc: Math.random() < 0.2 ? null : Math.floor(Math.random() * 160) + 30,
+      glasgow: Math.random() < 0.2 ? null : Math.floor(Math.random() * 13) + 3,
+      temp: Math.random() < 0.2 ? null : parseFloat((Math.random() * 7 + 34).toFixed(1)),
+      glucosa: Math.random() < 0.2 ? null : Math.floor(Math.random() * 680) + 30,
+      eva: Math.random() < 0.2 ? null : Math.floor(Math.random() * 11),
+      esPediatrico: Math.random() < 0.2,
+      edad: Math.floor(Math.random() * 85) + 1,
+      codigoInfarto: Math.random() < 0.08,
+      codigoIctus: Math.random() < 0.08,
+      codigoSepsis: Math.random() < 0.08,
+      esGestante: Math.random() < 0.08,
+      claveObstetrica: ["ninguna", null, "roja", "azul", "amarilla"][Math.floor(Math.random() * 5)],
+      panicoShockTrauma: Math.random() < 0.04
+    };
+
+    const res = evaluarTriajeEstandar(d);
+    const prio = res.prioridad;
+    const scoreNews2 = res.news2.scoreTotal;
+
+    // Invariante 1: Si NEWS2 === 0, glucosa normal, EVA 0 y sin códigos/claves -> JAMÁS puede devolver Prioridad I ni II.
+    const glucosaNorm = (d.glucosa === null) || (d.glucosa >= 70 && d.glucosa < 180);
+    const evaCero = (d.eva === null || d.eva === 0);
+    const sinCodigos = !(d.codigoInfarto || d.codigoIctus || d.codigoSepsis || ["roja", "azul", "amarilla"].includes(d.claveObstetrica) || d.panicoShockTrauma);
+    const gestanteHipertensa = d.esGestante && ((d.pas !== null && d.pas >= 160) || (d.pad !== null && d.pad >= 110));
+
+    if (scoreNews2 === 0 && glucosaNorm && evaCero && sinCodigos && !gestanteHipertensa) {
+      if (prio === "I" || prio === "II") {
+        throw new Error(`Violación Invariante 1 en iter ${i}: NEWS2=0 dio P-${prio}`);
+      }
+    }
+
+    // Invariante 2: Si glucosa > 400 -> JAMÁS puede devolver Prioridad III, IV ni V.
+    if (d.glucosa !== null && d.glucosa > 400) {
+      if (prio !== "I" && prio !== "II") {
+        throw new Error(`Violación Invariante 2 en iter ${i}: Glucosa ${d.glucosa} dio P-${prio}`);
+      }
+    }
+
+    // Invariante 3: Si glucosa < 54 o glasgow <= 8 o spo2 < 90 -> SIEMPRE debe devolver Prioridad I.
+    if ((d.glucosa !== null && d.glucosa < 54) ||
+        (d.glasgow !== null && d.glasgow <= 8) ||
+        (d.spo2 !== null && d.spo2 < 90)) {
+      if (prio !== "I") {
+        throw new Error(`Violación Invariante 3 en iter ${i}: glucosa=${d.glucosa}, glasgow=${d.glasgow}, spo2=${d.spo2} dio P-${prio}`);
+      }
+    }
+
+    // Invariante 4: Ningún campo vacío (null) puede alterar el puntaje NEWS2 ni disparar Prioridad I.
+    const dVacio = { fr: null, spo2: null, pas: null, pad: null, fc: null, glasgow: null, temp: null, glucosa: null, eva: null };
+    const resVacio = evaluarTriajeEstandar(dVacio);
+    if (resVacio.news2.scoreTotal !== 0) throw new Error("Invariante 4: NEWS2 vacío no fue 0");
+    if (resVacio.prioridad !== "V") throw new Error("Invariante 4: Triage vacío no fue V");
+
+    pasados++;
+  }
+  return { ok: true, total: pasados };
+}
+window.ejecutarFuzzingTriaje500 = ejecutarFuzzingTriaje500;
+
+// ===========================================================================
+// RECALCULAR PRIORIDAD CLÍNICA MEDIANTE MOTOR ESTANDARIZADO NTS-042 / ESI / NEWS2
+// ===========================================================================
 function recalcularPrioridad() {
   const validacion = validarSignosVitalesEnVivo();
   if (!validacion.esValido) {
@@ -2961,31 +3400,27 @@ function recalcularPrioridad() {
     return;
   }
 
-  // Si se activó botón de pánico o signo de paro
-  if (STATE.panicoShockTrauma || validacion.esParoOAgonia) {
-    STATE.prioridad = "I";
-    STATE.colorPrioridad = PRIORIDADES["I"].nombre;
-    mostrarPrioridad("I");
-    renderizarRutaClinica("I");
-    const chipLive = document.getElementById("chipPrioLive");
-    if (chipLive) {
-      chipLive.textContent = "P-I ROJO (PARO / SHOCK TRAUMA)";
-      chipLive.className = "top-prio-chip prio-I";
-    }
-    return;
+  // PARTE 1: Lectura segura de datos con parseVital (cero falsos positivos, null si vacío)
+  const spo2 = parseVital("spo2_full");
+  const fc = parseVital("fc_full");
+  const pas = parseVital("pas_full");
+  const pad = parseVital("pad_full");
+  const fr = parseVital("fr_full");
+  const temp = parseVital("temp_full");
+  const glucosa = parseVital("glucosa_full");
+  const glasgow = parseVital("glasgow_full");
+  
+  // EVA: 0 es válido (sin dolor), vacío es null
+  let eva = null;
+  const elEva = document.getElementById("eva_full");
+  if (elEva && elEva.value !== "") {
+    const valEva = parseInt(elEva.value, 10);
+    if (!isNaN(valEva)) eva = valEva;
   }
 
-  // Leer valores
-  const spo2 = parseFloat(document.getElementById("spo2_full")?.value) || null;
-  const fc = parseFloat(document.getElementById("fc_full")?.value) || null;
-  const pas = parseFloat(document.getElementById("pas_full")?.value) || null;
-  const pad = parseFloat(document.getElementById("pad_full")?.value) || null;
-  const fr = parseFloat(document.getElementById("fr_full")?.value) || null;
-  const temp = parseFloat(document.getElementById("temp_full")?.value) || null;
-  const glucosa = parseFloat(document.getElementById("glucosa_full")?.value) || null;
-  const glasgow = parseFloat(document.getElementById("glasgow_full")?.value) || null;
-  const eva = parseInt(document.getElementById("eva_full")?.value) || 0;
   const motivo = (document.getElementById("motivo_full")?.value || "").toLowerCase();
+  const esGestante = Boolean(STATE.esGestante || document.getElementById("check_gestante")?.checked);
+  const claveObstetrica = STATE.claveObstetrica || document.getElementById("clave_obstetrica_sel")?.value || null;
 
   const antCardio = document.getElementById("ant_cardio")?.checked || false;
   const antResp = document.getElementById("ant_resp")?.checked || false;
@@ -2993,82 +3428,36 @@ function recalcularPrioridad() {
   const antNeuro = document.getElementById("ant_neuro")?.checked || false;
   const antecedentes = antCardio || antResp || antDiab || antNeuro;
 
+  // Actualizar STATE con valores limpios
   STATE.spo2 = spo2; STATE.fc = fc; STATE.pasSistolica = pas;
   STATE.paDiastolica = pad; STATE.fr = fr; STATE.temperatura = temp;
-  STATE.glucosa = glucosa; STATE.glasgow = glasgow; STATE.eva = eva;
+  STATE.glucosa = glucosa; STATE.glasgow = glasgow; STATE.eva = eva !== null ? eva : 0;
   STATE.antecedentes = antecedentes;
   STATE.motivoConsulta = document.getElementById("motivo_full")?.value || "";
 
-  // Determinar Prioridad I a V según NTS N° 042-MINSA
-  let prio = null;
-  const tieneDatos = spo2 !== null || fc !== null || pas !== null || glasgow !== null;
+  // PARTE 2 y 3: Evaluar con Motor Estándar ESI v5 + NEWS2 + ADA + MINSA
+  const datosTriaje = {
+    spo2, fc, pas, pad, fr, temp, glucosa, glasgow, eva,
+    esPediatrico: Boolean(STATE.edad !== null && STATE.edad !== undefined && STATE.edad < 14),
+    edad: (typeof STATE.edad === "number") ? STATE.edad : 30,
+    motivo,
+    esGestante,
+    claveObstetrica,
+    codigoInfarto: Boolean(STATE.codigoInfarto),
+    codigoIctus: Boolean(STATE.codigoIctus),
+    codigoSepsis: Boolean(STATE.codigoSepsis),
+    panicoShockTrauma: Boolean(STATE.panicoShockTrauma),
+    esParoOAgonia: Boolean(validacion.esParoOAgonia)
+  };
 
-  // Criterios Prioridad I — ROJO (Emergencia Vital con Riesgo Inminente)
-  const esCritico = (
-    (spo2 !== null && spo2 < 92) ||
-    (fc !== null && (fc >= 130 || fc < 40)) ||
-    (pas !== null && pas < 90) ||
-    (pas !== null && pas >= 160 && (motivo.includes("torác") || motivo.includes("pecho") || STATE.codigoInfarto)) ||
-    (glasgow !== null && glasgow <= 12) ||
-    (glucosa !== null && glucosa < 54) ||
-    (glucosa !== null && glucosa > 400 && glasgow !== null && glasgow < 15) ||
-    STATE.codigoInfarto || STATE.codigoIctus || STATE.codigoSepsis ||
-    (STATE.esGestante && (STATE.claveObstetrica === "roja" || STATE.claveObstetrica === "azul" || STATE.claveObstetrica === "amarilla")) ||
-    (antecedentes && spo2 !== null && spo2 < 94) ||
-    (antecedentes && fc !== null && fc > 110)
-  );
-  if (esCritico) { prio = "I"; }
-
-  // Criterios Prioridad II — NARANJA (Urgencia Mayor)
-  if (!prio) {
-    const esUrgente = (
-      eva >= 8 ||
-      (fr !== null && fr > 25) ||
-      (temp !== null && temp > 39.5) ||
-      (spo2 !== null && spo2 >= 92 && spo2 < 95) ||
-      (pas !== null && pas >= 160) ||
-      (glucosa !== null && glucosa < 70) ||
-      (glucosa !== null && glucosa > 300)
-    );
-    if (esUrgente) { prio = "II"; }
-  }
-
-  // Criterios Prioridad III — AMARILLO (Urgencia Menor / Moderada)
-  if (!prio) {
-    const esModerado = (
-      (temp !== null && temp >= 38.0 && temp <= 39.5 && eva >= 4) ||
-      (fc !== null && fc > 100 && fc <= 110) ||
-      (fr !== null && fr > 20 && fr <= 25) ||
-      (pas !== null && pas >= 140 && pas < 160) ||
-      (pad !== null && pad >= 90 && pad < 100) ||
-      (eva >= 4 && eva < 8) ||
-      (antecedentes && eva >= 4) ||
-      (motivo.includes("dolor") && eva >= 4)
-    );
-    if (esModerado) { prio = "III"; }
-  }
-
-  // Criterios Prioridad IV — VERDE (Urgencia Leve / Sin compromiso vital)
-  if (!prio) {
-    const esLeve = (
-      (eva >= 2 && eva < 4) ||
-      (temp !== null && temp >= 37.5 && temp < 38.5) ||
-      motivo.includes("faringitis") || motivo.includes("resfrío") || motivo.includes("odinofagia") ||
-      /\btos\b/i.test(motivo) || motivo.includes("garganta")
-    );
-    if (esLeve) { prio = "IV"; }
-  }
-
-  // Criterios Prioridad V — AZUL (No Urgencia / Ambulatorio / Procedimientos)
-  if (!prio) {
-    prio = (motivo.includes("retiro") || motivo.includes("punto") || motivo.includes("curacion") || motivo.includes("curación") || eva <= 1) ? "V" : "IV";
-  }
-  if (!tieneDatos && antecedentes) { prio = "I"; }
+  const resultado = evaluarTriajeEstandar(datosTriaje);
+  const prio = resultado.prioridad;
 
   STATE.prioridad = prio;
-  STATE.colorPrioridad = PRIORIDADES[prio].nombre;
+  STATE.resultadoTriajeEstandar = resultado;
+  STATE.colorPrioridad = PRIORIDADES[prio]?.nombre || "Desconocido";
 
-  mostrarPrioridad(prio);
+  mostrarPrioridad(prio, resultado);
   renderizarRutaClinica(prio);
   registrarTimestamp("M3_triage");
 
@@ -3206,7 +3595,7 @@ function registrarFacturacionTriage(prio) {
 }
 window.registrarFacturacionTriage = registrarFacturacionTriage;
 
-function mostrarPrioridad(prio) {
+function mostrarPrioridad(prio, detalle) {
   const pd = document.getElementById("prioridad_display");
   const def = PRIORIDADES[prio];
   if (!def) return;
@@ -3231,8 +3620,6 @@ function mostrarPrioridad(prio) {
     elColorName.style.color = def.hex;
   }
 
-  // EN EL MÓDULO DE PRIORIDAD: SOLO SE COLOCA SI ES EMERGENCIA O URGENCIA Y SU CLASIFICACIÓN.
-  // PROHIBIDO COLOCAR MONTOS DE PAGO, S/ 0, S/ 80 O COPAGOS (ESO SE LIQUIDA EN EL MÓDULO DE FACTURACIÓN).
   const elPrioTipo = document.getElementById("prio_tipo");
   if (elPrioTipo) {
     elPrioTipo.textContent = `${categoriaTexto} — ${clasificacionTexto}`;
@@ -3248,6 +3635,80 @@ function mostrarPrioridad(prio) {
   if (elPrioDestino) {
     elPrioDestino.textContent = `Destino Clínico: ${def.destino}`;
     elPrioDestino.style.color = def.hex;
+  }
+
+  // Actualización SLA Display
+  const slaEl = document.getElementById("prio_sla_display");
+  if (slaEl) {
+    const slaMap = {
+      'I': '⏱️ SLA Normativo NTS N° 042: Inmediato — 0 min',
+      'II': '⏱️ SLA Normativo NTS N° 042: Máx. 10 min',
+      'III': '⏱️ SLA Normativo NTS N° 042: Máx. 30 min (NTS: hasta 60 min)',
+      'IV': '⏱️ SLA Normativo NTS N° 042: Máx. 60 min (NTS: hasta 120 min)',
+      'V': '⏱️ SLA Normativo NTS N° 042: Máx. 120 min (NTS: hasta 240 min)'
+    };
+    slaEl.textContent = (detalle && detalle.slaNormativo) ? `⏱️ SLA: ${detalle.slaNormativo}` : (slaMap[prio] || '⏱️ SLA: --');
+  }
+
+  // Trazabilidad Estándar NTS N° 042 / ESI v5 / NEWS2 / ADA
+  const trazaEl = document.getElementById("prio_trazabilidad_estandar");
+  if (trazaEl) {
+    trazaEl.style.display = "block";
+    const res = (detalle && detalle.news2) ? detalle : (STATE.resultadoTriajeEstandar || null);
+    if (res && res.news2) {
+      const scoreNews2 = res.news2.scoreTotal;
+      const maxIndiv = res.news2.maxParametroUnico;
+      const compuerta = res.compuerta || "--";
+      const esiNivel = res.esiNivel || (prio === "I" ? 1 : (prio === "II" ? 2 : (prio === "III" ? 3 : (prio === "IV" ? 4 : 5))));
+      const slaTxt = res.slaNormativo || "Por definir";
+      
+      let badgesHtml = "";
+      if (Array.isArray(res.news2.desglose)) {
+        badgesHtml = res.news2.desglose.map(b => {
+          let bg = "rgba(255,255,255,0.18)";
+          if (b.includes("+3")) bg = "rgba(239,68,68,0.45)";
+          else if (b.includes("+2")) bg = "rgba(249,115,22,0.45)";
+          else if (b.includes("+1")) bg = "rgba(234,179,8,0.35)";
+          return `<span style="background:${bg}; padding:2px 8px; border-radius:4px; font-size:0.73rem; font-weight:700;">${b}</span>`;
+        }).join(" ");
+      }
+
+      let motivosHtml = "";
+      if (Array.isArray(res.motivos) && res.motivos.length > 0) {
+        motivosHtml = res.motivos.map(m => `<li><strong>${m}</strong></li>`).join("");
+      } else {
+        motivosHtml = `<li>${res.resumenClinico || "Evaluación fisiológica estándar completada."}</li>`;
+      }
+
+      trazaEl.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.25); padding-bottom:6px; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+          <div style="font-weight:800; font-size:0.8rem; letter-spacing:0.5px;">📋 AUDITORÍA CLÍNICA: NTS N° 042-MINSA · ALGORITMO ESI v5 · NEWS2 (RCP LONDON) · UMBRALES ADA</div>
+          <span style="background:rgba(255,255,255,0.22); padding:3px 8px; border-radius:5px; font-weight:800; font-size:0.75rem;">SLA: ${slaTxt}</span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:8px; margin-bottom:8px;">
+          <div style="background:rgba(0,0,0,0.22); padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.15);">
+            <div style="font-size:0.7rem; opacity:0.85; text-transform:uppercase; font-weight:700;">Árbol ESI v5 (AHRQ / ENA)</div>
+            <div style="font-weight:900; font-size:0.95rem; margin-top:2px;">ESI Nivel ${esiNivel} · ${compuerta}</div>
+          </div>
+          <div style="background:rgba(0,0,0,0.22); padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.15);">
+            <div style="font-size:0.7rem; opacity:0.85; text-transform:uppercase; font-weight:700;">Score Fisiológico NEWS2 (RCP)</div>
+            <div style="font-weight:900; font-size:0.95rem; margin-top:2px;">${scoreNews2} pts <span style="font-size:0.75rem; font-weight:600; opacity:0.9;">(Máx. individual: ${maxIndiv} pts)</span></div>
+          </div>
+        </div>
+        <div style="margin-bottom:8px;">
+          <div style="font-size:0.72rem; opacity:0.9; margin-bottom:4px; font-weight:800; text-transform:uppercase;">Constantes Vitales en Escala NEWS2:</div>
+          <div style="display:flex; flex-wrap:wrap; gap:5px;">
+            ${badgesHtml}
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.72rem; opacity:0.9; margin-bottom:4px; font-weight:800; text-transform:uppercase;">Criterios Clínicos Determinantes:</div>
+          <ul style="margin:0; padding-left:18px; font-size:0.76rem; line-height:1.45;">
+            ${motivosHtml}
+          </ul>
+        </div>
+      `;
+    }
   }
 
   // Configuración de tránsito asistencial y salto de módulos según NTS N° 042-MINSA
