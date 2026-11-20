@@ -2319,6 +2319,7 @@
     }
 
   </style>
+  <link rel="stylesheet" href="design_system.css">
 </head>
 <body>
 
@@ -4816,5 +4817,35 @@
     </div>
   </div>
 
+  <script>
+    (function() {
+      const tema = localStorage.getItem("upp_tema_ui") || "light";
+      if (tema === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+        if (document.body) document.body.setAttribute("data-theme", "dark");
+      }
+      window.addEventListener("DOMContentLoaded", function() {
+        const btn = document.getElementById("btn_toggle_dark_mode");
+        if (btn) {
+          const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+          btn.innerHTML = isDark ? "🌙 Oscuro" : "☀️ Claro";
+          btn.onclick = function() {
+            const currentDark = document.documentElement.getAttribute("data-theme") === "dark";
+            const nuevo = currentDark ? "light" : "dark";
+            if (nuevo === "dark") {
+              document.documentElement.setAttribute("data-theme", "dark");
+              document.body.setAttribute("data-theme", "dark");
+              btn.innerHTML = "🌙 Oscuro";
+            } else {
+              document.documentElement.removeAttribute("data-theme");
+              document.body.removeAttribute("data-theme");
+              btn.innerHTML = "☀️ Claro";
+            }
+            localStorage.setItem("upp_tema_ui", nuevo);
+          };
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

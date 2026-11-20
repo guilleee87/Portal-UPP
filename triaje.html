@@ -2642,8 +2642,11 @@
           <button type="button" class="btn-caos-action btn-quirofano-action" onclick="activarIngresoDirectoQuirofano()" title="Admisión Inmediata de Emergencia a Quirófano SOP (Ley N° 27604)" style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%); color: #ffffff; font-weight: 800; border: 1px solid #9a3412; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);">
             🏥 Admitir Emergencia Quirófano SOP (P-I)
           </button>
-          <button type="button" class="btn-caos-action btn-nn-action" onclick="abrirModalAdmisionRapidaNN()" title="Admisión de Emergencia de Paciente Inconsciente o Sin DNI (Ley N° 27604)">
-            🚨 Admitir Emergencia NN (P-I)
+          <button type="button" class="btn-caos-action" onclick="ingresarNNConsciente()" title="Admisión de Paciente NN Consciente / Indocumentado (Pasa a Evaluación de Triaje)" style="background:#f0f9ff; color:#0369a1; border:1.5px solid #bae6fd; font-weight:800;">
+            👤 NN Consciente (Evaluación)
+          </button>
+          <button type="button" class="btn-caos-action btn-nn-action" onclick="ingresarNNInconsciente()" title="Admisión Inmediata de Paciente NN Inconsciente a Shock Trauma (Ley N° 27604)">
+            🚨 NN Inconsciente (Inmediata P-I)
           </button>
           <button type="button" class="btn-caos-action btn-soat-action" onclick="admitirEmergenciaSoat()" title="Protocolo de Emergencia Accidente de Tránsito / Trauma Vial (Ley N° 27181 & D.S. N° 024-2002-MTC)" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; font-weight: 800; border: 1px solid #075985; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);">
             🚗 Accidente de Tránsito / Trauma Vial (SOAT)
@@ -3227,9 +3230,12 @@
             <strong style="color:#c2410c; font-size:0.85rem;">🚨 ¿Paciente Indocumentado / En estado de Inconsciencia (NN)?</strong>
             <div style="font-size:0.75rem; color:#9a3412;">Abre Historia Temporal, deja en blanco fecha/edad sin bloquear el flujo y emite oficio legal a PNP.</div>
           </div>
-          <div style="display:flex; gap:8px;">
-            <button type="button" class="btn-full-secondary" style="border-color:#ea580c; color:#c2410c; font-weight:800;" onclick="ingresarPacienteNN()">
-              🚨 Ingresar Paciente NN
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-full-secondary" style="border:2px solid #0284c7; background:#f0f9ff; color:#0369a1; font-weight:800; padding:8px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;" onclick="ingresarNNConsciente()" title="1. Paciente NN Consciente (Pasa a Evaluación de Triaje regular)">
+              <span>👤</span> <span>1. NN Consciente (A Evaluación)</span>
+            </button>
+            <button type="button" class="btn-full-primary" style="background:linear-gradient(135deg, #b91c1c 0%, #dc2626 100%); border:1.5px solid #991c1c; color:#ffffff; font-weight:800; padding:8px 14px; border-radius:8px; box-shadow:0 2px 6px rgba(185,28,28,0.25); display:inline-flex; align-items:center; gap:6px;" onclick="ingresarNNInconsciente()" title="2. Paciente NN Inconsciente (Pase Directo a Shock Trauma P-I Ley N° 27604)">
+              <span>🚨</span> <span>2. NN Inconsciente (Atención Inmediata P-I)</span>
             </button>
             <button type="button" class="btn-full-secondary" id="btn_notif_pnp" style="display:none;" onclick="imprimirAlertaNN()">
               📄 Acta PNP / Servicio Social

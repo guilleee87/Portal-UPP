@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal Clínico & Algoritmos Hospitalarios — Universidad Politécnica del Perú</title>
   <link rel="stylesheet" href="landing.css">
+  <link rel="stylesheet" href="design_system.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏥</text></svg>">
 </head>
 <body>
@@ -86,6 +87,8 @@
 
       <!-- DERECHA: TELEMETRÍA EN VIVO & RELOJ UTC-5 -->
       <div class="nav-telemetry-cluster">
+        <button type="button" class="btn-theme-toggle" id="btn_toggle_dark_mode" title="Cambiar tema">☀️ Claro</button>
+        
         <div class="telemetry-pill">
           <span class="telemetry-pulse-dot" id="supabaseDot"></span>
           <span id="supabasePillText">Conectando Supabase...</span>
@@ -567,5 +570,35 @@
   </footer>
 
   <script src="landing.js"></script>
+  <script>
+    (function() {
+      const tema = localStorage.getItem("upp_tema_ui") || "light";
+      if (tema === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+        if (document.body) document.body.setAttribute("data-theme", "dark");
+      }
+      window.addEventListener("DOMContentLoaded", function() {
+        const btn = document.getElementById("btn_toggle_dark_mode");
+        if (btn) {
+          const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+          btn.innerHTML = isDark ? "🌙 Oscuro" : "☀️ Claro";
+          btn.onclick = function() {
+            const currentDark = document.documentElement.getAttribute("data-theme") === "dark";
+            const nuevo = currentDark ? "light" : "dark";
+            if (nuevo === "dark") {
+              document.documentElement.setAttribute("data-theme", "dark");
+              document.body.setAttribute("data-theme", "dark");
+              btn.innerHTML = "🌙 Oscuro";
+            } else {
+              document.documentElement.removeAttribute("data-theme");
+              document.body.removeAttribute("data-theme");
+              btn.innerHTML = "☀️ Claro";
+            }
+            localStorage.setItem("upp_tema_ui", nuevo);
+          };
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

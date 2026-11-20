@@ -90,8 +90,11 @@
         <button type="button" class="cockpit-tactical-btn" onclick="activarIngresoDirectoQuirofano()" title="Admisión Directa a Quirófano SOP">
           🏥 Quirófano SOP
         </button>
-        <button type="button" class="cockpit-tactical-btn" onclick="admitirEmergenciaNN()" title="Admisión de Paciente Indocumentado NN">
-          🚨 Paciente NN
+        <button type="button" class="cockpit-tactical-btn" onclick="ingresarNNConsciente()" style="border-left:3px solid #0284c7;" title="1. Paciente NN Consciente / Indocumentado (Pasa a Evaluación de Triaje)">
+          👤 NN Consciente
+        </button>
+        <button type="button" class="cockpit-tactical-btn btn-p1-danger" onclick="ingresarNNInconsciente()" style="border-left:3px solid #dc2626;" title="2. Paciente NN Inconsciente / Riesgo Vital Inminente (Atención Inmediata P-I Shock Trauma Ley 27604)">
+          🚨 NN Inconsciente (P-I)
         </button>
         <button type="button" class="cockpit-tactical-btn" onclick="generarEImprimirPulseraInmediata()" style="background:#0f172a; color:#38bdf8; border:1.5px solid #0284c7; font-weight:800;" title="Generar e Imprimir Inmediatamente la Pulsera QR de Emergencia">
           🏷️ Imprimir Pulsera QR
@@ -862,6 +865,98 @@
 
     if (rolActual === "MEDICO") actualizarTarjetaResumenTriaje();
     if (rolActual === "CAJA") actualizarTarjetaResumenCaja();
+
+    // Actualización dinámica de las 4 fases del Stepper y sombreado cuando está Atendido
+    const colaActual = window.PACIENTES_COLA || [];
+    const pxActual = colaActual.find(x => x.id === window.pacienteActivoId) || {};
+    const efActual = pxActual.estadoFlujo || (state && state.estadoFlujo) || "PENDIENTE_TRIAJE";
+    const fActual = pxActual.firmas || (state && state.firmas) || {};
+    const cobValActual = Boolean(pxActual.coberturaValidada || (state && state.coberturaValidada));
+
+    const s1 = document.getElementById("step_status_1");
+    const s2 = document.getElementById("step_status_2");
+    const s3 = document.getElementById("step_status_3");
+    const s4 = document.getElementById("step_status_4");
+    const step1El = document.getElementById("cockpit_step_1");
+    const step2El = document.getElementById("cockpit_step_2");
+    const step3El = document.getElementById("cockpit_step_3");
+    const step4El = document.getElementById("cockpit_step_4");
+
+    // Paso 1: Triaje
+    if (fActual.triaje || efActual !== "PENDIENTE_TRIAJE") {
+      if (s1) { s1.textContent = "✓ Sellado"; s1.className = "cockpit-step-status completed"; }
+      if (step1El) step1El.classList.add("completed");
+    } else {
+      if (s1) { s1.textContent = "En curso"; s1.className = "cockpit-step-status in-progress"; }
+      if (step1El) step1El.classList.remove("completed");
+    }
+
+    // Paso 2: Admisión
+    if (cobValActual || fActual.admision) {
+      if (s2) { s2.textContent = "✓ Validado"; s2.className = "cockpit-step-status completed"; }
+      if (step2El) step2El.classList.add("completed");
+    } else if (efActual !== "PENDIENTE_TRIAJE") {
+      if (s2) { s2.textContent = "Pendiente"; s2.className = "cockpit-step-status in-progress"; }
+      if (step2El) step2El.classList.remove("completed");
+    } else {
+      if (s2) { s2.textContent = "Pendiente"; s2.className = "cockpit-step-status"; }
+      if (step2El) step2El.classList.remove("completed");
+    }
+
+    // Paso 3: Médico
+    if (fActual.medico || efActual === "PENDIENTE_CAJA" || efActual === "CERRADO_FACTURADO") {
+      if (s3) { s3.textContent = "✓ Alta Firmada"; s3.className = "cockpit-step-status completed"; }
+      if (step3El) step3El.classList.add("completed");
+    } else if (efActual === "EN_ATENCION_MEDICA") {
+      if (s3) { s3.textContent = "En curso"; s3.className = "cockpit-step-status in-progress"; }
+      if (step3El) step3El.classList.remove("completed");
+    } else {
+      if (s3) { s3.textContent = "Pendiente"; s3.className = "cockpit-step-status"; }
+      if (step3El) step3El.classList.remove("completed");
+    }
+
+    // Paso 4: Liquidación / Caja
+    if (efActual === "CERRADO_FACTURADO") {
+      if (s4) { s4.textContent = "✓ Atendido"; s4.className = "cockpit-step-status completed"; }
+      if (step4El) step4El.classList.add("completed");
+    } else if (efActual === "PENDIENTE_CAJA") {
+      if (s4) { s4.textContent = "Por liquidar"; s4.className = "cockpit-step-status in-progress"; }
+      if (step4El) step4El.classList.remove("completed");
+    } else {
+      if (s4) { s4.textContent = "Pendiente"; s4.className = "cockpit-step-status"; }
+      if (step4El) step4El.classList.remove("completed");
+    }
+
+    // Panel izquierdo: sombrear y cambiar a Atendido
+    const stepperCard = document.getElementById("cockpit_stepper_card");
+    const stepperTitle = document.getElementById("cockpit_stepper_title");
+    if (stepperCard && stepperTitle) {
+      if (efActual === "CERRADO_FACTURADO") {
+        stepperCard.classList.add("atendido");
+        const pxId = pxActual.id || window.pacienteActivoId;
+        stepperTitle.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <span>Fases Asistenciales</span>
+            <span class="badge-atendido-pill" onclick="if(typeof window.abrirHistorialFlujoPaciente==='function'){event.stopPropagation();window.abrirHistorialFlujoPaciente('` + '${pxId}' + `');}" title="Ver Historial de lo que hizo cada rol con horas" style="cursor:pointer;">
+              ✓ Atendido 📜
+            </span>
+          </div>
+        `;
+        stepperCard.setAttribute("title", "Paciente Atendido - Haga clic para ver historial de atención");
+        stepperCard.onclick = function(e) {
+          if (!e.target.closest(".cockpit-step-item") || e.target.closest(".badge-atendido-pill")) {
+            if (typeof window.abrirHistorialFlujoPaciente === "function") {
+              window.abrirHistorialFlujoPaciente(pxId);
+            }
+          }
+        };
+      } else {
+        stepperCard.classList.remove("atendido");
+        stepperTitle.textContent = "Fases Asistenciales (HIS)";
+        stepperCard.removeAttribute("title");
+        stepperCard.onclick = null;
+      }
+    }
 
     actualizarBotonAccionPrincipal();
   }

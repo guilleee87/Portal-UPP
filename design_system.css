@@ -1,0 +1,1512 @@
+/* ==============================================================================
+   PROYECTOSUPP.ONLINE — SISTEMA DE DISEÑO UNIFICADO HOSPITALARIO (CALM-TECH)
+   design_system.css
+   Estándares: WCAG 2.1 AA · IEC 62366-1 · NTS N° 042-MINSA · NTS N° 139-MINSA · Ley N° 27604
+   Autores: Facultad de Ciencias de la Salud — Escuela Profesional de Enfermería UPP
+   ============================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
+
+/* ==============================================================================
+   1. TOKENS GLOBALES Y VARIABLES DE TEMA
+   ============================================================================== */
+:root {
+  /* Tipografía */
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Modo Claro Calm-Tech Ergonómico (Anti-Fatiga Visual) */
+  --upp-bg-canvas: #F4F7FA;
+  --upp-surface: #FFFFFF;
+  --upp-subsurface: #F8FAFC;
+  --upp-elevated: #FFFFFF;
+  --upp-border: #E2E8F0;
+  --upp-border-hover: #CBD5E1;
+  --upp-divider: #F1F5F9;
+
+  --upp-text-primary: #0F172A;
+  --upp-text-secondary: #475569;
+  --upp-text-muted: #64748B;
+  --upp-text-disabled: #94A3B8;
+
+  /* Acento Tecnológico Clínico */
+  --upp-accent: #0E7490;
+  --upp-accent-hover: #155E75;
+  --upp-accent-subtle: #ECFEFF;
+  --upp-accent-border: #A5F3FC;
+  --upp-accent-focus: rgba(14, 116, 144, 0.22);
+
+  /* Sombras y Elevaciones */
+  --upp-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.05);
+  --upp-shadow-hover: 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  --upp-shadow-elevated: 0 12px 28px -6px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.06);
+
+  /* Exclusividad Semáforo Clínico NTS N° 042-MINSA / ESI v5 */
+  --prio-1-solid: #DC2626;
+  --prio-1-tint: rgba(220, 38, 38, 0.12);
+  --prio-1-text: #DC2626;
+  --prio-1-border: #DC2626;
+
+  --prio-2-solid: #EA580C;
+  --prio-2-tint: rgba(234, 88, 12, 0.12);
+  --prio-2-text: #C2410C;
+  --prio-2-border: #EA580C;
+
+  --prio-3-solid: #CA8A04;
+  --prio-3-tint: rgba(202, 138, 4, 0.12);
+  --prio-3-text: #A16207;
+  --prio-3-border: #CA8A04;
+
+  --prio-4-solid: #16A34A;
+  --prio-4-tint: rgba(22, 163, 74, 0.12);
+  --prio-4-text: #15803D;
+  --prio-4-border: #16A34A;
+
+  --prio-5-solid: #2563EB;
+  --prio-5-tint: rgba(37, 99, 235, 0.12);
+  --prio-5-text: #1D4ED8;
+  --prio-5-border: #2563EB;
+
+  /* Superficies Oscuras Fijas de Monitores Clínicos */
+  --monitor-bg: #0F172A;
+  --monitor-surface: #1E293B;
+  --monitor-border: #334155;
+  --monitor-text: #F8FAFC;
+  --monitor-muted: #94A3B8;
+}
+
+/* Modo Oscuro Unificado [data-theme="dark"] / .dark / html.dark */
+[data-theme="dark"],
+html.dark,
+.dark,
+body[data-theme="dark"] {
+  --upp-bg-canvas: #0B1120 !important;
+  --upp-surface: #111827 !important;
+  --upp-subsurface: #1E293B !important;
+  --upp-elevated: #1E293B !important;
+  --upp-border: #334155 !important;
+  --upp-border-hover: #475569 !important;
+  --upp-divider: #1E293B !important;
+
+  --upp-text-primary: #F1F5F9 !important;
+  --upp-text-secondary: #94A3B8 !important;
+  --upp-text-muted: #64748B !important;
+  --upp-text-disabled: #475569 !important;
+
+  --upp-accent: #06B6D4 !important;
+  --upp-accent-hover: #22D3EE !important;
+  --upp-accent-subtle: rgba(6, 182, 212, 0.15) !important;
+  --upp-accent-border: #0891B2 !important;
+  --upp-accent-focus: rgba(6, 182, 212, 0.28) !important;
+
+  --upp-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+  --upp-shadow-hover: 0 4px 12px -2px rgba(0, 0, 0, 0.45) !important;
+  --upp-shadow-elevated: 0 12px 28px -6px rgba(0, 0, 0, 0.6) !important;
+
+  /* Semáforo en Modo Oscuro (Alto Contraste WCAG 2.1 AA) */
+  --prio-1-tint: rgba(239, 68, 68, 0.18) !important;
+  --prio-1-text: #F87171 !important;
+  --prio-2-tint: rgba(249, 115, 22, 0.18) !important;
+  --prio-2-text: #FB923C !important;
+  --prio-3-tint: rgba(234, 179, 8, 0.18) !important;
+  --prio-3-text: #FDE047 !important;
+  --prio-4-tint: rgba(34, 197, 94, 0.18) !important;
+  --prio-4-text: #4ADE80 !important;
+  --prio-5-tint: rgba(59, 130, 246, 0.18) !important;
+  --prio-5-text: #60A5FA !important;
+}
+
+/* ==============================================================================
+   2. REINICIO TIPOGRÁFICO Y BASE CALM-TECH
+   ============================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-sans);
+  background-color: var(--upp-bg-canvas);
+  color: var(--upp-text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans) !important;
+  background-color: var(--upp-bg-canvas) !important;
+  color: var(--upp-text-primary) !important;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Tipografía Monoespaciada Estricta en Métricas, Códigos, Tiempos y Dinero */
+.font-mono,
+.vital-value,
+.news2-score,
+.monto-dinero,
+.cockpit-num,
+.score-badge,
+.estancia-badge,
+.prio-code,
+.prio-numero,
+.kpi-value,
+.cockpit-m-val,
+.kardex-table td:nth-child(2),
+.kardex-table td:nth-child(4),
+.tabla-ordenes-body td:nth-child(2),
+.tabla-ordenes-body td:nth-child(5),
+#pas_full, #pad_full, #fc_full, #fr_full, #temp_full, #spo2_full, #glasgow_full, #glucosa_full,
+#cie10_codigo, #ident_full, #c_triage_news2_score, #mon_news2_score,
+#liq_subtotal_bruto, #liq_cobertura_monto, #liq_total_paciente,
+#mon_spo2, #mon_fc, #mon_pa, #mon_fr, #mon_temp, #mon_glasgow,
+#txt_total_factura, #c_caja_monto_total,
+#soat_consumido_val, #soat_saldo_val, #soat_tope_val,
+#soat_poliza, #soat_placa,
+.monto-celda,
+.invoice-table td:nth-child(4),
+.invoice-table td:nth-child(6),
+#invoice_tbody td:nth-child(4),
+#invoice_tbody td:nth-child(6),
+input[type="number"],
+input[type="time"] {
+  font-family: var(--font-mono) !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.015em;
+}
+
+/* ==============================================================================
+   3. BIBLIOTECA DE COMPONENTES UNIFICADA (TARJETAS, INPUTS, BOTONES, TABLAS)
+   ============================================================================== */
+
+/* Tarjetas y Contenedores */
+.module-section,
+.card,
+.cockpit-stepper-card,
+.cockpit-action-card,
+.cockpit-summary-card,
+.reniec-consulta-card,
+.consentimiento-legal-card,
+.entorno-operativo-card,
+.soat-meter-card,
+.estancia-meter-card,
+.bloqueo-sinadef-card,
+.bandeja-posta-card,
+.kpi-card,
+.tech-card,
+.system-portal-card,
+.author-card,
+.tool-card,
+.inst-card {
+  background-color: var(--upp-surface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 12px !important;
+  padding: 20px 24px !important;
+  box-shadow: var(--upp-shadow-card) !important;
+  color: var(--upp-text-primary) !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Encabezados de Tarjetas y Secciones */
+.module-section-header,
+.card-header,
+.cockpit-summary-card-header,
+.portal-card-header {
+  border-bottom: 1px solid var(--upp-border) !important;
+  padding-bottom: 14px !important;
+  margin-bottom: 18px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+}
+
+.module-section-title,
+.card-title,
+.portal-title,
+.section-title {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  color: var(--upp-text-primary) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  letter-spacing: -0.01em;
+}
+
+.module-num-badge {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  background-color: var(--upp-accent) !important;
+  color: #FFFFFF !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
+  flex-shrink: 0 !important;
+}
+
+.module-section-subtitle,
+.card-subtitle,
+.section-desc {
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  color: var(--upp-text-muted) !important;
+  margin-top: 2px !important;
+}
+
+/* Controles de Formulario e Inputs */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="date"],
+input[type="time"],
+select,
+textarea,
+.form-input,
+.input-full {
+  min-height: 42px !important;
+  border: 1.5px solid var(--upp-border) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.88rem !important;
+  color: var(--upp-text-primary) !important;
+  background-color: var(--upp-surface) !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease !important;
+  box-sizing: border-box !important;
+}
+
+input[type="number"],
+input[type="search"],
+input[type="time"] {
+  font-family: var(--font-mono) !important;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.form-input:focus-visible,
+.input-full:focus-visible {
+  border-color: var(--upp-accent) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--upp-accent-focus) !important;
+}
+
+label {
+  display: block;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  color: var(--upp-text-secondary) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.03em !important;
+  margin-bottom: 6px !important;
+}
+
+.form-hint,
+.cockpit-vital-hint {
+  font-size: 0.72rem !important;
+  color: var(--upp-text-muted) !important;
+  margin-top: 4px !important;
+  display: block;
+}
+
+/* Checkboxes y Radios Táctiles */
+input[type="checkbox"],
+input[type="radio"] {
+  width: 18px !important;
+  height: 18px !important;
+  accent-color: var(--upp-accent) !important;
+  cursor: pointer !important;
+}
+
+/* Botones Principales y Secundarios */
+.btn-full-primary,
+.btn-primary,
+.btn-launch-primary,
+.btn-act-primary,
+.btn-nav-primary {
+  background-color: var(--upp-accent) !important;
+  color: #FFFFFF !important;
+  border: 1px solid var(--upp-accent) !important;
+  border-radius: 8px !important;
+  min-height: 42px !important;
+  padding: 10px 18px !important;
+  font-weight: 700 !important;
+  font-size: 0.86rem !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  box-shadow: 0 2px 4px rgba(14, 116, 144, 0.18) !important;
+  text-decoration: none !important;
+}
+
+.btn-full-primary:hover,
+.btn-primary:hover,
+.btn-launch-primary:hover,
+.btn-act-primary:hover,
+.btn-nav-primary:hover {
+  background-color: var(--upp-accent-hover) !important;
+  border-color: var(--upp-accent-hover) !important;
+}
+
+.btn-full-secondary,
+.btn-secondary,
+.btn-launch-secondary,
+.btn-act-outline,
+.btn-nav {
+  background-color: var(--upp-surface) !important;
+  color: var(--upp-text-primary) !important;
+  border: 1.5px solid var(--upp-border) !important;
+  border-radius: 8px !important;
+  min-height: 42px !important;
+  padding: 10px 16px !important;
+  font-weight: 700 !important;
+  font-size: 0.86rem !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  text-decoration: none !important;
+}
+
+.btn-full-secondary:hover,
+.btn-secondary:hover,
+.btn-launch-secondary:hover,
+.btn-act-outline:hover,
+.btn-nav:hover {
+  background-color: var(--upp-subsurface) !important;
+  border-color: var(--upp-border-hover) !important;
+}
+
+/* Tablas Clínicas y Contables */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--upp-border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+th {
+  background-color: var(--upp-subsurface) !important;
+  color: var(--upp-text-secondary) !important;
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  border-bottom: 1.5px solid var(--upp-border) !important;
+  padding: 11px 14px !important;
+  text-align: left;
+}
+
+td {
+  padding: 11px 14px !important;
+  border-bottom: 1px solid var(--upp-border) !important;
+  color: var(--upp-text-primary) !important;
+  font-size: 0.85rem !important;
+  background-color: var(--upp-surface);
+  transition: background-color 0.1s ease;
+}
+
+tr:last-child td {
+  border-bottom: none !important;
+}
+
+tr:hover td {
+  background-color: var(--upp-subsurface) !important;
+}
+
+/* ==============================================================================
+   4. EXCLUSIVIDAD DEL SEMÁFORO CLÍNICO (NTS N° 042-MINSA / ESI v5)
+   ============================================================================== */
+.ui-badge-pill,
+.card-prio-badge,
+.score-badge-prio,
+.cat-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+}
+
+/* P-I Resucitación / Shock Trauma */
+.ui-badge-p1,
+.prio-p1 {
+  background-color: var(--prio-1-tint) !important;
+  border: 1px solid var(--prio-1-border) !important;
+  border-left: 4px solid var(--prio-1-border) !important;
+  color: var(--prio-1-text) !important;
+}
+
+/* Fondo rojo sólido EXCLUSIVO para P-1 Activa en Shock Trauma */
+.prio-p1-active-solid,
+.btn-p1-danger {
+  background-color: var(--prio-1-solid) !important;
+  border: 1px solid #B91C1C !important;
+  color: #FFFFFF !important;
+}
+
+.btn-p1-danger:hover {
+  background-color: #B91C1C !important;
+}
+
+/* P-II Emergencia */
+.ui-badge-p2,
+.prio-p2 {
+  background-color: var(--prio-2-tint) !important;
+  border: 1px solid var(--prio-2-border) !important;
+  border-left: 4px solid var(--prio-2-border) !important;
+  color: var(--prio-2-text) !important;
+}
+
+/* P-III Urgencia */
+.ui-badge-p3,
+.prio-p3 {
+  background-color: var(--prio-3-tint) !important;
+  border: 1px solid var(--prio-3-border) !important;
+  border-left: 4px solid var(--prio-3-border) !important;
+  color: var(--prio-3-text) !important;
+}
+
+/* P-IV Urgencia Menor */
+.ui-badge-p4,
+.prio-p4 {
+  background-color: var(--prio-4-tint) !important;
+  border: 1px solid var(--prio-4-border) !important;
+  border-left: 4px solid var(--prio-4-border) !important;
+  color: var(--prio-4-text) !important;
+}
+
+/* P-V No Urgente */
+.ui-badge-p5,
+.prio-p5 {
+  background-color: var(--prio-5-tint) !important;
+  border: 1px solid var(--prio-5-border) !important;
+  border-left: 4px solid var(--prio-5-border) !important;
+  color: var(--prio-5-text) !important;
+}
+
+/* Badges de Cobertura y Régimen */
+.badge-fua {
+  background-color: rgba(2, 132, 199, 0.12) !important;
+  color: #0284C7 !important;
+  border: 1px solid #7DD3FC !important;
+}
+
+.badge-essi {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  color: #059669 !important;
+  border: 1px solid #6EE7B7 !important;
+}
+
+.badge-siteds {
+  background-color: rgba(99, 102, 241, 0.12) !important;
+  color: #4F46E5 !important;
+  border: 1px solid #C7D2FE !important;
+}
+
+.badge-soat {
+  background-color: rgba(234, 88, 12, 0.12) !important;
+  color: #EA580C !important;
+  border: 1px solid #FDBA74 !important;
+}
+
+/* ==============================================================================
+   5. CABINA CLÍNICA /triaje_full & /triaje (3 ZONAS · ANCHO 1560px)
+   ============================================================================== */
+#cockpit_layout {
+  max-width: 1560px !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  gap: 20px !important;
+  align-items: flex-start !important;
+  padding: 20px 24px 60px 24px !important;
+  box-sizing: border-box !important;
+}
+
+/* Barra Superior Fija (64px) */
+#cockpit_top_bar {
+  height: 64px !important;
+  background-color: var(--upp-surface) !important;
+  border-bottom: 1px solid var(--upp-border) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 24px !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1000 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+}
+
+.cockpit-logo-badge {
+  text-decoration: none !important;
+  color: var(--upp-text-primary) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  font-weight: 800 !important;
+  font-size: 0.95rem !important;
+}
+
+.cockpit-logo-icon {
+  width: 32px !important;
+  height: 32px !important;
+  background-color: var(--upp-accent) !important;
+  color: #FFFFFF !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1rem !important;
+}
+
+/* Selector Segmentado de Entorno */
+.cockpit-sector-segment {
+  background-color: var(--upp-subsurface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 8px !important;
+  padding: 3px !important;
+  display: inline-flex !important;
+  gap: 3px !important;
+}
+
+.cockpit-sector-btn {
+  border: none !important;
+  background: transparent !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  color: var(--upp-text-secondary) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.cockpit-sector-btn.active {
+  background-color: var(--upp-surface) !important;
+  color: var(--upp-accent) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Píldora de Contexto Central del Paciente */
+.cockpit-patient-pill {
+  background-color: var(--upp-subsurface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 9999px !important;
+  padding: 6px 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  font-size: 0.8rem !important;
+}
+
+.cockpit-px-name {
+  font-weight: 800 !important;
+  color: var(--upp-text-primary) !important;
+  max-width: 220px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Botón Conmutador de Tema (☀️/🌙) */
+.cockpit-btn-theme,
+.btn-theme-toggle {
+  background-color: var(--upp-subsurface) !important;
+  border: 1.5px solid var(--upp-border) !important;
+  color: var(--upp-text-primary) !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  transition: all 0.15s ease !important;
+}
+
+.cockpit-btn-theme:hover,
+.btn-theme-toggle:hover {
+  background-color: var(--upp-border) !important;
+  color: var(--upp-text-primary) !important;
+}
+
+/* Columna Izquierda (260px) — Stepper & ED Track Board */
+#cockpit_sidebar_left {
+  width: 260px !important;
+  flex-shrink: 0 !important;
+  position: sticky !important;
+  top: 84px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+.cockpit-step-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+  border: 1.5px solid transparent !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  margin-bottom: 4px !important;
+}
+
+.cockpit-step-item:hover {
+  background-color: var(--upp-subsurface) !important;
+}
+
+.cockpit-step-item.active {
+  background-color: var(--upp-accent-subtle) !important;
+  border-color: var(--upp-accent-border) !important;
+}
+
+.cockpit-step-num {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  background-color: var(--upp-border) !important;
+  color: var(--upp-text-secondary) !important;
+  font-weight: 800 !important;
+  font-size: 0.8rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.cockpit-step-item.active .cockpit-step-num {
+  background-color: var(--upp-accent) !important;
+  color: #FFFFFF !important;
+}
+
+.cockpit-step-name {
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+  color: var(--upp-text-primary) !important;
+}
+
+.cockpit-step-sub {
+  font-size: 0.72rem !important;
+  color: var(--upp-text-muted) !important;
+}
+
+/* ED Track Board & Bandeja de Posta en Sidebar Izquierdo */
+#cockpit_posta_wrapper {
+  background-color: var(--upp-surface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 12px !important;
+  padding: 12px !important;
+  box-shadow: var(--upp-shadow-card) !important;
+}
+
+.bandeja-tabs-wrapper {
+  display: flex !important;
+  gap: 4px !important;
+  overflow-x: auto !important;
+  padding-bottom: 6px !important;
+  margin-bottom: 8px !important;
+  scrollbar-width: thin;
+}
+
+.bandeja-tab-btn {
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--upp-border) !important;
+  background-color: var(--upp-subsurface) !important;
+  color: var(--upp-text-secondary) !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+}
+
+.bandeja-tab-btn.active {
+  background-color: var(--upp-accent) !important;
+  color: #FFFFFF !important;
+  border-color: var(--upp-accent) !important;
+}
+
+/* Tarjetas Compactas del Track Board (#trackboard_pacientes_lista) */
+#trackboard_pacientes_lista > div {
+  background-color: var(--upp-surface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 8px !important;
+  padding: 8px 10px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+#trackboard_pacientes_lista > div:hover {
+  background-color: var(--upp-subsurface) !important;
+  border-color: var(--upp-border-hover) !important;
+}
+
+/* Columna Central (Workspace de Módulos) */
+#cockpit_workspace_center {
+  flex: 1 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+/* Barra Táctica de Ingresos Rápidos */
+.cockpit-tactical-bar {
+  background-color: var(--upp-surface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 12px !important;
+  padding: 12px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  box-shadow: var(--upp-shadow-card) !important;
+}
+
+.cockpit-tactical-btn {
+  background-color: var(--upp-surface) !important;
+  border: 1.5px solid var(--upp-border) !important;
+  color: var(--upp-text-primary) !important;
+  padding: 8px 14px !important;
+  border-radius: 8px !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.cockpit-tactical-btn:hover {
+  background-color: var(--upp-subsurface) !important;
+  border-color: var(--upp-border-hover) !important;
+}
+
+/* Grilla de 4 Columnas de Signos Vitales (Módulo 1) */
+.cockpit-vitals-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 12px !important;
+  margin-bottom: 16px !important;
+}
+
+.cockpit-vital-box {
+  background-color: var(--upp-subsurface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+}
+
+.cockpit-vital-label {
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  color: var(--upp-text-secondary) !important;
+  margin-bottom: 4px !important;
+  text-transform: uppercase !important;
+}
+
+.cockpit-vital-input {
+  height: 42px !important;
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  border: 1.5px solid var(--upp-border) !important;
+  border-radius: 8px !important;
+  padding: 0 10px !important;
+  background-color: var(--upp-surface) !important;
+  color: var(--upp-text-primary) !important;
+  width: 100% !important;
+}
+
+/* Resumen Sellado de Triaje y Caja (Estados Legales Profesionales) */
+.cockpit-summary-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.cockpit-summary-item {
+  background-color: var(--upp-subsurface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+}
+
+.cockpit-summary-label {
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  color: var(--upp-text-muted) !important;
+  text-transform: uppercase !important;
+  margin-bottom: 2px !important;
+}
+
+.cockpit-summary-val {
+  font-size: 0.88rem !important;
+  font-weight: 800 !important;
+  color: var(--upp-text-primary) !important;
+}
+
+.cockpit-seal-box {
+  margin-top: 12px !important;
+  padding: 10px 14px !important;
+  background-color: rgba(22, 163, 74, 0.08) !important;
+  border: 1px solid rgba(22, 163, 74, 0.25) !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  font-size: 0.78rem !important;
+  color: #166534 !important;
+}
+
+[data-theme="dark"] .cockpit-seal-box {
+  color: #86EFAC !important;
+  background-color: rgba(22, 163, 74, 0.15) !important;
+}
+
+/* Columna Derecha (330px) — Monitor Fisiológico & Acción Principal */
+#cockpit_sidebar_right {
+  width: 330px !important;
+  flex-shrink: 0 !important;
+  position: sticky !important;
+  top: 84px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+.cockpit-monitor-card {
+  background-color: var(--monitor-bg) !important;
+  border: 1px solid var(--monitor-border) !important;
+  border-radius: 14px !important;
+  padding: 18px 20px !important;
+  color: var(--monitor-text) !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.4) !important;
+}
+
+.cockpit-monitor-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-bottom: 1px solid var(--monitor-border) !important;
+  padding-bottom: 10px !important;
+  margin-bottom: 14px !important;
+}
+
+.cockpit-monitor-title {
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+  color: #38BDF8 !important;
+  text-transform: uppercase !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.cockpit-pulse-dot {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background-color: #10B981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+  animation: pulseBeacon 1.8s infinite !important;
+}
+
+@keyframes pulseBeacon {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.cockpit-monitor-vitals-row {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 10px !important;
+  margin-bottom: 12px !important;
+}
+
+.cockpit-monitor-item {
+  background-color: var(--monitor-surface) !important;
+  border-radius: 8px !important;
+  padding: 8px 10px !important;
+}
+
+.cockpit-m-label {
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  color: var(--monitor-muted) !important;
+  margin-bottom: 2px !important;
+}
+
+.cockpit-m-val {
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  color: var(--monitor-text) !important;
+  line-height: 1.1 !important;
+}
+
+.cockpit-m-unit {
+  font-size: 0.68rem !important;
+  color: var(--upp-text-muted) !important;
+  margin-left: 2px !important;
+}
+
+.cockpit-monitor-scores {
+  display: flex !important;
+  gap: 8px !important;
+  margin-bottom: 14px !important;
+}
+
+.cockpit-score-box {
+  flex: 1 !important;
+  background-color: var(--monitor-surface) !important;
+  border-radius: 8px !important;
+  padding: 8px 10px !important;
+  text-align: center !important;
+}
+
+.cockpit-score-num {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+}
+
+.cockpit-score-sub {
+  font-size: 0.68rem !important;
+  color: var(--monitor-muted) !important;
+  font-weight: 600 !important;
+}
+
+.cockpit-beds-summary {
+  font-size: 0.76rem !important;
+  color: var(--monitor-muted) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-top: 1px solid var(--monitor-border) !important;
+  padding-top: 10px !important;
+}
+
+/* Botón de Acción Principal de Posta (Cockpit CTA) */
+.cockpit-primary-action-btn {
+  width: 100% !important;
+  height: 48px !important;
+  background-color: var(--upp-accent) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-size: 0.92rem !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  box-shadow: 0 4px 12px rgba(14, 116, 144, 0.28) !important;
+}
+
+.cockpit-primary-action-btn:hover {
+  background-color: var(--upp-accent-hover) !important;
+}
+
+.cockpit-action-meta {
+  font-size: 0.72rem !important;
+  color: var(--upp-text-muted) !important;
+  text-align: center !important;
+  margin-top: 8px !important;
+  line-height: 1.35 !important;
+}
+
+/* ==============================================================================
+   6. LOGIN RBAC Y SELECTOR DE MODOS (#modal_login_rbac)
+   ============================================================================== */
+#modal_login_rbac,
+.modal-rbac-overlay {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(4px) !important;
+  z-index: 100050 !important;
+}
+
+#modal_login_rbac > div,
+.modal-rbac-dialog {
+  max-width: 520px !important;
+  width: 90% !important;
+  background-color: var(--upp-surface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--upp-shadow-elevated) !important;
+  overflow: hidden !important;
+}
+
+/* ==============================================================================
+   7. PÁGINA DE INICIO / PORTAL (index.html)
+   ============================================================================== */
+.tech-navbar {
+  background-color: var(--upp-surface) !important;
+  border-bottom: 1px solid var(--upp-border) !important;
+  box-shadow: var(--upp-shadow-card) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1000 !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.nav-brand-title {
+  color: var(--upp-text-primary) !important;
+}
+
+.nav-brand-sub {
+  color: var(--upp-text-muted) !important;
+}
+
+.dropdown-menu {
+  background-color: var(--upp-surface) !important;
+  border: 1px solid var(--upp-border) !important;
+  box-shadow: var(--upp-shadow-elevated) !important;
+  color: var(--upp-text-primary) !important;
+}
+
+.menu-item {
+  color: var(--upp-text-primary) !important;
+}
+
+.menu-item:hover {
+  background-color: var(--upp-subsurface) !important;
+}
+
+.dropdown-trigger-btn {
+  background-color: var(--upp-subsurface) !important;
+  border: 1px solid var(--upp-border) !important;
+  color: var(--upp-text-primary) !important;
+}
+
+.hero-section {
+  background: var(--upp-bg-canvas) !important;
+  color: var(--upp-text-primary) !important;
+  border-bottom: 1px solid var(--upp-border) !important;
+  padding: 48px 24px !important;
+}
+
+.hero-title {
+  color: var(--upp-text-primary) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.hero-title-highlight {
+  background: linear-gradient(135deg, var(--upp-accent) 0%, #10B981 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.hero-tag {
+  background-color: var(--upp-surface) !important;
+  border: 1px solid var(--upp-border) !important;
+  color: var(--upp-accent) !important;
+  box-shadow: var(--upp-shadow-card) !important;
+}
+
+.telemetry-pill,
+.clock-pill,
+.upp-pill {
+  background-color: var(--upp-subsurface) !important;
+  border: 1px solid var(--upp-border) !important;
+  color: var(--upp-text-secondary) !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  padding: 5px 12px !important;
+  border-radius: 9999px !important;
+}
+
+.telemetry-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  gap: 16px !important;
+  margin-top: 28px !important;
+}
+
+.system-portal-card {
+  background-color: var(--upp-surface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--upp-shadow-card) !important;
+}
+
+.system-portal-card:hover {
+  box-shadow: var(--upp-shadow-hover) !important;
+  border-color: var(--upp-accent) !important;
+}
+
+.tech-footer {
+  background-color: var(--upp-surface) !important;
+  border-top: 1px solid var(--upp-border) !important;
+  color: var(--upp-text-secondary) !important;
+}
+
+/* ==============================================================================
+   8. PORTAL DE FACTURACIÓN Y LIQUIDACIÓN TEDEF (facturacion.html)
+   ============================================================================== */
+.top-nav {
+  background-color: var(--upp-surface) !important;
+  border-bottom: 1px solid var(--upp-border) !important;
+  color: var(--upp-text-primary) !important;
+  box-shadow: var(--upp-shadow-card) !important;
+}
+
+.top-nav .nav-brand {
+  color: var(--upp-text-primary) !important;
+}
+
+.top-nav .nav-brand-title {
+  color: var(--upp-text-primary) !important;
+}
+
+.legal-alert {
+  background-color: rgba(22, 163, 74, 0.08) !important;
+  border: 1.5px solid rgba(22, 163, 74, 0.3) !important;
+  border-left: 5px solid #16A34A !important;
+  border-radius: 10px !important;
+  padding: 16px 20px !important;
+  margin-bottom: 24px !important;
+}
+
+.legal-alert-header {
+  color: #166534 !important;
+  font-weight: 800 !important;
+  font-size: 0.95rem !important;
+}
+
+[data-theme="dark"] .legal-alert-header {
+  color: #86EFAC !important;
+}
+
+.legal-alert-text {
+  font-size: 0.84rem !important;
+  color: var(--upp-text-secondary) !important;
+  line-height: 1.45 !important;
+}
+
+.demo-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  gap: 14px !important;
+}
+
+.demo-item {
+  background-color: var(--upp-subsurface) !important;
+  padding: 12px 14px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--upp-border) !important;
+}
+
+.demo-label {
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  color: var(--upp-text-muted) !important;
+  text-transform: uppercase !important;
+  margin-bottom: 2px !important;
+}
+
+.demo-value {
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  color: var(--upp-text-primary) !important;
+}
+
+/* Estado de Cuenta Financiero de Módulo 8 & Facturación */
+.estado-cuenta-box,
+#panel_resumen_contable_susalud {
+  background-color: var(--upp-surface) !important;
+  border: 1.5px solid var(--upp-border) !important;
+  border-radius: 12px !important;
+  padding: 18px 22px !important;
+  box-shadow: var(--upp-shadow-card) !important;
+}
+
+.totales-grid,
+.resumen-liquidacion-card {
+  background-color: var(--upp-subsurface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 10px !important;
+  padding: 16px !important;
+  margin-top: 16px !important;
+}
+
+/* ==============================================================================
+   9. FEEDBACK VISUAL: TOASTS Y MODALES CLÍNICOS (ui_feedback.css)
+   ============================================================================== */
+#ui_toast_container {
+  max-width: 320px !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 100050 !important;
+}
+
+.ui-toast {
+  background-color: var(--upp-surface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--upp-shadow-elevated) !important;
+  color: var(--upp-text-primary) !important;
+  padding: 10px 14px !important;
+}
+
+.ui-modal-overlay,
+.tech-modal-overlay {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(4px) !important;
+  z-index: 100000 !important;
+}
+
+.ui-modal-card,
+.tech-modal-dialog {
+  max-width: 520px !important;
+  background-color: var(--upp-surface) !important;
+  border: 1px solid var(--upp-border) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--upp-shadow-elevated) !important;
+  color: var(--upp-text-primary) !important;
+}
+
+/* ==============================================================================
+   10. ESTILOS DE IMPRESIÓN LIMPIOS (@media print)
+   (Protege estrictamente dimensiones y márgenes de Pulsera QR)
+   ============================================================================== */
+@media print {
+  body:not(.pulsera-print) #cockpit_top_bar,
+  body:not(.pulsera-print) #cockpit_sidebar_left,
+  body:not(.pulsera-print) #cockpit_sidebar_right,
+  body:not(.pulsera-print) .top-nav,
+  body:not(.pulsera-print) .tech-navbar,
+  body:not(.pulsera-print) .actions-bar,
+  body:not(.pulsera-print) button {
+    display: none !important;
+  }
+
+  body:not(.pulsera-print) {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+
+  body:not(.pulsera-print) .container,
+  body:not(.pulsera-print) #cockpit_workspace_center {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+/* ==============================================================================
+   11. RESPONSIVE ADAPTATIVO (ESCRITORIO 1440px · TABLET 900px · MÓVIL 390px)
+   ============================================================================== */
+@media (max-width: 1180px) {
+  #cockpit_layout {
+    flex-direction: column !important;
+    padding: 14px 16px !important;
+  }
+
+  #cockpit_sidebar_left,
+  #cockpit_sidebar_right {
+    width: 100% !important;
+    position: static !important;
+  }
+
+  .cockpit-stepper-title {
+    width: 100% !important;
+    flex-basis: 100% !important;
+    margin-bottom: 6px !important;
+  }
+
+  .cockpit-stepper-card {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 10px !important;
+  }
+
+  .cockpit-step-item {
+    flex-shrink: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .cockpit-vitals-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #cockpit_top_bar {
+    position: relative !important;
+    height: auto !important;
+    padding: 12px 16px !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .cockpit-top-left,
+  .cockpit-top-center,
+  .cockpit-top-right {
+    width: 100% !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .cockpit-vitals-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .cockpit-tactical-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .cockpit-tactical-group {
+    width: 100% !important;
+    justify-content: stretch !important;
+  }
+
+  .cockpit-tactical-btn {
+    flex: 1 !important;
+    justify-content: center !important;
+  }
+}
+
+/* ==============================================================================
+   12. COBERTURA TOTAL DE MODO OSCURO (INLINE STYLES OVERRIDE)
+   ============================================================================== */
+[data-theme="dark"] .module-section,
+html[data-theme="dark"] .module-section,
+[data-theme="dark"] .module-section-body,
+[data-theme="dark"] .module-section-header,
+html[data-theme="dark"] .module-section-header,
+body[data-theme="dark"] .module-section-header,
+.dark .module-section-header,
+html.dark .module-section-header,
+[data-theme="dark"] .module-card,
+[data-theme="dark"] .section-container,
+[data-theme="dark"] .ui-modal-card {
+  background: #111827 !important;
+  color: #F8FAFC !important;
+  border-color: #1E293B !important;
+}
+
+[data-theme="dark"] .module-section-header,
+html[data-theme="dark"] .module-section-header,
+body[data-theme="dark"] .module-section-header {
+  background: #1E293B !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+[data-theme="dark"] [style*="background:#ffffff"],
+[data-theme="dark"] [style*="background: #ffffff"],
+[data-theme="dark"] [style*="background:#FFFFFF"],
+[data-theme="dark"] [style*="background: #FFFFFF"],
+[data-theme="dark"] [style*="background:#f8fafc"],
+[data-theme="dark"] [style*="background: #f8fafc"],
+[data-theme="dark"] [style*="background:#f1f5f9"],
+[data-theme="dark"] [style*="background: #f1f5f9"] {
+  background: #1E293B !important;
+  color: #F8FAFC !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] [style*="color:#0f172a"],
+[data-theme="dark"] [style*="color: #0f172a"],
+[data-theme="dark"] [style*="color:#1e293b"],
+[data-theme="dark"] [style*="color: #1e293b"] {
+  color: #F1F5F9 !important;
+}
+
+[data-theme="dark"] [style*="color:#475569"],
+[data-theme="dark"] [style*="color: #475569"],
+[data-theme="dark"] [style*="color:#64748b"],
+[data-theme="dark"] [style*="color: #64748b"] {
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] select,
+[data-theme="dark"] input,
+[data-theme="dark"] textarea {
+  background-color: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+}
+
+/* ==============================================================================
+   ESTADOS DE PACIENTE ATENDIDO Y MODAL HISTORIAL ASISTENCIAL (CALM-TECH)
+   ============================================================================== */
+.cockpit-stepper-card.atendido {
+  background: #f0fdf4 !important;
+  border: 1.5px solid #86efac !important;
+  box-shadow: 0 4px 16px rgba(22, 101, 52, 0.08) !important;
+}
+
+[data-theme="dark"] .cockpit-stepper-card.atendido {
+  background: rgba(20, 83, 45, 0.25) !important;
+  border-color: rgba(74, 222, 128, 0.4) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.cockpit-step-item.completed .cockpit-step-num {
+  background-color: #16a34a !important;
+  color: #ffffff !important;
+}
+
+.cockpit-step-status.completed {
+  background-color: #dcfce7 !important;
+  color: #15803d !important;
+  border: 1px solid #86efac !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="dark"] .cockpit-step-status.completed {
+  background-color: rgba(34, 197, 94, 0.2) !important;
+  color: #86efac !important;
+  border-color: rgba(74, 222, 128, 0.35) !important;
+}
+
+.badge-atendido-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #16a34a;
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
