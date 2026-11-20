@@ -15,7 +15,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-width: 420px;
+  max-width: 320px;
   width: calc(100% - 48px);
   pointer-events: none;
 }
@@ -25,7 +25,8 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 10px 14px;
+  font-size: 13px;
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
@@ -176,7 +177,7 @@
 .ui-modal-card {
   background: #ffffff;
   border-radius: 16px;
-  max-width: 500px;
+  max-width: 460px;
   width: 100%;
   box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
   border: 1px solid #e2e8f0;
@@ -554,3 +555,5 @@
   max-width: 320px;
   line-height: 1.4;
 }
+
+.ui-modal-card-lg { max-width: 540px !important; }

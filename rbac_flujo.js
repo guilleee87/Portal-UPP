@@ -503,6 +503,11 @@
           </button>
         </div>
 
+        <!-- ED Track Board (Tablero Priorizado de Pacientes) -->
+        <div id="trackboard_pacientes_lista" style="display:flex; flex-direction:column; gap:6px; margin: 10px 0; max-height:220px; overflow-y:auto; padding-right:4px;">
+          <!-- Filas de expedientes renderizadas dinámicamente -->
+        </div>
+
         <!-- Barra de Acción Posta del Paciente Activo -->
         <div class="posta-action-bar" id="barra_accion_posta_activo">
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -542,6 +547,7 @@
   // ----------------------------------------------------------------------------
   let filtroBandejaActual = "TODOS";
 
+  window.renderizarBandejaPosta = function() { return renderizarBandejaPosta(); };
   function renderizarBandejaPosta() {
     const cola = window.PACIENTES_COLA || [];
     
@@ -594,8 +600,15 @@
     });
 
     actualizarBarraAccionPosta();
+    if (typeof renderizarTrackBoardLista === "function") {
+      renderizarTrackBoardLista();
+    }
+    if (typeof sincronizarExpedienteActivoEnStore === "function") {
+      sincronizarExpedienteActivoEnStore();
+    }
   }
 
+  window.filtrarBandejaPosta = function(estado) { return filtrarBandejaPosta(estado); };
   function filtrarBandejaPosta(estado) {
     filtroBandejaActual = estado;
     renderizarBandejaPosta();
@@ -663,7 +676,7 @@
     }
 
     // Renderizar botones según rol y estado actual
-    const rol = obtenerRolActivo();
+    const rol = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === 'function') ? window.RBAC_FLUJO.obtenerRolActivo() : (typeof obtenerRolActivo === 'function' ? obtenerRolActivo() : 'AUDITOR');
     const modo = obtenerModoOperacion();
     let botonesHtml = "";
 
@@ -845,6 +858,15 @@
       window.STATE.firmas = px.firmas;
     }
 
+    // Liberación garantizada de cama al otorgar el Alta Médica (Bloque 5)
+    if (typeof window.liberarRecursoHospitalarioOperativo === "function") {
+      window.liberarRecursoHospitalarioOperativo(px.camaId, px.id);
+    } else if (px.camaId && typeof window.RECURSOS_HOSPITALARIOS !== "undefined" && window.RECURSOS_HOSPITALARIOS[px.camaId]) {
+      window.RECURSOS_HOSPITALARIOS[px.camaId].estado = "disponible";
+      window.RECURSOS_HOSPITALARIOS[px.camaId].paciente = null;
+    }
+    px.camaLiberada = true;
+
     if (typeof window.sincronizarFacturacionYExportar === "function") {
       window.sincronizarFacturacionYExportar(true);
     }
@@ -882,6 +904,9 @@
     if (window.STATE) {
       window.STATE.estadoFlujo = "CERRADO_FACTURADO";
       window.STATE.firmas = px.firmas;
+      if (px.esNN || window.STATE.esNN || px.ingresoDirectoCritico) {
+        window.STATE.tipoSeguro = "Cuenta por Regularizar — Garantía Ley N° 27604 (Paciente NN)";
+      }
     }
 
     // Liberar recurso de cama si aplica
@@ -919,6 +944,11 @@
   function aplicarPermisosYEnmascaramiento(rol, modo) {
     rol = rol || "AUDITOR";
     modo = modo || "DEMO";
+
+    // Sincronizar vista focalizada y módulos visibles en Cabina Cockpit
+    if (window.COCKPIT && typeof window.COCKPIT.aplicarVistaYPermisosRol === "function") {
+      window.COCKPIT.aplicarVistaYPermisosRol(rol, modo);
+    }
 
     const elMotivo = document.getElementById("motivo_full");
     const elAlergias = document.getElementById("alergias_full");
@@ -1287,5 +1317,108 @@
     renderizarBandejaPosta();
     actualizarBarraAccionPosta();
   };
+
+
+  // ----------------------------------------------------------------------------
+  // 8. ED TRACK BOARD (TABLERO PRIORIZADO Y AISLAMIENTO MULTI-PACIENTE)
+  // ----------------------------------------------------------------------------
+  const EXPEDIENTES_KEY = "upp_expedientes_v1";
+
+  function sincronizarExpedienteActivoEnStore() {
+    try {
+      const raw = localStorage.getItem(EXPEDIENTES_KEY);
+      const store = raw ? JSON.parse(raw) : {};
+      if (window.pacienteActivoId && window.STATE) {
+        store[window.pacienteActivoId] = {
+          id: window.pacienteActivoId,
+          state: JSON.parse(JSON.stringify(window.STATE)),
+          timestamp: Date.now()
+        };
+        localStorage.setItem(EXPEDIENTES_KEY, JSON.stringify(store));
+      }
+    } catch(e) {}
+  }
+
+  function seleccionarExpediente(id) {
+    if (typeof window.cambiarPacienteActivo === "function") {
+      window.cambiarPacienteActivo(id);
+    }
+    actualizarBarraAccionPosta();
+    renderizarTrackBoardLista();
+    if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === "function") {
+      window.COCKPIT.actualizarContextoCockpit();
+    }
+  }
+  window.seleccionarExpediente = seleccionarExpediente;
+  window.renderizarTrackBoardLista = function() { return renderizarTrackBoardLista(); };
+
+  function renderizarTrackBoardLista() {
+    const contenedor = document.getElementById("trackboard_pacientes_lista");
+    if (!contenedor) return;
+
+    const cola = window.PACIENTES_COLA || [];
+    if (cola.length === 0) {
+      contenedor.innerHTML = `<div style="font-size:0.75rem; color:#94a3b8; text-align:center; padding:10px;">Sin pacientes en espera</div>`;
+      return;
+    }
+
+    // Ordenar: Prioridad I -> V, luego llegada
+    const prioOrder = { "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5 };
+    const ordenada = [...cola].sort((a, b) => {
+      const pA = prioOrder[a.prioridad] || 5;
+      const pB = prioOrder[b.prioridad] || 5;
+      if (pA !== pB) return pA - pB;
+      return (a.timestamp || 0) - (b.timestamp || 0);
+    });
+
+    const rol = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === 'function') ? window.RBAC_FLUJO.obtenerRolActivo() : (typeof obtenerRolActivo === 'function' ? obtenerRolActivo() : 'AUDITOR');
+    let primerCandidatoMedico = ordenada.find(p => p.estadoFlujo === "EN_ATENCION_MEDICA");
+
+    let html = "";
+    ordenada.forEach((p, idx) => {
+      // Filtrar según tab activa
+      if (filtroBandejaActual !== "TODOS") {
+        if (filtroBandejaActual === "ADMISION" && (p.coberturaValidada || p.estadoFlujo === "CERRADO_FACTURADO")) return;
+        if (filtroBandejaActual !== "ADMISION" && p.estadoFlujo !== filtroBandejaActual) return;
+      }
+
+      const turno = p.turno || `E-${String(idx + 1).padStart(3, "0")}`;
+      p.turno = turno;
+      const esActivo = p.id === window.pacienteActivoId;
+      const esSiguienteMed = (rol === "MEDICO" && p === primerCandidatoMedico);
+
+      const colorPrio = p.prioridad === "I" ? "#dc2626" : p.prioridad === "II" ? "#ea580c" : p.prioridad === "III" ? "#ca8a04" : p.prioridad === "IV" ? "#16a34a" : "#2563eb";
+      const bgCard = esActivo ? "#eff6ff" : "#ffffff";
+      const borderCard = esActivo ? "2px solid #3b82f6" : esSiguienteMed ? "2px solid #f59e0b" : "1px solid #e2e8f0";
+
+      html += `
+        <div onclick="seleccionarExpediente('${p.id}')" style="display:flex; justify-content:space-between; align-items:center; background:${bgCard}; border:${borderCard}; border-radius:8px; padding:7px 10px; cursor:pointer; transition:all 0.15s ease;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="background:${colorPrio}; color:#ffffff; font-size:0.7rem; font-weight:900; padding:2px 6px; border-radius:4px; font-variant-numeric:tabular-nums;">
+              ${p.prioridad ? "P-" + p.prioridad : "P-V"}
+            </span>
+            <div>
+              <div style="font-size:0.8rem; font-weight:800; color:#0f172a; line-height:1.2;">
+                ${turno} · ${p.nombre || "Paciente"}
+                ${esSiguienteMed ? `<span style="font-size:0.68rem; background:#fef3c7; color:#92400e; padding:1px 5px; border-radius:4px; margin-left:4px;">👉 Siguiente</span>` : ""}
+              </div>
+              <div style="font-size:0.7rem; color:#64748b; margin-top:2px;">
+                ${p.camaNombre ? `🛏️ ${p.camaNombre}` : "🛏️ Sin cama"} · ${p.estadoAtencion || "En atención"}
+              </div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:0.68rem; font-weight:700; color:#475569; background:#f1f5f9; padding:2px 6px; border-radius:4px;">
+              ${(p.estadoFlujo || "PENDIENTE_TRIAJE").replace("_", " ")}
+            </span>
+          </div>
+        </div>
+      `;
+    });
+
+    contenedor.innerHTML = html;
+  }
+
+// Direct renderizarTrackBoardLista already wired in renderizarBandejaPosta
 
 })();

@@ -5665,6 +5665,14 @@ let moduloActivoActual = 1;
 function irAModulo(num) {
   moduloActivoActual = num;
 
+  // Sincronizar automáticamente con fases de Cabina Cockpit
+  if (window.COCKPIT && typeof window.COCKPIT.irAFase === "function") {
+    if (num === 1 || num === 2) window.COCKPIT.irAFase(1);
+    else if (num === 3) window.COCKPIT.irAFase(2);
+    else if (num >= 4 && num <= 7) window.COCKPIT.irAFase(3);
+    else if (num === 8) window.COCKPIT.irAFase(4);
+  }
+
   // 1. Actualizar estados de botones en Navbar Superior, Stepper y Canvas
   for (let i = 1; i <= 8; i++) {
     const btnDrawer = document.getElementById(`btnStepDrawer_${i}`);
@@ -7037,8 +7045,46 @@ const RECURSOS_HOSPITALARIOS = {
     norma: "NTS N° 031-MINSA",
     tiempoFormateado: "--:--:--",
     progresoPct: 0
+  },
+  "SILLON-01": {
+    id: "SILLON-01",
+    tipo: "sillon",
+    nombre: "Sillón de Hidratación / Nebulización",
+    area: "Tópico de Urgencias",
+    categoria: "Terapia Rápida Ambulatoria",
+    icono: "🪑",
+    estado: "disponible",
+    paciente: null,
+    inicioMs: null,
+    finMs: null,
+    duracionHoras: 2,
+    horasAmpliadas: 0,
+    motivo: "Hidratación EV rápida / Nebulizaciones seriadas",
+    norma: "NTS N° 042-MINSA (Procedimiento ambulatorio)",
+    tiempoFormateado: "--:--:--",
+    progresoPct: 0
+  },
+  "SIN-CAMA": {
+    id: "SIN-CAMA",
+    tipo: "ambulatorio",
+    nombre: "Sin cama — Atención Ambulatoria / Tópico",
+    area: "Atención Ambulatoria",
+    categoria: "Atención Ambulatoria / P-IV y P-V",
+    icono: "🚶",
+    estado: "disponible",
+    paciente: null,
+    inicioMs: null,
+    finMs: null,
+    duracionHoras: 1,
+    horasAmpliadas: 0,
+    motivo: "Consulta médica ambulatoria / Sin requerimiento de cama hospitalaria",
+    norma: "NTS N° 042-MINSA (No urgente)",
+    tiempoFormateado: "--:--:--",
+    progresoPct: 0
   }
 };
+
+window.RECURSOS_HOSPITALARIOS = RECURSOS_HOSPITALARIOS;
 
 // INICIALIZADOR DEL SISTEMA DE CRONÓMETROS
 function iniciarCronometrosRecursos() {
@@ -8573,6 +8619,20 @@ function cargarCasoPreset(prioNum) {
 
 let PACIENTES_COLA = [];
 let pacienteActivoId = null;
+window.PACIENTES_COLA = PACIENTES_COLA;
+window.pacienteActivoId = pacienteActivoId;
+try {
+  Object.defineProperty(window, "PACIENTES_COLA", {
+    get: function() { return PACIENTES_COLA; },
+    set: function(v) { PACIENTES_COLA = v; },
+    configurable: true
+  });
+  Object.defineProperty(window, "pacienteActivoId", {
+    get: function() { return pacienteActivoId; },
+    set: function(v) { pacienteActivoId = v; },
+    configurable: true
+  });
+} catch(e) {}
 let contadorSecuencialPx = 1;
 let intervalCronometrosCola = null;
 
@@ -11088,13 +11148,15 @@ window.activarPanicoShockTrauma = function() {
   if (typeof orig_activarPanicoShockTrauma === 'function') {
     orig_activarPanicoShockTrauma();
   }
-  // Ocupar 1 sola cama de Shock Trauma libre de forma silenciosa
-  if (RECURSOS_HOSPITALARIOS['ST-01'] && RECURSOS_HOSPITALARIOS['ST-01'].estado === 'disponible') {
-    asignarPacienteActualARecurso('ST-01', null, null, true);
-  } else if (RECURSOS_HOSPITALARIOS['ST-02'] && RECURSOS_HOSPITALARIOS['ST-02'].estado === 'disponible') {
-    asignarPacienteActualARecurso('ST-02', null, null, true);
+  // Idempotente: solo asignar cama si el paciente no tiene aún cama registrada
+  if (!STATE.camaAsignadaId) {
+    if (RECURSOS_HOSPITALARIOS['ST-01'] && RECURSOS_HOSPITALARIOS['ST-01'].estado === 'disponible') {
+      asignarPacienteActualARecurso('ST-01', null, null, true);
+    } else if (RECURSOS_HOSPITALARIOS['ST-02'] && RECURSOS_HOSPITALARIOS['ST-02'].estado === 'disponible') {
+      asignarPacienteActualARecurso('ST-02', null, null, true);
+    }
   }
-  // Generar brazalete de emergencia P-I
+  // Generar brazalete de emergencia P-I sin bloquear
   generarBrazaleteEmergencia('temporal');
   if (typeof actualizarWidgetFlotanteCamas === 'function') actualizarWidgetFlotanteCamas();
 };
@@ -12643,3 +12705,202 @@ function bloquearCamposSimulacion(bloquear = true) {
   }
 }
 window.bloquearCamposSimulacion = bloquearCamposSimulacion;
+
+
+// ---------------------------------------------------------------------------
+// GESTIÓN IDEMPOTENTE DE CAMAS Y ADMISIÓN NN DE EMERGENCIA (LEYES 27604 / 29414)
+// ---------------------------------------------------------------------------
+function liberarRecursoHospitalarioOperativo(idRecursoOCama, idExpediente) {
+  let idRec = idRecursoOCama;
+  if (!idRec && typeof RECURSOS_HOSPITALARIOS !== 'undefined') {
+    for (let k in RECURSOS_HOSPITALARIOS) {
+      if (RECURSOS_HOSPITALARIOS[k].paciente && (RECURSOS_HOSPITALARIOS[k].paciente.id === idExpediente || RECURSOS_HOSPITALARIOS[k].paciente.identificador === idExpediente)) {
+        idRec = k;
+        break;
+      }
+    }
+  }
+  if (!idRec && window.STATE && window.STATE.camaAsignadaId) {
+    idRec = window.STATE.camaAsignadaId;
+  }
+  if (idRec && typeof RECURSOS_HOSPITALARIOS !== 'undefined' && RECURSOS_HOSPITALARIOS[idRec]) {
+    const rec = RECURSOS_HOSPITALARIOS[idRec];
+    rec.estado = "disponible";
+    rec.paciente = null;
+    rec.pacienteId = null;
+    rec.pacienteNombre = null;
+    rec.inicioMs = null;
+    rec.finMs = null;
+    rec.horasAmpliadas = 0;
+    rec.tiempoFormateado = "--:--:--";
+    rec.progresoPct = 0;
+    if (window.STATE && window.STATE.camaAsignadaId === idRec) {
+      window.STATE.camaAsignada = null;
+      window.STATE.camaAsignadaId = null;
+    }
+    if (typeof tickCronometrosCamas === "function") tickCronometrosCamas();
+    if (typeof renderizarTableroCamasYQuirofanos === "function") renderizarTableroCamasYQuirofanos();
+    if (typeof renderizarMonitorObservacionModulo5 === "function") renderizarMonitorObservacionModulo5();
+    if (typeof actualizarWidgetFlotanteCamas === "function") actualizarWidgetFlotanteCamas();
+    return true;
+  }
+  return false;
+}
+window.liberarRecursoHospitalarioOperativo = liberarRecursoHospitalarioOperativo;
+window.liberarRecurso = liberarRecursoHospitalarioOperativo;
+
+function sugerirRecursoSegunPrioridad(prioridad) {
+  if (prioridad === 'I') {
+    if (RECURSOS_HOSPITALARIOS['ST-01'] && RECURSOS_HOSPITALARIOS['ST-01'].estado === 'disponible') return 'ST-01';
+    if (RECURSOS_HOSPITALARIOS['ST-02'] && RECURSOS_HOSPITALARIOS['ST-02'].estado === 'disponible') return 'ST-02';
+    return 'ST-01';
+  } else if (prioridad === 'II') {
+    for (let id of ['OBS-01','OBS-02','OBS-03','OBS-04','OBS-05','OBS-06']) {
+      if (RECURSOS_HOSPITALARIOS[id] && RECURSOS_HOSPITALARIOS[id].estado === 'disponible') return id;
+    }
+    return 'OBS-01';
+  } else if (prioridad === 'III') {
+    for (let id of ['OBS-01','OBS-02','OBS-03','SILLON-01']) {
+      if (RECURSOS_HOSPITALARIOS[id] && RECURSOS_HOSPITALARIOS[id].estado === 'disponible') return id;
+    }
+    return 'SILLON-01';
+  } else {
+    return 'SIN-CAMA';
+  }
+}
+window.sugerirRecursoSegunPrioridad = sugerirRecursoSegunPrioridad;
+
+function admitirEmergenciaNN() {
+  if (typeof bloquearIdentificacionEnMod2 === "function") bloquearIdentificacionEnMod2(false);
+  window._identificacionOrigen = null;
+  const ahora = new Date();
+  const fechaCod = ahora.toISOString().slice(0, 10).replace(/-/g, "");
+  const numSec = String((window.PACIENTES_COLA || []).filter(x => x.esNN).length + 1).padStart(2, "0");
+  const codigoNN = `NN-${fechaCod}-${numSec}`;
+  const nombreNN = `Paciente NN (Indocumentado ${codigoNN})`;
+  const hcEmergencia = `HC-NN-${fechaCod}-${numSec}`;
+
+  guardarEstadoPacienteActivo();
+
+  // Buscar cama Shock Trauma libre sin duplicar
+  let camaId = "ST-01";
+  let camaNombre = "Shock Trauma ST-01";
+  if (typeof RECURSOS_HOSPITALARIOS !== "undefined") {
+    if (RECURSOS_HOSPITALARIOS["ST-01"] && RECURSOS_HOSPITALARIOS["ST-01"].estado === "disponible") {
+      camaId = "ST-01";
+      camaNombre = "Shock Trauma ST-01";
+    } else if (RECURSOS_HOSPITALARIOS["ST-02"] && RECURSOS_HOSPITALARIOS["ST-02"].estado === "disponible") {
+      camaId = "ST-02";
+      camaNombre = "Shock Trauma ST-02";
+    }
+  }
+
+  const pxNN = crearRegistroPaciente({
+    identificador: codigoNN,
+    nombre: nombreNN,
+    dni: "NN",
+    edad: "Desconocido",
+    sexo: "Desconocido",
+    prioridad: "I",
+    motivo: "Admisión de Emergencia Paciente NN / Riesgo Vital Inminente — Ley N° 27604",
+    estadoAtencion: "Shock Trauma Inmediato",
+    camaNombre: camaNombre,
+    camaId: camaId,
+    esEmergenciaDirecta: true,
+    esNN: true,
+    estadoFlujo: "EN_ATENCION_MEDICA"
+  });
+
+  esLlegadaSimultanea = false;
+  PACIENTES_COLA = [pxNN];
+  pacienteActivoId = pxNN.id;
+
+  limpiarFormularioCompletoState();
+
+  STATE.esNN = true;
+  STATE.ingresoDirectoCritico = true;
+  STATE.motivoIngresoCritico = "Admisión de Emergencia Paciente NN Indocumentado / Riesgo Vital Inminente — Ley N° 27604";
+  STATE.alertaPnpSs = true;
+  STATE.identificador = codigoNN;
+  STATE.nombreReniec = nombreNN;
+  STATE.numDni = "NN";
+  STATE.edad = "Desconocido";
+  STATE.sexo = "Desconocido";
+  STATE.telefono = "Desconocido";
+  STATE.direccion = "Desconocido";
+  STATE.grupoSanguineo = "Desconocido";
+  STATE.alergias = "Desconocido — Indagar";
+  STATE.tipoSeguro = "Regularización Diferida (Ley N° 27604)";
+  STATE.modalidadIngreso = "Pase Directo / Ambulancia";
+  STATE.motivoConsulta = "Admisión de Emergencia Paciente NN / Riesgo Vital Inminente — Ley N° 27604";
+  STATE.prioridad = "I";
+  STATE.colorPrioridad = "ROJO";
+  STATE.historiaClinica = hcEmergencia;
+  STATE.camaAsignada = camaNombre;
+  STATE.camaAsignadaId = camaId;
+  STATE.estadoFlujo = "EN_ATENCION_MEDICA";
+
+  // Asignar recurso hospitalario exactamente 1 cama de forma idempotente
+  if (typeof asignarPacienteActualARecurso === "function") {
+    asignarPacienteActualARecurso(camaId, 2, "Admisión de Emergencia Paciente NN (Ley N° 27604)", true);
+  }
+
+  // Sincronizar DOM
+  const elIdent = document.getElementById("ident_full");
+  if (elIdent) {
+    elIdent.value = codigoNN;
+    elIdent.placeholder = "PACIENTE NN — Documento No Requerido (Ley N° 27604)";
+  }
+  const elMotivo = document.getElementById("motivo_full");
+  if (elMotivo) elMotivo.value = STATE.motivoConsulta;
+  const elEdad = document.getElementById("edad_full");
+  if (elEdad) { elEdad.value = ""; elEdad.placeholder = "Desconocido"; }
+  const elSexo = document.getElementById("sexo_full");
+  if (elSexo) elSexo.value = "Desconocido";
+  const elGsan = document.getElementById("gsan_full");
+  if (elGsan) elGsan.value = "Desconocido";
+  const elAlergias = document.getElementById("alergias_full");
+  if (elAlergias) elAlergias.value = "Desconocido — Indagar";
+  const hcDisp = document.getElementById("hc_code_display");
+  if (hcDisp) hcDisp.textContent = hcEmergencia;
+
+  if (typeof mostrarPrioridad === "function") {
+    mostrarPrioridad("I", {
+      tipo: "Prioridad I — ROJO (Resucitación / Shock Trauma)",
+      desc: `Paciente indocumentado (${codigoNN}) en riesgo vital. Atención inmediata garantizada por Ley N° 27604 sin requisito de DNI.`,
+      destino: camaNombre
+    });
+  }
+
+  if (typeof generarBrazaleteEmergencia === "function") {
+    generarBrazaleteEmergencia("temporal");
+  }
+
+  if (typeof sincronizarDatosPacienteEnTodosLosModulos === "function") {
+    sincronizarDatosPacienteEnTodosLosModulos({
+      esNN: true,
+      dni: "NN",
+      nombre: nombreNN,
+      hc: hcEmergencia,
+      sexo: "Desconocido"
+    });
+  }
+
+  renderizarTableroColaPacientes();
+  if (typeof renderizarBandejaPosta === "function") renderizarBandejaPosta();
+  else if (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.renderizarBandejaPosta === "function") window.RBAC_FLUJO.renderizarBandejaPosta();
+  if (typeof actualizarWidgetFlotanteCamas === "function") actualizarWidgetFlotanteCamas();
+
+  if (typeof mostrarToast === "function") {
+    mostrarToast("warning", "🚨 Paciente NN Admitido (P-I)", `${codigoNN} derivado a Shock Trauma (${camaNombre}) conforme a Ley N° 27604.`);
+  } else if (typeof mostrarToastCola === "function") {
+    mostrarToastCola(`🚨 <strong>Admitir Emergencia NN (P-I):</strong> ${codigoNN} cargado con Grupo Sanguíneo <strong>Desconocido</strong>.`);
+  }
+
+  if (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.sincronizarExpedienteActivoEnStore === "function") {
+    window.RBAC_FLUJO.sincronizarExpedienteActivoEnStore();
+  }
+
+  irAModulo(4);
+}
+window.admitirEmergenciaNN = admitirEmergenciaNN;

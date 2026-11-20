@@ -14,7 +14,7 @@
   // 1. GESTOR DE TOASTS (Esquina Inferior Derecha - Máximo 3 simultáneos)
   // ----------------------------------------------------------------------------
   const MAX_TOASTS = 3;
-  const TOAST_DURATION_MS = 3800;
+  const TOAST_DURATION_MS = 3500;
   let toastContainer = null;
 
   function obtenerContenedorToasts() {
@@ -73,7 +73,7 @@
       <div class="ui-toast-icon">${iconSvg}</div>
       <div class="ui-toast-content">
         <div class="ui-toast-title">${sanitizarTexto(titulo || "Notificación")}</div>
-        ${detalle ? `<div class="ui-toast-detail">${sanitizarTexto(detalle)}</div>` : ""}
+        ${detalle ? `<div class="ui-toast-detail">${detalle.includes("<") ? detalle : sanitizarTexto(detalle)}</div>` : ""}
       </div>
       <button type="button" class="ui-toast-close" title="Cerrar aviso" aria-label="Cerrar">&times;</button>
       <div class="ui-toast-progress">

@@ -11,6 +11,7 @@
   "use strict";
 
   let faseActiva = 1;
+  let rolActivoVista = "AUDITOR";
 
   // ----------------------------------------------------------------------------
   // 1. CONSTRUCCIÓN DE LA CABINA CLÍNICA EN 3 ZONAS
@@ -32,8 +33,8 @@
     const sidebarLeft = document.createElement("aside");
     sidebarLeft.id = "cockpit_sidebar_left";
     sidebarLeft.innerHTML = `
-      <div class="cockpit-stepper-card">
-        <div class="cockpit-stepper-title">Fases Asistenciales (HIS)</div>
+      <div class="cockpit-stepper-card" id="cockpit_stepper_card">
+        <div class="cockpit-stepper-title" id="cockpit_stepper_title">Fases Asistenciales (HIS)</div>
         <div class="cockpit-step-item active" id="cockpit_step_1" onclick="window.COCKPIT.irAFase(1)">
           <div class="cockpit-step-num">1</div>
           <div class="cockpit-step-info">
@@ -45,8 +46,8 @@
         <div class="cockpit-step-item" id="cockpit_step_2" onclick="window.COCKPIT.irAFase(2)">
           <div class="cockpit-step-num">2</div>
           <div class="cockpit-step-info">
-            <div class="cockpit-step-name">Cobertura &amp; Camas</div>
-            <div class="cockpit-step-sub">SUSALUD, SOAT &amp; Pulsera</div>
+            <div class="cockpit-step-name">Cobertura &amp; Admisión</div>
+            <div class="cockpit-step-sub">SUSALUD, SOAT &amp; Regularización</div>
             <span class="cockpit-step-status" id="step_status_2">Pendiente</span>
           </div>
         </div>
@@ -54,7 +55,7 @@
           <div class="cockpit-step-num">3</div>
           <div class="cockpit-step-info">
             <div class="cockpit-step-name">Atención &amp; Alta</div>
-            <div class="cockpit-step-sub">CIE-10, Kardex, SOP &amp; Egreso</div>
+            <div class="cockpit-step-sub">CIE-10, Kardex, Camas/SOP &amp; Egreso</div>
             <span class="cockpit-step-status" id="step_status_3">Pendiente</span>
           </div>
         </div>
@@ -79,6 +80,7 @@
 
     // Barra Táctica de Ingresos Rápidos
     const tacticalBar = document.createElement("div");
+    tacticalBar.id = "cockpit_tactical_bar";
     tacticalBar.className = "cockpit-tactical-bar";
     tacticalBar.innerHTML = `
       <div class="cockpit-tactical-group">
@@ -105,6 +107,95 @@
       </div>
     `;
     workspaceCenter.appendChild(tacticalBar);
+
+    // Tarjeta Resumen Sellado de Triaje (Solo visible en Rol MÉDICO)
+    const triageSealedCard = document.createElement("div");
+    triageSealedCard.id = "cockpit_triage_sealed_card";
+    triageSealedCard.className = "cockpit-summary-card";
+    triageSealedCard.style.display = "none";
+    triageSealedCard.innerHTML = `
+      <div class="cockpit-summary-card-header">
+        <div class="cockpit-summary-title">
+          <span>🩺</span> Resumen Sellado de Triaje de Emergencia (NTS N° 139-MINSA)
+        </div>
+        <span class="ui-badge-pill ui-badge-p5" id="c_triage_prio_badge">P-V · No Urgente</span>
+      </div>
+      <div class="cockpit-summary-grid">
+        <div class="cockpit-summary-item">
+          <div class="cockpit-summary-label">Paciente / Turno</div>
+          <div class="cockpit-summary-val" id="c_triage_px_nombre">—</div>
+        </div>
+        <div class="cockpit-summary-item">
+          <div class="cockpit-summary-label">DNI / Filiación</div>
+          <div class="cockpit-summary-val" id="c_triage_px_dni">—</div>
+        </div>
+        <div class="cockpit-summary-item">
+          <div class="cockpit-summary-label">Edad / Sexo</div>
+          <div class="cockpit-summary-val" id="c_triage_px_edad_sexo">—</div>
+        </div>
+        <div class="cockpit-summary-item">
+          <div class="cockpit-summary-label">NEWS2 / ESI</div>
+          <div class="cockpit-summary-val" id="c_triage_news2_score" style="color:#0284c7;">0 pts (Nivel —)</div>
+        </div>
+        <div class="cockpit-summary-item">
+          <div class="cockpit-summary-label">Signos Vitales</div>
+          <div class="cockpit-summary-val" id="c_triage_vitals_resumen" style="font-size:0.78rem;">SpO2: --% | FC: -- | PA: --/--</div>
+        </div>
+        <div class="cockpit-summary-item">
+          <div class="cockpit-summary-label">Alergias Conocidas</div>
+          <div class="cockpit-summary-val" id="c_triage_alergias" style="color:#dc2626;">Ninguna referida</div>
+        </div>
+      </div>
+      <div class="cockpit-seal-box" id="c_triage_seal_box">
+        <span>🔒 <strong>Triaje Sellado por Enfermería:</strong> <span id="c_triage_firmante">Lic. Ana Torres (CEP 92410)</span></span>
+        <span id="c_triage_fecha_sello" style="font-weight:700;">Fecha: En curso</span>
+      </div>
+    `;
+    workspaceCenter.appendChild(triageSealedCard);
+
+    // Tarjeta Resumen Administrativo de Caja (Solo visible en Rol CAJA)
+    const cajaAdminCard = document.createElement("div");
+    cajaAdminCard.id = "cockpit_caja_admin_card";
+    cajaAdminCard.className = "cockpit-summary-card";
+    cajaAdminCard.style.display = "none";
+    cajaAdminCard.innerHTML = `
+      <div class="cockpit-summary-card-header">
+        <div class="cockpit-summary-title">
+          <span>💳</span> Liquidación Administrativa &amp; Cierre de Cuenta (Ley N° 29414)
+        </div>
+        <span class="ui-badge-pill ui-badge-p5" id="c_caja_seguro_badge">Seguro: Por validar</span>
+      </div>
+      <div class="cockpit-summary-grid">
+        <div class="cockpit-summary-item">
+          <div class="cockpit-summary-label">Paciente / Turno</div>
+          <div class="cockpit-summary-val" id="c_caja_px_nombre">—</div>
+        </div>
+        <div class="cockpit-summary-item">
+          <div class="cockpit-summary-label">Documento</div>
+          <div class="cockpit-summary-val" id="c_caja_px_dni">—</div>
+        </div>
+        <div class="cockpit-summary-item">
+          <div class="cockpit-summary-label">Régimen / Financiador</div>
+          <div class="cockpit-summary-val" id="c_caja_regimen_val">SIS Gratuito</div>
+        </div>
+        <div class="cockpit-summary-item">
+          <div class="cockpit-summary-label">Cama / Recurso</div>
+          <div class="cockpit-summary-val" id="c_caja_cama_val">Sin cama</div>
+        </div>
+        <div class="cockpit-summary-item">
+          <div class="cockpit-summary-label">Alta Médica</div>
+          <div class="cockpit-summary-val" id="c_caja_alta_status" style="color:#059669;">Firmada (CMP)</div>
+        </div>
+        <div class="cockpit-summary-item">
+          <div class="cockpit-summary-label">Total a Liquidar</div>
+          <div class="cockpit-summary-val" id="c_caja_monto_total" style="color:#0f172a; font-size:1.05rem;">S/ 0.00</div>
+        </div>
+      </div>
+      <div style="margin-top:10px; font-size:0.75rem; color:#64748b; background:#f8fafc; padding:8px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+        🔒 <strong>Privacidad Médica (Ley N° 29733):</strong> Las notas clínicas, diagnósticos CIE-10 y evolución se encuentran enmascaradas por confidencialidad para personal administrativo.
+      </div>
+    `;
+    workspaceCenter.appendChild(cajaAdminCard);
 
     // Contenedores de las 4 Fases
     const phase1 = document.createElement("div");
@@ -231,10 +322,15 @@
     // Ocultar main contenedor viejo
     mainContainer.style.display = "none";
 
-    // 1.8 Escuchar cambios de signos vitales para refrescar monitor
+    // 1.8 Escuchar eventos de monitor y tema
     engancharEventosMonitor();
+    inicializarModoOscuro();
 
-    // 1.9 Refrescar estado y contexto
+    // 1.9 Aplicar vista de rol inicial
+    const rolActual = window.RBAC_FLUJO ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
+    aplicarVistaYPermisosRol(rolActual);
+
+    // 1.10 Refrescar contexto periódicamente
     actualizarContextoCockpit();
     setInterval(actualizarContextoCockpit, 1500);
   }
@@ -277,10 +373,6 @@
       </div>
 
       <div class="cockpit-top-right">
-        <span class="cockpit-role-badge" id="cockpit_top_rol_badge">
-          🛡️ Rol: AUDITOR
-        </span>
-
         <!-- Selector Rápido de Simulación en Modo Auditor -->
         <select class="cockpit-sim-select" id="cockpit_sim_role_select" onchange="window.COCKPIT.cambiarVistaSimulada(this.value)">
           <option value="AUDITOR" selected>Vista: Auditor Full</option>
@@ -289,6 +381,15 @@
           <option value="MEDICO">Vista: Médico Emergencia</option>
           <option value="CAJA">Vista: Facturación / Caja</option>
         </select>
+
+        <span class="cockpit-role-badge" id="cockpit_top_rol_badge">
+          🛡️ Rol: AUDITOR
+        </span>
+
+        <!-- Botón Modo Oscuro / Claro -->
+        <button type="button" class="cockpit-btn-theme" id="btn_toggle_dark_mode" onclick="window.COCKPIT.toggleDarkMode()" title="Cambiar tema">
+          ☀️ Claro
+        </button>
 
         <button type="button" class="cockpit-btn-login" onclick="abrirModalLoginRBAC()">
           👤 Cambiar Rol
@@ -300,7 +401,183 @@
   }
 
   // ----------------------------------------------------------------------------
-  // 3. NAVEGACIÓN Y CONTROL DE FASES (1 A 4)
+  // 3. VISTAS FOCALIZADAS POR ROL (EPIC ASAP / CERNER FIRSTNET)
+  // ----------------------------------------------------------------------------
+  function aplicarVistaYPermisosRol(rol, modo) {
+    rol = rol || (window.RBAC_FLUJO ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR");
+    modo = modo || (window.RBAC_FLUJO ? window.RBAC_FLUJO.obtenerModoOperacion() : "DEMO");
+    rolActivoVista = rol;
+
+    const step1 = document.getElementById("cockpit_step_1");
+    const step2 = document.getElementById("cockpit_step_2");
+    const step3 = document.getElementById("cockpit_step_3");
+    const step4 = document.getElementById("cockpit_step_4");
+    const tacticalBar = document.getElementById("cockpit_tactical_bar");
+    const triageCard = document.getElementById("cockpit_triage_sealed_card");
+    const cajaCard = document.getElementById("cockpit_caja_admin_card");
+
+    const phase1 = document.getElementById("cockpit_phase_1");
+    const phase2 = document.getElementById("cockpit_phase_2");
+    const phase3 = document.getElementById("cockpit_phase_3");
+    const phase4 = document.getElementById("cockpit_phase_4");
+
+    const sec1 = document.getElementById("sec_mod1");
+    const sec2 = document.getElementById("sec_mod2");
+    const sec3 = document.getElementById("sec_mod3");
+    const sec4 = document.getElementById("sec_mod4");
+    const sec5 = document.getElementById("sec_mod5");
+    const sec6 = document.getElementById("sec_mod6");
+    const sec7 = document.getElementById("sec_mod7");
+    const sec8 = document.getElementById("sec_mod8");
+
+    // Desbloquear todos los módulos por defecto para prevenir casillas muertas
+    document.querySelectorAll(".module-blocked-overlay").forEach(ov => ov.remove());
+    for (let i = 1; i <= 8; i++) {
+      const sec = document.getElementById(`sec_mod${i}`);
+      if (sec) {
+        sec.style.pointerEvents = "auto";
+        sec.style.opacity = "1";
+        sec.querySelectorAll("button, input, select, textarea").forEach(ctrl => {
+          if (!ctrl.dataset.rbacHardDisabled) ctrl.disabled = false;
+        });
+      }
+    }
+
+    if (rol === "TRIAJE") {
+      // TRIAJE: Ve Barra Táctica + Módulos 1, 2, 5. Ocultos 3, 4, 6, 7, 8
+      if (tacticalBar) tacticalBar.style.display = "flex";
+      if (triageCard) triageCard.style.display = "none";
+      if (cajaCard) cajaCard.style.display = "none";
+
+      if (step1) { step1.style.display = "flex"; step1.classList.add("active"); }
+      if (step2) step2.style.display = "none";
+      if (step3) step3.style.display = "none";
+      if (step4) step4.style.display = "none";
+
+      if (phase1) phase1.style.display = "block";
+      if (phase2) phase2.style.display = "block";
+      if (phase3) phase3.style.display = "none";
+      if (phase4) phase4.style.display = "none";
+
+      if (sec1) sec1.style.display = "block";
+      if (sec2) sec2.style.display = "block";
+      if (sec5) sec5.style.display = "block";
+      if (sec3) sec3.style.display = "none";
+      if (sec4) sec4.style.display = "none";
+      if (sec6) sec6.style.display = "none";
+      if (sec7) sec7.style.display = "none";
+      if (sec8) sec8.style.display = "none";
+
+    } else if (rol === "ADMISION") {
+      // ADMISIÓN: Ve Módulos 2 y 3. Ocultos 1, 4, 5, 6, 7, 8
+      if (tacticalBar) tacticalBar.style.display = "none";
+      if (triageCard) triageCard.style.display = "none";
+      if (cajaCard) cajaCard.style.display = "none";
+
+      if (step1) step1.style.display = "none";
+      if (step2) { step2.style.display = "flex"; step2.classList.add("active"); }
+      if (step3) step3.style.display = "none";
+      if (step4) step4.style.display = "none";
+
+      if (phase1) phase1.style.display = "block";
+      if (phase2) phase2.style.display = "block";
+      if (phase3) phase3.style.display = "none";
+      if (phase4) phase4.style.display = "none";
+
+      if (sec2) sec2.style.display = "block";
+      if (sec3) sec3.style.display = "block";
+      if (sec1) sec1.style.display = "none";
+      if (sec4) sec4.style.display = "none";
+      if (sec5) sec5.style.display = "none";
+      if (sec6) sec6.style.display = "none";
+      if (sec7) sec7.style.display = "none";
+      if (sec8) sec8.style.display = "none";
+
+    } else if (rol === "MEDICO") {
+      // MÉDICO: Ve Resumen Sellado de Triaje + Módulos 4, 6, 7. Ocultos 1, 2, 3, 5, 8
+      if (tacticalBar) tacticalBar.style.display = "none";
+      if (triageCard) {
+        triageCard.style.display = "block";
+        actualizarTarjetaResumenTriaje();
+      }
+      if (cajaCard) cajaCard.style.display = "none";
+
+      if (step1) step1.style.display = "none";
+      if (step2) step2.style.display = "none";
+      if (step3) { step3.style.display = "flex"; step3.classList.add("active"); }
+      if (step4) step4.style.display = "none";
+
+      if (phase1) phase1.style.display = "none";
+      if (phase2) phase2.style.display = "none";
+      if (phase3) phase3.style.display = "block";
+      if (phase4) phase4.style.display = "none";
+
+      if (sec4) sec4.style.display = "block";
+      if (sec6) sec6.style.display = "block";
+      if (sec7) sec7.style.display = "block";
+      if (sec1) sec1.style.display = "none";
+      if (sec2) sec2.style.display = "none";
+      if (sec3) sec3.style.display = "none";
+      if (sec5) sec5.style.display = "none";
+      if (sec8) sec8.style.display = "none";
+
+    } else if (rol === "CAJA") {
+      // CAJA: Ve Resumen Administrativo + Módulo 8. Ocultos 1 al 7
+      if (tacticalBar) tacticalBar.style.display = "none";
+      if (triageCard) triageCard.style.display = "none";
+      if (cajaCard) {
+        cajaCard.style.display = "block";
+        actualizarTarjetaResumenCaja();
+      }
+
+      if (step1) step1.style.display = "none";
+      if (step2) step2.style.display = "none";
+      if (step3) step3.style.display = "none";
+      if (step4) { step4.style.display = "flex"; step4.classList.add("active"); }
+
+      if (phase1) phase1.style.display = "none";
+      if (phase2) phase2.style.display = "none";
+      if (phase3) phase3.style.display = "none";
+      if (phase4) phase4.style.display = "block";
+
+      if (sec8) sec8.style.display = "block";
+      if (sec1) sec1.style.display = "none";
+      if (sec2) sec2.style.display = "none";
+      if (sec3) sec3.style.display = "none";
+      if (sec4) sec4.style.display = "none";
+      if (sec5) sec5.style.display = "none";
+      if (sec6) sec6.style.display = "none";
+      if (sec7) sec7.style.display = "none";
+
+    } else {
+      // AUDITOR / DEMO FULL: Todos los pasos y módulos habilitados
+      if (tacticalBar) tacticalBar.style.display = "flex";
+      if (triageCard) triageCard.style.display = "none";
+      if (cajaCard) cajaCard.style.display = "none";
+
+      if (step1) step1.style.display = "flex";
+      if (step2) step2.style.display = "flex";
+      if (step3) step3.style.display = "flex";
+      if (step4) step4.style.display = "flex";
+
+      // Restaurar visibilidad por fases
+      irAFase(faseActiva);
+
+      if (sec1) sec1.style.display = "block";
+      if (sec2) sec2.style.display = "block";
+      if (sec3) sec3.style.display = "block";
+      if (sec4) sec4.style.display = "block";
+      if (sec5) sec5.style.display = "block";
+      if (sec6) sec6.style.display = "block";
+      if (sec7) sec7.style.display = "block";
+      if (sec8) sec8.style.display = "block";
+    }
+
+    actualizarBotonAccionPrincipal();
+  }
+
+  // ----------------------------------------------------------------------------
+  // 4. CONTROL DE FASES (MODO AUDITOR / SUPERVISIÓN)
   // ----------------------------------------------------------------------------
   function irAFase(numeroFase) {
     faseActiva = Number(numeroFase);
@@ -311,10 +588,18 @@
 
       if (f === faseActiva) {
         if (stepEl) stepEl.classList.add("active");
-        if (phaseEl) phaseEl.classList.add("cockpit-phase-active");
+        if (phaseEl) {
+          phaseEl.style.display = "block";
+          phaseEl.classList.add("cockpit-phase-active");
+        }
       } else {
         if (stepEl) stepEl.classList.remove("active");
-        if (phaseEl) phaseEl.classList.remove("cockpit-phase-active");
+        if (phaseEl) {
+          if (rolActivoVista === "AUDITOR" || rolActivoVista === "ADMIN") {
+            phaseEl.style.display = "none";
+          }
+          phaseEl.classList.remove("cockpit-phase-active");
+        }
       }
     }
 
@@ -323,7 +608,89 @@
   }
 
   // ----------------------------------------------------------------------------
-  // 4. MONITOR FISIOLÓGICO Y CONTEXTO EN VIVO
+  // 5. TARJETAS RESUMEN INTERACTIVAS (MÉDICO & CAJA)
+  // ----------------------------------------------------------------------------
+  function actualizarTarjetaResumenTriaje() {
+    const state = window.STATE || {};
+    const cola = window.PACIENTES_COLA || [];
+    const px = cola.find(x => x.id === window.pacienteActivoId) || {};
+
+    const elPrioBadge = document.getElementById("c_triage_prio_badge");
+    const elNombre = document.getElementById("c_triage_px_nombre");
+    const elDni = document.getElementById("c_triage_px_dni");
+    const elEdadSexo = document.getElementById("c_triage_px_edad_sexo");
+    const elNews2 = document.getElementById("c_triage_news2_score");
+    const elVitals = document.getElementById("c_triage_vitals_resumen");
+    const elAlergias = document.getElementById("c_triage_alergias");
+    const elFirmante = document.getElementById("c_triage_firmante");
+    const elFecha = document.getElementById("c_triage_fecha_sello");
+
+    const prio = px.prioridad || state.prioridad || "III";
+    if (elPrioBadge) {
+      elPrioBadge.className = `ui-badge-pill ui-badge-p${prio.toLowerCase()}`;
+      elPrioBadge.textContent = `P-${prio} · ${prio === "I" ? "Emergencia Vital" : prio === "II" ? "Emergencia" : "Urgencia"}`;
+    }
+
+    const turno = px.turno || (state.identificador ? state.identificador.replace("CRITICO-", "") : "E-001");
+    if (elNombre) elNombre.textContent = `${turno} · ${px.nombre || state.nombreReniec || state.identificador || "Paciente"}`;
+    if (elDni) elDni.textContent = px.dni || state.numDni || "NN (Indocumentado)";
+    if (elEdadSexo) elEdadSexo.textContent = `${state.edad || "—"} años / ${state.sexo || "Desconocido"}`;
+
+    const score = state.news2Score !== undefined ? state.news2Score : 0;
+    if (elNews2) elNews2.textContent = `${score} pts (Nivel ${prio})`;
+
+    const spo2 = document.getElementById("spo2_full")?.value || "--";
+    const fc = document.getElementById("fc_full")?.value || "--";
+    const pas = document.getElementById("pas_full")?.value || "--";
+    const pad = document.getElementById("pad_full")?.value || "--";
+    if (elVitals) elVitals.textContent = `SpO2: ${spo2}% | FC: ${fc} lpm | PA: ${pas}/${pad} mmHg`;
+
+    if (elAlergias) elAlergias.textContent = state.alergias || "Ninguna referida";
+
+    const firmaEnf = px.firmas?.triaje || state.firmas?.triaje;
+    if (firmaEnf && elFirmante) {
+      elFirmante.textContent = `${firmaEnf.usuario} (${firmaEnf.colegiatura || "CEP Oficial"})`;
+    }
+    if (firmaEnf && elFecha) {
+      elFecha.textContent = `Sellado: ${new Date(firmaEnf.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+  }
+
+  function actualizarTarjetaResumenCaja() {
+    const state = window.STATE || {};
+    const cola = window.PACIENTES_COLA || [];
+    const px = cola.find(x => x.id === window.pacienteActivoId) || {};
+
+    const elNombre = document.getElementById("c_caja_px_nombre");
+    const elDni = document.getElementById("c_caja_px_dni");
+    const elRegimen = document.getElementById("c_caja_regimen_val");
+    const elCama = document.getElementById("c_caja_cama_val");
+    const elAlta = document.getElementById("c_caja_alta_status");
+    const elTotal = document.getElementById("c_caja_monto_total");
+    const elBadgeSeguro = document.getElementById("c_caja_seguro_badge");
+
+    const turno = px.turno || (state.identificador ? state.identificador.replace("CRITICO-", "") : "E-001");
+    if (elNombre) elNombre.textContent = `${turno} · ${px.nombre || state.nombreReniec || "Paciente"}`;
+    if (elDni) elDni.textContent = px.dni || state.numDni || "NN";
+
+    const seguro = state.tipoSeguro || "SIS Gratuito";
+    if (elRegimen) elRegimen.textContent = seguro;
+    if (elBadgeSeguro) elBadgeSeguro.textContent = `Seguro: ${seguro.split(" ")[0]}`;
+
+    if (elCama) elCama.textContent = state.camaAsignada || "Sin cama";
+
+    const firmaMed = px.firmas?.medico || state.firmas?.medico;
+    if (elAlta) {
+      elAlta.textContent = firmaMed ? `Firmada por ${firmaMed.usuario} (${firmaMed.colegiatura || "CMP"})` : "Pendiente de firma médica";
+      elAlta.style.color = firmaMed ? "#059669" : "#d97706";
+    }
+
+    const totalFactura = document.getElementById("factura_total_monto")?.textContent || "S/ 0.00";
+    if (elTotal) elTotal.textContent = totalFactura;
+  }
+
+  // ----------------------------------------------------------------------------
+  // 6. MONITOR FISIOLÓGICO EN VIVO
   // ----------------------------------------------------------------------------
   function engancharEventosMonitor() {
     const ids = ["spo2_full", "fc_full", "pas_full", "pad_full", "fr_full", "temp_full", "glasgow_full", "glucosa_full"];
@@ -363,7 +730,6 @@
     const elG = document.getElementById("mon_glasgow");
     if (elG) elG.textContent = glasgow;
 
-    // Ritmo cardíaco referencial
     const elRitmo = document.getElementById("lbl_monitor_ritmo");
     if (elRitmo) {
       const numFc = Number(fc);
@@ -379,7 +745,6 @@
       }
     }
 
-    // NEWS2 y ESI
     const state = window.STATE;
     if (state) {
       const monNews2 = document.getElementById("mon_news2_score");
@@ -396,7 +761,6 @@
       }
     }
 
-    // Camas libres
     const monBeds = document.getElementById("mon_beds_free");
     const navBeds = document.getElementById("lbl_navbar_dispo_resumen");
     if (monBeds && navBeds) {
@@ -427,7 +791,6 @@
       }
     }
 
-    // Sincronizar badge de rol
     const rolActual = window.RBAC_FLUJO ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
     const rolBadge = document.getElementById("cockpit_top_rol_badge");
     if (rolBadge) {
@@ -442,25 +805,27 @@
       rolBadge.textContent = nombres[rolActual] || `Rol: ${rolActual}`;
     }
 
-    // Mostrar u ocultar selector de simulación
     const simSelect = document.getElementById("cockpit_sim_role_select");
     if (simSelect) {
       const esAuditor = rolActual === "AUDITOR" || rolActual === "ADMIN" || (window.RBAC_FLUJO && window.RBAC_FLUJO.obtenerModoOperacion() === "DEMO");
       simSelect.style.display = esAuditor ? "inline-block" : "none";
     }
 
+    if (rolActual === "MEDICO") actualizarTarjetaResumenTriaje();
+    if (rolActual === "CAJA") actualizarTarjetaResumenCaja();
+
     actualizarBotonAccionPrincipal();
   }
 
   // ----------------------------------------------------------------------------
-  // 5. ACCIÓN PRINCIPAL DE POSTA CLÍNICA
+  // 7. ACCIÓN PRINCIPAL DE POSTA CLÍNICA
   // ----------------------------------------------------------------------------
   function actualizarBotonAccionPrincipal() {
     const btn = document.getElementById("cockpit_primary_btn");
     const meta = document.getElementById("cockpit_action_meta");
     if (!btn || !meta) return;
 
-    const rol = window.RBAC_FLUJO ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
+    const rol = rolActivoVista;
 
     if (rol === "TRIAJE") {
       btn.textContent = "📤 Sellar Triaje y Derivar a Médico";
@@ -470,14 +835,13 @@
       meta.textContent = "Acreditación Padrón SUSALUD / SOAT en paralelo";
     } else if (rol === "MEDICO") {
       btn.textContent = "📤 Firmar Alta Clínica y Enviar a Caja";
-      meta.textContent = "Estampa CMP y pase a cierre administrativo";
+      meta.textContent = "Estampa CMP y liberación de cama";
     } else if (rol === "CAJA") {
       btn.textContent = "💳 Emitir Liquidación y Cierre";
       meta.textContent = "Cierre formal de cuenta · Ley N° 29414";
     } else {
-      // Rol AUDITOR / DEMO: Navegación continua de fases o acción de la fase activa
       if (faseActiva === 1) {
-        btn.textContent = "Continuar a Cobertura & Camas (Fase 2) →";
+        btn.textContent = "Continuar a Cobertura & Admisión (Fase 2) →";
         meta.textContent = "Auditoría integral · Pase a validación de seguro";
       } else if (faseActiva === 2) {
         btn.textContent = "Continuar a Atención Médica (Fase 3) →";
@@ -493,7 +857,7 @@
   }
 
   function ejecutarAccionPrincipal() {
-    const rol = window.RBAC_FLUJO ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
+    const rol = rolActivoVista;
 
     if (rol === "TRIAJE") {
       if (typeof window.sellarTriajeYDerivar === "function") {
@@ -512,7 +876,6 @@
         window.emitirLiquidacionYCierre();
       }
     } else {
-      // AUDITOR: avanzar de fase o abrir bitácora
       if (faseActiva < 4) {
         irAFase(faseActiva + 1);
       } else {
@@ -524,8 +887,49 @@
   }
 
   // ----------------------------------------------------------------------------
-  // 6. SELECCIÓN DE ENTORNO (PÚBLICO / PRIVADO)
+  // 8. SIMULADOR RÁPIDO DE VISTAS (MODO AUDITOR)
   // ----------------------------------------------------------------------------
+  function cambiarVistaSimulada(rolDestino) {
+    if (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.aplicarPermisosYEnmascaramiento === "function") {
+      window.RBAC_FLUJO.aplicarPermisosYEnmascaramiento(rolDestino, "DEMO");
+    }
+
+    aplicarVistaYPermisosRol(rolDestino, "DEMO");
+
+    if (typeof window.mostrarToast === "function") {
+      window.mostrarToast("info", "Vista Simulada", `Mostrando estación y módulos según rol: ${rolDestino}`);
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // 9. MODO OSCURO / CLARO
+  // ----------------------------------------------------------------------------
+  function inicializarModoOscuro() {
+    const tema = localStorage.getItem("upp_tema_ui") || "light";
+    aplicarTema(tema);
+  }
+
+  function toggleDarkMode() {
+    const actual = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    const nuevo = actual === "dark" ? "light" : "dark";
+    aplicarTema(nuevo);
+  }
+
+  function aplicarTema(tema) {
+    if (tema === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+      document.body.setAttribute("data-theme", "dark");
+      const btn = document.getElementById("btn_toggle_dark_mode");
+      if (btn) btn.innerHTML = "🌙 Oscuro";
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+      document.body.removeAttribute("data-theme");
+      const btn = document.getElementById("btn_toggle_dark_mode");
+      if (btn) btn.innerHTML = "☀️ Claro";
+    }
+    localStorage.setItem("upp_tema_ui", tema);
+  }
+
   function seleccionarSector(tipo) {
     const btnPub = document.getElementById("btn_sector_publico");
     const btnPriv = document.getElementById("btn_sector_privado");
@@ -546,29 +950,7 @@
   }
 
   // ----------------------------------------------------------------------------
-  // 7. SIMULACIÓN RÁPIDA DE VISTAS (MODO AUDITOR)
-  // ----------------------------------------------------------------------------
-  function cambiarVistaSimulada(rolDestino) {
-    if (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.aplicarPermisosYEnmascaramiento === "function") {
-      window.RBAC_FLUJO.aplicarPermisosYEnmascaramiento(rolDestino, "DEMO");
-    }
-
-    // Auto-ajustar fase sugerida según la vista simulada
-    if (rolDestino === "TRIAJE") irAFase(1);
-    else if (rolDestino === "ADMISION") irAFase(2);
-    else if (rolDestino === "MEDICO") irAFase(3);
-    else if (rolDestino === "CAJA") irAFase(4);
-    else irAFase(1);
-
-    actualizarContextoCockpit();
-
-    if (typeof window.mostrarToast === "function") {
-      window.mostrarToast("info", "Vista Simulada", `Mostrando permisos y bloqueos según rol: ${rolDestino}`);
-    }
-  }
-
-  // ----------------------------------------------------------------------------
-  // 8. INICIALIZACIÓN
+  // 10. INICIALIZACIÓN
   // ----------------------------------------------------------------------------
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", inicializarCockpit);
@@ -576,14 +958,15 @@
     inicializarCockpit();
   }
 
-  // API pública
   window.COCKPIT = {
     irAFase,
     ejecutarAccionPrincipal,
     seleccionarSector,
     cambiarVistaSimulada,
+    aplicarVistaYPermisosRol,
     actualizarContextoCockpit,
-    refrescarValoresMonitor
+    refrescarValoresMonitor,
+    toggleDarkMode
   };
 
 })();

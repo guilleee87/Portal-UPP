@@ -681,3 +681,234 @@ input[type="number"],
     margin-bottom: 0;
   }
 }
+
+
+/* ------------------------------------------------------------------------------
+   9. TARJETAS COMPACTAS RESUMEN POR ROL (MÉDICO Y CAJA)
+   ------------------------------------------------------------------------------ */
+.cockpit-summary-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.cockpit-summary-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.cockpit-summary-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cockpit-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.cockpit-summary-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.cockpit-summary-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.cockpit-summary-val {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.cockpit-seal-box {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: #166534;
+}
+
+.cockpit-btn-theme {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.cockpit-btn-theme:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* ------------------------------------------------------------------------------
+   10. MODO OSCURO CLÍNICO ANTI-FATIGA (WCAG 2.1 AA)
+   ------------------------------------------------------------------------------ */
+[data-theme="dark"] {
+  --bg-primary: #0B1120;
+  --bg-surface: #111827;
+  --bg-surface-soft: #1E293B;
+  --border-subtle: #1E293B;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --accent-cyan: #06B6D4;
+}
+
+[data-theme="dark"] body {
+  background-color: #0B1120 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] #cockpit_top_bar {
+  background: #111827 !important;
+  border-bottom: 1px solid #1E293B !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-logo-badge {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-patient-pill {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-stepper-card,
+[data-theme="dark"] .cockpit-monitor-card,
+[data-theme="dark"] .cockpit-action-card,
+[data-theme="dark"] .cockpit-tactical-bar,
+[data-theme="dark"] .cockpit-summary-card,
+[data-theme="dark"] .section-container,
+[data-theme="dark"] .module-card,
+[data-theme="dark"] .panel-container,
+[data-theme="dark"] .bandeja-posta-container,
+[data-theme="dark"] .modal-hc-container,
+[data-theme="dark"] .ui-modal-card {
+  background-color: #111827 !important;
+  border-color: #1E293B !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-stepper-title,
+[data-theme="dark"] .cockpit-monitor-title,
+[data-theme="dark"] .cockpit-step-name,
+[data-theme="dark"] .cockpit-summary-title,
+[data-theme="dark"] .section-title,
+[data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3 {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-summary-item {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] .cockpit-summary-val {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-step-item {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .cockpit-step-item.active {
+  border-color: #06B6D4 !important;
+  background-color: rgba(6, 182, 212, 0.15) !important;
+}
+
+[data-theme="dark"] .cockpit-step-item.active .cockpit-step-name {
+  color: #38BDF8 !important;
+}
+
+[data-theme="dark"] .cockpit-tactical-btn {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-tactical-btn:hover {
+  background: #334155 !important;
+}
+
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .input-full,
+[data-theme="dark"] select,
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="search"],
+[data-theme="dark"] textarea {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-btn-theme {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .bandeja-tab-btn {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .bandeja-tab-btn.active {
+  background: #06B6D4 !important;
+  color: #0F172A !important;
+}
+
+[data-theme="dark"] .bandeja-px-row {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .bandeja-px-row.active {
+  background: rgba(6, 182, 212, 0.15) !important;
+  border-color: #06B6D4 !important;
+}
+
+[data-theme="dark"] .recurso-card {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
