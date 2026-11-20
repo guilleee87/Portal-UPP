@@ -119,7 +119,7 @@
     triageSealedCard.innerHTML = `
       <div class="cockpit-summary-card-header">
         <div class="cockpit-summary-title">
-          <span>🩺</span> Resumen Sellado de Triaje de Emergencia (NTS N° 139-MINSA)
+          <span>🩺</span> Resumen Sellado de Triaje · Estándar Nacional IPRESS (NTS N° 139-MINSA) <span id="c_triage_regimen_badge" style="font-size:0.75rem; padding:2px 8px; border-radius:6px; font-weight:800; margin-left:8px;">[MINSA · FUA]</span>
         </div>
         <span class="ui-badge-pill ui-badge-p5" id="c_triage_prio_badge">P-V · No Urgente</span>
       </div>
@@ -637,7 +637,38 @@
 
     const turno = px.turno || (state.identificador ? state.identificador.replace("CRITICO-", "") : "E-001");
     if (elNombre) elNombre.textContent = `${turno} · ${px.nombre || state.nombreReniec || state.identificador || "Paciente"}`;
-    if (elDni) elDni.textContent = px.dni || state.numDni || "NN (Indocumentado)";
+    
+    const esNN = Boolean(px.esNN || state.esNN || (px.dni && String(px.dni).startsWith("NN")));
+    if (elDni) {
+      if (esNN) {
+        elDni.innerHTML = `<span style="color:#ea580c; font-weight:800;">Identidad: ${px.identificador || "NN-XXX"} (Desconocido) — Validación RENIEC pendiente por Admisión (Ley N° 27604)</span>`;
+      } else {
+        elDni.innerHTML = `<span style="color:#0f172a; font-weight:700;">${px.dni || state.numDni || "—"}</span> <span style="background:#dcfce7; color:#15803d; font-size:0.7rem; font-weight:800; padding:1px 6px; border-radius:4px; margin-left:6px;">✅ Validado en RENIEC</span>`;
+      }
+    }
+
+    // Badge dinámico del régimen activo: [MINSA · FUA], [EsSalud · ESSI] o [Clínica Privada · SITEDS]
+    const elRegimenBadge = document.getElementById("c_triage_regimen_badge");
+    if (elRegimenBadge) {
+      const entorno = state.entornoOperativo || "publico";
+      const ipress = state.tipoIpressPublica || (document.getElementById("select_ipress_publica")?.value) || "MINSA";
+      if (entorno === "privado") {
+        elRegimenBadge.textContent = "[Clínica Privada · SITEDS]";
+        elRegimenBadge.style.background = "#f5f3ff";
+        elRegimenBadge.style.color = "#6d28d9";
+        elRegimenBadge.style.border = "1px solid #ddd6fe";
+      } else if (ipress === "ESSALUD" || state.tipoSeguro === "EsSalud") {
+        elRegimenBadge.textContent = "[EsSalud · ESSI]";
+        elRegimenBadge.style.background = "#eff6ff";
+        elRegimenBadge.style.color = "#1e40af";
+        elRegimenBadge.style.border = "1px solid #bfdbfe";
+      } else {
+        elRegimenBadge.textContent = "[MINSA · FUA]";
+        elRegimenBadge.style.background = "#f0fdf4";
+        elRegimenBadge.style.color = "#166534";
+        elRegimenBadge.style.border = "1px solid #86efac";
+      }
+    }
     if (elEdadSexo) elEdadSexo.textContent = `${state.edad || "—"} años / ${state.sexo || "Desconocido"}`;
 
     const score = state.news2Score !== undefined ? state.news2Score : 0;

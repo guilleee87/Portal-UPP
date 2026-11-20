@@ -103,8 +103,12 @@
     try {
       postaCanal = new BroadcastChannel("triaje_posta_canal");
       postaCanal.onmessage = function(ev) {
-        if (ev.data && ev.data.tipo === "ACTUALIZAR_COLA") {
-          recargarColaCompartidaDesdeStorage();
+        if (ev.data && (ev.data.tipo === "ACTUALIZAR_COLA" || ev.data.tipo === "EXPEDIENTE_ACTUALIZADO")) {
+          if (typeof window.refrescarTrackBoardYBandeja === "function") {
+            window.refrescarTrackBoardYBandeja(ev.data);
+          } else {
+            recargarColaCompartidaDesdeStorage();
+          }
         }
       };
     } catch(e) {
@@ -113,10 +117,96 @@
   }
 
   window.addEventListener("storage", function(ev) {
-    if (ev.key === "UPP_PACIENTES_COLA_SHARED" || ev.key === "UPP_POSTA_LAST_EVENT") {
-      recargarColaCompartidaDesdeStorage();
+    if (ev.key === "UPP_PACIENTES_COLA_SHARED" || ev.key === "UPP_POSTA_LAST_EVENT" || ev.key === "upp_expedientes_v1") {
+      if (typeof window.refrescarTrackBoardYBandeja === "function") {
+        window.refrescarTrackBoardYBandeja({ key: ev.key });
+      } else {
+        recargarColaCompartidaDesdeStorage();
+      }
     }
   });
+
+  function guardarExpedienteSincrono(px, nuevoEstadoFlujo, firmaObj, accionLog) {
+    if (!px) return;
+    if (typeof window.guardarEstadoPacienteActivo === "function") {
+      window.guardarEstadoPacienteActivo();
+    }
+    if (nuevoEstadoFlujo) {
+      px.estadoFlujo = nuevoEstadoFlujo;
+      if (window.STATE) window.STATE.estadoFlujo = nuevoEstadoFlujo;
+    }
+    if (firmaObj) {
+      px.firmas = px.firmas || {};
+      const keyFirma = (firmaObj.rol || "auditor").toLowerCase();
+      px.firmas[keyFirma] = firmaObj;
+      if (window.STATE) {
+        window.STATE.firmas = window.STATE.firmas || {};
+        window.STATE.firmas[keyFirma] = firmaObj;
+      }
+    }
+
+    // Persistir en expedientesStore (upp_expedientes_v1)
+    try {
+      const raw = localStorage.getItem("upp_expedientes_v1");
+      const store = raw ? JSON.parse(raw) : {};
+      store[px.id] = {
+        id: px.id,
+        paciente: JSON.parse(JSON.stringify(px)),
+        state: window.STATE ? JSON.parse(JSON.stringify(window.STATE)) : null,
+        form: typeof window.capturarFormularioActual === "function" ? window.capturarFormularioActual() : null,
+        timestamp: Date.now()
+      };
+      localStorage.setItem("upp_expedientes_v1", JSON.stringify(store));
+    } catch(e) {}
+
+    // Sincronizar en cola compartida UPP_PACIENTES_COLA_SHARED
+    try {
+      if (Array.isArray(window.PACIENTES_COLA)) {
+        localStorage.setItem("UPP_PACIENTES_COLA_SHARED", JSON.stringify(window.PACIENTES_COLA));
+      }
+      localStorage.setItem("UPP_POSTA_LAST_EVENT", JSON.stringify({
+        tipo: "EXPEDIENTE_ACTUALIZADO",
+        accion: accionLog || "ACTUALIZAR",
+        idExpediente: px.id,
+        estadoFlujo: px.estadoFlujo,
+        pacienteActivoId: px.id,
+        timestamp: Date.now()
+      }));
+    } catch(e) {}
+
+    // Notificar por BroadcastChannel
+    if (postaCanal) {
+      try {
+        postaCanal.postMessage({
+          tipo: "EXPEDIENTE_ACTUALIZADO",
+          accion: accionLog || "ACTUALIZAR",
+          idExpediente: px.id,
+          estadoFlujo: px.estadoFlujo,
+          pacienteActivoId: px.id,
+          timestamp: Date.now()
+        });
+      } catch(e) {}
+    }
+
+    // Sincronizar en Supabase si está disponible
+    if (typeof window.SUPABASE_CONFIG !== "undefined" && window.SUPABASE_CONFIG.url && window.SUPABASE_CONFIG.key && window.STATE && window.STATE.identificador) {
+      try {
+        fetch(`${window.SUPABASE_CONFIG.url}/rest/v1/historias_clinicas?or=(identificador.eq.${encodeURIComponent(window.STATE.identificador)},identificador.ilike.*${encodeURIComponent(window.STATE.identificador)}*)`, {
+          method: "PATCH",
+          headers: {
+            "apikey": window.SUPABASE_CONFIG.key,
+            "Authorization": `Bearer ${window.SUPABASE_CONFIG.key}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            estado_flujo: px.estadoFlujo,
+            firmas: px.firmas,
+            cobertura_validada: Boolean(px.coberturaValidada)
+          })
+        }).catch(() => {});
+      } catch(e) {}
+    }
+  }
 
   function notificarCambioColaGlobal(accion = "ACTUALIZAR") {
     try {
@@ -124,6 +214,7 @@
         localStorage.setItem("UPP_PACIENTES_COLA_SHARED", JSON.stringify(window.PACIENTES_COLA));
       }
       localStorage.setItem("UPP_POSTA_LAST_EVENT", JSON.stringify({
+        tipo: "EXPEDIENTE_ACTUALIZADO",
         accion: accion,
         pacienteActivoId: window.pacienteActivoId,
         timestamp: Date.now()
@@ -131,7 +222,7 @@
 
       if (postaCanal) {
         postaCanal.postMessage({
-          tipo: "ACTUALIZAR_COLA",
+          tipo: "EXPEDIENTE_ACTUALIZADO",
           accion: accion,
           pacienteActivoId: window.pacienteActivoId,
           timestamp: Date.now()
@@ -139,6 +230,29 @@
       }
     } catch(e) {}
   }
+
+  window.refrescarTrackBoardYBandeja = function(evData) {
+    recargarColaCompartidaDesdeStorage();
+    const rol = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === 'function') ? window.RBAC_FLUJO.obtenerRolActivo() : (typeof obtenerRolActivo === 'function' ? obtenerRolActivo() : 'AUDITOR');
+    const cola = window.PACIENTES_COLA || [];
+    if (cola.length > 0) {
+      let pxPendiente = null;
+      if (rol === "MEDICO") {
+        pxPendiente = cola.find(p => p.estadoFlujo === "EN_ATENCION_MEDICA");
+      } else if (rol === "ADMISION") {
+        pxPendiente = cola.find(p => !p.coberturaValidada && p.estadoFlujo !== "CERRADO_FACTURADO");
+      } else if (rol === "CAJA") {
+        pxPendiente = cola.find(p => p.estadoFlujo === "PENDIENTE_CAJA");
+      }
+
+      if (pxPendiente && (!window.pacienteActivoId || (cola.length === 1 && window.pacienteActivoId !== pxPendiente.id))) {
+        seleccionarExpediente(pxPendiente.id);
+        if (typeof window.mostrarToast === "function") {
+          window.mostrarToast("info", `Nuevo paciente en bandeja de ${rol}`, `${pxPendiente.nombre || 'Paciente'} listo para atención.`);
+        }
+      }
+    }
+  };
 
   function recargarColaCompartidaDesdeStorage() {
     try {
@@ -796,7 +910,7 @@
       window.mostrarToastCola(`📤 Triaje sellado. Paciente <strong>${px.nombre}</strong> derivado a la bandeja médica.`);
     }
 
-    notificarCambioColaGlobal("SELLAR_TRIAJE");
+    guardarExpedienteSincrono(px, "EN_ATENCION_MEDICA", px.firmas.triaje, "SELLAR_TRIAJE");
     renderizarBandejaPosta();
     aplicarPermisosYEnmascaramiento(obtenerRolActivo(), obtenerModoOperacion());
   };
@@ -831,7 +945,7 @@
       window.mostrarToastCola(`✅ Cobertura validada para <strong>${px.nombre}</strong>. Notificado al médico en tiempo real.`);
     }
 
-    notificarCambioColaGlobal("VALIDAR_COBERTURA");
+    guardarExpedienteSincrono(px, px.estadoFlujo, px.firmas.admision, "VALIDAR_COBERTURA");
     renderizarBandejaPosta();
   };
 
@@ -879,7 +993,7 @@
       window.mostrarToastCola(`📤 Alta médica firmada para <strong>${px.nombre}</strong>. Expediente enviado a Caja.`);
     }
 
-    notificarCambioColaGlobal("ALTA_MEDICA");
+    guardarExpedienteSincrono(px, "PENDIENTE_CAJA", px.firmas.medico, "ALTA_MEDICA");
     renderizarBandejaPosta();
     aplicarPermisosYEnmascaramiento(obtenerRolActivo(), obtenerModoOperacion());
   };
@@ -933,7 +1047,7 @@
       window.mostrarToastCola(`💳 Cuenta liquidada para <strong>${px.nombre}</strong>. Cierre completado sin retención.`);
     }
 
-    notificarCambioColaGlobal("CIERRE_LIQUIDACION");
+    guardarExpedienteSincrono(px, "CERRADO_FACTURADO", px.firmas.caja, "CIERRE_LIQUIDACION");
     renderizarBandejaPosta();
     aplicarPermisosYEnmascaramiento(obtenerRolActivo(), obtenerModoOperacion());
   };
@@ -1034,6 +1148,40 @@
         desenmascararCampo(el, window.STATE?.[id.replace("_full", "")]);
       });
 
+      // CORRECCIÓN 2: El Médico ve datos DNI/RENIEC validados en su tarjeta resumen sin reingresar ni revalidar
+      const elDni4 = document.getElementById("dni_mod4");
+      const inputRowM4 = elDni4 ? elDni4.parentElement?.parentElement : null;
+      const cardM4 = document.getElementById("m4_reniec_result_card");
+      if (inputRowM4) inputRowM4.style.display = "none";
+      if (cardM4) cardM4.style.display = "block";
+
+      const colaPx = window.PACIENTES_COLA || [];
+      const pxAct = colaPx.find(x => x.id === window.pacienteActivoId) || {};
+      const esNN = Boolean(pxAct.esNN || window.STATE?.esNN || (pxAct.dni && String(pxAct.dni).startsWith("NN")));
+      const m4Nombre = document.getElementById("m4_disp_nombre");
+      const m4Dni = document.getElementById("m4_disp_dni");
+      const m4Sexo = document.getElementById("m4_disp_sexo");
+      const m4Badge = document.getElementById("m4_badge_sincronizado");
+
+      if (esNN) {
+        if (m4Nombre) m4Nombre.textContent = "Identidad: " + (pxAct.identificador || "NN-XXX") + " (Desconocido) — Validación RENIEC pendiente por Admisión (Ley N° 27604)";
+        if (m4Dni) m4Dni.textContent = "NN (Pendiente)";
+        if (m4Badge) {
+          m4Badge.textContent = "🚨 Validación RENIEC pendiente por Admisión (Ley N° 27604)";
+          m4Badge.style.background = "#fff7ed";
+          m4Badge.style.color = "#c2410c";
+        }
+      } else {
+        if (m4Nombre) m4Nombre.textContent = pxAct.nombre || window.STATE?.nombreReniec || "Paciente";
+        if (m4Dni) m4Dni.textContent = pxAct.dni || window.STATE?.numDni || "—";
+        if (m4Sexo) m4Sexo.textContent = window.STATE?.sexo || "—";
+        if (m4Badge) {
+          m4Badge.textContent = "✅ Validado en RENIEC (Solo Lectura)";
+          m4Badge.style.background = "#dcfce7";
+          m4Badge.style.color = "#15803d";
+        }
+      }
+
       bloquearModulo(1, true); // Sellado NTS 139
       bloquearModulo(2, true);
       bloquearModulo(3, true);
@@ -1043,6 +1191,11 @@
       bloquearModulo(7, false);
       bloquearModulo(8, true); // Costos referenciales solo lectura
       return;
+    } else {
+      // Restaurar visibilidad normal del input DNI en Módulo 4 para otros roles
+      const elDni4 = document.getElementById("dni_mod4");
+      const inputRowM4 = elDni4 ? elDni4.parentElement?.parentElement : null;
+      if (inputRowM4) inputRowM4.style.display = "flex";
     }
 
     // F) ADMIN / SUPERVISOR: Todo accesible

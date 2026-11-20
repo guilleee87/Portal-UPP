@@ -3535,6 +3535,46 @@ function recalcularPrioridad() {
   calcularPuntajePrelacionABCDE();
   // Actualizar liquidación financiera de Módulo 8
   actualizarFactura();
+
+  // CORRECCIÓN 3: Recálculo de tipo de cama / recurso al editar signos vitales
+  if (!STATE.ingresoDirectoCritico && !STATE.panicoShockTrauma) {
+    if (prio === "I" || prio === "II") {
+      const recursoSugerido = (typeof sugerirRecursoSegunPrioridad === "function") ? sugerirRecursoSegunPrioridad(prio) : "ST-01";
+      if (recursoSugerido && recursoSugerido !== "SIN-CAMA" && typeof RECURSOS_HOSPITALARIOS !== "undefined" && RECURSOS_HOSPITALARIOS[recursoSugerido]) {
+        if (!STATE.camaAsignadaId || STATE.camaAsignadaId === "SIN-CAMA") {
+          STATE.camaAsignadaId = recursoSugerido;
+          STATE.camaAsignada = RECURSOS_HOSPITALARIOS[recursoSugerido].nombre || recursoSugerido;
+          RECURSOS_HOSPITALARIOS[recursoSugerido].estado = "ocupada";
+          RECURSOS_HOSPITALARIOS[recursoSugerido].paciente = { id: STATE.id || pacienteActivoId, nombre: STATE.nombreReniec || STATE.identificador };
+        }
+      }
+    } else if (prio === "IV" || prio === "V") {
+      if (STATE.camaAsignadaId && STATE.camaAsignadaId !== "SIN-CAMA") {
+        if (typeof liberarRecursoHospitalarioOperativo === "function") {
+          liberarRecursoHospitalarioOperativo(STATE.camaAsignadaId, STATE.id || pacienteActivoId);
+        }
+      }
+      STATE.camaAsignada = "Sin cama — Atención Ambulatoria";
+      STATE.camaAsignadaId = "SIN-CAMA";
+    }
+  }
+
+  // Guardado síncrono en expediente activo y almacenamiento local (cero estados congelados)
+  guardarEstadoPacienteActivo();
+  if (typeof sincronizarExpedienteActivoEnStore === "function") {
+    try { sincronizarExpedienteActivoEnStore(); } catch(e){}
+  }
+
+  // Refrescar monitor fisiológico derecho y Track Board
+  if (window.COCKPIT && typeof window.COCKPIT.refrescarValoresMonitor === "function") {
+    window.COCKPIT.refrescarValoresMonitor();
+  }
+  if (typeof renderizarTrackBoardLista === "function") {
+    renderizarTrackBoardLista();
+  }
+  if (typeof renderizarTableroColaPacientes === "function") {
+    renderizarTableroColaPacientes();
+  }
 }
 
 
@@ -4493,8 +4533,17 @@ function calcularLiquidacionSeguro() {
 
     // REGLA D: Urgencia / Observación - Prioridades III, IV y V
     else {
-      copagoFijo = parseFloat(priv.copago_fijo) || 60.00;
-      pctCoaseguro = parseFloat(priv.coaseguro_pct) || 0.15;
+      const planSel = STATE.planPrivado || (document.getElementById("select_plan_privado")?.value) || "base_80_20";
+      if (planSel === "integral_90_10") {
+        copagoFijo = 50.00;
+        pctCoaseguro = 0.10;
+      } else if (planSel === "vip_100") {
+        copagoFijo = 0.00;
+        pctCoaseguro = 0.00;
+      } else {
+        copagoFijo = 80.00;
+        pctCoaseguro = 0.20;
+      }
       const gastoProcYFar = subtotalFarmacia + subtotalServicios;
       const coaseguroMonto = gastoProcYFar * pctCoaseguro;
       if (totalBruto === 0) {
@@ -8693,7 +8742,9 @@ function capturarFormularioActual() {
     "chk_gestante_full", "chk_pediatrico_full", "clave_obstetrica_sel",
     "enfermero_triaje_select", "alergias_full", "chk_consentimiento_datos",
     "chk_evento_fuga", "chk_exclusion_eps", "sel_consentimiento_medico",
-    "cie10_select", "cie10_input"
+    "cie10_select", "cie10_input", "dni_mod1", "dni_mod4",
+    "select_ipress_publica", "select_plan_privado", "sel_condicion_consentimiento",
+    "sel_procedimiento_consentimiento", "chk_consentimiento_firmado", "medico_responsable_select"
   ];
   ids.forEach(id => {
     const el = document.getElementById(id);
@@ -10275,6 +10326,17 @@ function cambiarEntornoOperativo(modo) {
     }
   }
 
+  // Alternar sub-selectores según entorno
+  const boxIpress = document.getElementById("subselector_ipress_publica");
+  const boxPlanPriv = document.getElementById("subselector_plan_privado");
+  if (nuevoModo === "publico") {
+    if (boxIpress) boxIpress.style.display = "flex";
+    if (boxPlanPriv) boxPlanPriv.style.display = "none";
+  } else {
+    if (boxIpress) boxIpress.style.display = "none";
+    if (boxPlanPriv) boxPlanPriv.style.display = "flex";
+  }
+
   actualizarVisibilidadBotonesEntorno();
   actualizarVistaSegunEntornoOperativo();
   actualizarFactura();
@@ -10655,27 +10717,22 @@ function construirHTMLBrazalete(esTemporal = false) {
   let gsanRaw = STATE.grupoSanguineo || document.getElementById("gsan_full")?.value || "Desconocido";
   let gsanDisplay = (gsanRaw && gsanRaw !== "Desconocido") ? gsanRaw : "Desconocido / Por tipificar";
 
-  // ALERGIAS (CERO PÉRDIDA DE INFORMACIÓN)
-  // Se lee de todas las fuentes: input DOM, STATE.alergias, STATE.alergiasConocidas
+  // CORRECCIÓN 4: ALERGIAS EN PULSERA QR (DESCONOCIDO EN ATENCIÓN RÁPIDA)
+  const esAtencionInmediata = Boolean(esTemporal || STATE.esNN || STATE.ingresoDirectoCritico || STATE.panicoShockTrauma || (STATE.numDni && String(STATE.numDni).startsWith("NN")) || (docPaciente && docPaciente.startsWith("S/D")));
   const alergiasInput = (document.getElementById("alergias_full")?.value || STATE.alergias || STATE.alergiasConocidas || "").trim();
-  let alergiasDisplay = "⚠️ ALERGIAS: DESCONOCIDO (NO EVALUADO)";
-  let alergiaBadgeStyle = "background:#fef3c7; color:#92400e; border:1px solid #fde68a;";
 
-  if (alergiasInput) {
-    const alLower = alergiasInput.toLowerCase();
-    if (alLower.includes("niega") || alLower.includes("ninguna") || alLower.includes("nkda") || alLower === "no") {
-      alergiasDisplay = "⚪ ALERGIAS: NIEGA (NKDA)";
-      alergiaBadgeStyle = "background:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;";
-    } else if (alLower.includes("desconocid") || alLower.includes("no evaluad") || alLower.includes("nn")) {
-      alergiasDisplay = "⚠️ ALERGIAS: DESCONOCIDO (NO EVALUADO)";
-      alergiaBadgeStyle = "background:#fef3c7; color:#92400e; border:1px solid #fde68a;";
-    } else {
-      alergiasDisplay = `🔴 ALERGIA CRÍTICA: ${alergiasInput.toUpperCase()}`;
-      alergiaBadgeStyle = "background:#dc2626; color:#ffffff; font-weight:900; box-shadow:0 1px 4px rgba(220,38,38,0.35);";
-    }
-  } else if (!esTemporal && !STATE.esNN && STATE.numDni && STATE.numDni !== "NN") {
-    alergiasDisplay = "⚠️ ALERGIAS: SIN REGISTRAR";
-    alergiaBadgeStyle = "background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;";
+  let alergiasDisplay = "";
+  let alergiaBadgeStyle = "";
+
+  if (esAtencionInmediata) {
+    alergiasDisplay = "⚠️ ALERGIAS: Desconocido";
+    alergiaBadgeStyle = "background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:800;";
+  } else if (alergiasInput) {
+    alergiasDisplay = `🔴 ALERGIA: ${alergiasInput.toUpperCase()}`;
+    alergiaBadgeStyle = "background:#dc2626; color:#ffffff; font-weight:900; box-shadow:0 1px 4px rgba(220,38,38,0.35);";
+  } else {
+    alergiasDisplay = "⚠️ ALERGIAS: No registradas / Indagar";
+    alergiaBadgeStyle = "background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:700;";
   }
 
   // UBICACIÓN / CAMA ASIGNADA
@@ -12904,3 +12961,75 @@ function admitirEmergenciaNN() {
   irAModulo(4);
 }
 window.admitirEmergenciaNN = admitirEmergenciaNN;
+
+
+// ==============================================================================
+// GESTIÓN DE SUB-SELECTORES: IPRESS PÚBLICA (FUA / ESSI) Y PLANES PRIVADOS EPS
+// ==============================================================================
+function cambiarIpressPublica(valor) {
+  STATE.tipoIpressPublica = valor || "MINSA";
+  if (valor === "MINSA") {
+    if (STATE.tipoSeguro === "SIS" || !STATE.tipoSeguro || STATE.tipoSeguro === "SIS Gratuito") {
+      STATE.nroFua = STATE.nroFua || `FUA-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+      STATE.estadoFua = STATE.estadoFua || "ABIERTO";
+    }
+  } else if (valor === "ESSALUD") {
+    if (STATE.tipoSeguro === "EsSalud" || !STATE.tipoSeguro) {
+      STATE.nroEssi = STATE.nroEssi || `ESSI-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+      STATE.estadoEssi = STATE.estadoEssi || "ABIERTO";
+    }
+  }
+  actualizarFactura();
+  if (window.COCKPIT && typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") {
+    window.COCKPIT.actualizarTarjetaResumenTriaje();
+  }
+}
+window.cambiarIpressPublica = cambiarIpressPublica;
+
+function cambiarPlanPrivado(plan) {
+  STATE.planPrivado = plan || "base_80_20";
+  actualizarFactura();
+}
+window.cambiarPlanPrivado = cambiarPlanPrivado;
+
+// Vinculación reactiva instantánea a campos de signos vitales (CORRECCIÓN 3)
+function vincularEventosRecalculoDinamicoVitales() {
+  const idsInputs = [
+    "spo2_full", "fc_full", "pas_full", "pad_full", "fr_full", "temp_full",
+    "glasgow_full", "glucosa_full", "eva_full", "eva_range", "sem_gestacion", "lcf_gestacion"
+  ];
+  idsInputs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el._recalculoBound) {
+      el.addEventListener("input", () => {
+        if (typeof recalcularPrioridad === "function") recalcularPrioridad();
+      });
+      el.addEventListener("change", () => {
+        if (typeof recalcularPrioridad === "function") recalcularPrioridad();
+      });
+      el._recalculoBound = true;
+    }
+  });
+
+  const idsChecks = [
+    "check_cod_infarto", "check_cod_ictus", "check_cod_sepsis",
+    "check_gestante", "check_pediatrico", "clave_obstetrica_sel",
+    "ant_cardio", "ant_resp", "ant_diab", "ant_neuro"
+  ];
+  idsChecks.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el._recalculoBound) {
+      el.addEventListener("change", () => {
+        if (typeof recalcularPrioridad === "function") recalcularPrioridad();
+      });
+      el._recalculoBound = true;
+    }
+  });
+}
+window.vincularEventosRecalculoDinamicoVitales = vincularEventosRecalculoDinamicoVitales;
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", vincularEventosRecalculoDinamicoVitales);
+} else {
+  vincularEventosRecalculoDinamicoVitales();
+}

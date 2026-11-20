@@ -2568,7 +2568,7 @@
         <button type="button" id="tab_entorno_publico" class="btn-entorno-tab active" onclick="cambiarEntornoOperativo('publico')" style="padding:12px 16px; border-radius:10px; font-weight:800; font-size:0.88rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; border:2.5px solid #0284c7; background:#eff6ff; color:#0369a1; box-shadow:0 2px 6px rgba(2,132,199,0.18); transition:all 0.2s;">
           <span style="font-size:1.2rem;">🏛️</span>
           <span style="text-align:left;">
-            <strong style="display:block; font-size:0.88rem;">Pestaña 1: Modo Público</strong>
+            <strong style="display:block; font-size:0.88rem;">Pestaña 1: Público (MINSA / EsSalud)</strong>
             <small style="font-size:0.72rem; font-weight:600; opacity:0.85;">MINSA / SIS / EsSalud (Gratuidad Universal Ley N° 27604)</small>
           </span>
         </button>
@@ -2580,6 +2580,26 @@
             <small style="font-size:0.72rem; font-weight:600; opacity:0.85;">Clínica / EPS / SITEDS (Copagos y Reglas de Póliza)</small>
           </span>
         </button>
+      </div>
+
+      <!-- SUB-SELECTORES DINÁMICOS DE RÉGIMEN (MINSA / ESSALUD / PLAN PRIVADO) -->
+      <div id="contenedor_subselectores_regimen" style="margin-bottom:12px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+        <div id="subselector_ipress_publica" style="display:flex; align-items:center; gap:8px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:6px 12px;">
+          <span style="font-size:0.75rem; font-weight:800; color:#0369a1;">🏛️ IPRESS Pública:</span>
+          <select id="select_ipress_publica" class="input-full" style="max-width:340px; font-size:0.76rem; font-weight:700; padding:4px 8px;" onchange="cambiarIpressPublica(this.value)">
+            <option value="MINSA" selected>MINSA (Sistema SIS — Documento: FUA)</option>
+            <option value="ESSALUD">ESSALUD (Sistema ESSI — Documento: Hoja de Atención de Emergencia)</option>
+          </select>
+        </div>
+
+        <div id="subselector_plan_privado" style="display:none; align-items:center; gap:8px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:6px 12px;">
+          <span style="font-size:0.75rem; font-weight:800; color:#6d28d9;">🏥 Plan Privado / EPS:</span>
+          <select id="select_plan_privado" class="input-full" style="max-width:340px; font-size:0.76rem; font-weight:700; padding:4px 8px;" onchange="cambiarPlanPrivado(this.value)">
+            <option value="base_80_20" selected>Plan Base 80/20 + Deducible S/ 80</option>
+            <option value="integral_90_10">Plan Integral 90/10 + Deducible S/ 50</option>
+            <option value="vip_100">Plan VIP 100%</option>
+          </select>
+        </div>
       </div>
 
       <!-- BANNER INFORMATIVO DINÁMICO DE REGLA DEL SECTOR -->
