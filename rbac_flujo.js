@@ -118,8 +118,12 @@
 
   window.addEventListener("storage", function(ev) {
     if (ev.key === "UPP_PACIENTES_COLA_SHARED" || ev.key === "UPP_POSTA_LAST_EVENT" || ev.key === "upp_expedientes_v1") {
+      let evData = null;
+      try {
+        if (ev.key === "UPP_POSTA_LAST_EVENT" && ev.newValue) evData = JSON.parse(ev.newValue);
+      } catch(e){}
       if (typeof window.refrescarTrackBoardYBandeja === "function") {
-        window.refrescarTrackBoardYBandeja({ key: ev.key });
+        window.refrescarTrackBoardYBandeja(evData || { key: ev.key });
       } else {
         recargarColaCompartidaDesdeStorage();
       }
@@ -131,6 +135,28 @@
     if (typeof window.guardarEstadoPacienteActivo === "function") {
       window.guardarEstadoPacienteActivo();
     }
+
+    // Captura exhaustiva de estado actual de inputs y datos clínicos del paciente (Corrección 1)
+    const state = window.STATE || {};
+    px.dni = (document.getElementById("dni_reniec_input")?.value || document.getElementById("dni_mod1")?.value || state.numDni || px.dni);
+    px.nombre = (state.nombreReniec || px.nombre);
+    px.edad = (document.getElementById("edad_full")?.value || state.edad || px.edad);
+    px.sexo = (document.getElementById("sexo_full")?.value || state.sexo || px.sexo);
+    px.prioridad = (state.prioridad || px.prioridad || "V");
+    px.camaId = (state.camaAsignadaId || px.camaId);
+    px.camaNombre = (state.camaAsignada || px.camaNombre);
+    px.alergias = (document.getElementById("alergias_full")?.value || state.alergias || px.alergias || "");
+    px.tipoSeguro = (state.tipoSeguro || px.tipoSeguro);
+    px.nroFua = (state.nroFua || px.nroFua);
+    px.estadoFua = (state.estadoFua || px.estadoFua);
+    px.nroEssi = (state.nroEssi || px.nroEssi);
+    px.estadoEssi = (state.estadoEssi || px.estadoEssi);
+    px.cie10 = (state.cie10 || state.cie10Codigo || px.cie10);
+    px.montos = {
+      total: state.montoTotal || (typeof calcularLiquidacionSeguro === "function" ? calcularLiquidacionSeguro().totalBruto : 0),
+      paciente: state.totalPaciente || (typeof calcularLiquidacionSeguro === "function" ? calcularLiquidacionSeguro().totalPaciente : 0)
+    };
+
     if (nuevoEstadoFlujo) {
       px.estadoFlujo = nuevoEstadoFlujo;
       if (window.STATE) window.STATE.estadoFlujo = nuevoEstadoFlujo;
@@ -235,6 +261,14 @@
     recargarColaCompartidaDesdeStorage();
     const rol = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === 'function') ? window.RBAC_FLUJO.obtenerRolActivo() : (typeof obtenerRolActivo === 'function' ? obtenerRolActivo() : 'AUDITOR');
     const cola = window.PACIENTES_COLA || [];
+
+    // Rehidratar si el paciente activo actual fue el actualizado desde otra pestaña/rol
+    if (window.pacienteActivoId && evData && evData.idExpediente === window.pacienteActivoId) {
+      if (typeof window.cambiarPacienteActivo === "function") {
+        window.cambiarPacienteActivo(window.pacienteActivoId, true);
+      }
+    }
+
     if (cola.length > 0) {
       let pxPendiente = null;
       if (rol === "MEDICO") {
@@ -243,14 +277,40 @@
         pxPendiente = cola.find(p => !p.coberturaValidada && p.estadoFlujo !== "CERRADO_FACTURADO");
       } else if (rol === "CAJA") {
         pxPendiente = cola.find(p => p.estadoFlujo === "PENDIENTE_CAJA");
+      } else if (rol === "TRIAJE") {
+        pxPendiente = cola.find(p => p.estadoFlujo === "PENDIENTE_TRIAJE");
       }
 
-      if (pxPendiente && (!window.pacienteActivoId || (cola.length === 1 && window.pacienteActivoId !== pxPendiente.id))) {
+      // Auto-seleccionar si el rol no tiene paciente activo o el actual no corresponde a su bandeja
+      const pxActual = cola.find(p => p.id === window.pacienteActivoId);
+      const debeCargarPendiente = pxPendiente && (
+        !window.pacienteActivoId ||
+        !pxActual ||
+        (rol === "MEDICO" && pxActual.estadoFlujo !== "EN_ATENCION_MEDICA") ||
+        (rol === "CAJA" && pxActual.estadoFlujo !== "PENDIENTE_CAJA") ||
+        (rol === "ADMISION" && pxActual.coberturaValidada && !pxPendiente.coberturaValidada)
+      );
+
+      if (debeCargarPendiente) {
         seleccionarExpediente(pxPendiente.id);
-        if (typeof window.mostrarToast === "function") {
-          window.mostrarToast("info", `Nuevo paciente en bandeja de ${rol}`, `${pxPendiente.nombre || 'Paciente'} listo para atención.`);
+        if (typeof window.mostrarToastCola === "function") {
+          window.mostrarToastCola(`📥 <strong>Bandeja ${rol}:</strong> Paciente <strong>${pxPendiente.nombre || 'Paciente'}</strong> listo para atención.`);
         }
       }
+    }
+
+    // Refrescar vistas del sistema inmediatamente
+    renderizarBandejaPosta();
+    actualizarBarraAccionPosta();
+    renderizarTrackBoardLista();
+    if (typeof window.renderizarTableroColaPacientes === "function") {
+      window.renderizarTableroColaPacientes();
+    }
+    if (window.COCKPIT && typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") {
+      window.COCKPIT.actualizarTarjetaResumenTriaje();
+    }
+    if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === "function") {
+      window.COCKPIT.actualizarContextoCockpit();
     }
   };
 
@@ -261,6 +321,24 @@
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
         window.PACIENTES_COLA = parsed;
+
+        // Mezclar snapshots completos desde expedientesStore (upp_expedientes_v1)
+        try {
+          const storeRaw = localStorage.getItem("upp_expedientes_v1");
+          if (storeRaw) {
+            const store = JSON.parse(storeRaw);
+            window.PACIENTES_COLA.forEach(p => {
+              if (store[p.id]) {
+                if (store[p.id].state) p.stateSnapshot = store[p.id].state;
+                if (store[p.id].form) p.formSnapshot = store[p.id].form;
+                if (store[p.id].paciente) {
+                  Object.assign(p, store[p.id].paciente);
+                }
+              }
+            });
+          }
+        } catch(e){}
+
         if (window.pacienteActivoId && typeof window.STATE !== "undefined") {
           const px = window.PACIENTES_COLA.find(x => x.id === window.pacienteActivoId);
           if (px) {
@@ -890,6 +968,8 @@
 
     const ident = obtenerIdentidadFirmante("TRIAJE");
     px.estadoFlujo = "EN_ATENCION_MEDICA";
+    if (px.nroFua || window.STATE?.nroFua) px.estadoFua = px.estadoFua || "ABIERTO";
+    if (px.nroEssi || window.STATE?.nroEssi) px.estadoEssi = px.estadoEssi || "ABIERTO";
     px.firmas = px.firmas || {};
     px.firmas.triaje = {
       usuario: ident.usuario,
@@ -960,6 +1040,15 @@
 
     const ident = obtenerIdentidadFirmante("MEDICO");
     px.estadoFlujo = "PENDIENTE_CAJA";
+    const horaIndicacion = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    px.estadoFua = "CON_SUSTENTO_MEDICO";
+    px.estadoEssi = "CON_SUSTENTO_MEDICO";
+    px.horaSustentoMedico = horaIndicacion;
+    if (window.STATE) {
+      window.STATE.estadoFua = "CON_SUSTENTO_MEDICO";
+      window.STATE.estadoEssi = "CON_SUSTENTO_MEDICO";
+      window.STATE.horaSustentoMedico = horaIndicacion;
+    }
     px.firmas = px.firmas || {};
     px.firmas.medico = {
       usuario: ident.usuario,
@@ -1009,6 +1098,12 @@
 
     const ident = obtenerIdentidadFirmante("CAJA");
     px.estadoFlujo = "CERRADO_FACTURADO";
+    px.estadoFua = "VALORIZADO_CERRADO";
+    px.estadoEssi = "VALORIZADO_CERRADO";
+    if (window.STATE) {
+      window.STATE.estadoFua = "VALORIZADO_CERRADO";
+      window.STATE.estadoEssi = "VALORIZADO_CERRADO";
+    }
     px.firmas = px.firmas || {};
     px.firmas.caja = {
       usuario: ident.usuario,
@@ -1160,7 +1255,9 @@
       const esNN = Boolean(pxAct.esNN || window.STATE?.esNN || (pxAct.dni && String(pxAct.dni).startsWith("NN")));
       const m4Nombre = document.getElementById("m4_disp_nombre");
       const m4Dni = document.getElementById("m4_disp_dni");
+      const m4Edad = document.getElementById("m4_disp_edad");
       const m4Sexo = document.getElementById("m4_disp_sexo");
+      const m4Hc = document.getElementById("m4_disp_hc");
       const m4Badge = document.getElementById("m4_badge_sincronizado");
 
       if (esNN) {
@@ -1174,11 +1271,16 @@
       } else {
         if (m4Nombre) m4Nombre.textContent = pxAct.nombre || window.STATE?.nombreReniec || "Paciente";
         if (m4Dni) m4Dni.textContent = pxAct.dni || window.STATE?.numDni || "—";
+        if (m4Edad) m4Edad.textContent = (pxAct.edad || window.STATE?.edad) ? `${pxAct.edad || window.STATE?.edad} años` : "—";
         if (m4Sexo) m4Sexo.textContent = window.STATE?.sexo || "—";
+        if (m4Hc) m4Hc.textContent = pxAct.historiaClinica || window.STATE?.historiaClinica || "—";
         if (m4Badge) {
           m4Badge.textContent = "✅ Validado en RENIEC (Solo Lectura)";
           m4Badge.style.background = "#dcfce7";
           m4Badge.style.color = "#15803d";
+        }
+        if (window.COCKPIT && typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") {
+          window.COCKPIT.actualizarTarjetaResumenTriaje();
         }
       }
 
@@ -1384,6 +1486,10 @@
     const modDestinos = { "TRIAJE": 1, "ADMISION": 2, "MEDICO": 4, "CAJA": 8, "ADMIN": 1 };
     if (typeof window.irAModulo === "function") {
       window.irAModulo(modDestinos[rol] || 1);
+    }
+
+    if (typeof window.refrescarTrackBoardYBandeja === "function") {
+      window.refrescarTrackBoardYBandeja();
     }
   };
 

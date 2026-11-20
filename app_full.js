@@ -6785,6 +6785,26 @@ function seleccionarCIE10(codigo, desc) {
   STATE.cie10Descripcion = desc;
   const input = document.getElementById("cie10_input");
   if (input) input.value = `${codigo} - ${desc}`;
+
+  // Bloque 5: Ciclo de vida IPRESS - Sustento Médico con CIE-10 y hora de indicación médica
+  const horaIndicacion = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  STATE.estadoFua = "CON_SUSTENTO_MEDICO";
+  STATE.estadoEssi = "CON_SUSTENTO_MEDICO";
+  STATE.horaSustentoMedico = horaIndicacion;
+
+  if (window.pacienteActivoId && Array.isArray(window.PACIENTES_COLA)) {
+    const px = window.PACIENTES_COLA.find(x => x.id === window.pacienteActivoId);
+    if (px) {
+      px.cie10 = `${codigo} - ${desc}`;
+      px.estadoFua = "CON_SUSTENTO_MEDICO";
+      px.estadoEssi = "CON_SUSTENTO_MEDICO";
+      px.horaSustentoMedico = horaIndicacion;
+    }
+  }
+
+  if (window.COCKPIT && typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") {
+    window.COCKPIT.actualizarTarjetaResumenTriaje();
+  }
 }
 
 function abrirCatalogoRapidoKardex(cat) {
@@ -8929,13 +8949,39 @@ function renderizarTableroColaPacientes() {
   });
 }
 
-function cambiarPacienteActivo(nuevoId) {
-  if (nuevoId === pacienteActivoId) return;
+function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
+  if (nuevoId === pacienteActivoId && !forzarRehidratacion) return;
 
   guardarEstadoPacienteActivo();
 
-  const nuevoPx = PACIENTES_COLA.find(x => x.id === nuevoId);
+  let nuevoPx = PACIENTES_COLA.find(x => x.id === nuevoId);
+  if (!nuevoPx) {
+    try {
+      const storeRaw = localStorage.getItem("upp_expedientes_v1");
+      if (storeRaw) {
+        const store = JSON.parse(storeRaw);
+        if (store[nuevoId] && store[nuevoId].paciente) {
+          nuevoPx = store[nuevoId].paciente;
+          PACIENTES_COLA.push(nuevoPx);
+        }
+      }
+    } catch(e){}
+  }
   if (!nuevoPx) return;
+
+  // Si no tiene snapshots en RAM, hidratar desde upp_expedientes_v1
+  if (!nuevoPx.stateSnapshot || !nuevoPx.formSnapshot) {
+    try {
+      const storeRaw = localStorage.getItem("upp_expedientes_v1");
+      if (storeRaw) {
+        const store = JSON.parse(storeRaw);
+        if (store[nuevoId]) {
+          if (!nuevoPx.stateSnapshot && store[nuevoId].state) nuevoPx.stateSnapshot = store[nuevoId].state;
+          if (!nuevoPx.formSnapshot && store[nuevoId].form) nuevoPx.formSnapshot = store[nuevoId].form;
+        }
+      }
+    } catch(e){}
+  }
 
   pacienteActivoId = nuevoId;
 
@@ -10311,6 +10357,32 @@ function cambiarEntornoOperativo(modo) {
   STATE.entornoOperativo = nuevoModo;
   STATE.esClinicaPrivada = (nuevoModo === "privado");
 
+  // Bloque 6: Persistencia del seguro SITEDS por DNI al alternar modo Público y Privado
+  const dniAct = STATE.numDni || (document.getElementById("dni_reniec_input")?.value) || (document.getElementById("dni_mod1")?.value) || "";
+  STATE.segurosSitedsPorDni = STATE.segurosSitedsPorDni || {};
+  if (dniAct) {
+    if (nuevoModo === "publico" && STATE.planPrivado) {
+      STATE.segurosSitedsPorDni[dniAct] = {
+        planPrivado: STATE.planPrivado,
+        tipoSeguro: STATE.tipoSeguro,
+        padronPrivado: STATE.padronSusalud?.privado ? JSON.parse(JSON.stringify(STATE.padronSusalud.privado)) : null
+      };
+    } else if (nuevoModo === "privado" && STATE.segurosSitedsPorDni[dniAct]) {
+      const guardado = STATE.segurosSitedsPorDni[dniAct];
+      if (guardado.planPrivado) {
+        STATE.planPrivado = guardado.planPrivado;
+        const selPlan = document.getElementById("select_plan_privado");
+        if (selPlan) selPlan.value = guardado.planPrivado;
+      }
+      if (guardado.tipoSeguro && guardado.tipoSeguro !== "Particular") {
+        STATE.tipoSeguro = guardado.tipoSeguro;
+      }
+      if (guardado.padronPrivado && STATE.padronSusalud) {
+        STATE.padronSusalud.privado = guardado.padronPrivado;
+      }
+    }
+  }
+
   // Actualizar estilos de los botones del selector
   const btnPub = document.getElementById("tab_entorno_publico");
   const btnPriv = document.getElementById("tab_entorno_privado");
@@ -10758,19 +10830,24 @@ function construirHTMLBrazalete(esTemporal = false) {
   let gsanRaw = STATE.grupoSanguineo || document.getElementById("gsan_full")?.value || "Desconocido";
   let gsanDisplay = (gsanRaw && gsanRaw !== "Desconocido") ? gsanRaw : "Desconocido / Por tipificar";
 
-  // CORRECCIÓN 4: ALERGIAS EN PULSERA QR (DESCONOCIDO EN ATENCIÓN RÁPIDA)
-  const esAtencionInmediata = Boolean(esTemporal || STATE.esNN || STATE.ingresoDirectoCritico || STATE.panicoShockTrauma || (STATE.numDni && String(STATE.numDni).startsWith("NN")) || (docPaciente && docPaciente.startsWith("S/D")));
+  // CORRECCIÓN 4: ALERGIAS EN PULSERA QR SEGÚN CONDICIÓN DE INGRESO
+  const esAdmisionRapidaEmergencia = Boolean(
+    esTemporal || STATE.esNN || STATE.ingresoDirectoCritico || STATE.panicoShockTrauma ||
+    STATE.esAccidenteTransito || STATE.esSOAT ||
+    (STATE.numDni && String(STATE.numDni).startsWith("NN")) ||
+    (docPaciente && docPaciente.startsWith("S/D"))
+  );
   const alergiasInput = (document.getElementById("alergias_mod1")?.value || document.getElementById("alergias_full")?.value || STATE.alergias || STATE.alergiasConocidas || "").trim();
 
   let alergiasDisplay = "";
   let alergiaBadgeStyle = "";
 
-  if (esAtencionInmediata || alergiasInput.toLowerCase().includes("desconocid")) {
+  if (alergiasInput && !alergiasInput.toLowerCase().includes("desconocid") && !alergiasInput.toLowerCase().includes("no registra") && !alergiasInput.toLowerCase().includes("ningun") && !alergiasInput.toLowerCase().includes("niega")) {
+    alergiasDisplay = `🔴 ALERGIAS: ${alergiasInput.toUpperCase()}`;
+    alergiaBadgeStyle = "background:#dc2626; color:#ffffff; font-weight:900; box-shadow:0 1px 4px rgba(220,38,38,0.35);";
+  } else if (esAdmisionRapidaEmergencia || alergiasInput.toLowerCase().includes("desconocid")) {
     alergiasDisplay = "⚠️ ALERGIAS: Desconocido";
     alergiaBadgeStyle = "background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:800;";
-  } else if (alergiasInput) {
-    alergiasDisplay = `🔴 ALERGIA: ${alergiasInput.toUpperCase()}`;
-    alergiaBadgeStyle = "background:#dc2626; color:#ffffff; font-weight:900; box-shadow:0 1px 4px rgba(220,38,38,0.35);";
   } else {
     alergiasDisplay = "⚠️ ALERGIAS: No registradas / Indagar";
     alergiaBadgeStyle = "background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:700;";
@@ -13017,15 +13094,11 @@ window.admitirEmergenciaNN = admitirEmergenciaNN;
 function cambiarIpressPublica(valor) {
   STATE.tipoIpressPublica = valor || "MINSA";
   if (valor === "MINSA") {
-    if (STATE.tipoSeguro === "SIS" || !STATE.tipoSeguro || STATE.tipoSeguro === "SIS Gratuito") {
-      STATE.nroFua = STATE.nroFua || `FUA-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-      STATE.estadoFua = STATE.estadoFua || "ABIERTO";
-    }
+    STATE.nroFua = STATE.nroFua || `FUA-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+    STATE.estadoFua = STATE.estadoFua || "ABIERTO";
   } else if (valor === "ESSALUD") {
-    if (STATE.tipoSeguro === "EsSalud" || !STATE.tipoSeguro) {
-      STATE.nroEssi = STATE.nroEssi || `ESSI-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-      STATE.estadoEssi = STATE.estadoEssi || "ABIERTO";
-    }
+    STATE.nroEssi = STATE.nroEssi || `ESSI-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+    STATE.estadoEssi = STATE.estadoEssi || "ABIERTO";
   }
   actualizarFactura();
   if (window.COCKPIT && typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") {

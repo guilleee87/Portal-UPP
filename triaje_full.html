@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="ui_feedback.css">
   <link rel="stylesheet" href="redesign_cockpit.css">
+  <link rel="stylesheet" href="design_system.css">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -3592,10 +3593,12 @@
                 <span style="font-size:0.7rem; font-weight:800; color:#15803d; text-transform:uppercase;">PACIENTE ASIGNADO A SHOCK TRAUMA / TÓPICO:</span>
                 <div id="m4_disp_nombre" style="font-size:0.98rem; font-weight:900; color:#0f172a;">—</div>
               </div>
-              <div style="display:flex; gap:12px; font-size:0.78rem; color:#334155; flex-wrap:wrap;">
+              <div style="display:flex; gap:12px; font-size:0.78rem; color:#334155; flex-wrap:wrap; align-items:center;">
                 <div><strong>DNI:</strong> <span id="m4_disp_dni">—</span></div>
+                <div><strong>Edad:</strong> <span id="m4_disp_edad">—</span></div>
                 <div><strong>Sexo:</strong> <span id="m4_disp_sexo">—</span></div>
                 <div><strong>Historia Clínica:</strong> <span id="m4_disp_hc" style="color:#0284c7; font-weight:800;">—</span></div>
+                <div id="m4_badge_sincronizado" style="padding:2px 8px; border-radius:4px; font-weight:800; font-size:0.75rem; background:#dcfce7; color:#15803d;">✅ Validado en RENIEC (Solo Lectura)</div>
               </div>
             </div>
           </div>
