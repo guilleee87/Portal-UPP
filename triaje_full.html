@@ -2425,10 +2425,20 @@
           <span>🛡️ Log SUSALUD</span>
         </button>
 
-        <!-- BOTÓN TOGGLE VISTA CLÍNICA / CAJA -->
-        <button type="button" id="btn_toggle_vista_caja" onclick="toggleVistaClinicaCaja()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200 hover:bg-sky-100 transition-all cursor-pointer" title="Alternar Vista Clínica / Vista Caja (Confidencialidad Ley N° 29733)">
-          <span id="lbl_toggle_vista_caja">👁️ Vista: Clínica</span>
-        </button>
+        <!-- SELECTOR DE ROL ASISTENCIAL (NTS N° 042 / LEY N° 29733) -->
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200" title="Seleccione el Rol Asistencial Activo (Secuencia compartida y protección de datos sensibles Ley N° 29733)">
+          <span>👤</span>
+          <label for="selector_rol_sistema" class="hidden sm:inline" style="margin:0; font-weight:800; color:#0369a1;">Rol:</label>
+          <select id="selector_rol_sistema" onchange="cambiarRolSistema(this.value)" style="background:transparent; border:none; font-weight:800; font-size:0.75rem; color:#0369a1; cursor:pointer;">
+            <option value="ADMIN" selected>🛡️ Administrador / Auditor General (Todos los Módulos)</option>
+            <option value="ENF_TRIAJE">👩‍⚕️ Enf. Triaje (Módulo 1: Signos &amp; Prioridad I-V)</option>
+            <option value="ADMISION">📋 Admisión / SUSALUD (Módulos 2-3: DNI, Póliza &amp; SOAT)</option>
+            <option value="MEDICO">🩺 Médico de Emergencia (Módulos 4-5: CIE-10, Kardex &amp; Consentimiento)</option>
+            <option value="ENF_ASIST">💉 Enf. Asistencial (Módulo 6: Cuidados &amp; Administración)</option>
+            <option value="GESTION_CAMAS">🛏️ Gestión de Camas (Módulo 7: Shock Trauma &amp; Observación)</option>
+            <option value="FACTURACION">💳 Facturación / Caja (Módulo 8: Cierre Financiero)</option>
+          </select>
+        </div>
 
         <div class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -2491,6 +2501,29 @@
 
   <!-- CONTENEDOR PRINCIPAL DE LOS 8 MÓDULOS -->
   <main class="main-app-container">
+
+    <!-- BANNER DE SIMULACIÓN CLÍNICA COMPLETADA (SANDBOX) -->
+    <div id="banner_sandbox_completado" style="display:none; background:linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%); color:#ffffff; padding:12px 18px; border-radius:10px; margin-bottom:14px; box-shadow:0 4px 12px rgba(109,40,217,0.25); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.3rem;">🧪</span>
+        <div>
+          <strong style="font-size:0.86rem; letter-spacing:0.3px;">SIMULACIÓN CLÍNICA COMPLETA AL 100% (8 MÓDULOS FINALIZADOS):</strong>
+          <div style="font-size:0.75rem; opacity:0.9; margin-top:2px;">Todos los campos han sido bloqueados con sus constantes vitales y registros correspondientes para auditoría.</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <button type="button" onclick="bloquearCamposSimulacion(false)" style="background:#ffffff; color:#5b21b6; border:none; padding:6px 12px; border-radius:6px; font-weight:800; font-size:0.75rem; cursor:pointer;">
+          🔓 Desbloquear Campos
+        </button>
+        <button type="button" onclick="imprimirConsentimientoDirecto()" style="background:#8b5cf6; color:#ffffff; border:1px solid #c4b5fd; padding:6px 12px; border-radius:6px; font-weight:800; font-size:0.75rem; cursor:pointer;">
+          📑 Imprimir Consentimiento
+        </button>
+        <button type="button" onclick="imprimirBrazaleteModal()" style="background:#ffffff; color:#dc2626; border:none; padding:6px 12px; border-radius:6px; font-weight:800; font-size:0.75rem; cursor:pointer;">
+          🏷️ Ver Pulsera
+        </button>
+        <button type="button" onclick="document.getElementById('banner_sandbox_completado').style.display='none'" style="background:transparent; color:#ffffff; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
+      </div>
+    </div>
 
     <!-- BANNER DE NOTIFICACIÓN DE BRAZALETE DE EMERGENCIA P-I GENERADO -->
     <div id="banner_notificacion_brazalete" style="display:none; background:linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color:#ffffff; padding:10px 18px; border-radius:10px; margin-bottom:14px; box-shadow:0 4px 12px rgba(220,38,38,0.25); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
@@ -2597,6 +2630,9 @@
           </button>
           <button type="button" class="btn-caos-action btn-newpx-action" onclick="registrarPacienteEnEspera()" title="Registrar llegada de paciente a sala de espera" style="background:#0284c7; color:#ffffff; border:none; font-weight:800;">
             ➕ Registrar Paciente en Espera
+          </button>
+          <button type="button" class="btn-caos-action btn-desempate-action" onclick="abrirModalLlegadasSimultaneasDesempate()" title="Protocolo de Desempate ante Llegadas Simultáneas (NTS N° 042-MINSA &amp; NTS N° 031-MINSA)" style="background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); color: #ffffff; font-weight: 800; border: 1px solid #3730a3; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);">
+            ⚖️ Desempate Llegadas Simultáneas
           </button>
         </div>
       </div>
@@ -3449,20 +3485,67 @@
             </button>
           </div>
 
-          <!-- REGISTRO DE CONSENTIMIENTO INFORMADO MÉDICO (NTS N° 139-MINSA / ART. 4° LEY N° 26842) -->
-        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:1.1rem;">✍️</span>
-            <div>
-              <div style="font-size:0.82rem; font-weight:800; color:#0f172a;">Consentimiento Informado Médico (NTS N° 139-MINSA):</div>
-              <div style="font-size:0.72rem; color:#64748b;">Procedimientos invasivos, cirugía de urgencia y analgesia mayor</div>
+        <!-- REGISTRO DE CONSENTIMIENTO INFORMADO MÉDICO (NTS N° 139-MINSA / ART. 4° Y 15° LEY N° 26842 / LEY N° 29414) -->
+        <div class="consentimiento-legal-card" style="background:#ffffff; border:2px solid #0284c7; border-radius:12px; padding:16px 18px; margin-bottom:18px; box-shadow:0 2px 8px rgba(2,132,199,0.08);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.3rem;">✍️</span>
+              <div>
+                <div style="font-size:0.92rem; font-weight:800; color:#0f172a;">CONSENTIMIENTO INFORMADO MÉDICO-QUIRÚRGICO DE EMERGENCIA (NTS N° 139-MINSA)</div>
+                <div style="font-size:0.75rem; color:#64748b;">Marco Legal: Ley General de Salud N° 26842 (Art. 4° y 15°), Ley N° 29414 y D.S. N° 027-2015-SA</div>
+              </div>
+            </div>
+            <span class="norma-tag" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:800; padding:3px 10px; border-radius:6px; font-size:0.75rem;">
+              ⚖️ Requisito Legal Obligatorio
+            </span>
+          </div>
+
+          <div class="form-grid-2" style="margin-bottom:12px;">
+            <div class="form-field" style="margin-bottom:0;">
+              <label for="sel_condicion_consentimiento" style="font-weight:700;">Condición Legal y Régimen de Otorgamiento:</label>
+              <select id="sel_condicion_consentimiento" class="input-full" onchange="actualizarCondicionConsentimiento(this.value)" style="font-weight:700;">
+                <option value="paciente_lucido" selected>✓ Paciente Lúcido y Consciente (≥18 años) — Otorga y firma por derecho propio</option>
+                <option value="representante_legal">👥 Representación Legal / Familiar Directo — Paciente menor o sensorio alterado</option>
+                <option value="exonerado_emergencia">⚡ Excepción Legal de Emergencia Vital (Art. 4° Ley N° 26842) — Inconsciente / Riesgo inminente</option>
+                <option value="disentimiento_rechazo">❌ Disentimiento Informado / Rechazo Expreso de Tratamiento (Art. 15° Ley N° 26842)</option>
+              </select>
+            </div>
+
+            <div class="form-field" style="margin-bottom:0;">
+              <label for="sel_procedimiento_consentimiento" style="font-weight:700;">Procedimiento / Intervención Sujeta a Consentimiento:</label>
+              <select id="sel_procedimiento_consentimiento" class="input-full" style="font-weight:700;">
+                <option value="Atención Médica y Reanimación en Shock Trauma / Tópico" selected>🩺 Atención Médica y Reanimación en Emergencia</option>
+                <option value="Intervención Quirúrgica de Emergencia (SOP) y Laparotomía / Toracotomía">🔪 Intervención Quirúrgica de Emergencia (SOP)</option>
+                <option value="Intubación Orotraqueal y Soporte Ventilatorio Mecánico">🫁 Intubación Orotraqueal y Ventilación Mecánica Asistida</option>
+                <option value="Cateterismo Venoso Central (CVC) y Accesos Vasculares Mayores">💉 Cateterismo Venoso Central (CVC)</option>
+                <option value="Transfusión Sanguínea de Emergencia y Hemoderivados">🩸 Transfusión Sanguínea de Emergencia y Hemoderivados</option>
+                <option value="Analgesia Mayor con Opioides / Sedoanalgesia de Procedimiento">💊 Analgesia Mayor con Opioides / Sedación</option>
+                <option value="Reducción de Fractura / Luxación y Procedimiento Invasivo">🦴 Reducción de Fractura / Luxación Traumática</option>
+              </select>
             </div>
           </div>
-          <div>
-            <select id="sel_consentimiento_medico" class="form-input" style="padding:5px 10px; font-size:0.78rem; font-weight:700; border-radius:6px; background:#ffffff;">
-              <option value="firmado">[✓ Firmado por Paciente / Familiar]</option>
-              <option value="exonerado_emergencia">[⚡ Exonerado de Oficio por Emergencia Vital sin Familiar — Avalado por Médico CMP (Art. 4° Ley N° 26842)]</option>
-            </select>
+
+          <!-- BANNER EXPLICATIVO SEGÚN RÉGIMEN LEGAL -->
+          <div id="consentimiento_alerta_banner" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 14px; font-size:0.78rem; color:#1e40af; margin-bottom:14px; line-height:1.45;">
+            <strong>ℹ️ Régimen Ordinario:</strong> Paciente lúcido y consciente (≥18 años) en pleno uso de sus facultades mentales. Suscribe el consentimiento de forma libre e informada tras comprender objetivos, riesgos y alternativas.
+          </div>
+
+          <!-- BOTONES DE ACCIÓN: DOCUMENTO, IMPRESIÓN Y CHECKLIST HC -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn-full-secondary" onclick="abrirModalConsentimiento()" style="padding:8px 14px; font-weight:800; font-size:0.78rem; display:flex; align-items:center; gap:6px;">
+                <span>📋</span> <span>Ver Documento Legal</span>
+              </button>
+              <button type="button" class="btn-full-primary" onclick="imprimirConsentimientoDirecto()" style="background:#0284c7; padding:8px 16px; font-weight:800; font-size:0.78rem; display:flex; align-items:center; gap:6px;">
+                <span>🖨️</span> <span>Imprimir Consentimiento para Firma</span>
+              </button>
+            </div>
+
+            <!-- CASILLA DE VERIFICACIÓN (CHECKLIST OBLIGATORIO) -->
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:800; color:#0f172a; font-size:0.8rem; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:8px 14px;">
+              <input type="checkbox" id="chk_consentimiento_firmado" onchange="toggleConsentimientoFirmado(this.checked)" style="width:18px; height:18px; accent-color:#16a34a; cursor:pointer;">
+              <span>📑 Se adjunta documento de Consentimiento debidamente firmado a la HC</span>
+            </label>
           </div>
         </div>
 
@@ -3545,11 +3628,55 @@
               </div>
               <div class="form-field" style="margin-bottom:0;">
                 <label for="input_dosis_kardex">Dosis / Vía de Administración:</label>
-                <input type="text" id="input_dosis_kardex" class="input-full" placeholder="Ej. 1 gr EV diluido cada 12h" value="Dosis terapéutica EV">
+                <select id="input_dosis_kardex" class="input-full" style="font-weight:700;">
+                  <optgroup label="Vía Endovenosa (EV) — Fármacos y Analgesia">
+                    <option value="1 ampolla EV directa en bolo lento STAT" selected>1 ampolla EV directa en bolo lento STAT</option>
+                    <option value="1 ampolla diluida en 100 ml NaCl 0.9% EV a pasar en 30 min">1 ampolla diluida en 100 ml NaCl a pasar en 30 min</option>
+                    <option value="1 ampolla diluida en 100 ml NaCl 0.9% EV a pasar en 60 min">1 ampolla diluida en 100 ml NaCl a pasar en 60 min</option>
+                    <option value="1 gr EV diluido en 100 ml NaCl 0.9% c/8h">1 gr EV diluido en 100 ml NaCl c/8h</option>
+                    <option value="1 gr EV diluido en 100 ml NaCl 0.9% c/12h">1 gr EV diluido en 100 ml NaCl c/12h</option>
+                    <option value="2 gr EV en infusión intermitente c/24h">2 gr EV en infusión intermitente c/24h</option>
+                    <option value="500 mg EV diluido cada 8 horas">500 mg EV diluido cada 8 horas</option>
+                    <option value="1 vial EV reconstituido STAT">1 vial EV reconstituido STAT</option>
+                  </optgroup>
+                  <optgroup label="Vía Endovenosa (EV) — Fluidoterapia">
+                    <option value="NaCl 0.9% 1000 ml EV a chorro STAT">NaCl 0.9% 1000 ml EV a chorro STAT (Shock)</option>
+                    <option value="NaCl 0.9% 1000 ml EV a 45 gotas/min">NaCl 0.9% 1000 ml EV a 45 gts/min (Mantenimiento)</option>
+                    <option value="Dextrosa 33% 4 ampollas EV en bolo STAT">Dextrosa 33% 4 ampollas EV en bolo (Hipoglucemia)</option>
+                    <option value="Lactato Ringer 1000 ml EV a 40 gotas/min">Lactato Ringer 1000 ml EV a 40 gotas/min</option>
+                  </optgroup>
+                  <optgroup label="Vía Sublingual (SL) y Oral (VO)">
+                    <option value="1 tableta SL (sublingual) STAT">1 tableta SL STAT (bajo la lengua)</option>
+                    <option value="1 tableta VO STAT con agua">1 tableta VO STAT</option>
+                    <option value="1 tableta VO cada 8 horas">1 tableta VO cada 8 horas</option>
+                    <option value="1 tableta VO cada 12 horas">1 tableta VO cada 12 horas</option>
+                  </optgroup>
+                  <optgroup label="Vía Intramuscular (IM) y Subcutánea (SC)">
+                    <option value="1 ampolla IM profunda STAT">1 ampolla IM profunda STAT</option>
+                    <option value="Insulina R 10 UI SC STAT">Insulina R 10 UI SC STAT</option>
+                  </optgroup>
+                  <optgroup label="Vía Inhalatoria y Oxigenoterapia">
+                    <option value="Nebulización con 20 gtas Fenoterol + 3cc NaCl c/20 min">Nebulización 20 gts Fenoterol + 3cc NaCl c/20m</option>
+                    <option value="Oxígeno por cánula binasal a 3-4 L/min">Oxígeno por cánula binasal a 3-4 L/min</option>
+                    <option value="Oxígeno por máscara con reservorio a 10-15 L/min">Oxígeno con máscara reservorio a 10-15 L/min</option>
+                  </optgroup>
+                </select>
               </div>
               <div class="form-field" style="margin-bottom:0;">
                 <label for="input_horario_kardex">Frecuencia / Horario:</label>
-                <input type="text" id="input_horario_kardex" class="input-full" placeholder="Horario" value="Stat (Inmediato)">
+                <select id="input_horario_kardex" class="input-full" style="font-weight:700;">
+                  <option value="STAT (Inmediato / Dosis Única)" selected>STAT (Inmediato / Dosis Única)</option>
+                  <option value="Cada 4 horas (c/4h)">Cada 4 horas (c/4h)</option>
+                  <option value="Cada 6 horas (c/6h)">Cada 6 horas (c/6h)</option>
+                  <option value="Cada 8 horas (c/8h)">Cada 8 horas (c/8h)</option>
+                  <option value="Cada 12 horas (c/12h)">Cada 12 horas (c/12h)</option>
+                  <option value="Cada 24 horas (c/24h - 08:00 hrs)">Cada 24 horas (c/24h - 08:00 hrs)</option>
+                  <option value="En infusión continua">En infusión continua</option>
+                  <option value="PRN / Condicional a dolor (EVA ≥ 6)">PRN / Condicional a dolor (EVA ≥ 6)</option>
+                  <option value="PRN / Condicional a fiebre (T ≥ 38.3 °C)">PRN / Condicional a fiebre (T ≥ 38.3 °C)</option>
+                  <option value="PRN / Condicional a náuseas o vómitos">PRN / Condicional a náuseas o vómitos</option>
+                  <option value="Por 3 ciclos continuos cada 20 min">Por 3 ciclos continuos cada 20 min</option>
+                </select>
               </div>
               <button type="button" class="btn-full-primary" style="height:38px; white-space:nowrap; background:#0284c7;" onclick="agregarMedicamentoAKardex()">
                 + Agregar al Kardex
@@ -3642,7 +3769,18 @@
               </div>
               <div class="form-field" style="margin-bottom:0;">
                 <label for="input_indicacion_img">Indicación Clínica:</label>
-                <input type="text" id="input_indicacion_img" class="input-full" placeholder="Ej. Descarte neumotórax / TEC" value="Evaluación de emergencia">
+                <select id="input_indicacion_img" class="input-full" style="font-weight:700;">
+                  <option value="Descarte de Traumatismo Intracraneal / TEC (Ventana ósea y parénquima)" selected>Descarte de Traumatismo Intracraneal / TEC</option>
+                  <option value="Descarte de Hemorragia Subaracnoidea / Ictus Isquémico Agudo (Protocolo Stroke)">Descarte de Hemorragia / Ictus (Protocolo Stroke)</option>
+                  <option value="Descarte de Fractura Ósea / Luxación Traumática (Accidente)">Descarte de Fractura Ósea / Luxación</option>
+                  <option value="Descarte de Neumotórax / Hemotórax / Derrame Pleural">Descarte de Neumotórax / Hemotórax</option>
+                  <option value="Descarte de Neumonía / Infiltrado Alveolar Agudo">Descarte de Neumonía / Infiltrado Alveolar</option>
+                  <option value="Descarte de Abdomen Agudo Quirúrgico / Apendicitis / Obstrucción">Descarte de Abdomen Agudo / Apendicitis</option>
+                  <option value="Ecografía FAST de Trauma Abdominal Cerrado (Hemoperitoneo)">Ecografía FAST de Trauma Abdominal</option>
+                  <option value="Descarte de Cólico Renal / Urolitiasis / Hidronefrosis">Descarte de Cólico Renal / Urolitiasis</option>
+                  <option value="Evaluación de Silueta Cardíaca y Congestión Pulmonar (ICC)">Evaluación de Silueta Cardíaca / Congestión</option>
+                  <option value="Control de Catéter Venoso Central / Tubo de Drenaje Torácico">Control de Catéter Central / Tubo de Drenaje</option>
+                </select>
               </div>
               <button type="button" class="btn-full-primary" style="height:38px; white-space:nowrap; background:#4f46e5;" onclick="solicitarEstudioImagen()">
                 + Solicitar Estudio
@@ -4536,9 +4674,32 @@
   <!-- BRAZALETE IMPRIMIBLE OCULTO -->
   <div class="brazalete-print" id="brazalete_print_area" style="display:none;"></div>
 
+  <!-- MODAL: VISOR / IMPRESIÓN OFICIAL DE CONSENTIMIENTO INFORMADO (NTS N° 139-MINSA) -->
+  <div class="modal-hc-overlay" id="modal_consentimiento_informado" style="display:none;">
+    <div class="modal-hc-container" style="max-width:820px; width:95%; max-height:92vh; display:flex; flex-direction:column;">
+      <div style="background:#0f172a; color:#ffffff; display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-top-left-radius:12px; border-top-right-radius:12px;">
+        <h3 style="margin:0; font-size:0.92rem; display:flex; align-items:center; gap:8px;">
+          <span>✍️</span>
+          <span>Consentimiento Informado Médico-Quirúrgico (NTS N° 139-MINSA / Ley N° 26842)</span>
+        </h3>
+        <button type="button" onclick="cerrarModalConsentimiento()" style="color:#ffffff; background:none; border:none; font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+      <div style="padding:16px; overflow-y:auto; flex:1; background:#f8fafc; text-align:center;">
+        <div id="consentimiento_modal_preview" style="display:flex; justify-content:center;">
+          <!-- Contenido visual inyectado dinámicamente -->
+        </div>
+      </div>
+      <div style="padding:12px 18px; background:#ffffff; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:10px; border-bottom-left-radius:12px; border-bottom-right-radius:12px;">
+        <button type="button" class="btn-full-secondary" onclick="cerrarModalConsentimiento()">Cerrar</button>
+        <button type="button" class="btn-full-primary" style="background:#0284c7;" onclick="imprimirConsentimientoDirecto()">🖨️ Mandar a Imprimir Documento</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: VISOR / IMPRESIÓN DIRECTA DE BRAZALETE DE EMERGENCIA -->
   <div class="modal-hc-overlay" id="modal_ver_brazalete" style="display:none;">
-    <div class="modal-hc-container" style="max-width:880px; width:95%;">
+
+    <div class="modal-hc-container" style="max-width:1040px; width:95%;">
       <div style="background:#0f172a; color:#ffffff; display:flex; justify-content:space-between; align-items:center; padding:14px 18px;">
         <h3 style="margin:0; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
           <span>🏷️</span>
@@ -4955,6 +5116,90 @@
                 <small>Hemodinámicamente estable → P-III Amarillo</small>
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ==========================================================================
+       MODAL DE PROTOCOLO DE DESEMPATE CLÍNICO Y LLEGADAS SIMULTÁNEAS (NTS N° 042 / NTS N° 031)
+       ========================================================================== -->
+  <div class="modal-hc-overlay" id="modalLlegadasSimultaneasDesempate" style="display:none;" onclick="if(event.target===this) cerrarModalLlegadasSimultaneasDesempate()">
+    <div class="modal-hc-container" style="max-width: 960px; width: 95%;">
+      <div class="modal-hc-header" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: #ffffff;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.5rem;">⚖️</span>
+          <div>
+            <strong style="font-size:1.05rem;">Protocolo de Desempate Clínico — Llegadas Simultáneas a Emergencia</strong>
+            <div style="font-size:0.75rem; color:#c7d2fe; margin-top:2px;">NTS N° 042-MINSA (Clasificación por Severidad vs Timestamp) &amp; NTS N° 031-MINSA (Prelación ABCDE en Recursos Críticos)</div>
+          </div>
+        </div>
+        <button type="button" onclick="cerrarModalLlegadasSimultaneasDesempate()" style="background:none; border:none; color:#ffffff; font-size:1.6rem; cursor:pointer;">&times;</button>
+      </div>
+
+      <div class="modal-hc-body" style="padding:18px 22px;">
+        <!-- PANEL DE CAPACIDAD Y CAMAS DISPONIBLES EN TIEMPO REAL -->
+        <div style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:10px; padding:12px 16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+            <div style="font-size:0.85rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+              <span>🛏️</span>
+              <span>Parámetros del Establecimiento &amp; Recursos Críticos Disponibles:</span>
+            </div>
+            <span id="badge_desempate_camas_total" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.75rem; font-weight:800; padding:3px 8px; border-radius:9999px;">
+              🟢 Verificando stock...
+            </span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px;" id="grid_resumen_camas_desempate">
+            <!-- Rellenado dinámicamente -->
+          </div>
+        </div>
+
+        <!-- CONFIGURADOR DE CANTIDAD DE PACIENTES SIMULTÁNEOS -->
+        <div style="background:#eef2ff; border:1.5px solid #c7d2fe; border-radius:10px; padding:12px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <label for="input_cant_px_simultaneos" style="font-size:0.85rem; font-weight:800; color:#1e1b4b;">
+              ¿Cuántos pacientes están ingresando simultáneamente?
+            </label>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <input type="number" id="input_cant_px_simultaneos" min="2" max="15" value="3" style="width:75px; text-align:center; font-weight:800; font-size:1rem; padding:6px; border:2px solid #6366f1; border-radius:8px;" onchange="verificarParametrosCamasVsPacientes()">
+              <span style="font-size:0.78rem; color:#4338ca; font-weight:700;">pacientes</span>
+            </div>
+          </div>
+          <button type="button" class="btn-full-primary" style="background:#4f46e5; border-color:#4338ca; font-size:0.82rem; padding:8px 16px; font-weight:800;" onclick="generarPacientesLlegadaSimultanea()">
+            👥 Cargar / Generar Pacientes en Disputa
+          </button>
+        </div>
+
+        <!-- ALERTA DE SATURACIÓN O CONTINGENCIA -->
+        <div id="alerta_saturacion_desempate" style="display:none; background:#fff1f2; border:1.5px solid #fecdd3; border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:0.78rem; color:#9f1239;"></div>
+
+        <!-- CONTENEDOR DE PACIENTES SIMULTÁNEOS -->
+        <div style="margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="font-size:0.85rem; color:#0f172a;">Pacientes en Llegada Simultánea (Candidatos a Asignación):</strong>
+            <span style="font-size:0.74rem; color:#64748b;">Puede elegir individualmente el destino o asignar automáticamente por Score ABCDE</span>
+          </div>
+
+          <div id="contenedor_lista_pacientes_desempate" style="display:flex; flex-direction:column; gap:10px; max-height:360px; overflow-y:auto; padding-right:4px;">
+            <!-- Renderizado dinámicamente -->
+          </div>
+        </div>
+
+        <!-- BOTONERA DE ACCIÓN FINAL -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-top:1.5px solid #f1f5f9; padding-top:14px;">
+          <button type="button" class="btn-full-secondary" style="font-size:0.8rem; padding:8px 14px;" onclick="cerrarModalLlegadasSimultaneasDesempate()">
+            Cancelar
+          </button>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn-full-secondary" style="background:#f0fdf4; border-color:#86efac; color:#15803d; font-weight:800; font-size:0.82rem; padding:8px 16px;" onclick="asignarTodosACamaDesempate()">
+              ⚡ Asignar Todos a Cama Automáticamente (Criterio ABCDE)
+            </button>
+            <button type="button" class="btn-full-primary" style="background:#16a34a; border-color:#15803d; font-weight:800; font-size:0.82rem; padding:8px 20px;" onclick="confirmarLlegadaSimultaneaAlTablero()">
+              ✅ Confirmar e Ingresar Pacientes Simultáneos al Tablero
+            </button>
           </div>
         </div>
       </div>

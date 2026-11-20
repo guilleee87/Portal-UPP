@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ==============================================================================
  * SIMULADOR HIS COMPLETO — EMERGENCIA NIVEL III-1
  * Curso: Pensamiento Algorítmico - Ciclo II (Trabajo Parcial UPP)
@@ -1473,6 +1473,8 @@ const STATE = {
   entornoOperativo: "publico", // "publico" (MINSA/SIS/EsSalud) | "privado" (Clínica/EPS/SITEDS)
   padronSusalud: null, // Padrón Único SUSALUD del paciente
   eventoFugaTransversal: false, // Marca de fuga transversal
+  ingresoDirectoCritico: false,
+  motivoIngresoCritico: null,
   panicoShockTrauma: false,
 
   // Módulo 1: Triaje Fisiológico
@@ -3118,7 +3120,46 @@ function evaluarTriajeEstandar(datos = {}) {
   const esPediatrico = Boolean(datos.esPediatrico);
   const edad = typeof datos.edad === "number" ? datos.edad : 30;
 
+  const esIngresoCritico = Boolean(datos.ingresoDirectoCritico || datos.panicoShockTrauma || (typeof STATE !== "undefined" && STATE.ingresoDirectoCritico));
+  const motivoCritico = datos.motivoIngresoCritico || (typeof STATE !== "undefined" && STATE.motivoIngresoCritico) || "Activación directa de Trauma Shock / Riesgo Vital Inmediato — Ley N° 27604";
+  const todosVitalesVacios = (fr === null && spo2 === null && pas === null && pad === null && fc === null && glasgow === null && temp === null);
+
   const news2 = calcularNEWS2({ fr, spo2, pas, fc, glasgow, temp, esPediatrico, edad });
+
+  // REGLA CLÍNICA DE INGRESO DIRECTO CRÍTICO (Ley N° 27604 / NTS N° 042-MINSA):
+  // Si el paciente ingresó por pase crítico directo, se garantiza Prioridad I obligatoria en auditoría.
+  if (esIngresoCritico) {
+    if (todosVitalesVacios) {
+      news2.esPendienteMonitorizacion = true;
+      news2.scoreTotal = 0;
+      news2.maxParametroUnico = 0;
+      news2.desglose = ["Pendiente de monitorización (Ingreso Directo P-I)"];
+      return {
+        prioridad: "I",
+        esiNivel: 1,
+        compuerta: "COMPUERTA A (Intervención Vital Inmediata)",
+        slaNormativo: "Inmediato — 0 min (NTS N° 042-MINSA)",
+        news2,
+        motivos: [motivoCritico],
+        resumenClinico: "Riesgo vital inminente. Destino: Unidad de Shock Trauma / Reanimación."
+      };
+    } else {
+      // El usuario ingresó signos vitales posteriormente: calcular puntaje NEWS2 real sin degradar Prioridad I
+      const motivosConSignos = [motivoCritico];
+      if (news2.scoreTotal > 0) {
+        motivosConSignos.push(`Monitoreo hemodinámico en curso: NEWS2 ${news2.scoreTotal} pts (Máx. indiv. ${news2.maxParametroUnico} pts)`);
+      }
+      return {
+        prioridad: "I",
+        esiNivel: 1,
+        compuerta: "COMPUERTA A (Intervención Vital Inmediata)",
+        slaNormativo: "Inmediato — 0 min (NTS N° 042-MINSA)",
+        news2,
+        motivos: motivosConSignos,
+        resumenClinico: "Riesgo vital inminente. Destino: Unidad de Shock Trauma / Reanimación."
+      };
+    }
+  }
 
   const indiceShock = (fc !== null && pas !== null && pas > 0) ? (fc / pas) : null;
   const tieneCodTiempo = Boolean(datos.codigoInfarto || datos.codigoIctus || datos.codigoSepsis);
@@ -3203,7 +3244,9 @@ function evaluarTriajeEstandar(datos = {}) {
     evaCero &&
     !tieneCodTiempo &&
     !claveObst &&
-    !(esGestante && ((pas !== null && pas >= 160) || (pad !== null && pad >= 110)))
+    !(esGestante && ((pas !== null && pas >= 160) || (pad !== null && pad >= 110))) &&
+    !(pas !== null && pas >= 180) &&
+    !(pad !== null && pad >= 120)
   );
 
   // =========================================================================
@@ -3447,7 +3490,9 @@ function recalcularPrioridad() {
     codigoIctus: Boolean(STATE.codigoIctus),
     codigoSepsis: Boolean(STATE.codigoSepsis),
     panicoShockTrauma: Boolean(STATE.panicoShockTrauma),
-    esParoOAgonia: Boolean(validacion.esParoOAgonia)
+    esParoOAgonia: Boolean(validacion.esParoOAgonia),
+    ingresoDirectoCritico: Boolean(STATE.ingresoDirectoCritico),
+    motivoIngresoCritico: STATE.motivoIngresoCritico || "Activación directa de Trauma Shock / Riesgo Vital Inmediato — Ley N° 27604"
   };
 
   const resultado = evaluarTriajeEstandar(datosTriaje);
@@ -3654,7 +3699,30 @@ function mostrarPrioridad(prio, detalle) {
   const trazaEl = document.getElementById("prio_trazabilidad_estandar");
   if (trazaEl) {
     trazaEl.style.display = "block";
-    const res = (detalle && detalle.news2) ? detalle : (STATE.resultadoTriajeEstandar || null);
+    let res = (detalle && detalle.news2) ? detalle : null;
+    if (!res || STATE.ingresoDirectoCritico || STATE.panicoShockTrauma) {
+      if (typeof evaluarTriajeEstandar === "function") {
+        res = evaluarTriajeEstandar({
+          fr: STATE.fr,
+          spo2: STATE.spo2,
+          pas: STATE.pasSistolica,
+          pad: STATE.paDiastolica,
+          fc: STATE.fc,
+          glasgow: STATE.glasgow,
+          temp: STATE.temperatura,
+          glucosa: STATE.glucosa,
+          eva: STATE.eva,
+          esPediatrico: Boolean(STATE.edad !== null && STATE.edad !== undefined && STATE.edad < 14),
+          edad: (typeof STATE.edad === "number") ? STATE.edad : 30,
+          ingresoDirectoCritico: Boolean(STATE.ingresoDirectoCritico || STATE.panicoShockTrauma),
+          motivoIngresoCritico: STATE.motivoIngresoCritico || "Activación directa de Trauma Shock / Riesgo Vital Inmediato — Ley N° 27604",
+          panicoShockTrauma: Boolean(STATE.panicoShockTrauma)
+        });
+        STATE.resultadoTriajeEstandar = res;
+      } else {
+        res = STATE.resultadoTriajeEstandar || null;
+      }
+    }
     if (res && res.news2) {
       const scoreNews2 = res.news2.scoreTotal;
       const maxIndiv = res.news2.maxParametroUnico;
@@ -3662,8 +3730,11 @@ function mostrarPrioridad(prio, detalle) {
       const esiNivel = res.esiNivel || (prio === "I" ? 1 : (prio === "II" ? 2 : (prio === "III" ? 3 : (prio === "IV" ? 4 : 5))));
       const slaTxt = res.slaNormativo || "Por definir";
       
+      const esPendiente = Boolean(res.news2 && res.news2.esPendienteMonitorizacion);
       let badgesHtml = "";
-      if (Array.isArray(res.news2.desglose)) {
+      if (esPendiente) {
+        badgesHtml = `<span style="background:rgba(239,68,68,0.35); border:1px solid rgba(239,68,68,0.5); padding:3px 10px; border-radius:5px; font-size:0.75rem; font-weight:800; color:#fee2e2;">⚠️ Monitorización de cabecera en curso — Parámetros pendientes de toma</span>`;
+      } else if (Array.isArray(res.news2.desglose)) {
         badgesHtml = res.news2.desglose.map(b => {
           let bg = "rgba(255,255,255,0.18)";
           if (b.includes("+3")) bg = "rgba(239,68,68,0.45)";
@@ -3692,7 +3763,7 @@ function mostrarPrioridad(prio, detalle) {
           </div>
           <div style="background:rgba(0,0,0,0.22); padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.15);">
             <div style="font-size:0.7rem; opacity:0.85; text-transform:uppercase; font-weight:700;">Score Fisiológico NEWS2 (RCP)</div>
-            <div style="font-weight:900; font-size:0.95rem; margin-top:2px;">${scoreNews2} pts <span style="font-size:0.75rem; font-weight:600; opacity:0.9;">(Máx. individual: ${maxIndiv} pts)</span></div>
+            <div style="font-weight:900; font-size:0.95rem; margin-top:2px;">${esPendiente ? `<span style="color:#fde047; font-size:0.8rem; font-weight:800;">Pendiente de monitorización (Ingreso Directo P-I)</span>` : `${scoreNews2} pts <span style="font-size:0.75rem; font-weight:600; opacity:0.9;">(Máx. individual: ${maxIndiv} pts)</span>`}</div>
           </div>
         </div>
         <div style="margin-bottom:8px;">
@@ -6166,12 +6237,15 @@ function activarPanicoShockTrauma() {
     esNN: true
   });
 
-  PACIENTES_COLA.push(pxST);
+  esLlegadaSimultanea = false;
+  PACIENTES_COLA = [pxST];
   pacienteActivoId = pxST.id;
 
   // 2. Configurar STATE
   limpiarFormularioCompletoState();
   STATE.panicoShockTrauma = true;
+  STATE.ingresoDirectoCritico = true;
+  STATE.motivoIngresoCritico = "Activación directa de Trauma Shock / Riesgo Vital Inmediato — Ley N° 27604";
   STATE.prioridad = "I";
   STATE.colorPrioridad = "ROJO";
   STATE.identificador = idEmergencia;
@@ -6220,11 +6294,15 @@ function activarPanicoShockTrauma() {
   const bannerParo = document.getElementById("banner_paro_agonia");
   if (bannerParo) bannerParo.style.display = "block";
 
-  mostrarPrioridad("I", {
-    tipo: "Prioridad I — ROJO (Resucitación / Shock Trauma)",
-    desc: "Ingreso directo a Shock Trauma ST-01 activado. Trámites y origen omitidos por premura asistencial.",
-    destino: "Shock Trauma ST-01"
-  });
+  if (typeof recalcularPrioridad === "function") {
+    recalcularPrioridad();
+  } else {
+    mostrarPrioridad("I", {
+      tipo: "Prioridad I — ROJO (Resucitación / Shock Trauma)",
+      desc: "Ingreso directo a Shock Trauma ST-01 activado. Trámites y origen omitidos por premura asistencial.",
+      destino: "Shock Trauma ST-01"
+    });
+  }
 
   // Sincronizar paciente crítico NN en todos los módulos (incluido Módulo 4)
   if (typeof sincronizarDatosPacienteEnTodosLosModulos === "function") {
@@ -6415,12 +6493,15 @@ function activarIngresoDirectoQuirofano() {
     esNN: true
   });
 
-  PACIENTES_COLA.push(pxSOP);
+  esLlegadaSimultanea = false;
+  PACIENTES_COLA = [pxSOP];
   pacienteActivoId = pxSOP.id;
 
   // 2. Configurar STATE
   limpiarFormularioCompletoState();
   STATE.esNN = true;
+  STATE.ingresoDirectoCritico = true;
+  STATE.motivoIngresoCritico = "Pase Directo a Quirófano SOP / Cirugía de Control de Daños — Ley N° 27604";
   STATE.prioridad = "I";
   STATE.colorPrioridad = "ROJO";
   STATE.regularizacionDiferida = true;
@@ -6487,11 +6568,15 @@ function activarIngresoDirectoQuirofano() {
     badgeSop1.style.color = "#991b1b";
   }
 
-  mostrarPrioridad("I", {
-    tipo: "Prioridad I — ROJO (Cirugía de Emergencia SOP)",
-    desc: "Ingreso inmediato a Quirófano SOP 1 activado. Sin condicionamiento de pago ni seguro previo (Ley N° 27604).",
-    destino: "Quirófano 1 (SOP 1)"
-  });
+  if (typeof recalcularPrioridad === "function") {
+    recalcularPrioridad();
+  } else {
+    mostrarPrioridad("I", {
+      tipo: "Prioridad I — ROJO (Cirugía de Emergencia SOP)",
+      desc: "Ingreso inmediato a Quirófano SOP 1 activado. Sin condicionamiento de pago ni seguro previo (Ley N° 27604).",
+      destino: "Quirófano 1 (SOP 1)"
+    });
+  }
 
   // Sincronizar paciente NN en todos los módulos (incluido Módulo 4)
   if (typeof sincronizarDatosPacienteEnTodosLosModulos === "function") {
@@ -7180,7 +7265,7 @@ function filtrarTableroModal(tipo, btn = null) {
 }
 
 // ASIGNACIÓN DE RECURSO A PACIENTE
-function asignarPacienteActualARecurso(idRecurso, duracionManual = null, motivoManual = null) {
+function asignarPacienteActualARecurso(idRecurso, duracionManual = null, motivoManual = null, silencioso = false) {
   const rec = RECURSOS_HOSPITALARIOS[idRecurso];
   if (!rec) return;
 
@@ -7232,7 +7317,7 @@ function asignarPacienteActualARecurso(idRecurso, duracionManual = null, motivoM
     actualizarWidgetFlotanteCamas();
   }
 
-  alert(`✅ ASIGNACIÓN CONFIRMADA:\n\n${rec.nombre}\nPaciente: ${rec.paciente.nombre}\nEstancia programada: ${horas} horas (${rec.norma})\n\nEl contador en tiempo real ha iniciado.`);
+  if (!silencioso) alert(`✅ ASIGNACIÓN CONFIRMADA:\n\n${rec.nombre}\nPaciente: ${rec.paciente.nombre}\nEstancia programada: ${horas} horas (${rec.norma})\n\nEl contador en tiempo real ha iniciado.`);
 }
 
 // AMPLIACIÓN DE HORAS DE OBSERVACIÓN (REQUERIMIENTO CLAVE)
@@ -8103,6 +8188,10 @@ window.actualizarWidgetFlotanteCamas = actualizarWidgetFlotanteCamas;
 // PRESETS DE CASOS CLÍNICOS RÁPIDOS DE 1 CLIC (EXPOSICIÓN & AUDITORÍA ASISTENCIAL)
 // ==============================================================================
 function cargarCasoPreset(prioNum) {
+  // 0. Mock temporal para evitar alertas bloqueantes durante la simulación automática
+  const origAlert = window.alert;
+  window.alert = function(msg) { console.log("[SIMULACIÓN ALERT INTERCEPTADO]:", msg); };
+
   // Limpiar códigos de tiempo previos
   const chkInfarto = document.getElementById("check_cod_infarto");
   if (chkInfarto) { chkInfarto.checked = false; toggleCodigoTiempo('infarto', false); }
@@ -8111,6 +8200,128 @@ function cargarCasoPreset(prioNum) {
   const chkSepsis = document.getElementById("check_cod_sepsis");
   if (chkSepsis) { chkSepsis.checked = false; toggleCodigoTiempo('sepsis', false); }
 
+  const casos = {
+    1: {
+      titulo: "Caso 1: Shock Hipovolémico / Politrauma por Atropello (P-I Rojo)",
+      motivo: "Politraumatismo severo por atropello en vía pública, shock circulatorio, hemorragia activa y depresión neurológica severa",
+      spo2: 82, fc: 142, pas: 70, pad: 40, fr: 32, temp: 35.5, glasgow: 7, glucosa: 60, eva: 0,
+      dni: "44418504", nombre: "LUIS GUILLERMO VASQUEZ VALDIVIESO", edad: 22, sexo: "M", gsan: "O+",
+      alergias: "Niega alergias medicamentosas conocidas (NKDA)",
+      origen: "soat",
+      seguro: "SOAT Activo (La Positiva Seguros — Póliza 99214)",
+      cie10: "T14.9 — Traumatismo no especificado por accidente de tránsito",
+      medico: "Médico de Turno 1 (Emergenciólogo / CMP 0001)",
+      camaId: "ST-01",
+      camaNombre: "Shock Trauma ST-01",
+      condicionConsentimiento: "exonerado_emergencia",
+      procedimientoConsentimiento: "Intervención Quirúrgica de Emergencia (SOP) y Laparotomía / Toracotomía",
+      kardex: [
+        { med: "Cloruro de Sodio 0.9% 1000ml", dosis: "NaCl 0.9% 1000 ml EV a chorro STAT", via: "EV", cum: "CUM-CLNA" },
+        { med: "Fentanilo 0.5mg/10ml", dosis: "1 ampolla EV directa en bolo lento STAT", via: "EV", cum: "CUM-FENT" },
+        { med: "Ceftriaxona 1g", dosis: "2 gr EV en infusión intermitente c/24h", via: "EV", cum: "CUM-CEFT" }
+      ],
+      horasObs: "8|Traumatismo Encéfalo-Craneano (TEC) Leve con riesgo / Moderado",
+      estadoAlta: "En Atención Crítica — Shock Trauma ST-01"
+    },
+    2: {
+      titulo: "Caso 2: Crisis Hipertensiva / Sospecha Síndrome Coronario Agudo (P-II Naranja)",
+      motivo: "Cefalea holocraneana pulsátil intensa 9/10, dolor precordial opresivo con irradiación a cuello y náuseas sin shock",
+      spo2: 96, fc: 98, pas: 185, pad: 115, fr: 22, temp: 36.8, glasgow: 15, glucosa: 110, eva: 7,
+      dni: "10203040", nombre: "CARLOS MENDOZA ROJAS", edad: 58, sexo: "M", gsan: "A+",
+      alergias: "Penicilina y derivados",
+      origen: "comun",
+      seguro: "EsSalud Titular Acreditado (Reg. 5810203040)",
+      cie10: "I21.9 — Infarto agudo del miocardio sin otra especificación",
+      medico: "Médico de Turno 3 (Médico Internista / CMP 0003)",
+      camaId: "OBS-01",
+      camaNombre: "Observación OBS-01",
+      condicionConsentimiento: "paciente_lucido",
+      procedimientoConsentimiento: "Atención Médica y Reanimación en Emergencia",
+      kardex: [
+        { med: "Captopril 25mg", dosis: "1 tableta SL STAT", via: "SL", cum: "CUM-CAPT" },
+        { med: "Cloruro de Sodio 0.9% 1000ml", dosis: "NaCl 0.9% 1000 ml EV a 30 gotas/min", via: "EV", cum: "CUM-CLNA" }
+      ],
+      horasObs: "6|Síndrome Coronario Agudo Descartado / Dolor Torácico",
+      estadoAlta: "En Observación — Monitoreo Cardíaco"
+    },
+    3: {
+      titulo: "Caso 3: Cólico Renal Agudo / Urolitiasis Complicada (P-III Amarillo)",
+      motivo: "Dolor cólico lumbar unilateral agudo moderado 5/10 irradiado a flanco y fosa ilíaca con náuseas",
+      spo2: 98, fc: 84, pas: 130, pad: 85, fr: 18, temp: 37.1, glasgow: 15, glucosa: 100, eva: 5,
+      dni: "70809010", nombre: "HERMELINDA ANTONIO VILLANUEVA", edad: 45, sexo: "F", gsan: "O+",
+      alergias: "Niega alergias medicamentosas conocidas (NKDA)",
+      origen: "comun",
+      seguro: "SIS Gratuito (Padrón Único SUSALUD Acreditado)",
+      cie10: "R10.4 — Otros dolores abdominales y los no especificados",
+      medico: "Médico de Turno 1 (Emergenciólogo / CMP 0001)",
+      camaId: "OBS-02",
+      camaNombre: "Observación OBS-02",
+      condicionConsentimiento: "paciente_lucido",
+      procedimientoConsentimiento: "Atención Médica y Reanimación en Emergencia",
+      kardex: [
+        { med: "Ketorolaco 30mg/ml", dosis: "1 ampolla diluida en 100 ml NaCl 0.9% EV a pasar en 30 min", via: "EV", cum: "CUM-KETO" },
+        { med: "Cloruro de Sodio 0.9% 1000ml", dosis: "NaCl 0.9% 1000 ml EV a 45 gotas/min", via: "EV", cum: "CUM-CLNA" }
+      ],
+      horasObs: "6|Dolor Abdominal Agudo en estudio (Descarte apendicitis / ecografía)",
+      estadoAlta: "En Observación — Analgesia Administrada"
+    },
+    4: {
+      titulo: "Caso 4: Faringoamigdalitis Aguda / Síndrome Febril (P-IV Verde)",
+      motivo: "Odinofagia marcada de 48 horas de evolución, fiebre cuantificada en 38.0 °C, malestar general sin dificultad respiratoria",
+      spo2: 99, fc: 78, pas: 115, pad: 75, fr: 16, temp: 38.0, glasgow: 15, glucosa: 95, eva: 3,
+      dni: "45678901", nombre: "RONY ALEXANDER ARENAS HUAMANCHUMO", edad: 28, sexo: "M", gsan: "O+",
+      alergias: "Niega alergias medicamentosas conocidas (NKDA)",
+      origen: "comun",
+      seguro: "SIS Para Todos (Acreditación Automática)",
+      cie10: "J45.9 — Asma, no especificada (Crisis asmática)",
+      medico: "Médico de Turno 4 (Pediatra de Turno / CMP 0004)",
+      camaId: null,
+      camaNombre: "Tópico Ambulatorio (Sin cama requerida)",
+      condicionConsentimiento: "paciente_lucido",
+      procedimientoConsentimiento: "Atención y Tratamiento General de Emergencia",
+      kardex: [
+        { med: "Paracetamol 500mg", dosis: "1 tableta VO STAT con agua", via: "VO", cum: "CUM-PARA" }
+      ],
+      horasObs: "4|Crisis Asmática / Broncoespasmo Agudo",
+      estadoAlta: "Atendido / Alta Médica Ambulatoria con Receta"
+    },
+    5: {
+      titulo: "Caso 5: Retiro de Puntos de Sutura y Curación de Herida (P-V Azul)",
+      motivo: "Paciente ambulatorio acude para retiro de 5 puntos de sutura en antebrazo y curación de herida operatoria limpia",
+      spo2: 99, fc: 72, pas: 120, pad: 80, fr: 16, temp: 36.5, glasgow: 15, glucosa: 90, eva: 0,
+      dni: "12345678", nombre: "DEMO PACIENTE AMBULATORIO", edad: 32, sexo: "M", gsan: "O+",
+      alergias: "Niega alergias medicamentosas conocidas (NKDA)",
+      origen: "comun",
+      seguro: "Particular / Seguro Privado",
+      cie10: "K35.8 — Apendicitis aguda",
+      medico: "Médico de Turno 2 (Cirujano de Guardia / CMP 0002)",
+      camaId: null,
+      camaNombre: "Tópico de Procedimientos Menores",
+      condicionConsentimiento: "paciente_lucido",
+      procedimientoConsentimiento: "Atención y Tratamiento General de Emergencia",
+      kardex: [
+        { med: "Clorhexidina 2%", dosis: "Curación tópica y apósito estéril", via: "Tópica", cum: "CUM-CLOR" }
+      ],
+      horasObs: "4|Crisis Asmática / Broncoespasmo Agudo",
+      estadoAlta: "Atendido / Alta Definitiva Post-Procedimiento"
+    }
+  };
+
+  const c = casos[prioNum];
+  if (!c) { window.alert = origAlert; return; }
+
+  // 1. DESPLEGAR Y ABRIR TODOS LOS MÓDULOS (1 AL 8) PARA VISIBILIDAD TOTAL
+  for (let i = 1; i <= 8; i++) {
+    const b = document.getElementById(`body_mod${i}`);
+    if (b) {
+      b.style.display = "block";
+      b.classList.add("open");
+    }
+    const a = document.getElementById(`arrow_mod${i}`);
+    if (a) a.classList.add("open");
+  }
+
+  // 2. MÓDULO 1: LLENAR CONSTANTES VITALES Y EVALUAR TRIAJE
   const elMotivo = document.getElementById("motivo_full");
   const elSpo2 = document.getElementById("spo2_full");
   const elFc = document.getElementById("fc_full");
@@ -8123,41 +8334,6 @@ function cargarCasoPreset(prioNum) {
   const elEva = document.getElementById("eva_full");
   const elEvaRange = document.getElementById("eva_range");
   const elIdent = document.getElementById("ident_full");
-
-  const casos = {
-    1: {
-      titulo: "Caso 1: Shock Hipovolémico / Politrauma (P-I)",
-      motivo: "Politraumatismo severo por atropello con hemorragia masiva activa y shock circulatorio",
-      spo2: 82, fc: 142, pas: 70, pad: 40, fr: 32, temp: 35.5, glasgow: 7, glucosa: 60, eva: 0,
-      dni: "44418504", nombre: "LUIS GUILLERMO VASQUEZ VALDIVIESO"
-    },
-    2: {
-      titulo: "Caso 2: Crisis Hipertensiva / Urgencia Mayor (P-II)",
-      motivo: "Cefalea pulsátil intensa, mareos y dolor precordial opresivo sin shock",
-      spo2: 96, fc: 98, pas: 180, pad: 110, fr: 22, temp: 36.8, glasgow: 15, glucosa: 110, eva: 7,
-      dni: "10203040", nombre: "CARLOS MENDOZA ROJAS"
-    },
-    3: {
-      titulo: "Caso 3: Cólico Renal Agudo / Urgencia Menor (P-III)",
-      motivo: "Dolor lumbar unilateral tipo cólico agudo moderado irradiado a fosa ilíaca",
-      spo2: 98, fc: 84, pas: 130, pad: 85, fr: 18, temp: 37.1, glasgow: 15, glucosa: 100, eva: 5,
-      dni: "70809010", nombre: "HERMELINDA ANTONIO VILLANUEVA"
-    },
-    4: {
-      titulo: "Caso 4: Faringoamigdalitis Aguda / Urgencia Leve (P-IV)",
-      motivo: "Odinofagia intensa, disfagia y alza térmica de 48 horas de evolución",
-      spo2: 99, fc: 78, pas: 115, pad: 75, fr: 16, temp: 38.0, glasgow: 15, glucosa: 95, eva: 3,
-      dni: "45678901", nombre: "RONY ALEXANDER ARENAS HUAMANCHUMO"
-    },
-    5: {
-      titulo: "Caso 5: Retiro de Puntos / No Urgencia (P-V)",
-      motivo: "Paciente acude para retiro de puntos de sutura y curación de herida operatoria",
-      spo2: 99, fc: 72, pas: 120, pad: 80, fr: 16, temp: 36.5, glasgow: 15, glucosa: 90, eva: 0,
-      dni: "12345678", nombre: "DEMO PACIENTE AMBULATORIO"
-    }
-  };
-  const c = casos[prioNum];
-  if (!c) return;
 
   if (elMotivo) { elMotivo.value = c.motivo; STATE.motivoConsulta = c.motivo; }
   if (elSpo2) elSpo2.value = c.spo2;
@@ -8172,41 +8348,188 @@ function cargarCasoPreset(prioNum) {
   if (elEvaRange) elEvaRange.value = c.eva;
   actualizarEVA(c.eva);
 
-  if (c.codigo === "infarto" && chkInfarto) {
-    chkInfarto.checked = true;
-    toggleCodigoTiempo('infarto', true);
+  // Origen del Evento
+  if (c.origen === "soat") {
+    if (typeof cambiarOrigenEvento === "function") cambiarOrigenEvento("soat");
+  } else {
+    if (typeof cambiarOrigenEvento === "function") cambiarOrigenEvento("comun");
   }
 
-  // Si no hay identificación previa, autocompletar identificación del paciente demo
-  if (elIdent && (!elIdent.value || elIdent.value.length < 2)) {
-    elIdent.value = `${c.nombre} (DNI ${c.dni})`;
-    STATE.numDni = c.dni;
-    STATE.nombreReniec = c.nombre;
-    STATE.identificador = `${c.nombre} (DNI ${c.dni})`;
-    STATE.historiaClinica = `HC-2026-${c.dni.slice(-4)}`;
-    const hcDisp = document.getElementById("hc_code_display");
-    if (hcDisp) hcDisp.textContent = STATE.historiaClinica;
-    const badgeEstado = document.getElementById("hc_badge_estado");
-    if (badgeEstado) {
-      badgeEstado.textContent = "✅ Identificado";
-      badgeEstado.className = "badge-estado badge-si";
+  // Ejecutar evaluación de triaje completa (ESI v5 + NEWS2 + MINSA)
+  evaluarPacienteCompleto();
+
+  // 3. MÓDULO 2: DATOS FILIATORIOS Y RENIEC COMPLETOS
+  if (elIdent) elIdent.value = `${c.nombre} (DNI ${c.dni})`;
+  const elDniM1 = document.getElementById("dni_mod1");
+  if (elDniM1) elDniM1.value = c.dni;
+  const elDniM2 = document.getElementById("dni_reniec_input");
+  if (elDniM2) elDniM2.value = c.dni;
+  const elEdad = document.getElementById("edad_full");
+  if (elEdad) elEdad.value = c.edad;
+  const elSexo = document.getElementById("sexo_full");
+  if (elSexo) elSexo.value = c.sexo;
+  const elGsan = document.getElementById("gsan_full");
+  if (elGsan) elGsan.value = c.gsan;
+  const elAlergias = document.getElementById("alergias_full");
+  if (elAlergias) elAlergias.value = c.alergias;
+
+  STATE.numDni = c.dni;
+  STATE.nombreReniec = c.nombre;
+  STATE.identificador = `${c.nombre} (DNI ${c.dni})`;
+  STATE.edad = c.edad;
+  STATE.sexo = c.sexo;
+  STATE.grupoSanguineo = c.gsan;
+  STATE.alergias = c.alergias;
+  STATE.historiaClinica = `HC-2026-${c.dni.slice(-4)}`;
+
+  const hcDisp = document.getElementById("hc_code_display");
+  if (hcDisp) hcDisp.textContent = STATE.historiaClinica;
+  const badgeEstado = document.getElementById("hc_badge_estado");
+  if (badgeEstado) {
+    badgeEstado.textContent = "✅ Identificado en RENIEC";
+    badgeEstado.className = "badge-estado badge-si";
+  }
+
+  const m1Card = document.getElementById("m1_reniec_result_card");
+  if (m1Card) {
+    m1Card.style.display = "block";
+    const m1N = document.getElementById("m1_disp_nombre");
+    if (m1N) m1N.textContent = c.nombre;
+    const m1D = document.getElementById("m1_disp_dni");
+    if (m1D) m1D.textContent = c.dni;
+    const m1S = document.getElementById("m1_disp_sexo");
+    if (m1S) m1S.textContent = c.sexo;
+    const m1H = document.getElementById("m1_disp_hc");
+    if (m1H) m1H.textContent = STATE.historiaClinica;
+  }
+
+  // Sincronizar en todos los módulos
+  if (typeof sincronizarDatosPacienteEnTodosLosModulos === "function") {
+    sincronizarDatosPacienteEnTodosLosModulos({
+      esNN: false,
+      dni: c.dni,
+      nombre: c.nombre,
+      hc: STATE.historiaClinica,
+      sexo: c.sexo
+    });
+  }
+
+  // Generar Brazalete Oficial
+  if (typeof generarBrazaleteEmergencia === "function") {
+    generarBrazaleteEmergencia("oficial");
+  }
+
+  // 4. MÓDULO 3: ASEGURAMIENTO Y PÓLIZA
+  STATE.tipoSeguro = c.seguro;
+  const badgeSusalud = document.getElementById("badge_susalud_persistencia");
+  if (badgeSusalud) {
+    badgeSusalud.style.display = "inline-block";
+    badgeSusalud.textContent = `[PADRÓN SUSALUD: ${c.seguro.toUpperCase()}]`;
+    badgeSusalud.style.background = "#dcfce7";
+    badgeSusalud.style.color = "#15803d";
+  }
+
+  // 5. MÓDULO 4: MÉDICO DE GUARDIA, DIAGNÓSTICO CIE-10, KARDEX & CONSENTIMIENTO
+  actualizarMedicoAsignado(c.medico);
+
+  const selCie = document.getElementById("cie10_select");
+  if (selCie) selCie.value = c.cie10;
+  STATE.cie10 = c.cie10;
+
+  const selCondC = document.getElementById("sel_condicion_consentimiento");
+  if (selCondC) selCondC.value = c.condicionConsentimiento;
+  const selProcC = document.getElementById("sel_procedimiento_consentimiento");
+  if (selProcC) selProcC.value = c.procedimientoConsentimiento;
+  actualizarCondicionConsentimiento(c.condicionConsentimiento);
+
+  const chkConsentimiento = document.getElementById("chk_consentimiento_firmado");
+  if (chkConsentimiento) {
+    chkConsentimiento.checked = true;
+    toggleConsentimientoFirmado(true);
+  }
+
+  // Agregar medicamentos al Kardex
+  c.kardex.forEach(k => {
+    agregarMedicamentoAKardex(k.med, k.dosis, k.via, k.cum);
+  });
+
+  // 6. MÓDULO 5: SALA DE OBSERVACIÓN / MONITOREO
+  const selHorasObs = document.getElementById("select_m5_patologia_horas");
+  if (selHorasObs) selHorasObs.value = c.horasObs;
+  if (typeof aplicarNormaHorasObservacion === "function") {
+    aplicarNormaHorasObservacion(c.horasObs);
+  }
+  if (typeof calcularBalanceHidrico === "function") {
+    calcularBalanceHidrico();
+  }
+
+  // 7. MÓDULO 6: CAMAS & QUIRÓFANOS (ASIGNACIÓN DE RECURSO)
+  if (c.camaId && typeof asignarPacienteActualARecurso === "function") {
+    // Si la cama estuviese ocupada, liberarla primero para garantizar la simulación limpia
+    if (typeof RECURSOS_HOSPITALARIOS !== "undefined" && RECURSOS_HOSPITALARIOS[c.camaId]) {
+      RECURSOS_HOSPITALARIOS[c.camaId].estado = "disponible";
     }
+    asignarPacienteActualARecurso(c.camaId, null, null, true);
+  } else {
+    STATE.camaAsignada = c.camaNombre;
   }
 
-  // Destacar visualmente el botón seleccionado
+  // 8. MÓDULO 7: CIERRE ASISTENCIAL Y ALTA
+  STATE.destinoPostTopico = (prioNum === 1) ? "shock_trauma" : (prioNum <= 3 ? "observacion" : "alta");
+
+  // 9. MÓDULO 8: FACTURACIÓN Y LIQUIDACIÓN AL 100%
+  if (typeof actualizarFactura === "function") {
+    actualizarFactura();
+  }
+
+  // 10. MARCAR TODOS LOS 8 PASOS DEL STEPPER COMO COMPLETADOS
+  for (let i = 1; i <= 8; i++) {
+    const btnTop = document.getElementById(`btnStepTop_${i}`);
+    if (btnTop) btnTop.classList.add("is-completed");
+    const btnDrawer = document.getElementById(`btnStepDrawer_${i}`);
+    if (btnDrawer) btnDrawer.classList.add("is-completed");
+  }
+
+  // 11. ACTUALIZAR EN LA COLA DE EMERGENCIAS
+  let pxActivo = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
+  if (!pxActivo) {
+    pxActivo = crearRegistroPaciente({
+      identificador: STATE.identificador,
+      nombre: c.nombre,
+      dni: c.dni,
+      prioridad: (prioNum === 1 ? 'I' : (prioNum === 2 ? 'II' : (prioNum === 3 ? 'III' : (prioNum === 4 ? 'IV' : 'V')))),
+      camaNombre: c.camaNombre,
+      medico: c.medico,
+      estadoAtencion: c.estadoAlta
+    });
+    PACIENTES_COLA = [pxActivo];
+    pacienteActivoId = pxActivo.id;
+  } else {
+    pxActivo.nombre = c.nombre;
+    pxActivo.dni = c.dni;
+    pxActivo.medico = c.medico;
+    pxActivo.camaNombre = c.camaNombre;
+    pxActivo.prioridad = (prioNum === 1 ? 'I' : (prioNum === 2 ? 'II' : (prioNum === 3 ? 'III' : (prioNum === 4 ? 'IV' : 'V'))));
+    pxActivo.estadoAtencion = c.estadoAlta;
+  }
+  renderizarTableroColaPacientes();
+
+  // 12. BLOQUEO GENERAL DE TODOS LOS CAMPOS DE LOS 8 MÓDULOS (AUDITORÍA INMUTABLE)
+  bloquearCamposSimulacion(true);
+
+  // Restaurar alert
+  window.alert = origAlert;
+
+  // Feedback y activación del botón seleccionado
   document.querySelectorAll('.btn-preset-caso').forEach(b => b.classList.remove('active-preset'));
   const btnAct = document.getElementById(`btn_preset_${prioNum}`);
   if (btnAct) btnAct.classList.add('active-preset');
 
-  // Ejecutar evaluación inmediata en el algoritmo de triaje
-  evaluarPacienteCompleto();
-
-  // Feedback visual rápido
   const msgToast = document.getElementById("toast_preset_msg");
   if (msgToast) {
     msgToast.style.display = "block";
-    msgToast.innerHTML = `⚡ <strong>Cargado con éxito:</strong> ${c.titulo} — Evaluado en el algoritmo en tiempo real.`;
-    setTimeout(() => { msgToast.style.display = "none"; }, 4000);
+    msgToast.innerHTML = `🧪 <strong>Simulación Finalizada al 100%:</strong> ${c.titulo}. Los 8 módulos fueron completados exitosamente y todos los campos se encuentran bloqueados con sus constantes oficiales.`;
+    setTimeout(() => { msgToast.style.display = "none"; }, 5000);
   }
 }
 
@@ -8257,6 +8580,7 @@ function crearRegistroPaciente(datos = {}) {
     estadoAtencion: datos.estadoAtencion || "En Triaje",
     camaId: datos.camaId || null,
     camaNombre: datos.camaNombre || null,
+    medico: datos.medico || STATE.medicoTratante || "Por asignar",
     esNN: Boolean(datos.esNN),
     stateSnapshot: datos.stateSnapshot ? JSON.parse(JSON.stringify(datos.stateSnapshot)) : null,
     formSnapshot: datos.formSnapshot ? JSON.parse(JSON.stringify(datos.formSnapshot)) : null
@@ -8316,6 +8640,7 @@ function guardarEstadoPacienteActivo() {
   p.motivo = STATE.motivoConsulta || p.motivo;
   p.camaId = STATE.camaAsignadaId;
   p.camaNombre = STATE.camaAsignada;
+  p.medico = STATE.medicoTratante || p.medico || "Por asignar";
 }
 
 function ordenarColaPacientes() {
@@ -8342,7 +8667,15 @@ function renderizarTableroColaPacientes() {
   ordenarColaPacientes();
 
   if (countBadge) {
-    countBadge.textContent = `${PACIENTES_COLA.length} ${PACIENTES_COLA.length === 1 ? 'Paciente en atención' : 'Pacientes en simultáneo'}`;
+    if (esLlegadaSimultanea && PACIENTES_COLA.length > 1) {
+      countBadge.textContent = `${PACIENTES_COLA.length} Pacientes en atención simultánea (Desempate Activo)`;
+      countBadge.style.background = "#eef2ff";
+      countBadge.style.color = "#4338ca";
+    } else {
+      countBadge.textContent = `${PACIENTES_COLA.length} ${PACIENTES_COLA.length === 1 ? 'Paciente en atención (Caso Único)' : 'Pacientes en espera'}`;
+      countBadge.style.background = "";
+      countBadge.style.color = "";
+    }
   }
 
   if (PACIENTES_COLA.length === 0) {
@@ -8383,6 +8716,11 @@ function renderizarTableroColaPacientes() {
       ? `<span style="font-weight:700; color:#15803d;">🛏️ ${p.camaNombre}</span>`
       : `<span style="font-weight:700; color:#0284c7;">${p.estadoAtencion || 'En Espera'}</span>`;
 
+    const medNombre = p.medico || (p.stateSnapshot && p.stateSnapshot.medicoTratante) || (esActivo && STATE.medicoTratante && STATE.medicoTratante !== "Por asignar" ? STATE.medicoTratante : null);
+    const metaMedico = medNombre && medNombre !== "Por asignar"
+      ? `<span style="font-weight:700; color:#0369a1; display:flex; align-items:center; gap:4px; font-size:0.72rem;">👨‍⚕️ ${medNombre}</span>`
+      : `<span style="color:#94a3b8; font-style:italic; font-size:0.72rem;">👨‍⚕️ Médico por asignar</span>`;
+
     card.innerHTML = `
       <div class="card-top-row">
         <span class="card-prio-badge" style="background:${prioCfg.bg}; color:${prioCfg.text}; border:1px solid ${prioCfg.border};">
@@ -8396,6 +8734,9 @@ function renderizarTableroColaPacientes() {
       <div class="card-meta">
         ${metaOrigen}
         ${metaDestino}
+      </div>
+      <div class="card-medico-row" style="margin-top:4px; padding-top:4px; border-top:1px dashed #e2e8f0;">
+        ${metaMedico}
       </div>
       <button type="button" class="btn-close-card" onclick="cerrarAtencionPaciente('${p.id}', event)" title="Finalizar atención / Dar de alta">&times;</button>
     `;
@@ -8422,6 +8763,9 @@ function cambiarPacienteActivo(nuevoId) {
     STATE.nombreReniec = nuevoPx.nombre;
     STATE.numDni = nuevoPx.dni;
     STATE.prioridad = nuevoPx.prioridad;
+    STATE.medicoTratante = nuevoPx.medico || (nuevoPx.stateSnapshot && nuevoPx.stateSnapshot.medicoTratante) || "Por asignar";
+    const selMedResponsable = document.getElementById("medico_responsable_select");
+    if (selMedResponsable && STATE.medicoTratante) selMedResponsable.value = STATE.medicoTratante;
   }
 
   if (nuevoPx.formSnapshot) {
@@ -8462,13 +8806,19 @@ function limpiarFormularioCompletoState() {
   STATE.fr = null; STATE.temperatura = null; STATE.glucosa = null; STATE.glasgow = null; STATE.eva = 0;
   STATE.motivoConsulta = ""; STATE.prioridad = null; STATE.colorPrioridad = null;
   STATE.codigoInfarto = false; STATE.codigoIctus = false; STATE.codigoSepsis = false;
+  STATE.ingresoDirectoCritico = false; STATE.motivoIngresoCritico = null;
   STATE.identificador = ""; STATE.numDni = null; STATE.nombreReniec = null;
   STATE.historiaClinica = "—"; STATE.camaAsignada = null; STATE.camaAsignadaId = null;
+  STATE.alergias = "";
+  STATE.fechaIngresoBrazalete = null;
+  STATE.horaIngresoBrazalete = null;
+  STATE.horaLlegada = null;
+  STATE.fechaLlegada = null;
 
   const inputsIds = [
-    "ident_full", "dni_reniec_input", "motivo_full", "spo2_full", "fc_full",
+    "ident_full", "dni_reniec_input", "dni_mod1", "motivo_full", "spo2_full", "fc_full",
     "pas_full", "pad_full", "fr_full", "temp_full", "glasgow_full", "glucosa_full",
-    "eva_full", "eva_range", "edad_full", "sexo_full", "fecha_nac_full"
+    "eva_full", "eva_range", "edad_full", "sexo_full", "fecha_nac_full", "alergias_full"
   ];
   inputsIds.forEach(id => {
     const el = document.getElementById(id);
@@ -8479,6 +8829,7 @@ function limpiarFormularioCompletoState() {
   STATE.grupoSanguineo = "Desconocido";
 
   if (typeof actualizarEVA === "function") actualizarEVA(0);
+  if (typeof actualizarIndicadorVisualAlergias === "function") actualizarIndicadorVisualAlergias("");
   limpiarPrioridadUI();
 }
 
@@ -8571,13 +8922,16 @@ function ejecutarAdmisionRapidaNN(event) {
     estadoAtencion: "Shock Trauma Inmediato"
   });
 
-  PACIENTES_COLA.push(pxNN);
+  esLlegadaSimultanea = false;
+  PACIENTES_COLA = [pxNN];
   pacienteActivoId = pxNN.id;
 
   limpiarFormularioCompletoState();
 
   // Actualizar STATE con datos de NN
   STATE.esNN = true;
+  STATE.ingresoDirectoCritico = true;
+  STATE.motivoIngresoCritico = "Admisión de Emergencia Paciente NN Indocumentado / Riesgo Vital Inminente — Ley N° 27604";
   STATE.alertaPnpSs = true;
   STATE.identificador = codigoNN;
   STATE.nombreReniec = nombreNN;
@@ -8638,8 +8992,10 @@ function ejecutarAdmisionRapidaNN(event) {
   const btnPnp = document.getElementById("btn_notif_pnp");
   if (btnPnp) btnPnp.style.display = "inline-block";
 
-  // 3. ACTIVAR PRIORIDAD I ROJO INMEDIATA
-  if (typeof mostrarPrioridad === "function") {
+  // 3. ACTIVAR PRIORIDAD I ROJO INMEDIATA CON AUDITORÍA SINCRONIZADA
+  if (typeof recalcularPrioridad === "function") {
+    recalcularPrioridad();
+  } else if (typeof mostrarPrioridad === "function") {
     mostrarPrioridad("I", {
       tipo: "Prioridad I — ROJO (Resucitación / Shock Trauma)",
       desc: `Paciente indocumentado (${codigoNN}) en riesgo vital. Atención inmediata garantizada por Ley N° 27604 sin requisito de DNI.`,
@@ -8701,7 +9057,8 @@ function completarPreTriageSTART(prio, motivo) {
     estadoAtencion: prio === 'I' ? "Shock Trauma" : (prio === 'II' ? "Tópico Inmediato" : "En Espera")
   });
 
-  PACIENTES_COLA.push(px);
+  esLlegadaSimultanea = false;
+  PACIENTES_COLA = [px];
   pacienteActivoId = px.id;
 
   limpiarFormularioCompletoState();
@@ -8868,12 +9225,10 @@ function registrarPacienteEnEspera() {
     modalidad: "A pie"
   });
 
-  PACIENTES_COLA.push(nuevoPx);
-
-  if (!pacienteActivoId || PACIENTES_COLA.length === 1) {
-    pacienteActivoId = nuevoPx.id;
-    cambiarPacienteActivo(nuevoPx.id);
-  }
+  esLlegadaSimultanea = false;
+  PACIENTES_COLA = [nuevoPx];
+  pacienteActivoId = nuevoPx.id;
+  cambiarPacienteActivo(nuevoPx.id);
 
   renderizarTableroColaPacientes();
   mostrarToastCola(`👤 <strong>Llegada Registrada:</strong> ${nombrePx} ingresado a sala de espera.`);
@@ -9924,6 +10279,10 @@ function renderizarBoxAcreditacionSusalud(padron) {
 // ---------------------------------------------------------------------------
 function admitirEmergenciaSoat() {
   cambiarOrigenEvento("soat");
+  STATE.ingresoDirectoCritico = true;
+  STATE.prioridad = "I";
+  STATE.colorPrioridad = "ROJO";
+  STATE.motivoIngresoCritico = "Protocolo de Emergencia Accidente de Tránsito / Trauma Vial Crítico (SOAT) — Ley N° 27181 & D.S. N° 024-2002-MTC";
 
   // Si el Módulo 1 está colapsado, desplegarlo para ingreso inmediato de datos
   const bodyM1 = document.getElementById("body_mod1");
@@ -10037,90 +10396,138 @@ function construirHTMLBrazalete(esTemporal = false) {
   const colorBanda = coloresPrio[prio] || "#dc2626";
   const nombrePrio = nombresPrio[prio] || `PRIORIDAD ${prio}`;
 
-  let edadDisplay = "desconocido";
-  let generoDisplay = "desconocido";
-  let alergiasDisplay = "desconocido";
-  let alergiaClase = "ok";
-  let nombrePaciente = (STATE.nombreReniec || STATE.identificador || "PACIENTE POR IDENTIFICAR").toUpperCase();
-  let hcPaciente = STATE.historiaClinica || "HC-TEMP-NN";
-  let docPaciente = STATE.numDni || (STATE.identificador ? STATE.identificador : "S/D (INDOCUMENTADO)");
+  // 1. FECHA Y HORA INMUTABLES:
+  // Se fijan en la primera creación/admisión y NUNCA se recalculan al imprimir
+  if (!STATE.fechaIngresoBrazalete) {
+    STATE.fechaIngresoBrazalete = STATE.fechaLlegada || new Date().toLocaleDateString('es-PE');
+  }
+  if (!STATE.horaIngresoBrazalete) {
+    STATE.horaIngresoBrazalete = STATE.horaLlegada || new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  }
+  if (!STATE.horaLlegada) {
+    STATE.horaLlegada = STATE.horaIngresoBrazalete;
+  }
+  if (!STATE.fechaLlegada) {
+    STATE.fechaLlegada = STATE.fechaIngresoBrazalete;
+  }
+  const fechaActual = STATE.fechaIngresoBrazalete;
+  const horaActual = STATE.horaIngresoBrazalete;
 
-  if (!esTemporal && !STATE.esNN && STATE.numDni && STATE.numDni !== "NN") {
-    // Si NO es temporal y está identificado
-    edadDisplay = STATE.edad ? `${STATE.edad} años` : (document.getElementById("edad_full")?.value ? `${document.getElementById("edad_full").value} años` : "desconocido");
-    generoDisplay = STATE.sexo || document.getElementById("sexo_full")?.value || "desconocido";
-    const alergiasInput = document.getElementById("alergias_full")?.value?.trim() || STATE.alergias || "";
-    if (alergiasInput && !alergiasInput.toLowerCase().includes("niega") && !alergiasInput.toLowerCase().includes("ninguna")) {
-      alergiasDisplay = `🔴 ALERGIA CRÍTICA: ${alergiasInput.toUpperCase()}`;
-      alergiaClase = "danger";
-    } else if (alergiasInput) {
-      alergiasDisplay = "⚪ ALERGIAS: NIEGA";
-      alergiaClase = "ok";
-    } else {
-      alergiasDisplay = "desconocido";
-      alergiaClase = "ok";
-    }
-  } else {
-    // REGLA ESTRICTA DE BOTONES DE ATENCIÓN RÁPIDA:
-    // edad: "desconocido", genero: "desconocido", alergias: "desconocido", y marcar "Temporal"
-    edadDisplay = "desconocido";
-    generoDisplay = "desconocido";
-    alergiasDisplay = "⚠️ ALERGIAS: DESCONOCIDO";
-    alergiaClase = "ok";
-    if (!hcPaciente || (hcPaciente.startsWith("HC-2026-") && STATE.esNN)) {
-      hcPaciente = "HC-TEMP-NN";
-    }
+  // 2. LECTURA EXHAUSTIVA DE DATOS DEL PACIENTE:
+  let nombrePaciente = (STATE.nombreReniec || STATE.identificador || "PACIENTE POR IDENTIFICAR").toUpperCase();
+  let hcPaciente = STATE.historiaClinica || document.getElementById("hc_code_display")?.textContent?.trim() || "";
+  if (!hcPaciente || hcPaciente === "—") {
+    hcPaciente = (esTemporal || STATE.esNN) ? "HC-TEMP-NN" : "HC-PROVISIONAL";
   }
 
-  const fechaActual = new Date().toLocaleDateString('es-PE');
-  const horaActual = STATE.horaLlegada || new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-  const ubicacion = STATE.camaAsignada || (prio === 'I' ? 'Shock Trauma ST-01' : 'Tópico de Emergencia');
+  let docPaciente = STATE.numDni || document.getElementById("dni_mod1")?.value?.trim() || document.getElementById("ident_full")?.value?.trim() || STATE.identificador || "";
+  if (!docPaciente || docPaciente === "NN") {
+    docPaciente = "S/D (INDOCUMENTADO)";
+  }
+
+  // EDAD
+  let edadRaw = STATE.edad || document.getElementById("edad_full")?.value?.trim();
+  let edadDisplay = edadRaw ? `${edadRaw} años` : "desconocido";
+
+  // GÉNERO
+  let generoRaw = STATE.sexo || document.getElementById("sexo_full")?.value;
+  let generoDisplay = (generoRaw && generoRaw !== "Desconocido") ? generoRaw : "desconocido";
+
+  // GRUPO SANGUÍNEO Y FACTOR RH
+  let gsanRaw = STATE.grupoSanguineo || document.getElementById("gsan_full")?.value || "Desconocido";
+  let gsanDisplay = (gsanRaw && gsanRaw !== "Desconocido") ? gsanRaw : "Desconocido / Por tipificar";
+
+  // ALERGIAS (CERO PÉRDIDA DE INFORMACIÓN)
+  // Se lee de todas las fuentes: input DOM, STATE.alergias, STATE.alergiasConocidas
+  const alergiasInput = (document.getElementById("alergias_full")?.value || STATE.alergias || STATE.alergiasConocidas || "").trim();
+  let alergiasDisplay = "⚠️ ALERGIAS: DESCONOCIDO (NO EVALUADO)";
+  let alergiaBadgeStyle = "background:#fef3c7; color:#92400e; border:1px solid #fde68a;";
+
+  if (alergiasInput) {
+    const alLower = alergiasInput.toLowerCase();
+    if (alLower.includes("niega") || alLower.includes("ninguna") || alLower.includes("nkda") || alLower === "no") {
+      alergiasDisplay = "⚪ ALERGIAS: NIEGA (NKDA)";
+      alergiaBadgeStyle = "background:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;";
+    } else if (alLower.includes("desconocid") || alLower.includes("no evaluad") || alLower.includes("nn")) {
+      alergiasDisplay = "⚠️ ALERGIAS: DESCONOCIDO (NO EVALUADO)";
+      alergiaBadgeStyle = "background:#fef3c7; color:#92400e; border:1px solid #fde68a;";
+    } else {
+      alergiasDisplay = `🔴 ALERGIA CRÍTICA: ${alergiasInput.toUpperCase()}`;
+      alergiaBadgeStyle = "background:#dc2626; color:#ffffff; font-weight:900; box-shadow:0 1px 4px rgba(220,38,38,0.35);";
+    }
+  } else if (!esTemporal && !STATE.esNN && STATE.numDni && STATE.numDni !== "NN") {
+    alergiasDisplay = "⚠️ ALERGIAS: SIN REGISTRAR";
+    alergiaBadgeStyle = "background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;";
+  }
+
+  // UBICACIÓN / CAMA ASIGNADA
+  const ubicacion = STATE.camaAsignada || (prio === 'I' ? 'Shock Trauma ST-01' : (prio === 'II' ? 'Tópico de Emergencia' : 'Observación / Espera'));
+
+  // INDICADOR TEMPORAL vs OFICIAL
+  const esRealmenteTemporal = Boolean(esTemporal || STATE.esNN || !STATE.numDni || STATE.numDni === "NN" || docPaciente.startsWith("S/D") || hcPaciente.includes("TEMP") || hcPaciente.includes("NN"));
 
   return `
-    <div class="wristband-strip" style="width:820px; height:135px; background:#ffffff; border:2px solid #94a3b8; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.15); display:flex; position:relative; overflow:hidden; font-family:Arial, Helvetica, sans-serif; box-sizing:border-box; margin:auto;">
-      <!-- BANDA LATERAL CON COLOR DE TRIAJE -->
-      <div class="band-triage" style="width:65px; background:${colorBanda}; color:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:900; text-align:center; padding:4px; box-sizing:border-box; border-right:2px solid rgba(0,0,0,0.15);">
+    <div class="wristband-strip" style="width:960px; height:138px; background:#ffffff; border:2px solid #94a3b8; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.15); display:flex; position:relative; overflow:hidden; font-family:Arial, Helvetica, sans-serif; box-sizing:border-box; margin:auto;">
+      <!-- 1. BANDA LATERAL CON COLOR DE TRIAJE -->
+      <div class="band-triage" style="width:65px; min-width:65px; background:${colorBanda}; color:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:900; text-align:center; padding:4px; box-sizing:border-box; border-right:2px solid rgba(0,0,0,0.15);">
         <div class="prio-code" style="font-size:26px; line-height:1;">P-${prio}</div>
         <div class="prio-desc" style="font-size:9px; writing-mode:vertical-rl; transform:rotate(180deg); letter-spacing:1px; margin-top:6px; text-transform:uppercase;">${nombrePrio}</div>
       </div>
 
-      <!-- CUERPO CENTRAL DE IDENTIFICACIÓN -->
-      <div class="wristband-body" style="flex:1; padding:10px 14px; display:flex; flex-direction:column; justify-content:space-between; border-right:2px dashed #cbd5e1; box-sizing:border-box;">
-        <div class="inst-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #cbd5e1; padding-bottom:4px;">
+      <!-- 2. CUERPO CENTRAL DE IDENTIFICACIÓN -->
+      <div class="wristband-body" style="flex:1; padding:8px 12px; display:flex; flex-direction:column; justify-content:space-between; border-right:2px dashed #cbd5e1; box-sizing:border-box; overflow:hidden;">
+        <div class="inst-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #cbd5e1; padding-bottom:3px;">
           <span class="inst-name" style="font-size:11px; font-weight:800; color:#0f172a; letter-spacing:0.5px;">HOSPITAL REGIONAL DOCENTE UPP</span>
           <div style="display:flex; align-items:center; gap:8px;">
-            ${esTemporal ? '<span style="background:#dc2626; color:#ffffff; font-size:10px; font-weight:900; padding:2px 8px; border-radius:4px; letter-spacing:0.5px;">🏷️ BRAZALETE TEMPORAL</span>' : '<span style="background:#16a34a; color:#ffffff; font-size:10px; font-weight:900; padding:2px 8px; border-radius:4px; letter-spacing:0.5px;">✓ OFICIAL IDENTIFICADO</span>'}
-            <span class="service-name" style="font-size:10px; font-weight:700; color:#0284c7;">SERVICIO DE EMERGENCIA · NIVEL III-1</span>
+            ${esRealmenteTemporal ? '<span style="background:#dc2626; color:#ffffff; font-size:9.5px; font-weight:900; padding:2px 7px; border-radius:4px; letter-spacing:0.5px;">🏷️ BRAZALETE TEMPORAL</span>' : '<span style="background:#16a34a; color:#ffffff; font-size:9.5px; font-weight:900; padding:2px 7px; border-radius:4px; letter-spacing:0.5px;">✓ OFICIAL IDENTIFICADO</span>'}
+            <span class="service-name" style="font-size:9.5px; font-weight:700; color:#0284c7;">SERVICIO DE EMERGENCIA · NIVEL III-1</span>
           </div>
         </div>
 
-        <div class="patient-main" style="margin:4px 0;">
-          <div class="patient-name" style="font-size:17px; font-weight:900; color:#0f172a; line-height:1.1; letter-spacing:0.2px;">${nombrePaciente}</div>
-          <div class="patient-details" style="display:flex; gap:14px; font-size:11px; color:#334155; margin-top:4px; font-weight:600; flex-wrap:wrap;">
-            <span><strong>HC:</strong> <span class="hc-badge" style="background:#0f172a; color:#ffffff; padding:1px 6px; border-radius:4px; font-family:monospace; font-size:11px; font-weight:800;">${hcPaciente}${esTemporal ? ' (TEMPORAL)' : ''}</span></span>
-            <span><strong>DOC / DNI:</strong> ${docPaciente}</span>
+        <div class="patient-main" style="margin:2px 0;">
+          <div class="patient-name" style="font-size:16px; font-weight:900; color:#0f172a; line-height:1.15; letter-spacing:0.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${nombrePaciente}</div>
+          <div class="patient-details" style="display:flex; gap:10px; font-size:10.5px; color:#334155; margin-top:3px; font-weight:600; flex-wrap:wrap; line-height:1.3;">
+            <span><strong>HC:</strong> <span class="hc-badge" style="background:#0f172a; color:#ffffff; padding:1px 5px; border-radius:4px; font-family:monospace; font-size:10.5px; font-weight:800;">${hcPaciente}${esRealmenteTemporal ? ' (TEMPORAL)' : ''}</span></span>
+            <span><strong>DOC/DNI:</strong> ${docPaciente}</span>
             <span><strong>EDAD:</strong> ${edadDisplay}</span>
             <span><strong>GÉNERO:</strong> ${generoDisplay}</span>
-            <span><strong>INGRESO:</strong> ${fechaActual} ${horaActual}</span>
+            <span><strong>GS/Rh:</strong> <span style="background:#fee2e2; color:#991b1b; padding:1px 5px; border-radius:3px; font-weight:800;">${gsanDisplay}</span></span>
+            <span><strong>INGRESO:</strong> <span style="font-family:monospace; font-weight:700;">${fechaActual} ${horaActual}</span></span>
             <span><strong>UBICACIÓN:</strong> <strong style="color:#b91c1c;">${ubicacion}</strong></span>
           </div>
         </div>
 
         <!-- SISTEMA DE ALERTAS POR COLOR (METAS DE SEGURIDAD MINSA) -->
-        <div class="risk-bars" style="display:flex; gap:8px; margin-top:4px; align-items:center; flex-wrap:wrap;">
-          <div class="bar-allergy" style="padding:2px 8px; border-radius:4px; font-size:10px; font-weight:900; text-transform:uppercase; ${esTemporal ? 'background:#fef3c7; color:#92400e; border:1px solid #fde68a;' : (alergiaClase === 'danger' ? 'background:#dc2626; color:#ffffff;' : 'background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;')}">
-            ${esTemporal ? '⚠️ ALERGIAS: DESCONOCIDO' : alergiasDisplay}
+        <div class="risk-bars" style="display:flex; gap:6px; margin-top:2px; align-items:center; flex-wrap:wrap;">
+          <div class="bar-allergy" style="padding:2px 8px; border-radius:4px; font-size:9.5px; text-transform:uppercase; ${alergiaBadgeStyle}">
+            ${alergiasDisplay}
           </div>
-          ${esTemporal ? '<div style="background:#7f1d1d; color:#fecaca; font-size:10px; font-weight:900; padding:2px 8px; border-radius:4px;">🚨 PACIENTE EN ESTABILIZACIÓN CRÍTICA — LEY N° 27604</div>' : ''}
-          ${STATE.esAccidenteTransito ? '<div style="background:#ea580c; color:#fff; font-size:10px; font-weight:900; padding:2px 8px; border-radius:4px;">🚗 SOAT ACTIVO</div>' : ''}
+          ${esRealmenteTemporal ? '<div style="background:#7f1d1d; color:#fecaca; font-size:9.5px; font-weight:900; padding:2px 7px; border-radius:4px;">🚨 PACIENTE EN ESTABILIZACIÓN CRÍTICA — LEY N° 27604</div>' : ''}
+          ${STATE.esAccidenteTransito ? '<div style="background:#ea580c; color:#fff; font-size:9.5px; font-weight:900; padding:2px 7px; border-radius:4px;">🚗 SOAT ACTIVO</div>' : ''}
         </div>
       </div>
 
-      <!-- CÓDIGO DE BARRAS DE TRAZABILIDAD -->
-      <div class="wristband-barcode-area" style="width:145px; padding:8px 10px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#fafafa; box-sizing:border-box;">
-        <div class="barcode-lines" style="width:120px; height:48px; background:repeating-linear-gradient(90deg, #000 0, #000 2px, #fff 2px, #fff 4px, #000 4px, #000 7px, #fff 7px, #fff 9px, #000 9px, #000 13px, #fff 13px, #fff 15px); border-radius:2px;"></div>
+      <!-- 3. CÓDIGO DE BARRAS DE TRAZABILIDAD (UBICADO ANTES DE LA ZONA DE CIERRE) -->
+      <div class="wristband-barcode-area" style="width:135px; min-width:135px; padding:6px 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#fafafa; box-sizing:border-box; border-right:2px dashed #94a3b8;">
+        <div class="barcode-lines" style="width:115px; height:46px; background:repeating-linear-gradient(90deg, #000 0, #000 2px, #fff 2px, #fff 4px, #000 4px, #000 7px, #fff 7px, #fff 9px, #000 9px, #000 13px, #fff 13px, #fff 15px); border-radius:2px;"></div>
         <div class="barcode-text" style="font-family:monospace; font-size:9px; color:#334155; margin-top:3px; font-weight:700;">*${hcPaciente}*</div>
-        <div class="seal-minsa" style="font-size:8px; color:#64748b; text-align:center; margin-top:4px;">MINSA · METAS SEGURIDAD</div>
+        <div class="seal-minsa" style="font-size:7.5px; color:#64748b; text-align:center; margin-top:3px; font-weight:700;">MINSA · METAS SEGURIDAD</div>
+      </div>
+
+      <!-- 4. ESPACIO ADECUADO POSTERIOR AL CÓDIGO DE BARRAS (ZONA DE TRASLAPE Y CIERRE ADHESIVO) -->
+      <div class="wristband-closure-area" style="width:185px; min-width:185px; background:#f8fafc; padding:8px 10px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-sizing:border-box;">
+        <div style="font-size:9.5px; font-weight:900; color:#334155; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:4px;">
+          <span>🔒</span> <span>ÁREA DE TRASLAPE</span>
+        </div>
+        <div style="font-size:8px; font-weight:700; color:#64748b; margin-top:3px; line-height:1.2;">
+          ZONA DE CIERRE Y ADHESIVO
+        </div>
+        <div style="margin-top:6px; border:1.5px dashed #0284c7; background:#e0f2fe; border-radius:4px; padding:3px 8px; font-size:8px; font-weight:800; color:#0369a1;">
+          ✂️ PEGAR / TRASLAPAR AQUÍ
+        </div>
+        <div style="font-size:7.5px; color:#94a3b8; margin-top:5px; line-height:1.1;">
+          [ NO CUBRE CÓDIGO DE BARRAS ]
+        </div>
       </div>
     </div>
   `;
@@ -10154,7 +10561,7 @@ function generarBrazaleteEmergencia(modo = 'temporal') {
 function abrirModalBrazalete() {
   const m = document.getElementById('modal_ver_brazalete');
   const modalPreview = document.getElementById('brazalete_modal_preview');
-  if (modalPreview && (!modalPreview.innerHTML || modalPreview.innerHTML.trim().length === 0)) {
+  if (modalPreview) {
     const esTemporal = Boolean(STATE.esNN || !STATE.numDni || STATE.numDni === "NN");
     modalPreview.innerHTML = construirHTMLBrazalete(esTemporal);
   }
@@ -10210,16 +10617,16 @@ function imprimirBrazaleteDirecto() {
           text-align: center;
         }
         @media print {
-          body { background: #ffffff; padding: 0; }
+          body { background: #ffffff; padding: 0; margin: 0; }
           .instruction-box { display: none; }
-          .wristband-strip { box-shadow: none !important; border: 1px solid #000 !important; }
+          .wristband-strip { box-shadow: none !important; border: 1px solid #000 !important; width: 960px !important; margin: 20px auto !important; }
         }
       </style>
     </head>
     <body>
       <div class="instruction-box">
         <strong>PULSERA TÉRMICA OFICIAL DE IDENTIFICACIÓN DE PACIENTE — NTS N° 042 / NTS N° 139-MINSA</strong><br>
-        Imprima y coloque inmediatamente en la muñeca dominante del paciente. No retirar durante su estancia hospitalaria.
+        Imprima y coloque inmediatamente en la muñeca dominante del paciente. El área de traslape posterior evita la obstrucción del código de barras.
       </div>
       ${htmlBrazalete}
     </body>
@@ -10459,7 +10866,13 @@ function validarFarmacovigilanciaAlergias(nombreItem, tipoItem = 'fármaco') {
   return { permitido: true };
 }
 
-function agregarMedicamentoAKardex(med, dosis = '1 dosis', via = 'EV', cum = 'CUM-GEN') {
+function agregarMedicamentoAKardex(med, dosis, via = 'EV', cum = 'CUM-GEN') {
+  const selMedEl = document.getElementById('select_farmacia_catalogo');
+  med = med || (selMedEl ? selMedEl.value : 'Medicamento General');
+  const selDosisEl = document.getElementById('input_dosis_kardex');
+  dosis = dosis || (selDosisEl ? selDosisEl.value : '1 ampolla EV');
+  const selHorarioEl = document.getElementById('input_horario_kardex');
+  const horario = (selHorarioEl ? selHorarioEl.value : 'STAT');
   const check = validarFarmacovigilanciaAlergias(med, 'medicamento');
   if (!check.permitido) {
     alert(`🚨 ALERTA ROJA DE FARMACOVIGILANCIA (NTS N° 139-MINSA):\n\n${check.detalle}\n\nPrescripción BLOQUEADA por seguridad del paciente.`);
@@ -10474,6 +10887,10 @@ function agregarMedicamentoAKardex(med, dosis = '1 dosis', via = 'EV', cum = 'CU
 }
 
 function solicitarEstudioImagen(tipo, cpms = 'CPMS-IMG') {
+  const selImgEl = document.getElementById('select_imagenes_catalogo');
+  tipo = tipo || (selImgEl ? selImgEl.value : 'Radiografía de Emergencia');
+  const selIndEl = document.getElementById('input_indicacion_img');
+  const indicacion = selIndEl ? selIndEl.value : 'Evaluación de Emergencia';
   const check = validarFarmacovigilanciaAlergias(tipo, 'imagen');
   if (!check.permitido) {
     alert(`🚨 ALERTA ROJA DE FARMACOVIGILANCIA (NTS N° 139-MINSA):\n\n${check.detalle}\n\nEstudio radiológico BLOQUEADO.`);
@@ -10513,11 +10930,11 @@ window.activarPanicoShockTrauma = function() {
   if (typeof orig_activarPanicoShockTrauma === 'function') {
     orig_activarPanicoShockTrauma();
   }
-  // Ocupar cama de Shock Trauma ST-01 si está libre
+  // Ocupar 1 sola cama de Shock Trauma libre de forma silenciosa
   if (RECURSOS_HOSPITALARIOS['ST-01'] && RECURSOS_HOSPITALARIOS['ST-01'].estado === 'disponible') {
-    asignarPacienteActualARecurso('ST-01');
+    asignarPacienteActualARecurso('ST-01', null, null, true);
   } else if (RECURSOS_HOSPITALARIOS['ST-02'] && RECURSOS_HOSPITALARIOS['ST-02'].estado === 'disponible') {
-    asignarPacienteActualARecurso('ST-02');
+    asignarPacienteActualARecurso('ST-02', null, null, true);
   }
   // Generar brazalete de emergencia P-I
   generarBrazaleteEmergencia('temporal');
@@ -10529,8 +10946,13 @@ window.activarIngresoDirectoQuirofano = function() {
   if (typeof orig_activarIngresoDirectoQuirofano === 'function') {
     orig_activarIngresoDirectoQuirofano();
   }
-  // Ocupar primer quirófano libre
-  ocuparCamaPorTipo('quirofano');
+  // Ocupar 1 solo quirófano libre
+  for (let id of ['SOP-01', 'SOP-02', 'SOP-03']) {
+    if (RECURSOS_HOSPITALARIOS[id] && RECURSOS_HOSPITALARIOS[id].estado === 'disponible') {
+      asignarPacienteActualARecurso(id, null, null, true);
+      break;
+    }
+  }
   generarBrazaleteEmergencia('temporal');
   if (typeof actualizarWidgetFlotanteCamas === 'function') actualizarWidgetFlotanteCamas();
 };
@@ -11094,3 +11516,972 @@ function toggleVistaClinicaCaja() {
 }
 window.toggleVistaClinicaCaja = toggleVistaClinicaCaja;
 
+
+
+// ==============================================================================
+// GESTIÓN DE LLEGADAS SIMULTÁNEAS Y DESEMPATE CLÍNICO (NTS N° 042 & NTS N° 031)
+// ==============================================================================
+let esLlegadaSimultanea = false;
+let PACIENTES_DESEMPATE_TEMP = [];
+
+function obtenerResumenCamasDisponibles() {
+  const resumen = {
+    shock_trauma: { libres: 0, total: 0, items: [] },
+    quirofano: { libres: 0, total: 0, items: [] },
+    observacion: { libres: 0, total: 0, items: [] },
+    uci: { libres: 0, total: 0, items: [] },
+    urpa: { libres: 0, total: 0, items: [] },
+    totalLibres: 0,
+    totalCamas: 0
+  };
+
+  if (typeof RECURSOS_HOSPITALARIOS !== "undefined") {
+    for (const id in RECURSOS_HOSPITALARIOS) {
+      const rec = RECURSOS_HOSPITALARIOS[id];
+      const tipo = rec.tipo;
+      if (resumen[tipo]) {
+        resumen[tipo].total++;
+        resumen.totalCamas++;
+        if (rec.estado === "disponible") {
+          resumen[tipo].libres++;
+          resumen[tipo].items.push(rec);
+          resumen.totalLibres++;
+        }
+      }
+    }
+  }
+  return resumen;
+}
+
+function abrirModalLlegadasSimultaneasDesempate() {
+  const modal = document.getElementById("modalLlegadasSimultaneasDesempate");
+  if (!modal) return;
+
+  actualizarUIRecursosDesempate();
+  generarPacientesLlegadaSimultanea();
+
+  modal.classList.add("open");
+  modal.style.display = "flex";
+}
+
+function cerrarModalLlegadasSimultaneasDesempate() {
+  const modal = document.getElementById("modalLlegadasSimultaneasDesempate");
+  if (!modal) return;
+  modal.classList.remove("open");
+  modal.style.display = "none";
+}
+
+function actualizarUIRecursosDesempate() {
+  const resumen = obtenerResumenCamasDisponibles();
+  const badgeTotal = document.getElementById("badge_desempate_camas_total");
+  const gridRecursos = document.getElementById("grid_resumen_camas_desempate");
+
+  if (badgeTotal) {
+    badgeTotal.textContent = `🟢 ${resumen.totalLibres} de ${resumen.totalCamas} Camas Libres`;
+    if (resumen.totalLibres <= 2) {
+      badgeTotal.style.background = "#fee2e2";
+      badgeTotal.style.color = "#dc2626";
+      badgeTotal.style.borderColor = "#fca5a5";
+    } else {
+      badgeTotal.style.background = "#dcfce7";
+      badgeTotal.style.color = "#15803d";
+      badgeTotal.style.borderColor = "#86efac";
+    }
+  }
+
+  if (gridRecursos) {
+    gridRecursos.innerHTML = `
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:0.75rem;">
+        <div style="color:#64748b; font-weight:700;">⚡ Shock Trauma</div>
+        <div style="font-size:1.1rem; font-weight:900; color:#dc2626;">${resumen.shock_trauma.libres} / ${resumen.shock_trauma.total}</div>
+        <div style="color:#94a3b8; font-size:0.68rem;">P-I Vital Inmediato</div>
+      </div>
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:0.75rem;">
+        <div style="color:#64748b; font-weight:700;">🔪 Quirófano SOP</div>
+        <div style="font-size:1.1rem; font-weight:900; color:#ea580c;">${resumen.quirofano.libres} / ${resumen.quirofano.total}</div>
+        <div style="color:#94a3b8; font-size:0.68rem;">Cirugía de Emergencia</div>
+      </div>
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:0.75rem;">
+        <div style="color:#64748b; font-weight:700;">🏥 UCI Adultos</div>
+        <div style="font-size:1.1rem; font-weight:900; color:#7c3aed;">${resumen.uci.libres} / ${resumen.uci.total}</div>
+        <div style="color:#94a3b8; font-size:0.68rem;">Soporte Ventilatorio</div>
+      </div>
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:0.75rem;">
+        <div style="color:#64748b; font-weight:700;">🛏️ Observación</div>
+        <div style="font-size:1.1rem; font-weight:900; color:#0284c7;">${resumen.observacion.libres} / ${resumen.observacion.total}</div>
+        <div style="color:#94a3b8; font-size:0.68rem;">Corta estancia (≤12h)</div>
+      </div>
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:0.75rem;">
+        <div style="color:#64748b; font-weight:700;">🛌 URPA Recup.</div>
+        <div style="font-size:1.1rem; font-weight:900; color:#059669;">${resumen.urpa.libres} / ${resumen.urpa.total}</div>
+        <div style="color:#94a3b8; font-size:0.68rem;">Post-quirúrgico</div>
+      </div>
+    `;
+  }
+}
+
+function verificarParametrosCamasVsPacientes() {
+  const inputCant = document.getElementById("input_cant_px_simultaneos");
+  const alerta = document.getElementById("alerta_saturacion_desempate");
+  if (!inputCant || !alerta) return;
+
+  const cant = parseInt(inputCant.value, 10) || 2;
+  const resumen = obtenerResumenCamasDisponibles();
+
+  if (cant > resumen.totalLibres) {
+    alerta.style.display = "block";
+    alerta.innerHTML = `
+      <strong>⚠️ ALERTA DE SATURACIÓN HOSPITALARIA (NTS N° 042-MINSA):</strong>
+      Ingresan <strong>${cant} pacientes</strong> simultáneamente pero solo hay <strong>${resumen.totalLibres} camas libres</strong> en el establecimiento.
+      El sistema aplicará estrictamente el <strong>Algoritmo de Desempate Fisiológico ABCDE</strong> para asignar las camas a los casos más graves; los pacientes excedentes serán programados para <strong>Boarding en Emergencia</strong> o <strong>Derivación REFCON</strong>.
+    `;
+  } else {
+    alerta.style.display = "none";
+  }
+}
+
+function calcularScorePrelacionParaCaso(c) {
+  const spo2 = c.vitals.spo2 || 98;
+  const glasgow = c.vitals.glasgow || 15;
+  const fc = c.vitals.fc || 80;
+  const pas = c.vitals.pas || 120;
+  const eva = c.vitals.eva || 0;
+  const relFcPas = pas > 0 ? (fc / pas) : 1;
+
+  let basePrio = 0;
+  if (c.prioridad === 'I') basePrio = 500;
+  else if (c.prioridad === 'II') basePrio = 300;
+  else if (c.prioridad === 'III') basePrio = 150;
+  else if (c.prioridad === 'IV') basePrio = 50;
+
+  let fisiologico = ((100 - spo2) * 1.5) + ((15 - glasgow) * 3) + (relFcPas * 15) + eva;
+
+  let bonif = 0;
+  if (c.esGestante) bonif += 10;
+  if (c.tieneCodigo) bonif += 6;
+  if (c.edad < 14 || c.edad >= 65) bonif += 3;
+
+  return Math.round((basePrio + fisiologico + bonif) * 10) / 10;
+}
+
+function generarPacientesLlegadaSimultanea() {
+  verificarParametrosCamasVsPacientes();
+  const inputCant = document.getElementById("input_cant_px_simultaneos");
+  const cant = Math.max(2, Math.min(15, parseInt(inputCant?.value, 10) || 3));
+
+  const bancoCasos = [
+    {
+      identificador: "PX-SIM-01",
+      nombre: "NN MASCULINO (~35a) — Politraumatizado Choque",
+      dni: "NN",
+      edad: 35,
+      sexo: "M",
+      esNN: true,
+      motivo: "Accidente vehicular alta energía, volet costal, shock hipovolémico, pulso débil.",
+      modalidad: "Ambulancia SAMU",
+      vitals: { spo2: 83, fc: 140, pas: 72, pad: 42, fr: 32, temp: 35.6, glasgow: 8, glucosa: 80, eva: 0 },
+      esGestante: false,
+      tieneCodigo: true,
+      prioridadDeseada: "I"
+    },
+    {
+      identificador: "PX-SIM-02",
+      nombre: "JUAN CARLOS BENITEZ SOTO (58a)",
+      dni: "10874523",
+      edad: 58,
+      sexo: "M",
+      esNN: false,
+      motivo: "Dolor precordial opresivo irradiado a mandíbula >30 min, diaforesis profusa, crisis hipertensiva.",
+      modalidad: "Vehículo Particular",
+      vitals: { spo2: 94, fc: 106, pas: 184, pad: 112, fr: 22, temp: 36.8, glasgow: 15, glucosa: 135, eva: 9 },
+      esGestante: false,
+      tieneCodigo: true,
+      prioridadDeseada: "II"
+    },
+    {
+      identificador: "PX-SIM-03",
+      nombre: "MARIA ELENA ROJAS VILCHEZ (28a) — Gestante",
+      dni: "72458901",
+      edad: 28,
+      sexo: "F",
+      esNN: false,
+      motivo: "Gestante 36 semanas, cefalea intensa, fotopsias, escotomas, PA crítica 168/112 mmHg (Clave Azul).",
+      modalidad: "Patrullero PNP",
+      vitals: { spo2: 96, fc: 98, pas: 168, pad: 112, fr: 20, temp: 37.1, glasgow: 15, glucosa: 95, eva: 8 },
+      esGestante: true,
+      tieneCodigo: true,
+      prioridadDeseada: "I"
+    },
+    {
+      identificador: "PX-SIM-04",
+      nombre: "ROBERTO GUTIERREZ PAZ (46a)",
+      dni: "41987654",
+      edad: 46,
+      sexo: "M",
+      esNN: false,
+      motivo: "Apendicitis aguda con 48h de evolución, fiebre, signo de rebote (Blumberg) positivo, dolor cólico 8/10.",
+      modalidad: "A pie",
+      vitals: { spo2: 97, fc: 102, pas: 130, pad: 85, fr: 20, temp: 38.6, glasgow: 15, glucosa: 105, eva: 8 },
+      esGestante: false,
+      tieneCodigo: false,
+      prioridadDeseada: "II"
+    },
+    {
+      identificador: "PX-SIM-05",
+      nombre: "TERESA CONDORI MAMANI (74a)",
+      dni: "08451234",
+      edad: 74,
+      sexo: "F",
+      esNN: false,
+      motivo: "Deshidratación moderada secundaria a GECA, intolerancia oral, debilidad generalizada.",
+      modalidad: "A pie / Silla de Ruedas",
+      vitals: { spo2: 96, fc: 88, pas: 110, pad: 68, fr: 18, temp: 37.4, glasgow: 15, glucosa: 118, eva: 4 },
+      esGestante: false,
+      tieneCodigo: false,
+      prioridadDeseada: "III"
+    },
+    {
+      identificador: "PX-SIM-06",
+      nombre: "CARMEN SILVA PRADO (33a)",
+      dni: "45678912",
+      edad: 33,
+      sexo: "F",
+      esNN: false,
+      motivo: "Cólico nefrítico izquierdo agudo irradiado a flanco, náuseas, dolor severo 7/10.",
+      modalidad: "Taxi",
+      vitals: { spo2: 98, fc: 90, pas: 135, pad: 86, fr: 18, temp: 36.9, glasgow: 15, glucosa: 92, eva: 7 },
+      esGestante: false,
+      tieneCodigo: false,
+      prioridadDeseada: "III"
+    },
+    {
+      identificador: "PX-SIM-07",
+      nombre: "LUCAS MENDOZA SANDOVAL (9a)",
+      dni: "78912345",
+      edad: 9,
+      sexo: "M",
+      esNN: false,
+      motivo: "Herida cortocontusa superficial en ceja izquierda por caída accidental, hemostasia lograda.",
+      modalidad: "A pie con acompañante",
+      vitals: { spo2: 99, fc: 86, pas: 105, pad: 65, fr: 18, temp: 36.7, glasgow: 15, glucosa: 90, eva: 3 },
+      esGestante: false,
+      tieneCodigo: false,
+      prioridadDeseada: "IV"
+    }
+  ];
+
+  PACIENTES_DESEMPATE_TEMP = [];
+
+  for (let i = 0; i < cant; i++) {
+    const plantilla = bancoCasos[i % bancoCasos.length];
+    const copia = JSON.parse(JSON.stringify(plantilla));
+    copia.numOrden = i + 1;
+    copia.identificador = `SIM-${String(i + 1).padStart(2, "0")}-${copia.esNN ? "NN" : copia.dni.slice(-4)}`;
+
+    if (typeof evaluarTriajeEstandar === "function") {
+      const evalClinica = evaluarTriajeEstandar({
+        fr: copia.vitals.fr,
+        spo2: copia.vitals.spo2,
+        pas: copia.vitals.pas,
+        pad: copia.vitals.pad,
+        fc: copia.vitals.fc,
+        temp: copia.vitals.temp,
+        glasgow: copia.vitals.glasgow,
+        glucosa: copia.vitals.glucosa,
+        eva: copia.vitals.eva,
+        esGestante: copia.esGestante,
+        codigoInfarto: copia.tieneCodigo && copia.prioridadDeseada === "II",
+        esPediatrico: copia.edad < 14,
+        edad: copia.edad
+      });
+      copia.prioridad = evalClinica.prioridad || copia.prioridadDeseada;
+    } else {
+      copia.prioridad = copia.prioridadDeseada;
+    }
+
+    copia.scorePrelacion = calcularScorePrelacionParaCaso(copia);
+    copia.camaAsignadaId = "";
+    copia.camaAsignadaNombre = "";
+    PACIENTES_DESEMPATE_TEMP.push(copia);
+  }
+
+  PACIENTES_DESEMPATE_TEMP.sort((a, b) => b.scorePrelacion - a.scorePrelacion);
+  renderizarListaPacientesDesempate();
+}
+
+function renderizarListaPacientesDesempate() {
+  const cont = document.getElementById("contenedor_lista_pacientes_desempate");
+  if (!cont) return;
+
+  const prioColors = {
+    "I": { bg: "#fee2e2", text: "#991b1b", border: "#f87171", label: "P-I ROJO" },
+    "II": { bg: "#ffedd5", text: "#9a3412", border: "#fb923c", label: "P-II NARANJA" },
+    "III": { bg: "#fef9c3", text: "#854d0e", border: "#facc15", label: "P-III AMARILLO" },
+    "IV": { bg: "#dcfce7", text: "#166534", border: "#4ade80", label: "P-IV VERDE" },
+    "V": { bg: "#e0f2fe", text: "#075985", border: "#38bdf8", label: "P-V AZUL" }
+  };
+
+  let opcionesCamasHtml = `<option value="">(Seleccione Cama o Destino)</option>`;
+  if (typeof RECURSOS_HOSPITALARIOS !== "undefined") {
+    opcionesCamasHtml += `<optgroup label="⚡ Shock Trauma (P-I Vital)">`;
+    for (let id of ["ST-01", "ST-02"]) {
+      const r = RECURSOS_HOSPITALARIOS[id];
+      if (r) opcionesCamasHtml += `<option value="${r.id}">${r.nombre} [${r.estado === 'disponible' ? '🟢 Libre' : '🔴 Ocupada'}]</option>`;
+    }
+    opcionesCamasHtml += `</optgroup>`;
+
+    opcionesCamasHtml += `<optgroup label="🔪 Quirófanos SOP (Cirugía)">`;
+    for (let id of ["SOP-01", "SOP-02", "SOP-03"]) {
+      const r = RECURSOS_HOSPITALARIOS[id];
+      if (r) opcionesCamasHtml += `<option value="${r.id}">${r.nombre} [${r.estado === 'disponible' ? '🟢 Libre' : '🔴 Ocupada'}]</option>`;
+    }
+    opcionesCamasHtml += `</optgroup>`;
+
+    opcionesCamasHtml += `<optgroup label="🏥 UCI / UCIN (Cuidados Críticos)">`;
+    for (let id of ["UCI-01", "UCI-02"]) {
+      const r = RECURSOS_HOSPITALARIOS[id];
+      if (r) opcionesCamasHtml += `<option value="${r.id}">${r.nombre} [${r.estado === 'disponible' ? '🟢 Libre' : '🔴 Ocupada'}]</option>`;
+    }
+    opcionesCamasHtml += `</optgroup>`;
+
+    opcionesCamasHtml += `<optgroup label="🛏️ Sala de Observación (Estancia Corta)">`;
+    for (let id of ["OBS-01", "OBS-02", "OBS-03", "OBS-04", "OBS-05", "OBS-06"]) {
+      const r = RECURSOS_HOSPITALARIOS[id];
+      if (r) opcionesCamasHtml += `<option value="${r.id}">${r.nombre} [${r.estado === 'disponible' ? '🟢 Libre' : '🔴 Ocupada'}]</option>`;
+    }
+    opcionesCamasHtml += `</optgroup>`;
+
+    opcionesCamasHtml += `<optgroup label="🛌 URPA (Recuperación)">`;
+    for (let id of ["URPA-01", "URPA-02"]) {
+      const r = RECURSOS_HOSPITALARIOS[id];
+      if (r) opcionesCamasHtml += `<option value="${r.id}">${r.nombre} [${r.estado === 'disponible' ? '🟢 Libre' : '🔴 Ocupada'}]</option>`;
+    }
+    opcionesCamasHtml += `</optgroup>`;
+  }
+  opcionesCamasHtml += `<optgroup label="⚠️ Contingencia por Saturación">
+    <option value="REFCON">🚑 Derivación Inmediata REFCON (Stock Cero)</option>
+    <option value="BOARDING">🏥 Boarding en Pasillo / Camilla de Transporte</option>
+  </optgroup>`;
+
+  cont.innerHTML = "";
+
+  PACIENTES_DESEMPATE_TEMP.forEach((p, idx) => {
+    const cfg = prioColors[p.prioridad] || prioColors["III"];
+    const card = document.createElement("div");
+    card.style.cssText = `background:#ffffff; border:1.5px solid ${cfg.border}; border-left:6px solid ${cfg.border}; border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:8px; box-shadow:0 1px 4px rgba(0,0,0,0.05);`;
+
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="background:${cfg.bg}; color:${cfg.text}; font-weight:900; font-size:0.75rem; padding:2px 8px; border-radius:6px; border:1px solid ${cfg.border};">
+            ${cfg.label}
+          </span>
+          <strong style="font-size:0.86rem; color:#0f172a;">${p.nombre}</strong>
+          <span style="font-size:0.72rem; color:#64748b;">(${p.sexo}, ${p.edad}a · ${p.modalidad})</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="background:#f1f5f9; color:#0f172a; font-weight:800; font-size:0.75rem; padding:2px 8px; border-radius:6px; border:1px solid #cbd5e1;" title="Puntaje matemático de prelación">
+            🧮 Score Desempate: <strong style="color:#0369a1;">${p.scorePrelacion} pts</strong>
+          </span>
+          <span style="font-size:0.72rem; color:#64748b; font-weight:700;">#${idx + 1} en Prelación</span>
+        </div>
+      </div>
+
+      <div style="font-size:0.78rem; color:#334155;">
+        <strong>Motivo de Consulta:</strong> ${p.motivo}
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; background:#f8fafc; padding:8px 10px; border-radius:8px; border:1px solid #f1f5f9;">
+        <div style="font-size:0.74rem; color:#475569; display:flex; gap:10px; flex-wrap:wrap;">
+          <span>SpO₂: <strong>${p.vitals.spo2}%</strong></span>
+          <span>FC: <strong>${p.vitals.fc} lpm</strong></span>
+          <span>PA: <strong>${p.vitals.pas}/${p.vitals.pad}</strong></span>
+          <span>FR: <strong>${p.vitals.fr} rpm</strong></span>
+          <span>Glasgow: <strong>${p.vitals.glasgow}/15</strong></span>
+          <span>EVA: <strong>${p.vitals.eva}/10</strong></span>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px; min-width:260px;">
+          <label style="font-size:0.74rem; font-weight:800; color:#0f172a; white-space:nowrap;">Asignar Cama:</label>
+          <select id="select_cama_sim_${idx}" class="input-full" style="padding:4px 8px; font-size:0.76rem; font-weight:700; border-radius:6px;" onchange="cambiarCamaPacienteDesempateManual(${idx}, this.value)">
+            ${opcionesCamasHtml}
+          </select>
+        </div>
+      </div>
+    `;
+
+    cont.appendChild(card);
+
+    if (p.camaAsignadaId) {
+      setTimeout(() => {
+        const sel = document.getElementById(`select_cama_sim_${idx}`);
+        if (sel) sel.value = p.camaAsignadaId;
+      }, 10);
+    }
+  });
+}
+
+function cambiarCamaPacienteDesempateManual(idx, camaId) {
+  if (!PACIENTES_DESEMPATE_TEMP[idx]) return;
+  PACIENTES_DESEMPATE_TEMP[idx].camaAsignadaId = camaId;
+  if (camaId === "REFCON") {
+    PACIENTES_DESEMPATE_TEMP[idx].camaAsignadaNombre = "Derivación REFCON (Saturación)";
+  } else if (camaId === "BOARDING") {
+    PACIENTES_DESEMPATE_TEMP[idx].camaAsignadaNombre = "Boarding en Camilla";
+  } else if (typeof RECURSOS_HOSPITALARIOS !== "undefined" && RECURSOS_HOSPITALARIOS[camaId]) {
+    PACIENTES_DESEMPATE_TEMP[idx].camaAsignadaNombre = RECURSOS_HOSPITALARIOS[camaId].nombre;
+  }
+}
+
+function asignarTodosACamaDesempate() {
+  const camasAsignadasSet = new Set();
+
+  PACIENTES_DESEMPATE_TEMP.forEach((p, idx) => {
+    let camaElegidaId = null;
+
+    if (p.prioridad === 'I') {
+      if (RECURSOS_HOSPITALARIOS['ST-01'] && RECURSOS_HOSPITALARIOS['ST-01'].estado === 'disponible' && !camasAsignadasSet.has('ST-01')) {
+        camaElegidaId = 'ST-01';
+      } else if (RECURSOS_HOSPITALARIOS['ST-02'] && RECURSOS_HOSPITALARIOS['ST-02'].estado === 'disponible' && !camasAsignadasSet.has('ST-02')) {
+        camaElegidaId = 'ST-02';
+      } else if (RECURSOS_HOSPITALARIOS['SOP-01'] && RECURSOS_HOSPITALARIOS['SOP-01'].estado === 'disponible' && !camasAsignadasSet.has('SOP-01')) {
+        camaElegidaId = 'SOP-01';
+      } else if (RECURSOS_HOSPITALARIOS['UCI-01'] && RECURSOS_HOSPITALARIOS['UCI-01'].estado === 'disponible' && !camasAsignadasSet.has('UCI-01')) {
+        camaElegidaId = 'UCI-01';
+      } else {
+        camaElegidaId = 'BOARDING';
+      }
+    } else if (p.prioridad === 'II') {
+      if (p.motivo.toLowerCase().includes("apendic") || p.motivo.toLowerCase().includes("quirúrg")) {
+        if (RECURSOS_HOSPITALARIOS['SOP-02'] && RECURSOS_HOSPITALARIOS['SOP-02'].estado === 'disponible' && !camasAsignadasSet.has('SOP-02')) {
+          camaElegidaId = 'SOP-02';
+        }
+      }
+      if (!camaElegidaId) {
+        for (let id of ['OBS-01', 'OBS-02', 'OBS-03', 'OBS-04', 'OBS-05', 'OBS-06']) {
+          if (RECURSOS_HOSPITALARIOS[id] && RECURSOS_HOSPITALARIOS[id].estado === 'disponible' && !camasAsignadasSet.has(id)) {
+            camaElegidaId = id;
+            break;
+          }
+        }
+      }
+      if (!camaElegidaId) camaElegidaId = 'REFCON';
+    } else {
+      for (let id of ['OBS-01', 'OBS-02', 'OBS-03', 'OBS-04', 'OBS-05', 'OBS-06']) {
+        if (RECURSOS_HOSPITALARIOS[id] && RECURSOS_HOSPITALARIOS[id].estado === 'disponible' && !camasAsignadasSet.has(id)) {
+          camaElegidaId = id;
+          break;
+        }
+      }
+      if (!camaElegidaId) camaElegidaId = 'REFCON';
+    }
+
+    if (camaElegidaId && camaElegidaId !== 'REFCON' && camaElegidaId !== 'BOARDING') {
+      camasAsignadasSet.add(camaElegidaId);
+    }
+
+    cambiarCamaPacienteDesempateManual(idx, camaElegidaId);
+    const sel = document.getElementById(`select_cama_sim_${idx}`);
+    if (sel) sel.value = camaElegidaId;
+  });
+
+  mostrarToastCola(`⚡ <strong>Camas Asignadas Automáticamente:</strong> Criterio de desempate ABCDE aplicado a ${PACIENTES_DESEMPATE_TEMP.length} pacientes.`);
+}
+
+function confirmarLlegadaSimultaneaAlTablero() {
+  if (PACIENTES_DESEMPATE_TEMP.length === 0) {
+    alert("No hay pacientes para ingresar.");
+    return;
+  }
+
+  guardarEstadoPacienteActivo();
+
+  PACIENTES_DESEMPATE_TEMP.forEach((p, idx) => {
+    const sel = document.getElementById(`select_cama_sim_${idx}`);
+    if (sel && sel.value) {
+      cambiarCamaPacienteDesempateManual(idx, sel.value);
+    }
+  });
+
+  const nuevosPacientesCola = [];
+
+  PACIENTES_DESEMPATE_TEMP.forEach(p => {
+    if (p.camaAsignadaId && RECURSOS_HOSPITALARIOS[p.camaAsignadaId]) {
+      const rec = RECURSOS_HOSPITALARIOS[p.camaAsignadaId];
+      rec.estado = "ocupada";
+      rec.inicioMs = Date.now();
+      rec.finMs = rec.inicioMs + (rec.duracionHoras * 3600 * 1000);
+      rec.paciente = {
+        nombre: p.nombre,
+        identificador: p.identificador,
+        dni: p.dni,
+        prioridad: p.prioridad,
+        motivo: p.motivo
+      };
+    }
+
+    const reg = crearRegistroPaciente({
+      identificador: p.identificador,
+      nombre: p.nombre,
+      dni: p.dni,
+      edad: p.edad,
+      sexo: p.sexo,
+      modalidad: p.modalidad,
+      prioridad: p.prioridad,
+      motivo: p.motivo,
+      estadoAtencion: p.camaAsignadaNombre ? `🛏️ ${p.camaAsignadaNombre}` : "En Espera",
+      camaNombre: p.camaAsignadaNombre || null,
+      camaId: p.camaAsignadaId || null,
+      esNN: p.esNN,
+      formSnapshot: {
+        ident_full: p.nombre,
+        dni_reniec_input: p.dni,
+        motivo_full: p.motivo,
+        spo2_full: p.vitals.spo2,
+        fc_full: p.vitals.fc,
+        pas_full: p.vitals.pas,
+        pad_full: p.vitals.pad,
+        fr_full: p.vitals.fr,
+        temp_full: p.vitals.temp,
+        glasgow_full: p.vitals.glasgow,
+        glucosa_full: p.vitals.glucosa,
+        eva_full: p.vitals.eva,
+        eva_range: p.vitals.eva,
+        edad_full: p.edad,
+        sexo_full: p.sexo
+      }
+    });
+
+    nuevosPacientesCola.push(reg);
+  });
+
+  PACIENTES_COLA = nuevosPacientesCola;
+  esLlegadaSimultanea = true;
+
+  const primerPx = PACIENTES_COLA[0];
+  pacienteActivoId = primerPx.id;
+  cambiarPacienteActivo(primerPx.id);
+
+  cerrarModalLlegadasSimultaneasDesempate();
+
+  renderizarTableroColaPacientes();
+  if (typeof renderizarTableroCamasYQuirofanos === "function") renderizarTableroCamasYQuirofanos();
+  if (typeof actualizarWidgetFlotanteCamas === "function") actualizarWidgetFlotanteCamas();
+
+  mostrarToastCola(`⚖️ <strong>Llegada Simultánea Confirmada:</strong> ${PACIENTES_COLA.length} pacientes ingresados con desempate ABCDE. Puede navegar entre ellos en el tablero.`);
+}
+
+window.abrirModalLlegadasSimultaneasDesempate = abrirModalLlegadasSimultaneasDesempate;
+window.cerrarModalLlegadasSimultaneasDesempate = cerrarModalLlegadasSimultaneasDesempate;
+window.generarPacientesLlegadaSimultanea = generarPacientesLlegadaSimultanea;
+window.asignarTodosACamaDesempate = asignarTodosACamaDesempate;
+window.confirmarLlegadaSimultaneaAlTablero = confirmarLlegadaSimultaneaAlTablero;
+window.cambiarCamaPacienteDesempateManual = cambiarCamaPacienteDesempateManual;
+window.obtenerResumenCamasDisponibles = obtenerResumenCamasDisponibles;
+window.verificarParametrosCamasVsPacientes = verificarParametrosCamasVsPacientes;
+
+
+
+// ==============================================================================
+// GESTIÓN DE MÉDICO DE TURNO, CONSENTIMIENTO INFORMADO & ROLES (NTS 042 / NTS 139)
+// ==============================================================================
+
+// --- ASIGNACIÓN DE MÉDICO DE TURNO CON SINCRONIZACIÓN TOTAL ---
+function actualizarMedicoAsignado(medico) {
+  if (!medico) return;
+  STATE.medicoTratante = medico;
+
+  // 1. Sincronizar en el paciente activo de la cola
+  const pxActivo = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
+  if (pxActivo) {
+    pxActivo.medico = medico;
+    if (pxActivo.stateSnapshot) {
+      pxActivo.stateSnapshot.medicoTratante = medico;
+    }
+  }
+
+  // 2. Si tiene cama asignada, actualizar en RECURSOS_HOSPITALARIOS
+  if (STATE.camaAsignadaId && typeof RECURSOS_HOSPITALARIOS !== "undefined" && RECURSOS_HOSPITALARIOS[STATE.camaAsignadaId]) {
+    if (RECURSOS_HOSPITALARIOS[STATE.camaAsignadaId].paciente) {
+      RECURSOS_HOSPITALARIOS[STATE.camaAsignadaId].paciente.medico = medico;
+    }
+  }
+
+  // 3. Sincronizar selectores del DOM
+  const selMed = document.getElementById("medico_responsable_select");
+  if (selMed && selMed.value !== medico) selMed.value = medico;
+  const elAdendaMed = document.getElementById("adenda_legal_medico");
+  if (elAdendaMed) elAdendaMed.value = medico;
+
+  // 4. Re-renderizar tablero de cola y stock de camas
+  renderizarTableroColaPacientes();
+  if (typeof renderizarTableroCamasYQuirofanos === "function") {
+    renderizarTableroCamasYQuirofanos();
+  }
+  if (typeof actualizarWidgetFlotanteCamas === "function") {
+    actualizarWidgetFlotanteCamas();
+  }
+
+  // 5. Registro inmutable de auditoría
+  const nomPx = STATE.nombreReniec || STATE.identificador || "Paciente";
+  registrarLogAuditoria("Módulo 4", "ASIGNAR_MEDICO", `Médico de Turno asignado: ${medico} — Paciente: ${nomPx}`);
+  if (typeof mostrarToastCola === "function") {
+    mostrarToastCola(`👨‍⚕️ <strong>Médico Asignado:</strong> ${medico} al paciente <strong>${nomPx}</strong>`);
+  }
+}
+window.actualizarMedicoAsignado = actualizarMedicoAsignado;
+
+function asignarMedicoDisponible() {
+  const selMed = document.getElementById("medico_responsable_select");
+  if (!selMed) return;
+
+  const prio = STATE.prioridad || "I";
+  let medicoSugerido = selMed.options[0]?.value;
+
+  if (prio === "I") {
+    medicoSugerido = selMed.options[0]?.value; // Emergenciólogo
+  } else if (prio === "II") {
+    if (STATE.codigoInfarto || (STATE.pasSistolica && STATE.pasSistolica >= 180)) {
+      medicoSugerido = selMed.options[2]?.value || selMed.options[0]?.value; // Internista
+    } else {
+      medicoSugerido = selMed.options[1]?.value || selMed.options[0]?.value; // Cirujano
+    }
+  } else if (STATE.esPediatrico) {
+    medicoSugerido = selMed.options[3]?.value || selMed.options[0]?.value; // Pediatra
+  } else if (STATE.claveObstetrica && STATE.claveObstetrica !== "ninguna") {
+    medicoSugerido = selMed.options[4]?.value || selMed.options[0]?.value; // Gineco-Obstetra
+  } else {
+    medicoSugerido = selMed.value || selMed.options[0]?.value;
+  }
+
+  selMed.value = medicoSugerido;
+  actualizarMedicoAsignado(medicoSugerido);
+}
+window.asignarMedicoDisponible = asignarMedicoDisponible;
+
+// --- GESTIÓN DE CONSENTIMIENTO INFORMADO MÉDICO POR LEY ---
+function actualizarCondicionConsentimiento(cond) {
+  STATE.condicionConsentimiento = cond;
+  const banner = document.getElementById("consentimiento_alerta_banner");
+  if (!banner) return;
+
+  if (cond === "exonerado_emergencia") {
+    banner.style.background = "#fff1f2";
+    banner.style.borderColor = "#fecdd3";
+    banner.style.color = "#9f1239";
+    banner.innerHTML = `<strong>⚡ EXCEPCIÓN LEGAL DE EMERGENCIA VITAL (Art. 4° Ley N° 26842 & Ley N° 27604):</strong> Paciente en estado crítico de inconsciencia o sin familiar. El Médico Asistencial tratante actúa de oficio sin condicionar a firma previa para salvar la vida o prevenir secuelas graves. Se suscribe informe médico de emergencia en la Historia Clínica.`;
+  } else if (cond === "representante_legal") {
+    banner.style.background = "#fefce8";
+    banner.style.borderColor = "#fef08a";
+    banner.style.color = "#854d0e";
+    banner.innerHTML = `<strong>👥 REPRESENTACIÓN LEGAL (Ley N° 29414):</strong> Paciente menor de edad (<18 años) o con incapacidad de discernimiento. Otorga y suscribe el familiar directo (cónyuge, conviviente, padres, hijos mayores) o tutor legal con DNI acreditado.`;
+  } else if (cond === "disentimiento_rechazo") {
+    banner.style.background = "#fef2f2";
+    banner.style.borderColor = "#ef4444";
+    banner.style.color = "#b91c1c";
+    banner.innerHTML = `<strong>❌ DISENTIMIENTO INFORMADO / RECHAZO DE TRATAMIENTO (Art. 15° Ley N° 26842):</strong> El paciente o deudo legal rehúsa el procedimiento propuesto tras ser informado de los riesgos letales o secuelas. Obligatorio firmar acta de exoneración de responsabilidad médica.`;
+  } else {
+    banner.style.background = "#eff6ff";
+    banner.style.borderColor = "#bfdbfe";
+    banner.style.color = "#1e40af";
+    banner.innerHTML = `<strong>ℹ️ RÉGIMEN ORDINARIO:</strong> Paciente lúcido y consciente (≥18 años) en pleno uso de sus facultades mentales. Suscribe el consentimiento de forma libre e informada tras comprender objetivos, riesgos y alternativas.`;
+  }
+
+  registrarLogAuditoria("Módulo 4", "CAMBIO_REGIMEN_CONSENTIMIENTO", `Régimen: ${cond}`);
+}
+window.actualizarCondicionConsentimiento = actualizarCondicionConsentimiento;
+
+function toggleConsentimientoFirmado(checked) {
+  STATE.consentimientoAdjuntoHC = Boolean(checked);
+  const pxActivo = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
+  if (pxActivo && pxActivo.stateSnapshot) {
+    pxActivo.stateSnapshot.consentimientoAdjuntoHC = Boolean(checked);
+  }
+  const nomPx = STATE.nombreReniec || STATE.identificador || "Paciente";
+  registrarLogAuditoria("Módulo 4", "CONSENTIMIENTO_ADJUNTO_HC", `Consentimiento firmado adjunto a HC: ${checked} — Paciente: ${nomPx}`);
+  if (typeof mostrarToastCola === "function") {
+    mostrarToastCola(checked
+      ? `📑 <strong>Consentimiento Informado:</strong> Documento firmado adjuntado a la Historia Clínica de ${nomPx}.`
+      : `⚠️ <strong>Consentimiento Informado:</strong> Pendiente de firma y adjunto físico a HC.`);
+  }
+}
+window.toggleConsentimientoFirmado = toggleConsentimientoFirmado;
+
+function construirHTMLDocumentoConsentimiento() {
+  const nomPx = (STATE.nombreReniec || STATE.identificador || "PACIENTE POR IDENTIFICAR").toUpperCase();
+  const dniPx = STATE.numDni || "S/D (INDOCUMENTADO)";
+  const hcPx = STATE.historiaClinica || "HC-PROVISIONAL";
+  const edadPx = STATE.edad ? `${STATE.edad} años` : "Desconocido";
+  const sexoPx = STATE.sexo || "Desconocido";
+  const diagCIE10 = document.getElementById("cie10_select")?.value || STATE.cie10 || "Evaluación Clínica de Emergencia";
+  const medResponsable = STATE.medicoTratante || "Médico Emergenciólogo de Guardia (CMP 0001)";
+  const procedimientoSel = document.getElementById("sel_procedimiento_consentimiento")?.value || "Atención Médica y Reanimación en Emergencia";
+  const condicionSel = document.getElementById("sel_condicion_consentimiento")?.value || "paciente_lucido";
+  const fechaHoy = new Date().toLocaleDateString('es-PE');
+  const horaHoy = STATE.horaLlegada || new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+
+  let textoDeclaracion = "";
+  if (condicionSel === "exonerado_emergencia") {
+    textoDeclaracion = `
+      <div style="background:#fff1f2; border:1.5px solid #fecdd3; padding:12px; border-radius:6px; font-size:11px; color:#9f1239; margin-bottom:14px; line-height:1.45;">
+        <strong>CERTIFICACIÓN MÉDICA DE EXCEPCIÓN LEGAL POR EMERGENCIA VITAL (ART. 4° LEY N° 26842 & LEY N° 27604):</strong><br>
+        Se deja constancia expresa de que el/la paciente ingresa en estado de riesgo vital inminente / alteración del sensorio sin presencia de familiar responsable. En estricto cumplimiento de la Ley General de Salud, el equipo médico asistencial procede de oficio a ejecutar las maniobras médico-quirúrgicas y de soporte vital indispensable para preservar la vida, exonerando la suscripción previa de consentimiento.
+      </div>
+    `;
+  } else if (condicionSel === "representante_legal") {
+    textoDeclaracion = `
+      <div style="font-size:11px; color:#1e293b; line-height:1.5; margin-bottom:14px;">
+        Yo, en calidad de <strong>REPRESENTANTE LEGAL / FAMILIAR DIRECTO</strong> del paciente antes identificado, declaro que el Médico Tratante me ha explicado en lenguaje claro y comprensible el diagnóstico presuntivo, la naturaleza del procedimiento propuesto, sus objetivos, beneficios esperados, riesgos potenciales y alternativas terapéuticas. En consecuencia, <strong>OTORGO MI CONSENTIMIENTO LIBRE E INFORMADO</strong> para la realización de dicho procedimiento en el Servicio de Emergencia.
+      </div>
+    `;
+  } else if (condicionSel === "disentimiento_rechazo") {
+    textoDeclaracion = `
+      <div style="background:#fef2f2; border:1.5px solid #ef4444; padding:12px; border-radius:6px; font-size:11px; color:#b91c1c; margin-bottom:14px; line-height:1.45;">
+        <strong>ACTA DE DISENTIMIENTO Y RECHAZO EXPRESO DE TRATAMIENTO MÉDICO (ART. 15° LEY N° 26842):</strong><br>
+        Habiendo sido plenamente advertido(a) sobre la gravedad del cuadro clínico y los riesgos inminentes (incluido el desenlace fatal o secuelas irreversibles) que conlleva rechazar el procedimiento indicado, <strong>DECLARO MI DECISIÓN DE NO AUTORIZAR</strong> su realización, asumiendo de manera exclusiva toda responsabilidad legal y clínica, y exonerando al personal médico y al hospital.
+      </div>
+    `;
+  } else {
+    textoDeclaracion = `
+      <div style="font-size:11px; color:#1e293b; line-height:1.5; margin-bottom:14px;">
+        Yo, <strong>${nomPx}</strong>, identificado(a) con DNI N° <strong>${dniPx}</strong>, en pleno uso de mis facultades mentales, declaro que el Médico Tratante me ha informado satisfactoriamente sobre mi estado de salud, el diagnóstico, la necesidad de la intervención propuesta, los beneficios esperados, riesgos frecuentes y complicaciones graves posibles. Habiendo absuelto todas mis dudas, <strong>OTORGO VOLUNTARIAMENTE MI CONSENTIMIENTO INFORMADO</strong> para su realización.
+      </div>
+    `;
+  }
+
+  return `
+    <div class="consentimiento-doc" style="width:700px; max-width:100%; margin:auto; background:#ffffff; border:1px solid #000; padding:28px 34px; font-family:Arial, Helvetica, sans-serif; font-size:11px; color:#0f172a; box-sizing:border-box;">
+      <!-- CABECERA OFICIAL MINSA -->
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #000; padding-bottom:8px; margin-bottom:14px;">
+        <div style="font-size:10px; font-weight:800; color:#000;">
+          REPÚBLICA DEL PERÚ<br>
+          MINISTERIO DE SALUD
+        </div>
+        <div style="text-align:center;">
+          <strong style="font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">Hospital Regional Docente UPP</strong><br>
+          <span style="font-size:10px; font-weight:700; color:#0284c7;">SERVICIO DE EMERGENCIA · NIVEL III-1</span>
+        </div>
+        <div style="font-size:10px; text-align:right;">
+          <strong>NTS N° 139-MINSA</strong><br>
+          FORMATO OFICIAL CI-01
+        </div>
+      </div>
+
+      <div style="text-align:center; font-size:13px; font-weight:900; text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px; border-bottom:1px solid #cbd5e1; padding-bottom:4px;">
+        FORMATO DE CONSENTIMIENTO INFORMADO MÉDICO-QUIRÚRGICO DE EMERGENCIA
+      </div>
+
+      <!-- DATOS DE FILIACIÓN DEL PACIENTE -->
+      <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:10.5px;">
+        <tr>
+          <td style="padding:4px; border:1px solid #94a3b8; background:#f8fafc; width:22%;"><strong>Paciente:</strong></td>
+          <td style="padding:4px; border:1px solid #94a3b8; font-weight:700;" colspan="3">${nomPx}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px; border:1px solid #94a3b8; background:#f8fafc;"><strong>DNI / Doc:</strong></td>
+          <td style="padding:4px; border:1px solid #94a3b8;">${dniPx}</td>
+          <td style="padding:4px; border:1px solid #94a3b8; background:#f8fafc; width:20%;"><strong>Historia Clínica:</strong></td>
+          <td style="padding:4px; border:1px solid #94a3b8; font-weight:700;">${hcPx}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px; border:1px solid #94a3b8; background:#f8fafc;"><strong>Edad / Sexo:</strong></td>
+          <td style="padding:4px; border:1px solid #94a3b8;">${edadPx} | ${sexoPx}</td>
+          <td style="padding:4px; border:1px solid #94a3b8; background:#f8fafc;"><strong>Fecha / Hora:</strong></td>
+          <td style="padding:4px; border:1px solid #94a3b8;">${fechaHoy} ${horaHoy}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px; border:1px solid #94a3b8; background:#f8fafc;"><strong>Diagnóstico (CIE-10):</strong></td>
+          <td style="padding:4px; border:1px solid #94a3b8; font-weight:700;" colspan="3">${diagCIE10}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px; border:1px solid #94a3b8; background:#f8fafc;"><strong>Procedimiento:</strong></td>
+          <td style="padding:4px; border:1px solid #94a3b8; font-weight:700; color:#0369a1;" colspan="3">${procedimientoSel}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px; border:1px solid #94a3b8; background:#f8fafc;"><strong>Médico Tratante:</strong></td>
+          <td style="padding:4px; border:1px solid #94a3b8; font-weight:700;" colspan="3">${medResponsable}</td>
+        </tr>
+      </table>
+
+      <!-- CUERPO DE DECLARACIÓN -->
+      ${textoDeclaracion}
+
+      <!-- FUNDAMENTO LEGAL -->
+      <div style="font-size:9.5px; color:#475569; border-top:1px dashed #cbd5e1; padding-top:6px; margin-bottom:18px; line-height:1.35;">
+        <strong>BASE LEGAL:</strong> Ley General de Salud N° 26842 (Artículos 4° y 15°), Ley N° 29414 (Derechos de los Usuarios en Salud), D.S. N° 027-2015-SA, y Ley N° 27604 (Atención Médica de Emergencia). Toda información se encuentra amparada por el secreto profesional y la Ley N° 29733 de Protección de Datos Personales.
+      </div>
+
+      <!-- SECCIÓN DE FIRMAS Y HUELLA DACTILAR -->
+      <table style="width:100%; border-collapse:collapse; margin-top:20px; text-align:center; font-size:10px;">
+        <tr>
+          <td style="width:36%; vertical-align:bottom; padding:0 8px;">
+            <div style="border-bottom:1.5px solid #000; height:50px;"></div>
+            <div style="margin-top:4px; font-weight:700;">Firma del Paciente / Representante</div>
+            <div>DNI: _______________________</div>
+            <div style="font-size:8.5px; color:#64748b;">Parentesco: ___________________</div>
+          </td>
+          <td style="width:28%; vertical-align:middle; padding:0 6px;">
+            <div style="width:68px; height:78px; border:1.5px dashed #475569; margin:auto; display:flex; align-items:center; justify-content:center; font-size:8px; color:#64748b; text-align:center;">
+              Huella Dactilar<br>Índice Derecho
+            </div>
+          </td>
+          <td style="width:36%; vertical-align:bottom; padding:0 8px;">
+            <div style="border-bottom:1.5px solid #000; height:50px;"></div>
+            <div style="margin-top:4px; font-weight:700;">Firma y Sello del Médico Tratante</div>
+            <div>${medResponsable}</div>
+            <div style="font-size:8.5px; color:#64748b;">Colegio Médico del Perú (CMP)</div>
+          </td>
+        </tr>
+      </table>
+
+      <div style="margin-top:16px; text-align:center; font-size:8.5px; color:#64748b; border-top:1px solid #e2e8f0; padding-top:6px;">
+        ESTE DOCUMENTO FORMA PARTE INTEGRANTE DE LA HISTORIA CLÍNICA (NTS N° 139-MINSA) · ARCHIVO OBLIGATORIO
+      </div>
+    </div>
+  `;
+}
+
+function abrirModalConsentimiento() {
+  const m = document.getElementById("modal_consentimiento_informado");
+  const cont = document.getElementById("consentimiento_modal_preview");
+  if (cont) {
+    cont.innerHTML = construirHTMLDocumentoConsentimiento();
+  }
+  if (m) {
+    m.classList.add("open");
+    m.style.display = "flex";
+  }
+}
+window.abrirModalConsentimiento = abrirModalConsentimiento;
+
+function cerrarModalConsentimiento() {
+  const m = document.getElementById("modal_consentimiento_informado");
+  if (m) {
+    m.classList.remove("open");
+    m.style.display = "none";
+  }
+}
+window.cerrarModalConsentimiento = cerrarModalConsentimiento;
+
+function imprimirConsentimientoDirecto() {
+  const htmlDoc = construirHTMLDocumentoConsentimiento();
+  const nomPx = STATE.nombreReniec || STATE.identificador || "Paciente";
+  const hcPx = STATE.historiaClinica || "HC-PROVISIONAL";
+
+  const w = window.open('', '_blank');
+  if (!w) { alert("Permita las ventanas emergentes para imprimir el consentimiento."); return; }
+
+  w.document.write(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <title>Consentimiento Informado — ${nomPx} (${hcPx})</title>
+      <style>
+        @page { size: portrait; margin: 15mm; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #e2e8f0; display:flex; justify-content:center; }
+        @media print {
+          body { background: #ffffff; padding: 0; }
+          .consentimiento-doc { border: none !important; box-shadow: none !important; }
+        }
+      </style>
+    </head>
+    <body>
+      ${htmlDoc}
+    </body>
+    </html>
+  `);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); }, 250);
+}
+window.imprimirConsentimientoDirecto = imprimirConsentimientoDirecto;
+
+// --- GESTIÓN DE ROLES ASISTENCIALES Y PROTECCIÓN DE DATOS (LEY N° 29733) ---
+let rolActivoActual = "ADMIN";
+function cambiarRolSistema(rol) {
+  rolActivoActual = rol || "ADMIN";
+  const lbl = document.getElementById("lbl_toggle_vista_caja");
+
+  // Redireccionar al módulo principal del rol
+  const rolModulos = {
+    "ENF_TRIAJE": 1,
+    "ADMISION": 2,
+    "MEDICO": 4,
+    "ENF_ASIST": 6,
+    "GESTION_CAMAS": 7,
+    "FACTURACION": 8,
+    "ADMIN": 1
+  };
+  const modDestino = rolModulos[rolActivoActual] || 1;
+  if (typeof irAModulo === "function") {
+    irAModulo(modDestino);
+  }
+
+  // Protección de datos sensibles (Ley N° 29733)
+  const elMotivo = document.getElementById("motivo_full");
+  const elAlergias = document.getElementById("alergias_full");
+
+  if (rolActivoActual === "FACTURACION") {
+    if (lbl) lbl.textContent = "👁️ Vista: Caja (Financiera)";
+    if (elMotivo) {
+      if (!elMotivo.dataset.realVal) elMotivo.dataset.realVal = elMotivo.value;
+      elMotivo.value = "🔒 [ANAMNESIS MÉDICA PROTEGIDA — LEY N° 29733]";
+      elMotivo.disabled = true;
+    }
+  } else {
+    if (lbl) lbl.textContent = `👁️ Vista: ${rolActivoActual}`;
+    if (elMotivo && elMotivo.dataset.realVal) {
+      elMotivo.value = elMotivo.dataset.realVal || STATE.motivoConsulta || "";
+      elMotivo.disabled = false;
+    }
+  }
+
+  registrarLogAuditoria("Sistema", "CAMBIO_ROL", `Rol activo modificado a: ${rolActivoActual}`);
+  if (typeof mostrarToastCola === "function") {
+    const nombresRoles = {
+      "ADMIN": "🛡️ Administrador / Auditor General",
+      "ENF_TRIAJE": "👩‍⚕️ Lic. Enfermería de Triaje",
+      "ADMISION": "📋 Admisión de Emergencia / SUSALUD",
+      "MEDICO": "🩺 Médico Especialista de Guardia",
+      "ENF_ASIST": "💉 Lic. Enfermería Asistencial",
+      "GESTION_CAMAS": "🛏️ Gestión de Camas y Flujo",
+      "FACTURACION": "💳 Facturación y Liquidación"
+    };
+    mostrarToastCola(`👤 <strong>Sesión Activa:</strong> ${nombresRoles[rolActivoActual] || rolActivoActual}`);
+  }
+}
+window.cambiarRolSistema = cambiarRolSistema;
+
+// --- MOTOR DE BLOQUEO Y DESBLOQUEO DE CAMPOS EN SIMULACIÓN ---
+function bloquearCamposSimulacion(bloquear = true) {
+  for (let i = 1; i <= 8; i++) {
+    const modEl = document.getElementById(`sec_mod${i}`) || document.getElementById(`body_mod${i}`);
+    if (!modEl) continue;
+    const elements = modEl.querySelectorAll("input:not(#chk_consentimiento_firmado), select:not(#selector_rol_sistema):not(#enfermero_triaje_select), textarea");
+    elements.forEach(el => {
+      el.disabled = Boolean(bloquear);
+      if (bloquear) {
+        el.style.backgroundColor = "#f8fafc";
+        el.style.color = "#0f172a";
+        el.style.fontWeight = "700";
+        el.style.borderColor = "#cbd5e1";
+        el.style.cursor = "not-allowed";
+        el.title = "🔒 Campo bloqueado con valor clínico simulado (NTS N° 042-MINSA)";
+      } else {
+        el.style.backgroundColor = "";
+        el.style.color = "";
+        el.style.fontWeight = "";
+        el.style.borderColor = "";
+        el.style.cursor = "";
+        el.title = "";
+      }
+    });
+  }
+
+  const bannerSim = document.getElementById("banner_sandbox_completado");
+  if (bannerSim) {
+    bannerSim.style.display = bloquear ? "flex" : "none";
+  }
+}
+window.bloquearCamposSimulacion = bloquearCamposSimulacion;

@@ -2567,7 +2567,7 @@
         </div>
         <span class="toggle-arrow" id="arrow_mod1">▼</span>
       </div>
-      <div class="module-section-body" id="body_mod1" style="display: none;">
+      <div class="module-section-body open" id="body_mod1" style="display: block;">
 
         
         <div class="norma-pill-banner">
@@ -3455,11 +3455,55 @@
               </div>
               <div class="form-field" style="margin-bottom:0;">
                 <label for="input_dosis_kardex">Dosis / Vía de Administración:</label>
-                <input type="text" id="input_dosis_kardex" class="input-full" placeholder="Ej. 1 gr EV diluido cada 12h" value="Dosis terapéutica EV">
+                <select id="input_dosis_kardex" class="input-full" style="font-weight:700;">
+                  <optgroup label="Vía Endovenosa (EV) — Fármacos y Analgesia">
+                    <option value="1 ampolla EV directa en bolo lento STAT" selected>1 ampolla EV directa en bolo lento STAT</option>
+                    <option value="1 ampolla diluida en 100 ml NaCl 0.9% EV a pasar en 30 min">1 ampolla diluida en 100 ml NaCl a pasar en 30 min</option>
+                    <option value="1 ampolla diluida en 100 ml NaCl 0.9% EV a pasar en 60 min">1 ampolla diluida en 100 ml NaCl a pasar en 60 min</option>
+                    <option value="1 gr EV diluido en 100 ml NaCl 0.9% c/8h">1 gr EV diluido en 100 ml NaCl c/8h</option>
+                    <option value="1 gr EV diluido en 100 ml NaCl 0.9% c/12h">1 gr EV diluido en 100 ml NaCl c/12h</option>
+                    <option value="2 gr EV en infusión intermitente c/24h">2 gr EV en infusión intermitente c/24h</option>
+                    <option value="500 mg EV diluido cada 8 horas">500 mg EV diluido cada 8 horas</option>
+                    <option value="1 vial EV reconstituido STAT">1 vial EV reconstituido STAT</option>
+                  </optgroup>
+                  <optgroup label="Vía Endovenosa (EV) — Fluidoterapia">
+                    <option value="NaCl 0.9% 1000 ml EV a chorro STAT">NaCl 0.9% 1000 ml EV a chorro STAT (Shock)</option>
+                    <option value="NaCl 0.9% 1000 ml EV a 45 gotas/min">NaCl 0.9% 1000 ml EV a 45 gts/min (Mantenimiento)</option>
+                    <option value="Dextrosa 33% 4 ampollas EV en bolo STAT">Dextrosa 33% 4 ampollas EV en bolo (Hipoglucemia)</option>
+                    <option value="Lactato Ringer 1000 ml EV a 40 gotas/min">Lactato Ringer 1000 ml EV a 40 gotas/min</option>
+                  </optgroup>
+                  <optgroup label="Vía Sublingual (SL) y Oral (VO)">
+                    <option value="1 tableta SL (sublingual) STAT">1 tableta SL STAT (bajo la lengua)</option>
+                    <option value="1 tableta VO STAT con agua">1 tableta VO STAT</option>
+                    <option value="1 tableta VO cada 8 horas">1 tableta VO cada 8 horas</option>
+                    <option value="1 tableta VO cada 12 horas">1 tableta VO cada 12 horas</option>
+                  </optgroup>
+                  <optgroup label="Vía Intramuscular (IM) y Subcutánea (SC)">
+                    <option value="1 ampolla IM profunda STAT">1 ampolla IM profunda STAT</option>
+                    <option value="Insulina R 10 UI SC STAT">Insulina R 10 UI SC STAT</option>
+                  </optgroup>
+                  <optgroup label="Vía Inhalatoria y Oxigenoterapia">
+                    <option value="Nebulización con 20 gtas Fenoterol + 3cc NaCl c/20 min">Nebulización 20 gts Fenoterol + 3cc NaCl c/20m</option>
+                    <option value="Oxígeno por cánula binasal a 3-4 L/min">Oxígeno por cánula binasal a 3-4 L/min</option>
+                    <option value="Oxígeno por máscara con reservorio a 10-15 L/min">Oxígeno con máscara reservorio a 10-15 L/min</option>
+                  </optgroup>
+                </select>
               </div>
               <div class="form-field" style="margin-bottom:0;">
                 <label for="input_horario_kardex">Frecuencia / Horario:</label>
-                <input type="text" id="input_horario_kardex" class="input-full" placeholder="Horario" value="Stat (Inmediato)">
+                <select id="input_horario_kardex" class="input-full" style="font-weight:700;">
+                  <option value="STAT (Inmediato / Dosis Única)" selected>STAT (Inmediato / Dosis Única)</option>
+                  <option value="Cada 4 horas (c/4h)">Cada 4 horas (c/4h)</option>
+                  <option value="Cada 6 horas (c/6h)">Cada 6 horas (c/6h)</option>
+                  <option value="Cada 8 horas (c/8h)">Cada 8 horas (c/8h)</option>
+                  <option value="Cada 12 horas (c/12h)">Cada 12 horas (c/12h)</option>
+                  <option value="Cada 24 horas (c/24h - 08:00 hrs)">Cada 24 horas (c/24h - 08:00 hrs)</option>
+                  <option value="En infusión continua">En infusión continua</option>
+                  <option value="PRN / Condicional a dolor (EVA ≥ 6)">PRN / Condicional a dolor (EVA ≥ 6)</option>
+                  <option value="PRN / Condicional a fiebre (T ≥ 38.3 °C)">PRN / Condicional a fiebre (T ≥ 38.3 °C)</option>
+                  <option value="PRN / Condicional a náuseas o vómitos">PRN / Condicional a náuseas o vómitos</option>
+                  <option value="Por 3 ciclos continuos cada 20 min">Por 3 ciclos continuos cada 20 min</option>
+                </select>
               </div>
               <button type="button" class="btn-full-primary" style="height:38px; white-space:nowrap; background:#0284c7;" onclick="agregarMedicamentoAKardex()">
                 + Agregar al Kardex
@@ -3552,7 +3596,18 @@
               </div>
               <div class="form-field" style="margin-bottom:0;">
                 <label for="input_indicacion_img">Indicación Clínica:</label>
-                <input type="text" id="input_indicacion_img" class="input-full" placeholder="Ej. Descarte neumotórax / TEC" value="Evaluación de emergencia">
+                <select id="input_indicacion_img" class="input-full" style="font-weight:700;">
+                  <option value="Descarte de Traumatismo Intracraneal / TEC (Ventana ósea y parénquima)" selected>Descarte de Traumatismo Intracraneal / TEC</option>
+                  <option value="Descarte de Hemorragia Subaracnoidea / Ictus Isquémico Agudo (Protocolo Stroke)">Descarte de Hemorragia / Ictus (Protocolo Stroke)</option>
+                  <option value="Descarte de Fractura Ósea / Luxación Traumática (Accidente)">Descarte de Fractura Ósea / Luxación</option>
+                  <option value="Descarte de Neumotórax / Hemotórax / Derrame Pleural">Descarte de Neumotórax / Hemotórax</option>
+                  <option value="Descarte de Neumonía / Infiltrado Alveolar Agudo">Descarte de Neumonía / Infiltrado Alveolar</option>
+                  <option value="Descarte de Abdomen Agudo Quirúrgico / Apendicitis / Obstrucción">Descarte de Abdomen Agudo / Apendicitis</option>
+                  <option value="Ecografía FAST de Trauma Abdominal Cerrado (Hemoperitoneo)">Ecografía FAST de Trauma Abdominal</option>
+                  <option value="Descarte de Cólico Renal / Urolitiasis / Hidronefrosis">Descarte de Cólico Renal / Urolitiasis</option>
+                  <option value="Evaluación de Silueta Cardíaca y Congestión Pulmonar (ICC)">Evaluación de Silueta Cardíaca / Congestión</option>
+                  <option value="Control de Catéter Venoso Central / Tubo de Drenaje Torácico">Control de Catéter Central / Tubo de Drenaje</option>
+                </select>
               </div>
               <button type="button" class="btn-full-primary" style="height:38px; white-space:nowrap; background:#4f46e5;" onclick="solicitarEstudioImagen()">
                 + Solicitar Estudio
