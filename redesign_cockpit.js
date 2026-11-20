@@ -93,6 +93,9 @@
         <button type="button" class="cockpit-tactical-btn" onclick="admitirEmergenciaNN()" title="Admisión de Paciente Indocumentado NN">
           🚨 Paciente NN
         </button>
+        <button type="button" class="cockpit-tactical-btn" onclick="generarEImprimirPulseraInmediata()" style="background:#0f172a; color:#38bdf8; border:1.5px solid #0284c7; font-weight:800;" title="Generar e Imprimir Inmediatamente la Pulsera QR de Emergencia">
+          🏷️ Imprimir Pulsera QR
+        </button>
       </div>
       <div class="cockpit-tactical-group">
         <button type="button" class="cockpit-tactical-btn" onclick="abrirModalPreTriageSTART()" title="Pre-Triage START de Cola (15s)">
@@ -324,6 +327,7 @@
 
     // 1.8 Escuchar eventos de monitor y tema
     engancharEventosMonitor();
+    if (typeof window.poblarCatalogosModulo4 === 'function') window.poblarCatalogosModulo4();
     inicializarModoOscuro();
 
     // 1.9 Aplicar vista de rol inicial
@@ -762,9 +766,23 @@
     }
 
     const monBeds = document.getElementById("mon_beds_free");
-    const navBeds = document.getElementById("lbl_navbar_dispo_resumen");
-    if (monBeds && navBeds) {
-      monBeds.textContent = navBeds.textContent || "15/15 Libres";
+    if (monBeds) {
+      const idsHospitalarios = [
+        "ST-01", "ST-02", "SOP-01", "SOP-02", "SOP-03",
+        "OBS-01", "OBS-02", "OBS-03", "OBS-04", "OBS-05", "OBS-06",
+        "URPA-01", "URPA-02", "UCI-01", "UCI-02"
+      ];
+      let ocupadas = 0;
+      const recursos = window.RECURSOS_HOSPITALARIOS || (typeof RECURSOS_HOSPITALARIOS !== 'undefined' ? RECURSOS_HOSPITALARIOS : null);
+      if (recursos) {
+        idsHospitalarios.forEach(id => {
+          if (recursos[id] && recursos[id].estado === "ocupada") ocupadas++;
+        });
+      }
+      const total = idsHospitalarios.length; // 15
+      const libres = Math.max(0, total - ocupadas);
+      monBeds.textContent = `${libres}/${total} Libres`;
+      monBeds.style.color = libres === 0 ? "#EF4444" : libres <= 3 ? "#F59E0B" : "#10B981";
     }
   }
 
@@ -952,6 +970,19 @@
   // ----------------------------------------------------------------------------
   // 10. INICIALIZACIÓN
   // ----------------------------------------------------------------------------
+  
+  function generarEImprimirPulseraInmediata() {
+    if (typeof window.generarBrazaleteEmergencia === "function") {
+      window.generarBrazaleteEmergencia("completo");
+    }
+    if (typeof window.imprimirBrazalete === "function") {
+      window.imprimirBrazalete();
+    } else if (typeof window.imprimirBrazaleteDirecto === "function") {
+      window.imprimirBrazaleteDirecto();
+    }
+  }
+  window.generarEImprimirPulseraInmediata = generarEImprimirPulseraInmediata;
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", inicializarCockpit);
   } else {

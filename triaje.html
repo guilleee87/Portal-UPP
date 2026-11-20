@@ -3624,6 +3624,7 @@
             <div class="action-row-grid-4">
               <div class="form-field" style="margin-bottom:0;">
                 <label for="select_farmacia_catalogo">Seleccionar Medicamento / Solución EV:</label>
+                <input type="search" id="buscar_farmacia_input" placeholder="🔍 Buscar medicamento por nombre o acción..." class="input-full" style="margin-bottom:6px; font-size:0.82rem; padding:6px 10px; border-radius:6px;" oninput="filtrarCatalogoFarmacia(this.value)">
                 <select id="select_farmacia_catalogo" class="input-full" style="font-weight:600;">
                   <!-- Se llena dinámicamente con los fármacos de FARMACIA -->
                 </select>
@@ -3716,6 +3717,7 @@
             <div class="action-row-grid-3">
               <div class="form-field" style="margin-bottom:0;">
                 <label for="select_laboratorio_catalogo">Seleccionar Prueba de Laboratorio:</label>
+                <input type="search" id="buscar_laboratorio_input" placeholder="🔍 Buscar prueba de laboratorio (ej. Troponina, AGA, Hemograma)..." class="input-full" style="margin-bottom:6px; font-size:0.82rem; padding:6px 10px; border-radius:6px;" oninput="filtrarCatalogoLaboratorio(this.value)">
                 <select id="select_laboratorio_catalogo" class="input-full" style="font-weight:600;">
                   <!-- Se llena dinámicamente con los exámenes de LABORATORIO -->
                 </select>
@@ -3765,6 +3767,7 @@
             <div class="action-row-grid-3">
               <div class="form-field" style="margin-bottom:0;">
                 <label for="select_imagenes_catalogo">Seleccionar Estudio Radiológico / Imagen:</label>
+                <input type="search" id="buscar_imagenes_input" placeholder="🔍 Buscar estudio radiológico (ej. TAC Cerebral, Rx Tórax, Eco FAST)..." class="input-full" style="margin-bottom:6px; font-size:0.82rem; padding:6px 10px; border-radius:6px;" oninput="filtrarCatalogoImagenes(this.value)">
                 <select id="select_imagenes_catalogo" class="input-full" style="font-weight:600;">
                   <!-- Se llena dinámicamente con los estudios de IMAGENES -->
                 </select>
