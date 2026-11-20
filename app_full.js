@@ -1476,6 +1476,10 @@ const STATE = {
   ingresoDirectoCritico: false,
   motivoIngresoCritico: null,
   panicoShockTrauma: false,
+  estadoFlujo: "PENDIENTE_TRIAJE", // "PENDIENTE_TRIAJE" | "EN_ATENCION_MEDICA" | "PENDIENTE_CAJA" | "CERRADO_FACTURADO"
+  coberturaValidada: false,
+  firmas: {},
+  alertaPrioridad1: false,
 
   // Módulo 1: Triaje Fisiológico
   spo2: null, fc: null, pasSistolica: null, paDiastolica: null,
@@ -1561,6 +1565,7 @@ const STATE = {
   // Timestamps por módulo
   ts: {},
 };
+window.STATE = STATE;
 
 
 // ---------------------------------------------------------------------------
@@ -2017,6 +2022,18 @@ async function consultarReniec() {
 
   let nombreCompleto = "";
   let payload = null;
+
+  // TIER 0: Consulta al proxy seguro del servidor (Caché 24h y Llave Privada Oculta)
+  try {
+    const res0 = await fetch(`/api/reniec/consultar?dni=${ident}`);
+    if (res0.ok) {
+      const data0 = await res0.json();
+      if (data0 && data0.exito && data0.data && data0.data.nombres) {
+        payload = data0.data;
+        nombreCompleto = `${payload.nombres} ${payload.apellidoPaterno} ${payload.apellidoMaterno}`.trim();
+      }
+    }
+  } catch (e0) {}
 
   // TIER 1: Consulta a dniruc.apisperu.com
   try {
@@ -8188,6 +8205,18 @@ window.actualizarWidgetFlotanteCamas = actualizarWidgetFlotanteCamas;
 // PRESETS DE CASOS CLÍNICOS RÁPIDOS DE 1 CLIC (EXPOSICIÓN & AUDITORÍA ASISTENCIAL)
 // ==============================================================================
 function cargarCasoPreset(prioNum) {
+  // Limpiar cargos de facturación y kardex previos para simulación limpia e independiente
+  STATE.items_factura = [];
+  STATE.kardexAdministrados = [];
+  STATE.kardexItems = [];
+  STATE.ordenesLaboratorio = [];
+  STATE.ordenesImagenes = [];
+  STATE.liquidacionAuditada = null;
+  STATE.estadoFlujo = "PENDIENTE_TRIAJE";
+  STATE.coberturaValidada = false;
+  STATE.firmas = {};
+  STATE.alertaPrioridad1 = false;
+
   // 0. Mock temporal para evitar alertas bloqueantes durante la simulación automática
   const origAlert = window.alert;
   window.alert = function(msg) { console.log("[SIMULACIÓN ALERT INTERCEPTADO]:", msg); };
@@ -8481,6 +8510,9 @@ function cargarCasoPreset(prioNum) {
   if (typeof actualizarFactura === "function") {
     actualizarFactura();
   }
+  if (typeof sincronizarFacturacionYExportar === "function") {
+    sincronizarFacturacionYExportar(true);
+  }
 
   // 10. MARCAR TODOS LOS 8 PASOS DEL STEPPER COMO COMPLETADOS
   for (let i = 1; i <= 8; i++) {
@@ -8582,6 +8614,10 @@ function crearRegistroPaciente(datos = {}) {
     camaNombre: datos.camaNombre || null,
     medico: datos.medico || STATE.medicoTratante || "Por asignar",
     esNN: Boolean(datos.esNN),
+    estadoFlujo: datos.estadoFlujo || ((datos.prioridad === 'I' || datos.ingresoDirectoCritico) ? 'EN_ATENCION_MEDICA' : 'PENDIENTE_TRIAJE'),
+    coberturaValidada: Boolean(datos.coberturaValidada),
+    firmas: datos.firmas || {},
+    alertaPrioridad1: Boolean(datos.prioridad === 'I' || datos.ingresoDirectoCritico || datos.alertaPrioridad1),
     stateSnapshot: datos.stateSnapshot ? JSON.parse(JSON.stringify(datos.stateSnapshot)) : null,
     formSnapshot: datos.formSnapshot ? JSON.parse(JSON.stringify(datos.formSnapshot)) : null
   };
@@ -8641,6 +8677,10 @@ function guardarEstadoPacienteActivo() {
   p.camaId = STATE.camaAsignadaId;
   p.camaNombre = STATE.camaAsignada;
   p.medico = STATE.medicoTratante || p.medico || "Por asignar";
+  p.estadoFlujo = STATE.estadoFlujo || p.estadoFlujo || "PENDIENTE_TRIAJE";
+  p.coberturaValidada = Boolean(STATE.coberturaValidada);
+  p.firmas = STATE.firmas || p.firmas || {};
+  p.alertaPrioridad1 = Boolean(STATE.alertaPrioridad1 || STATE.prioridad === 'I');
 }
 
 function ordenarColaPacientes() {
@@ -8764,6 +8804,10 @@ function cambiarPacienteActivo(nuevoId) {
     STATE.numDni = nuevoPx.dni;
     STATE.prioridad = nuevoPx.prioridad;
     STATE.medicoTratante = nuevoPx.medico || (nuevoPx.stateSnapshot && nuevoPx.stateSnapshot.medicoTratante) || "Por asignar";
+    STATE.estadoFlujo = nuevoPx.estadoFlujo || "PENDIENTE_TRIAJE";
+    STATE.coberturaValidada = Boolean(nuevoPx.coberturaValidada);
+    STATE.firmas = nuevoPx.firmas || {};
+    STATE.alertaPrioridad1 = Boolean(nuevoPx.alertaPrioridad1 || nuevoPx.prioridad === 'I');
     const selMedResponsable = document.getElementById("medico_responsable_select");
     if (selMedResponsable && STATE.medicoTratante) selMedResponsable.value = STATE.medicoTratante;
   }
@@ -8797,6 +8841,15 @@ function cambiarPacienteActivo(nuevoId) {
     limpiarPrioridadUI();
   }
 
+    if (typeof actualizarFactura === "function") {
+    actualizarFactura();
+  }
+  if (typeof sincronizarFacturacionYExportar === "function") {
+    sincronizarFacturacionYExportar(true);
+  }
+  if (typeof window.actualizarBandejaPostaUI === "function") {
+    window.actualizarBandejaPostaUI();
+  }
   renderizarTableroColaPacientes();
   mostrarToastCola(`🔄 Paciente activo: <strong>${nuevoPx.nombre}</strong>`);
 }
@@ -8810,6 +8863,17 @@ function limpiarFormularioCompletoState() {
   STATE.identificador = ""; STATE.numDni = null; STATE.nombreReniec = null;
   STATE.historiaClinica = "—"; STATE.camaAsignada = null; STATE.camaAsignadaId = null;
   STATE.alergias = "";
+  STATE.items_factura = [];
+  STATE.kardexAdministrados = [];
+  STATE.kardexItems = [];
+  STATE.ordenesLaboratorio = [];
+  STATE.ordenesImagenes = [];
+  STATE.tipoSeguro = "SIS";
+  STATE.esAccidenteTransito = false;
+  STATE.tipoOrigenEvento = "comun";
+  STATE.soatVehiculoFuga = false;
+  STATE.eventoFugaTransversal = false;
+  STATE.liquidacionAuditada = null;
   STATE.fechaIngresoBrazalete = null;
   STATE.horaIngresoBrazalete = null;
   STATE.horaLlegada = null;
@@ -9252,7 +9316,35 @@ function inicializarTableroColaPacientes() {
 }
 
 // Exponer en window para acceso universal
-window.PACIENTES_COLA = PACIENTES_COLA;
+try {
+  Object.defineProperty(window, 'PACIENTES_COLA', {
+    get() { return PACIENTES_COLA; },
+    set(val) { PACIENTES_COLA = val; },
+    configurable: true
+  });
+  Object.defineProperty(window, 'pacienteActivoId', {
+    get() { return pacienteActivoId; },
+    set(val) { pacienteActivoId = val; },
+    configurable: true
+  });
+} catch(e) {
+  try {
+  Object.defineProperty(window, 'PACIENTES_COLA', {
+    get() { return PACIENTES_COLA; },
+    set(val) { PACIENTES_COLA = val; },
+    configurable: true
+  });
+  Object.defineProperty(window, 'pacienteActivoId', {
+    get() { return pacienteActivoId; },
+    set(val) { pacienteActivoId = val; },
+    configurable: true
+  });
+} catch(e) {
+  window.PACIENTES_COLA = PACIENTES_COLA;
+  window.pacienteActivoId = pacienteActivoId;
+}
+  window.pacienteActivoId = pacienteActivoId;
+}
 window.abrirModalAdmisionRapidaNN = abrirModalAdmisionRapidaNN;
 window.cerrarModalAdmisionNN = cerrarModalAdmisionNN;
 window.ejecutarAdmisionRapidaNN = ejecutarAdmisionRapidaNN;
@@ -10366,21 +10458,87 @@ window.imprimirFacturaOficial = imprimirFacturaOficial;
 // ==============================================================================
 
 // --- 1. PUENTE DE DATOS HACIA FACTURACION.HTML (BLOQUE 1.5) ---
-function sincronizarFacturacionYExportar() {
+function sincronizarFacturacionYExportar(silencioso = false) {
   try {
     if (typeof calcularLiquidacionSeguro === 'function') {
       STATE.liquidacionAuditada = calcularLiquidacionSeguro();
     }
-    // Añadir timestamp de auditoría
     STATE.exportadoFacturacionEn = new Date().toISOString();
+
+    const nombre = STATE.nombreReniec || STATE.identificador || "Paciente en Atención";
+    const dni = STATE.numDni || (STATE.identificador ? STATE.identificador.replace(/\D/g, '') : '') || "44418504";
+    const hc = STATE.historiaClinica || `HC-2026-${dni.slice(-4)}`;
+    const prio = (STATE.prioridad || "I").toString().replace("P-", "");
+    const seguro = STATE.tipoSeguro || (STATE.tipoOrigenEvento === "soat" ? "SOAT Activo (La Positiva Seguros)" : "SIS Gratuito (MINSA)");
+    const esAccidente = Boolean(STATE.esAccidenteTransito || STATE.tipoOrigenEvento === "soat" || seguro.toLowerCase().includes("soat"));
+    const esFuga = Boolean(STATE.soatVehiculoFuga || STATE.eventoFugaTransversal);
+    const medico = STATE.medicoTratante || "Médico de Guardia (Emergenciólogo / CMP 0001)";
+
+    // 1. Guardar expediente consolidado completo en LocalStorage
     localStorage.setItem('EXPEDIENTE_FACTURACION_ACTUAL', JSON.stringify(STATE));
-    registrarLogAuditoria("Módulo 8", "EXPORTAR_FACTURACION", "Expediente sincronizado con portal de facturación");
-    console.log("📦 EXPEDIENTE_FACTURACION_ACTUAL guardado en localStorage:", STATE);
+
+    // 2. Sincronizar llaves directas de UPP para retrocompatibilidad total
+    localStorage.setItem('UPP_PACIENTE_NOMBRE', nombre);
+    localStorage.setItem('UPP_PACIENTE_DNI', dni);
+    localStorage.setItem('UPP_PACIENTE_HC', hc);
+    localStorage.setItem('UPP_PRIORIDAD', prio);
+    localStorage.setItem('UPP_TIPO_SEGURO', seguro);
+    localStorage.setItem('UPP_ES_SOAT', esAccidente ? "true" : "false");
+    localStorage.setItem('UPP_SOAT_FUGA', esFuga ? "true" : "false");
+    localStorage.setItem('UPP_ITEMS_FACTURA', JSON.stringify(STATE.items_factura || []));
+
+    // 3. Episodio actual
+    const episodioActual = {
+      folio: `FOL-2026-${dni.slice(-4) || '8821'}`,
+      nombre_completo: nombre,
+      identificador: dni,
+      historia_clinica: hc,
+      tipo_seguro: seguro,
+      prioridad: `P-${prio}`,
+      items_factura: STATE.items_factura || [],
+      cama_asignada: STATE.camaAsignada || 'Ninguna',
+      cie10: STATE.cie10 || STATE.cie10Codigo || 'En evaluación',
+      medico_tratante: medico,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('UPP_EPISODIO_ACTUAL', JSON.stringify(episodioActual));
+
+    // 4. Actualizar en PACIENTES_MASTER por DNI
+    try {
+      const master = JSON.parse(localStorage.getItem('UPP_PACIENTES_MASTER') || '{}');
+      master[dni] = {
+        identificador: dni,
+        historia_clinica: hc,
+        nombre_completo: nombre,
+        tipo_seguro: seguro,
+        ultimo_episodio: episodioActual
+      };
+      localStorage.setItem('UPP_PACIENTES_MASTER', JSON.stringify(master));
+    } catch(e) {}
+
+    if (!silencioso) {
+      registrarLogAuditoria("Módulo 8", "EXPORTAR_FACTURACION", `Expediente de ${nombre} (DNI ${dni}) sincronizado con portal de facturación`);
+      console.log("📦 EXPEDIENTE_FACTURACION_ACTUAL sincronizado para:", nombre, dni, seguro);
+    }
   } catch (err) {
     console.error("Error al exportar expediente hacia facturacion.html:", err);
   }
 }
 window.sincronizarFacturacionYExportar = sincronizarFacturacionYExportar;
+
+function abrirPortalFacturacion(event) {
+  if (event) {
+    try { event.preventDefault(); } catch(e){}
+  }
+  sincronizarFacturacionYExportar(false);
+  const dni = STATE.numDni || (STATE.identificador ? STATE.identificador.replace(/\D/g, '') : '') || '';
+  const hc = STATE.historiaClinica || '';
+  const prio = STATE.prioridad || '';
+  const url = `facturacion.html?dni=${encodeURIComponent(dni)}&hc=${encodeURIComponent(hc)}&prio=${encodeURIComponent(prio)}&t=${Date.now()}`;
+  window.open(url, '_blank');
+  return false;
+}
+window.abrirPortalFacturacion = abrirPortalFacturacion;
 
 // --- 2. GENERACIÓN Y GESTIÓN DE BRAZALETE DE EMERGENCIA UNIFICADO (BLOQUE 2.1 & NTS 042/139) ---
 function construirHTMLBrazalete(esTemporal = false) {

@@ -360,7 +360,7 @@
       </div>
     </a>
     <div class="nav-actions">
-      <a href="triaje_full.html" class="btn-nav">
+      <a href="javascript:void(0)" onclick="if(window.opener){window.close();}else{window.location.href='triaje.html';}" class="btn-nav">
         🚑 Volver a Triaje de Emergencia
       </a>
       <button type="button" class="btn-nav btn-nav-primary" onclick="window.print()">
@@ -538,7 +538,7 @@
 
     <!-- BARRA DE ACCIONES INFERIOR -->
     <section class="actions-bar no-print">
-      <a href="triaje_full.html" class="btn-act btn-act-outline">
+      <a href="javascript:void(0)" onclick="if(window.opener){window.close();}else{window.location.href='triaje.html';}" class="btn-act btn-act-outline">
         ⬅ Volver al Triaje
       </a>
       <button type="button" class="btn-act btn-act-primary" onclick="descargarJsonLiquidacion()">
@@ -555,54 +555,120 @@
   <script>
     // Recuperar datos consolidados del expediente
     function cargarExpedienteFacturacion() {
-      // 1. Obtener parámetros de URL si existen
+      // 1. Obtener parámetros de URL
       const urlParams = new URLSearchParams(window.location.search);
       const dniParam = urlParams.get("dni");
       const hcParam = urlParams.get("hc");
+      const prioParam = urlParams.get("prio");
 
-      // 2. Cargar estado de Triaje persistido en LocalStorage
+      // 2. Intentar cargar el expediente consolidado en tiempo real desde LocalStorage
+      let expActual = null;
+      try { expActual = JSON.parse(localStorage.getItem("EXPEDIENTE_FACTURACION_ACTUAL") || "null"); } catch(e){}
+
       let master = {};
       try { master = JSON.parse(localStorage.getItem("UPP_PACIENTES_MASTER") || "{}"); } catch(e){}
 
       let episodio = null;
       try { episodio = JSON.parse(localStorage.getItem("UPP_EPISODIO_ACTUAL") || "null"); } catch(e){}
 
+      // Si se especificó un DNI en URL y difiere del actual pero existe en master
+      if (dniParam && master[dniParam] && master[dniParam].ultimo_episodio) {
+        episodio = master[dniParam].ultimo_episodio;
+      }
+
+      // Valores iniciales
+      let nombreActual = "LUIS GUILLERMO VASQUEZ VALDIVIESO";
+      let dniActual = "44418504";
+      let hcActual = "HC-2026-8504";
+      let seguroActual = "SIS";
+      let prioridadActual = "I";
+      let esAccidente = false;
+      let esFuga = false;
+      let medicoTratante = "Dr. Médico Asistente de Turno (CMP 0001)";
       let facturaItems = [];
-      try { facturaItems = JSON.parse(localStorage.getItem("UPP_ITEMS_FACTURA") || "[]"); } catch(e){}
 
-      let seguroActual = localStorage.getItem("UPP_TIPO_SEGURO") || "SIS";
-      let prioridadActual = localStorage.getItem("UPP_PRIORIDAD") || "II";
-      let nombreActual = localStorage.getItem("UPP_PACIENTE_NOMBRE") || "LUIS GUILLERMO VASQUEZ VALDIVIESO";
-      let dniActual = localStorage.getItem("UPP_PACIENTE_DNI") || "44418504";
-      let hcActual = localStorage.getItem("UPP_PACIENTE_HC") || "HC-2026-8504";
-      let esAccidente = localStorage.getItem("UPP_ES_SOAT") === "true";
-      let esFuga = localStorage.getItem("UPP_SOAT_FUGA") === "true";
-
-      // Si hay un episodio grabado formalmente
-      if (episodio) {
+      // A) Sincronización desde EXPEDIENTE_FACTURACION_ACTUAL (Prioridad máxima)
+      if (expActual && (!dniParam || !expActual.numDni || expActual.numDni === dniParam || !master[dniParam])) {
+        nombreActual = expActual.nombreReniec || expActual.identificador || "Paciente en Atención";
+        dniActual = expActual.numDni || (expActual.identificador ? expActual.identificador.replace(/\D/g, "") : "") || "44418504";
+        hcActual = expActual.historiaClinica || `HC-2026-${dniActual.slice(-4)}`;
+        prioridadActual = (expActual.prioridad || prioParam || "I").toString().replace("P-", "");
+        seguroActual = expActual.tipoSeguro || (expActual.tipoOrigenEvento === "soat" ? "SOAT Activo (La Positiva Seguros)" : "SIS Gratuito (MINSA)");
+        esAccidente = Boolean(expActual.esAccidenteTransito || expActual.tipoOrigenEvento === "soat" || seguroActual.toLowerCase().includes("soat"));
+        esFuga = Boolean(expActual.soatVehiculoFuga || expActual.eventoFugaTransversal);
+        medicoTratante = expActual.medicoTratante || expActual.medico || "Dr. Médico Asistente de Turno (CMP 0001)";
+        if (Array.isArray(expActual.items_factura) && expActual.items_factura.length > 0) {
+          facturaItems = expActual.items_factura;
+        }
+      } else if (episodio) {
+        // B) Sincronización desde Episodio guardado
         if (episodio.nombre_completo) nombreActual = episodio.nombre_completo;
         if (episodio.identificador) dniActual = episodio.identificador.replace(/\D/g, "") || episodio.identificador;
         if (episodio.historia_clinica) hcActual = episodio.historia_clinica;
         if (episodio.tipo_seguro) seguroActual = episodio.tipo_seguro;
         if (episodio.prioridad) prioridadActual = episodio.prioridad.replace("P-", "");
+        if (episodio.medico_tratante) medicoTratante = episodio.medico_tratante;
+        esAccidente = Boolean(seguroActual.toLowerCase().includes("soat"));
         if (Array.isArray(episodio.items_factura) && episodio.items_factura.length > 0) {
           facturaItems = episodio.items_factura;
         }
+      } else {
+        // C) Sincronización de llaves directas de LocalStorage
+        nombreActual = localStorage.getItem("UPP_PACIENTE_NOMBRE") || nombreActual;
+        dniActual = localStorage.getItem("UPP_PACIENTE_DNI") || dniActual;
+        hcActual = localStorage.getItem("UPP_PACIENTE_HC") || hcActual;
+        prioridadActual = localStorage.getItem("UPP_PRIORIDAD") || prioParam || prioridadActual;
+        seguroActual = localStorage.getItem("UPP_TIPO_SEGURO") || seguroActual;
+        esAccidente = localStorage.getItem("UPP_ES_SOAT") === "true";
+        esFuga = localStorage.getItem("UPP_SOAT_FUGA") === "true";
+        try { facturaItems = JSON.parse(localStorage.getItem("UPP_ITEMS_FACTURA") || "[]"); } catch(e){}
       }
 
-      // Si no hay items, precargar items estándar de atención asistencial
+      // D) Si los cargos están vacíos, autogenerar la cuenta clínica asistencial EXACTA para el nivel de prioridad
       if (!facturaItems || facturaItems.length === 0) {
-        facturaItems = [
-          { servicio: "Evaluación Médica y Triaje de Emergencia (Nivel III-1)", costo: 30, categoria: "Consulta", timestamp: "08:00:00" },
-          { servicio: "Monitoreo Continuo No Invasivo de Signos Vitales", costo: 25, categoria: "Procedimientos", timestamp: "08:15:00" },
-          { servicio: "Cloruro de Sodio 0.9% 1000 mL + Equipo de Venoclisis", costo: 18, categoria: "Farmacia", timestamp: "08:20:00" },
-          { servicio: "Omeprazol 40 mg Inyectable", costo: 14, categoria: "Farmacia", timestamp: "08:30:00" },
-          { servicio: "Hemograma Completo Automatizado + PCR Cuantitativa", costo: 45, categoria: "Laboratorio", timestamp: "08:45:00" },
-          { servicio: "Estancia en Cama de Observación de Emergencia (6 horas)", costo: 90, categoria: "Estancia", timestamp: "09:00:00" }
-        ];
+        const p = prioridadActual.toUpperCase();
+        if (p === "I" || p === "1") {
+          facturaItems = [
+            { servicio: "Evaluación y Triaje Crítico de Emergencia (Nivel III-1 / ESI-1)", costo: 30, categoria: "Triaje", timestamp: "00:01:00" },
+            { servicio: "Atención de Reanimación y Soporte Vital en Shock Trauma", costo: 250, categoria: "Procedimientos", timestamp: "00:03:00" },
+            { servicio: "Monitoreo Multiparámetro Invasivo Continuo", costo: 80, categoria: "Procedimientos", timestamp: "00:05:00" },
+            { servicio: "Cloruro de Sodio 0.9% 1000 mL EV a chorro + Venoclisis", costo: 25, categoria: "Farmacia", timestamp: "00:08:00" },
+            { servicio: "Fentanilo 0.5mg/10ml Ampolla EV (Analgesia Mayor)", costo: 25, categoria: "Farmacia", timestamp: "00:10:00" },
+            { servicio: "Cama Especializada Shock Trauma ST-01 (Día/Cama)", costo: 350, categoria: "Hospitalización", timestamp: "00:15:00" }
+          ];
+        } else if (p === "II" || p === "2") {
+          facturaItems = [
+            { servicio: "Evaluación de Triaje de Emergencia (Nivel III-1 / ESI-2)", costo: 30, categoria: "Triaje", timestamp: "00:05:00" },
+            { servicio: "Electrocardiograma (EKG) de 12 Derivaciones", costo: 40, categoria: "Procedimientos", timestamp: "00:10:00" },
+            { servicio: "Monitoreo Continuo No Invasivo de Signos Vitales", costo: 25, categoria: "Procedimientos", timestamp: "00:15:00" },
+            { servicio: "Captopril 25 mg Comprimido Sublingual", costo: 15, categoria: "Farmacia", timestamp: "00:20:00" },
+            { servicio: "Cloruro de Sodio 0.9% 1000 mL EV + Equipo de Infusión", costo: 25, categoria: "Farmacia", timestamp: "00:25:00" },
+            { servicio: "Estancia en Cama de Observación de Emergencia OBS-01", costo: 150, categoria: "Hospitalización", timestamp: "00:30:00" }
+          ];
+        } else if (p === "III" || p === "3") {
+          facturaItems = [
+            { servicio: "Evaluación de Triaje Clínico (Nivel III-1 / ESI-3)", costo: 30, categoria: "Triaje", timestamp: "00:10:00" },
+            { servicio: "Atención Médica de Urgencia en Tópico de Medicina", costo: 35, categoria: "Consulta", timestamp: "00:25:00" },
+            { servicio: "Ketorolaco 30 mg Inyectable EV", costo: 25, categoria: "Farmacia", timestamp: "00:35:00" },
+            { servicio: "Cloruro de Sodio 0.9% 1000 mL EV", costo: 25, categoria: "Farmacia", timestamp: "00:40:00" },
+            { servicio: "Estancia en Cama de Observación de Emergencia OBS-02", costo: 150, categoria: "Hospitalización", timestamp: "00:45:00" }
+          ];
+        } else if (p === "IV" || p === "4") {
+          facturaItems = [
+            { servicio: "Evaluación de Triaje Clínico (Nivel III-1 / ESI-4)", costo: 30, categoria: "Triaje", timestamp: "00:15:00" },
+            { servicio: "Consulta Médica Ambulatoria en Tópico de Urgencias", costo: 30, categoria: "Consulta", timestamp: "00:40:00" },
+            { servicio: "Paracetamol 500 mg Tableta Oral", costo: 10, categoria: "Farmacia", timestamp: "00:45:00" }
+          ];
+        } else {
+          facturaItems = [
+            { servicio: "Evaluación de Triaje Descarte (Nivel III-1 / ESI-5)", costo: 30, categoria: "Triaje", timestamp: "00:20:00" },
+            { servicio: "Curación de Herida Limpia y Retiro de Puntos", costo: 35, categoria: "Procedimientos", timestamp: "00:50:00" },
+            { servicio: "Clorhexidina 2% Solución Antiséptica Tópica", costo: 15, categoria: "Farmacia", timestamp: "00:52:00" }
+          ];
+        }
       }
 
-      // Desplegar datos demográficos
+      // Desplegar datos filiatorios y clínicos exactos
       document.getElementById("disp_nombre").textContent = nombreActual;
       document.getElementById("disp_dni").textContent = dniActual;
       document.getElementById("disp_hc").textContent = hcActual;
@@ -611,10 +677,12 @@
       document.getElementById("disp_regimen").textContent = seguroActual.toUpperCase();
       document.getElementById("disp_fecha").textContent = new Date().toLocaleString();
 
-      const elFirmante = document.getElementById("firmante_paciente");
-      if (elFirmante) elFirmante.textContent = nombreActual;
+      const elFirmantePac = document.getElementById("firmante_paciente");
+      if (elFirmantePac) elFirmantePac.textContent = nombreActual;
+      const elFirmanteMed = document.getElementById("firmante_medico");
+      if (elFirmanteMed) elFirmanteMed.textContent = medicoTratante;
 
-      // Calcular liquidación según seguro
+      // Calcular liquidación según seguro y prioridad bajo Ley N° 27604
       const totalBruto = facturaItems.reduce((acc, i) => acc + (parseFloat(i.costo) || 0), 0);
       const subtotalFarmacia = facturaItems
         .filter(i => (i.categoria || "").toLowerCase().includes("farmacia"))
@@ -631,7 +699,7 @@
       let badgeHtml = "";
       let establecimiento = "Hospital Regional Docente UPP (Red Asistencial Pública)";
 
-      if (esAccidente) {
+      if (esAccidente || seguroL.includes("soat")) {
         // Régimen SOAT
         establecimiento = "Clínica Privada / Hospital - Red de Emergencias SOAT";
         badgeHtml = `<span style="background:#ea580c; color:#fff; padding:4px 10px; border-radius:9999px;">🚗 ACCIDENTE DE TRÁNSITO (SOAT)</span>`;
@@ -647,7 +715,7 @@
         const pctSoat = Math.min(100, (cubiertoSoat / topeSoat) * 100);
         document.getElementById("soat_bar").style.width = `${pctSoat}%`;
 
-        explicacion = `Accidente de tránsito amparado por Ley General de Transporte y D.S. N° 024-2002-MTC. Cobertura obligatoria de gastos médicos hasta 5 UIT (S/. 27,500.00). Cobertura al 100% sin deducible.`;
+        explicacion = `Accidente de tránsito amparado por Ley General de Transporte y D.S. N° 024-2002-MTC. Cobertura obligatoria de gastos médicos hasta 5 UIT (S/. 27,500.00). Cobertura al 100% sin deducible. Copago paciente: S/. 0.00.`;
       } else if (seguroL.includes("sis") || seguroL.includes("minsa")) {
         // SIS
         establecimiento = "Hospital Nacional Docente Madre Niño San Bartolomé (MINSA - Lima)";
@@ -673,7 +741,7 @@
           totalPaciente = 0;
           explicacion = `Atención de Emergencia Médica / Quirúrgica (Prioridad ${prioridadActual}). Protegida por el Principio de No Condicionamiento de la Ley N° 27604 y D.S. N° 016-2002-SA. Cobertura al 100% hasta la estabilización clínica hemodinámica completa. Copago paciente: S/. 0.00.`;
         } else {
-          // No es Emergencia (P-III, IV, V) -> Automáticamente Urgencia: Cobro 80 soles por consulta + 10% medicamentos
+          // No es Emergencia (P-III, IV, V) -> Urgencia: Copago S/. 80 + 10% farmacia
           copagoEps = 80;
           coaseguroFarmacia = subtotalFarmacia * 0.10;
           totalPaciente = copagoEps + coaseguroFarmacia;
@@ -683,7 +751,7 @@
           document.getElementById("liq_row_coaseguro_meds").style.display = "flex";
           document.getElementById("liq_coaseguro_meds_val").textContent = `+ S/. ${coaseguroFarmacia.toFixed(2)}`;
 
-          explicacion = `Atención en Clínica Privada con póliza EPS clasificada como Urgencia Médica (No Emergencia / P-${prioridadActual}). Se aplica la condición contractual estipulada: Copago fijo de S/. 80.00 por consulta de urgencia + coaseguro del 10% sobre el valor total de medicamentos despachados (S/. ${subtotalFarmacia.toFixed(2)} * 10% = S/. ${coaseguroFarmacia.toFixed(2)}).`;
+          explicacion = `Atención en Clínica Privada con póliza EPS clasificada como Urgencia Médica (No Emergencia / P-${prioridadActual}). Se aplica copago fijo de S/. 80.00 por consulta de urgencia + coaseguro del 10% sobre medicamentos despachados (S/. ${subtotalFarmacia.toFixed(2)} * 10% = S/. ${coaseguroFarmacia.toFixed(2)}).`;
         }
       } else {
         // Particular (Sin seguro)
@@ -698,7 +766,7 @@
       document.getElementById("disp_establecimiento").textContent = establecimiento;
       document.getElementById("badge_seguro_header").innerHTML = badgeHtml;
 
-      // Renderizar tabla
+      // Renderizar tabla de prestaciones
       const tbody = document.getElementById("invoice_tbody");
       tbody.innerHTML = "";
       facturaItems.forEach((it, idx) => {

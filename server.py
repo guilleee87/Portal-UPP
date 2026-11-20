@@ -19,6 +19,10 @@ import re
 import sys
 import time
 import uuid
+import gzip
+import hashlib
+import mimetypes
+import urllib.request
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -35,6 +39,34 @@ DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 # Almacén de sesiones de CAPTCHA activas para consulta de seguros
 CAPTCHA_SESSIONS = {}
+
+# ------------------------------------------------------------------------------
+# CAPA DE SEGURIDAD: RATE LIMITING, CACHÉ EN MEMORIA Y PROTECCIÓN DE TOKENS
+# ------------------------------------------------------------------------------
+RATE_LIMIT_STORE = {}       # {ip: [timestamps]}
+RATE_LIMIT_API_MAX = 60     # Máximo 60 peticiones/minuto a endpoints API
+RATE_LIMIT_STATIC_MAX = 300 # Máximo 300 peticiones/minuto a estáticos
+RENIEC_CACHE_STORE = {}     # {dni: (timestamp, data)}
+
+# Token seguro en servidor (nunca expuesto al cliente)
+SERVER_APISPERU_TOKEN = os.environ.get(
+    "APISPERU_TOKEN",
+    "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6Imd1aWxsZXJtb3ZzdmxAZ21haWwuY29tIn0.Qz_l75KqK69d9T1T50G8c14j4g1u80kF_3v0gqF373k"
+)
+
+def verificar_rate_limit(ip, es_api=False):
+    """Verifica si la IP ha superado el límite de peticiones por minuto."""
+    ahora = time.time()
+    limite = RATE_LIMIT_API_MAX if es_api else RATE_LIMIT_STATIC_MAX
+    ventana = 60.0
+    if ip not in RATE_LIMIT_STORE:
+        RATE_LIMIT_STORE[ip] = []
+    RATE_LIMIT_STORE[ip] = [t for t in RATE_LIMIT_STORE[ip] if ahora - t < ventana]
+    if len(RATE_LIMIT_STORE[ip]) >= limite:
+        return False, len(RATE_LIMIT_STORE[ip]), limite
+    RATE_LIMIT_STORE[ip].append(ahora)
+    return True, len(RATE_LIMIT_STORE[ip]), limite
+
 
 DB_PATH = os.path.join(DIRECTORY, "triaje_hospitalario.db")
 
@@ -367,13 +399,141 @@ class TriageAPIHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
 
     def do_OPTIONS(self):
         self._set_json_headers(HTTPStatus.NO_CONTENT)
 
+    def servir_archivo_estatico(self, ruta_archivo):
+        """Sirve archivos estáticos con compresión GZIP, ETag y encabezados de caché."""
+        ruta_completa = os.path.join(DIRECTORY, ruta_archivo.lstrip("/"))
+        if not os.path.exists(ruta_completa) or os.path.isdir(ruta_completa):
+            self.send_response(HTTPStatus.NOT_FOUND)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(b"404 Not Found")
+            return
+
+        # Calcular ETag
+        st = os.stat(ruta_completa)
+        etag = f'"{hashlib.sha256(f"{ruta_completa}:{st.st_mtime}:{st.st_size}".encode()).hexdigest()[:16]}"'
+
+        # Comprobar If-None-Match (Caché 304 Not Modified)
+        if self.headers.get("If-None-Match") == etag:
+            self.send_response(HTTPStatus.NOT_MODIFIED)
+            self.send_header("ETag", etag)
+            self.send_header("Cache-Control", "public, max-age=86400, stale-while-revalidate=3600" if not ruta_archivo.endswith(".html") else "no-cache, must-revalidate")
+            self.end_headers()
+            return
+
+        with open(ruta_completa, "rb") as f:
+            contenido = f.read()
+
+        # Determinar Content-Type
+        ctype, _ = mimetypes.guess_type(ruta_completa)
+        if not ctype:
+            ctype = "application/octet-stream"
+        if ctype.startswith("text/") or ctype in ["application/javascript", "application/json"]:
+            ctype += "; charset=utf-8"
+
+        # Comprobar soporte GZIP
+        accept_encoding = self.headers.get("Accept-Encoding", "")
+        usar_gzip = "gzip" in accept_encoding and len(contenido) > 512 and (ctype.startswith("text/") or "javascript" in ctype or "json" in ctype or "css" in ctype)
+
+        if usar_gzip:
+            contenido = gzip.compress(contenido, compresslevel=6)
+
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(contenido)))
+        self.send_header("ETag", etag)
+        self.send_header("X-Content-Type-Options", "nosniff")
+
+        if ruta_archivo.endswith(".html"):
+            self.send_header("Cache-Control", "no-cache, must-revalidate")
+        else:
+            self.send_header("Cache-Control", "public, max-age=86400, stale-while-revalidate=3600")
+
+        if usar_gzip:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
+
+        self.end_headers()
+        self.wfile.write(contenido)
+
     def do_GET(self):
         parsed = urlparse(self.path)
+
+        # 1. BLOQUEO ESTRICTO DE SOURCE MAPS (Anti-Snoop / Cero filtración de mapas)
+        if parsed.path.endswith(".map") or ".js.map" in parsed.path or ".css.map" in parsed.path:
+            self.send_response(HTTPStatus.NOT_FOUND)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+            self.end_headers()
+            self.wfile.write(b"Source maps disabled.")
+            return
+
+        # 2. CONTROL DE RATE LIMITING
+        ip = self.client_address[0]
+        es_api = parsed.path.startswith("/api/")
+        permitido, conteo, limite = verificar_rate_limit(ip, es_api)
+        if not permitido:
+            self.send_response(HTTPStatus.TOO_MANY_REQUESTS)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Retry-After", "60")
+            self.send_header("X-RateLimit-Limit", str(limite))
+            self.send_header("X-RateLimit-Remaining", "0")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "exito": False,
+                "error": "Límite de peticiones excedido (Rate Limit). Espere un minuto.",
+                "retry_after": 60
+            }).encode("utf-8"))
+            return
+
+        # 3. PROXY SEGURO DE CONSULTA RENIEC (Protección de Llave Privada y Caché 24h)
+        if parsed.path == "/api/reniec/consultar":
+            query_params = parse_qs(parsed.query)
+            dni = query_params.get("dni", [""])[0].strip()
+            if not dni or len(dni) != 8 or not dni.isdigit():
+                self._set_json_headers(HTTPStatus.BAD_REQUEST)
+                self.wfile.write(json.dumps({"exito": False, "error": "DNI inválido"}, ensure_ascii=False).encode("utf-8"))
+                return
+
+            ahora = time.time()
+            if dni in RENIEC_CACHE_STORE and (ahora - RENIEC_CACHE_STORE[dni][0] < 86400):
+                self._set_json_headers(HTTPStatus.OK)
+                self.wfile.write(json.dumps(RENIEC_CACHE_STORE[dni][1], ensure_ascii=False).encode("utf-8"))
+                return
+
+            try:
+                url_api = f"https://dniruc.apisperu.com/api/v1/dni/{dni}?token={SERVER_APISPERU_TOKEN}"
+                req = urllib.request.Request(url_api, headers={"User-Agent": "UPP-Triaje-HIS/2.0"})
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    if resp.status == 200:
+                        data = json.loads(resp.read().decode("utf-8"))
+                        payload = data.get("data", data)
+                        res = {
+                            "exito": True,
+                            "data": {
+                                "nombres": payload.get("nombres", ""),
+                                "apellidoPaterno": payload.get("apellidoPaterno", ""),
+                                "apellidoMaterno": payload.get("apellidoMaterno", ""),
+                                "dni": dni
+                            }
+                        }
+                        RENIEC_CACHE_STORE[dni] = (ahora, res)
+                        self._set_json_headers(HTTPStatus.OK)
+                        self.wfile.write(json.dumps(res, ensure_ascii=False).encode("utf-8"))
+                        return
+            except Exception:
+                pass
+
+            self._set_json_headers(HTTPStatus.OK)
+            self.wfile.write(json.dumps({"exito": False, "error": "No disponible vía proxy"}, ensure_ascii=False).encode("utf-8"))
+            return
 
         # Health check
         # Purgar base de datos SQLite y comenzar desde cero
@@ -527,20 +687,32 @@ class TriageAPIHandler(SimpleHTTPRequestHandler):
                 self.path = "/simulacion.html"
                 return super().do_GET()
 
-        if parsed.path == "/triaje":
-            self.path = "/triaje.html"
+        target_path = parsed.path
+        if target_path in ["", "/"]:
+            target_path = "/index.html"
+        elif target_path == "/triaje":
+            target_path = "/triaje.html"
+        elif target_path == "/facturacion":
+            target_path = "/facturacion.html"
+        elif target_path == "/simulacion":
+            target_path = "/simulacion.html"
 
-        if parsed.path == "/facturacion":
-            self.path = "/facturacion.html"
-
-        if parsed.path == "/simulacion":
-            self.path = "/simulacion.html"
-
-        # Servir archivos estaticos por defecto (index.html, styles.css, app.js, etc.)
-        return super().do_GET()
+        return self.servir_archivo_estatico(target_path)
 
     def do_POST(self):
         parsed = urlparse(self.path)
+        ip = self.client_address[0]
+        permitido, conteo, limite = verificar_rate_limit(ip, True)
+        if not permitido:
+            self.send_response(HTTPStatus.TOO_MANY_REQUESTS)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Retry-After", "60")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "exito": False,
+                "error": "Límite de peticiones excedido (Rate Limit). Espere un minuto."
+            }).encode("utf-8"))
+            return
 
         # Consultar y validar acreditación de seguro con CAPTCHA
         if parsed.path == "/api/seguro/consultar":

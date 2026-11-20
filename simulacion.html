@@ -2447,7 +2447,7 @@
         <span class="mini-chip" id="mini_soat_badge" style="display:none; background:#fff7ed; color:#c2410c; border-color:#fb923c;">
           🚗 SOAT Saldo: S/. 27,500.00
         </span>
-        <a href="facturacion.html" target="_blank" class="mini-chip" id="btn_nav_facturacion" style="background:#0284c7; color:#ffffff; text-decoration:none; font-weight:800; cursor:pointer;" title="Acceder a la Unidad de Facturación Post-Estabilización (D.S. 016-2002-SA)">
+        <a href="facturacion.html" target="_blank" class="mini-chip" id="btn_nav_facturacion" onclick="return abrirPortalFacturacion(event)" style="background:#0284c7; color:#ffffff; text-decoration:none; font-weight:700; padding:4px 8px; border-radius:4px; font-size:0.75rem;">
           🧾 Facturación Post-Estabilización ↗
         </a>
       </div>
@@ -4332,7 +4332,7 @@
             <div style="font-size:1.05rem; font-weight:900; color:#0f172a; margin-bottom:12px;">
               La atención médica ha concluido. El expediente ha sido derivado al área administrativa para liquidación de cobertura.
             </div>
-            <a href="facturacion.html" target="_blank" class="btn-full-primary" style="display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:14px 28px; font-size:1.05rem; font-weight:800; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#ffffff; text-decoration:none; border-radius:8px; box-shadow:0 6px 20px rgba(2,132,199,0.35); cursor:pointer;">
+            <a href="facturacion.html" id="btn_ir_facturacion_m8" onclick="return abrirPortalFacturacion(event)" target="_blank" class="btn-full-primary" style="display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:12px 24px; font-size:1rem; font-weight:700; text-decoration:none; box-shadow:0 4px 14px rgba(2,132,199,0.35); cursor:pointer;">
               🧾 Abrir Portal de Facturación &amp; Liquidación Post-Estabilización ↗
             </a>
             <div style="font-size:0.75rem; color:#64748b; margin-top:8px;">

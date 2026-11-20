@@ -1,0 +1,556 @@
+/* ==============================================================================
+   SISTEMA UNIFICADO DE FEEDBACK VISUAL CLÍNICO (HIS / EMERGENCIAS) - UPP FCS
+   ui_feedback.css
+   Normas: NTS N° 042-MINSA, NTS N° 139-MINSA, Ley N° 27604, Ley N° 29733, Ley N° 29414
+   ============================================================================== */
+
+/* ------------------------------------------------------------------------------
+   1. CONTENEDOR Y TARJETAS DE TOAST (Esquina Inferior Derecha)
+   ------------------------------------------------------------------------------ */
+#ui_toast_container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100050;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 420px;
+  width: calc(100% - 48px);
+  pointer-events: none;
+}
+
+.ui-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+  border: 1px solid #e2e8f0;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: uiToastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  position: relative;
+}
+
+.ui-toast.ui-toast-out {
+  animation: uiToastSlideOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+@keyframes uiToastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes uiToastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    max-height: 120px;
+    margin-bottom: 0;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-bottom: -10px;
+  }
+}
+
+/* Tipos de Toasts (Tonos neutros / éxito, sin usar colores de severidad P-I a P-III) */
+.ui-toast-success {
+  border-left: 4px solid #10b981;
+}
+.ui-toast-info {
+  border-left: 4px solid #0284c7;
+}
+.ui-toast-warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.ui-toast-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ui-toast-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+
+.ui-toast-detail {
+  font-size: 12.5px;
+  color: #475569;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.ui-toast-close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  transition: all 0.15s ease;
+  margin-left: 4px;
+}
+
+.ui-toast-close:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.ui-toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: #e2e8f0;
+  width: 100%;
+}
+
+.ui-toast-progress-bar {
+  height: 100%;
+  background: #94a3b8;
+  width: 100%;
+  transform-origin: left;
+}
+
+/* ------------------------------------------------------------------------------
+   2. MODALES CLÍNICOS BLOQUEANTES (Escritorio y Móvil)
+   ------------------------------------------------------------------------------ */
+#ui_modal_backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 100060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-out;
+}
+
+#ui_modal_backdrop.ui-modal-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ui-modal-card {
+  background: #ffffff;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  transform: scale(0.95) translateY(8px);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+#ui_modal_backdrop.ui-modal-open .ui-modal-card {
+  transform: scale(1) translateY(0);
+}
+
+.ui-modal-header {
+  padding: 18px 22px 14px 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.ui-modal-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ui-modal-header-icon.danger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.ui-modal-header-icon.warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.ui-modal-header-icon.info {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.ui-modal-header-icon.success {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.ui-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  flex: 1;
+  line-height: 1.3;
+}
+
+.ui-modal-body {
+  padding: 18px 22px;
+  font-size: 13.5px;
+  color: #334155;
+  line-height: 1.55;
+  white-space: pre-line;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.ui-modal-footer {
+  padding: 14px 22px 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+}
+
+.ui-modal-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+}
+
+.ui-modal-btn-cancel {
+  background: #ffffff;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.ui-modal-btn-cancel:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.ui-modal-btn-confirm {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.ui-modal-btn-confirm:hover {
+  background: #0369a1;
+}
+
+.ui-modal-btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.ui-modal-btn-danger:hover {
+  background: #b91c1c;
+}
+
+/* ------------------------------------------------------------------------------
+   3. BANNERS Y ALERTAS INLINE (Fijos en los Módulos)
+   ------------------------------------------------------------------------------ */
+.ui-banner-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  transition: all 0.2s ease;
+}
+
+.ui-banner-p1-urgente {
+  background: #fef2f2;
+  border: 1.5px solid #ef4444;
+  color: #991b1b;
+}
+
+.ui-banner-p1-urgente strong {
+  color: #7f1d1d;
+}
+
+.ui-banner-soat-tope {
+  background: #fffbeb;
+  border: 1.5px solid #f59e0b;
+  color: #92400e;
+}
+
+.ui-banner-cie10-riesgo {
+  background: #fff1f2;
+  border: 1.5px solid #f43f5e;
+  color: #9f1239;
+}
+
+.ui-banner-sellado-nts {
+  background: #f1f5f9;
+  border: 1.5px solid #94a3b8;
+  color: #334155;
+}
+
+.ui-banner-confidencialidad {
+  background: #f8fafc;
+  border: 1.5px dashed #0284c7;
+  color: #0369a1;
+}
+
+.ui-banner-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.ui-banner-text {
+  flex: 1;
+}
+
+/* ------------------------------------------------------------------------------
+   4. BADGES / PILLS CLÍNICOS DE ESCANEO RÁPIDO
+   ------------------------------------------------------------------------------ */
+.ui-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+/* Colores de severidad clínica estrictos */
+.ui-badge-p1 {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.ui-badge-p2 {
+  background: #f97316;
+  color: #ffffff;
+}
+
+.ui-badge-p3 {
+  background: #eab308;
+  color: #713f12;
+}
+
+.ui-badge-p4 {
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.ui-badge-p5 {
+  background: #0ea5e9;
+  color: #ffffff;
+}
+
+/* Badges neutros de flujo y estado administrativo */
+.ui-badge-flujo {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.ui-badge-sello-ley {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.ui-badge-cobertura {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+/* ------------------------------------------------------------------------------
+   5. TOOLTIPS CONTEXTUALES (Ícono ? accesible por hover y touch)
+   ------------------------------------------------------------------------------ */
+.ui-tooltip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 10.5px;
+  font-weight: 800;
+  cursor: pointer;
+  border: none;
+  margin-left: 5px;
+  vertical-align: middle;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.ui-tooltip-btn:hover,
+.ui-tooltip-btn:focus {
+  background: #0284c7;
+  color: #ffffff;
+  outline: none;
+}
+
+.ui-tooltip-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  max-width: 260px;
+  width: max-content;
+  white-space: normal;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
+  z-index: 100070;
+  text-align: left;
+}
+
+.ui-tooltip-popover::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+}
+
+.ui-tooltip-btn:hover .ui-tooltip-popover,
+.ui-tooltip-btn.is-active .ui-tooltip-popover {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ------------------------------------------------------------------------------
+   6. SKELETON LOADERS (Shimmer animado sin bloquear pantalla)
+   ------------------------------------------------------------------------------ */
+.ui-skeleton-box {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: uiSkeletonShimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+.ui-skeleton-line {
+  height: 14px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+
+.ui-skeleton-line:last-child {
+  margin-bottom: 0;
+}
+
+@keyframes uiSkeletonShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ------------------------------------------------------------------------------
+   7. EMPTY STATES (Estados Vacíos Limpios)
+   ------------------------------------------------------------------------------ */
+.ui-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 12px;
+  text-align: center;
+  color: #64748b;
+  margin: 12px 0;
+}
+
+.ui-empty-state-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+  opacity: 0.85;
+}
+
+.ui-empty-state-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 3px;
+}
+
+.ui-empty-state-desc {
+  font-size: 12px;
+  color: #64748b;
+  max-width: 320px;
+  line-height: 1.4;
+}
