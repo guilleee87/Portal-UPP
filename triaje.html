@@ -3043,6 +3043,20 @@
           </div>
         </div>
 
+        <!-- REGISTRO DE ALERGIAS MEDICAMENTOSAS EN MÓDULO 1 (TRIAJE FISIOLÓGICO) -->
+        <div class="form-field" style="margin: 14px 0 10px; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label for="alergias_mod1" style="font-weight:700; margin:0; font-size:0.82rem; color:#0f172a;">
+              ⚠️ Alergias Conocidas / Medicamentosas (Impresión en Pulsera):
+            </label>
+            <span id="alergias_mod1_tag" style="display:none; font-size:0.72rem; font-weight:800; background:#fee2e2; color:#b91c1c; border:1px solid #ef4444; border-radius:6px; padding:2px 8px;">
+              🔴 ALERTA CRÍTICA
+            </span>
+          </div>
+          <input type="text" id="alergias_mod1" class="input-full" placeholder="Ej. Niega alergias conocidas / Alérgico a Penicilina o AINEs (o vacío para 'No registradas / Indagar')" oninput="actualizarAlergiasEnTiempoReal(this.value)">
+          <div id="alergias_mod1_banner" style="display:none; margin-top:6px; padding:6px 12px; border-radius:6px; background:#fff1f2; border:1px solid #fecdd3; color:#9f1239; font-size:0.78rem; font-weight:700;"></div>
+        </div>
+
         <!-- 8. BOTÓN DE EVALUACIÓN Y RESULTADO DE TRIAJE -->
         <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
           <button type="button" class="btn-full-primary" style="flex:1; padding:12px; font-size:0.92rem;" onclick="evaluarPacienteCompleto()">

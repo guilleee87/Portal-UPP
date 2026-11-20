@@ -419,6 +419,13 @@ function actualizarAlergiasEnMaster(identificador, nroHc, alergias) {
 function actualizarAlergiasEnTiempoReal(val) {
   const cleanVal = String(val || "").trim();
   STATE.alergias = cleanVal;
+  STATE.alergiasConocidas = cleanVal;
+
+  const elM1 = document.getElementById("alergias_mod1");
+  const elFull = document.getElementById("alergias_full");
+  if (elM1 && elM1.value !== cleanVal) elM1.value = cleanVal;
+  if (elFull && elFull.value !== cleanVal) elFull.value = cleanVal;
+
   actualizarIndicadorVisualAlergias(cleanVal);
   if (STATE.identificador && STATE.historiaClinica) {
     actualizarAlergiasEnMaster(STATE.identificador, STATE.historiaClinica, cleanVal);
@@ -427,37 +434,47 @@ function actualizarAlergiasEnTiempoReal(val) {
 
 
 function actualizarIndicadorVisualAlergias(val) {
-  const tag = document.getElementById("alergias_alerta_tag");
-  const banner = document.getElementById("alergias_alerta_banner");
-  const input = document.getElementById("alergias_full");
-
-
   const str = String(val || "").trim();
-  const esAlergico = str && !str.toLowerCase().includes("niega") && !str.toLowerCase().includes("ninguna") && !str.toLowerCase().includes("desconocida");
+  const esAlergico = str && !str.toLowerCase().includes("niega") && !str.toLowerCase().includes("ninguna") && !str.toLowerCase().includes("desconocid");
 
+  const tagM1 = document.getElementById("alergias_mod1_tag");
+  const bannerM1 = document.getElementById("alergias_mod1_banner");
+  const inputM1 = document.getElementById("alergias_mod1");
 
-  if (tag) tag.style.display = esAlergico ? "inline-block" : "none";
-  if (banner) {
-    if (esAlergico) {
-      banner.innerHTML = `⚠️ <strong>ALERTA ASISTENCIAL:</strong> Paciente con alergia crítica a <strong>"${str}"</strong>. Prohibido prescribir medicamentos derivados o de reactividad cruzada.`;
-      banner.style.display = "block";
-    } else {
-      banner.style.display = "none";
+  const tagM2 = document.getElementById("alergias_alerta_tag");
+  const bannerM2 = document.getElementById("alergias_alerta_banner");
+  const inputM2 = document.getElementById("alergias_full");
+
+  [tagM1, tagM2].forEach(tag => {
+    if (tag) tag.style.display = esAlergico ? "inline-block" : "none";
+  });
+
+  [bannerM1, bannerM2].forEach(banner => {
+    if (banner) {
+      if (esAlergico) {
+        banner.innerHTML = `⚠️ <strong>ALERTA ASISTENCIAL:</strong> Paciente con alergia crítica a <strong>"${str}"</strong>. Prohibido prescribir medicamentos derivados o de reactividad cruzada.`;
+        banner.style.display = "block";
+      } else {
+        banner.style.display = "none";
+      }
     }
-  }
-  if (input) {
-    if (esAlergico) {
-      input.style.borderColor = "#ef4444";
-      input.style.backgroundColor = "#fff1f2";
-      input.style.color = "#991b1b";
-      input.style.fontWeight = "700";
-    } else {
-      input.style.borderColor = "";
-      input.style.backgroundColor = "";
-      input.style.color = "";
-      input.style.fontWeight = "";
+  });
+
+  [inputM1, inputM2].forEach(inp => {
+    if (inp) {
+      if (esAlergico) {
+        inp.style.borderColor = "#ef4444";
+        inp.style.backgroundColor = "#fff1f2";
+        inp.style.color = "#991b1b";
+        inp.style.fontWeight = "700";
+      } else {
+        inp.style.borderColor = "";
+        inp.style.backgroundColor = "";
+        inp.style.color = "";
+        inp.style.fontWeight = "";
+      }
     }
-  }
+  });
 }
 
 
@@ -1042,6 +1059,10 @@ function ingresarPacienteNN() {
 
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
+  const elAlergiasFull = document.getElementById("alergias_full");
+  if (elAlergiasFull) elAlergiasFull.value = "Desconocido";
+  const elAlergiasM1 = document.getElementById("alergias_mod1");
+  if (elAlergiasM1) elAlergiasM1.value = "Desconocido";
   STATE.grupoSanguineo = "Desconocido";
 
 
@@ -6329,6 +6350,8 @@ function activarPanicoShockTrauma() {
   STATE.camaAsignadaId = "ST-01";
   STATE.tipoSeguro = "Regularización Diferida (Ley N° 27604)";
   STATE.grupoSanguineo = "Desconocido";
+  STATE.alergias = "Desconocido";
+  STATE.alergiasConocidas = "Desconocido";
   STATE.destinoPostTopico = "shock_trauma";
 
   // Asignar recurso hospitalario ST-01
@@ -6356,6 +6379,10 @@ function activarPanicoShockTrauma() {
   if (elMotivo) elMotivo.value = "Paro Cardiorrespiratorio / Shock Circulatorio Extremo (P-I)";
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
+  const elAlergiasFull = document.getElementById("alergias_full");
+  if (elAlergiasFull) elAlergiasFull.value = "Desconocido";
+  const elAlergiasM1 = document.getElementById("alergias_mod1");
+  if (elAlergiasM1) elAlergiasM1.value = "Desconocido";
   const hcDisp = document.getElementById("hc_code_display");
   if (hcDisp) hcDisp.textContent = hcEmergencia;
   const badgeEstado = document.getElementById("hc_badge_estado");
@@ -6585,6 +6612,8 @@ function activarIngresoDirectoQuirofano() {
   STATE.historiaClinica = hcEmergencia;
   STATE.alertaPnpSs = true;
   STATE.grupoSanguineo = "Desconocido";
+  STATE.alergias = "Desconocido";
+  STATE.alergiasConocidas = "Desconocido";
   STATE.tipoSeguro = "Regularización Diferida (Ley N° 27604)";
   STATE.camaAsignada = "Quirófano 1 (SOP 1 - Cirugía de Control de Daños)";
   STATE.camaAsignadaId = "SOP-01";
@@ -6615,6 +6644,10 @@ function activarIngresoDirectoQuirofano() {
   if (elMotivo) elMotivo.value = "Laparotomía Exploratoria de Emergencia / Control de Daños (P-I)";
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
+  const elAlergiasFull = document.getElementById("alergias_full");
+  if (elAlergiasFull) elAlergiasFull.value = "Desconocido";
+  const elAlergiasM1 = document.getElementById("alergias_mod1");
+  if (elAlergiasM1) elAlergiasM1.value = "Desconocido";
   const hcDisp = document.getElementById("hc_code_display");
   if (hcDisp) hcDisp.textContent = hcEmergencia;
   const badgeEstado = document.getElementById("hc_badge_estado");
@@ -9001,6 +9034,10 @@ function limpiarFormularioCompletoState() {
   });
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
+  const elAlergiasFull = document.getElementById("alergias_full");
+  if (elAlergiasFull) elAlergiasFull.value = "Desconocido";
+  const elAlergiasM1 = document.getElementById("alergias_mod1");
+  if (elAlergiasM1) elAlergiasM1.value = "Desconocido";
   STATE.grupoSanguineo = "Desconocido";
 
   if (typeof actualizarEVA === "function") actualizarEVA(0);
@@ -9143,6 +9180,10 @@ function ejecutarAdmisionRapidaNN(event) {
   // GRUPO SANGUÍNEO: Asignar obligatoriamente "Desconocido"
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
+  const elAlergiasFull = document.getElementById("alergias_full");
+  if (elAlergiasFull) elAlergiasFull.value = "Desconocido";
+  const elAlergiasM1 = document.getElementById("alergias_mod1");
+  if (elAlergiasM1) elAlergiasM1.value = "Desconocido";
 
   // Marcar modalidad de ingreso en Módulo 2
   document.querySelectorAll(".modalidad-btn").forEach(b => {
@@ -10719,12 +10760,12 @@ function construirHTMLBrazalete(esTemporal = false) {
 
   // CORRECCIÓN 4: ALERGIAS EN PULSERA QR (DESCONOCIDO EN ATENCIÓN RÁPIDA)
   const esAtencionInmediata = Boolean(esTemporal || STATE.esNN || STATE.ingresoDirectoCritico || STATE.panicoShockTrauma || (STATE.numDni && String(STATE.numDni).startsWith("NN")) || (docPaciente && docPaciente.startsWith("S/D")));
-  const alergiasInput = (document.getElementById("alergias_full")?.value || STATE.alergias || STATE.alergiasConocidas || "").trim();
+  const alergiasInput = (document.getElementById("alergias_mod1")?.value || document.getElementById("alergias_full")?.value || STATE.alergias || STATE.alergiasConocidas || "").trim();
 
   let alergiasDisplay = "";
   let alergiaBadgeStyle = "";
 
-  if (esAtencionInmediata) {
+  if (esAtencionInmediata || alergiasInput.toLowerCase().includes("desconocid")) {
     alergiasDisplay = "⚠️ ALERGIAS: Desconocido";
     alergiaBadgeStyle = "background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:800;";
   } else if (alergiasInput) {
@@ -12886,7 +12927,8 @@ function admitirEmergenciaNN() {
   STATE.telefono = "Desconocido";
   STATE.direccion = "Desconocido";
   STATE.grupoSanguineo = "Desconocido";
-  STATE.alergias = "Desconocido — Indagar";
+  STATE.alergias = "Desconocido";
+  STATE.alergiasConocidas = "Desconocido";
   STATE.tipoSeguro = "Regularización Diferida (Ley N° 27604)";
   STATE.modalidadIngreso = "Pase Directo / Ambulancia";
   STATE.motivoConsulta = "Admisión de Emergencia Paciente NN / Riesgo Vital Inminente — Ley N° 27604";
@@ -12916,8 +12958,14 @@ function admitirEmergenciaNN() {
   if (elSexo) elSexo.value = "Desconocido";
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
+  const elAlergiasFull = document.getElementById("alergias_full");
+  if (elAlergiasFull) elAlergiasFull.value = "Desconocido";
+  const elAlergiasM1 = document.getElementById("alergias_mod1");
+  if (elAlergiasM1) elAlergiasM1.value = "Desconocido";
   const elAlergias = document.getElementById("alergias_full");
-  if (elAlergias) elAlergias.value = "Desconocido — Indagar";
+  if (elAlergias) elAlergias.value = "Desconocido";
+  const elAlergiasM1NN = document.getElementById("alergias_mod1");
+  if (elAlergiasM1NN) elAlergiasM1NN.value = "Desconocido";
   const hcDisp = document.getElementById("hc_code_display");
   if (hcDisp) hcDisp.textContent = hcEmergencia;
 

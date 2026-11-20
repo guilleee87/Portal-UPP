@@ -912,3 +912,297 @@ input[type="number"],
   border-color: #334155 !important;
   color: #F8FAFC !important;
 }
+
+
+/* ==============================================================================
+   11. CALM-TECH CLÍNICO EXPANDIDO — WCAG 2.1 AA / IEC 62366-1 (AUDITORÍA VISUAL)
+   ============================================================================== */
+
+/* Tipografía JetBrains Mono + tabular-nums en toda métrica, código y valor financiero */
+.font-mono,
+.vital-value,
+.news2-score,
+.monto-dinero,
+.cockpit-num,
+.score-badge,
+.estancia-badge,
+.prio-code,
+.prio-numero,
+#prio_numero,
+#mon_news2_val,
+#mon_gcs_val,
+#mon_shock_val,
+#mon_beds_free,
+#mon_vitals_summary,
+#m4_disp_dni,
+#m4_disp_hc,
+#c_triage_px_dni,
+#c_triage_news2_score,
+#c_triage_vitals_resumen,
+#txt_total_factura,
+#soat_consumido_val,
+#soat_saldo_val,
+#soat_tope_val,
+input[type="number"],
+input[type="search"],
+.kardex-table td:nth-child(2),
+.kardex-table td:nth-child(4),
+.tabla-ordenes-body td {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.01em;
+}
+
+/* Reducción de Ruido Espacial: Eliminación de bordes dobles/triples y cajas anidadas */
+.reniec-consulta-card,
+.consentimiento-legal-card,
+.entorno-operativo-card,
+.soat-meter-card,
+.estancia-meter-card,
+.bloqueo-sinadef-card,
+.start-step-card {
+  border: 1px solid var(--cockpit-card-border) !important;
+  background: var(--cockpit-card-bg) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  padding: 16px 20px !important;
+  margin-bottom: 14px !important;
+}
+
+/* Sub-contenedores y áreas secundarias: separadores limpios y fondos suaves */
+.cockpit-summary-item,
+.reniec-consulta-card > div:first-child,
+#consentimiento_alerta_banner,
+#box_soat_fuga_alert,
+#entorno_sector_info_banner {
+  border: 1px solid var(--cockpit-divider) !important;
+  border-radius: 8px !important;
+}
+
+/* Alineación de Grillas Clínicas y Espaciado Ergonomico */
+.form-grid-2 {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 14px !important;
+}
+
+.form-grid-3 {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 14px !important;
+}
+
+.form-grid-4 {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 14px !important;
+}
+
+.codigos-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 12px !important;
+}
+
+.codigo-card {
+  border: 1px solid var(--cockpit-card-border) !important;
+  border-radius: 10px !important;
+  padding: 12px 14px !important;
+  background: var(--cockpit-card-bg) !important;
+  transition: all 0.15s ease !important;
+}
+
+.codigo-card:hover {
+  border-color: var(--cockpit-cyan-primary) !important;
+  background: var(--cockpit-sub-bg) !important;
+}
+
+/* Contraste y Ergonomía de Inputs y Selects (WCAG 2.1 AA) */
+.input-full,
+.form-input,
+select.input-full,
+textarea.input-full {
+  min-height: 42px !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 0.85rem !important;
+  color: #0F172A !important;
+  background-color: #FFFFFF !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  box-sizing: border-box !important;
+}
+
+.input-full:focus-visible,
+.form-input:focus-visible,
+select.input-full:focus-visible,
+textarea.input-full:focus-visible {
+  border-color: var(--cockpit-cyan-primary) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.15) !important;
+}
+
+/* Botones: Alto Contraste y Semáforo Clínico Exclusivo */
+.btn-full-primary {
+  background-color: var(--cockpit-cyan-primary) !important;
+  color: #FFFFFF !important;
+  border: 1px solid var(--cockpit-cyan-primary) !important;
+  border-radius: 8px !important;
+  min-height: 42px !important;
+  padding: 10px 18px !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.btn-full-primary:hover {
+  background-color: var(--cockpit-cyan-hover) !important;
+  border-color: var(--cockpit-cyan-hover) !important;
+}
+
+.btn-full-secondary {
+  background-color: #FFFFFF !important;
+  color: #1E293B !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 8px !important;
+  min-height: 42px !important;
+  padding: 10px 16px !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.btn-full-secondary:hover {
+  background-color: #F8FAFC !important;
+  border-color: #94A3B8 !important;
+  color: #0F172A !important;
+}
+
+/* Soporte Universal de Modo Oscuro (.dark, html.dark y [data-theme="dark"]) */
+html.dark,
+.dark,
+[data-theme="dark"] {
+  --cockpit-bg: #0B1120 !important;
+  --cockpit-card-bg: #111827 !important;
+  --cockpit-card-border: #1E293B !important;
+  --cockpit-divider: #1E293B !important;
+  --cockpit-sub-bg: #1E293B !important;
+  --cockpit-text: #F8FAFC !important;
+  --cockpit-text-muted: #94A3B8 !important;
+  --cockpit-cyan-primary: #06B6D4 !important;
+  --cockpit-cyan-hover: #22D3EE !important;
+  --cockpit-cyan-light: rgba(6, 182, 212, 0.15) !important;
+  --cockpit-cyan-border: #0891B2 !important;
+}
+
+html.dark body,
+.dark body,
+[data-theme="dark"] body {
+  background-color: #0B1120 !important;
+  color: #F8FAFC !important;
+}
+
+html.dark .module-section,
+.dark .module-section,
+[data-theme="dark"] .module-section,
+html.dark .reniec-consulta-card,
+.dark .reniec-consulta-card,
+[data-theme="dark"] .reniec-consulta-card,
+html.dark .consentimiento-legal-card,
+.dark .consentimiento-legal-card,
+[data-theme="dark"] .consentimiento-legal-card,
+html.dark .codigo-card,
+.dark .codigo-card,
+[data-theme="dark"] .codigo-card,
+html.dark .soat-meter-card,
+.dark .soat-meter-card,
+[data-theme="dark"] .soat-meter-card,
+html.dark .cockpit-stepper-card,
+.dark .cockpit-stepper-card,
+[data-theme="dark"] .cockpit-stepper-card,
+html.dark .cockpit-monitor-card,
+.dark .cockpit-monitor-card,
+[data-theme="dark"] .cockpit-monitor-card,
+html.dark .cockpit-tactical-bar,
+.dark .cockpit-tactical-bar,
+[data-theme="dark"] .cockpit-tactical-bar,
+html.dark .cockpit-summary-card,
+.dark .cockpit-summary-card,
+[data-theme="dark"] .cockpit-summary-card,
+html.dark #cockpit_top_bar,
+.dark #cockpit_top_bar,
+[data-theme="dark"] #cockpit_top_bar {
+  background-color: #111827 !important;
+  border-color: #1E293B !important;
+  color: #F8FAFC !important;
+}
+
+html.dark .input-full,
+.dark .input-full,
+[data-theme="dark"] .input-full,
+html.dark select.input-full,
+.dark select.input-full,
+[data-theme="dark"] select.input-full,
+html.dark textarea.input-full,
+.dark textarea.input-full,
+[data-theme="dark"] textarea.input-full {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+html.dark .input-full:focus-visible,
+.dark .input-full:focus-visible,
+[data-theme="dark"] .input-full:focus-visible {
+  border-color: #06B6D4 !important;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25) !important;
+}
+
+html.dark .btn-full-secondary,
+.dark .btn-full-secondary,
+[data-theme="dark"] .btn-full-secondary {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+html.dark .btn-full-secondary:hover,
+.dark .btn-full-secondary:hover,
+[data-theme="dark"] .btn-full-secondary:hover {
+  background-color: #334155 !important;
+  color: #FFFFFF !important;
+}
+
+html.dark label,
+.dark label,
+[data-theme="dark"] label {
+  color: #CBD5E1 !important;
+}
+
+/* Adaptación responsive limpia */
+@media (max-width: 1024px) {
+  .form-grid-4,
+  .form-grid-3,
+  .codigos-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .form-grid-4,
+  .form-grid-3,
+  .form-grid-2,
+  .codigos-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
