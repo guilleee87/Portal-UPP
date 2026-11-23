@@ -3620,16 +3620,93 @@
           </div>
           <div class="form-field">
             <label for="cie10_select">Diagnóstico CIE-10 (Obligatorio para Cobertura):</label>
-            <select id="cie10_select" class="input-full" onchange="seleccionarCIE10(this.value)">
+                        <select id="cie10_select" class="input-full" onchange="seleccionarCIE10(this.value)">
               <option value="">Seleccione diagnóstico CIE-10...</option>
-              <option value="I21.9 — Infarto agudo del miocardio sin otra especificación">I21.9 — Infarto agudo del miocardio</option>
-              <option value="I64.X — Accidente vascular encefálico agudo (Ictus)">I64.X — Accidente vascular encefálico (Ictus)</option>
-              <option value="A41.9 — Sepsis, no especificada">A41.9 — Sepsis no especificada</option>
-              <option value="T14.9 — Traumatismo no especificado por accidente de tránsito">T14.9 — Traumatismo por accidente de tránsito</option>
-              <option value="S06.9 — Traumatismo intracraneal no especificado (TEC)">S06.9 — Traumatismo intracraneal (TEC)</option>
-              <option value="K35.8 — Apendicitis aguda">K35.8 — Apendicitis aguda</option>
-              <option value="J45.9 — Asma, no especificada (Crisis asmática)">J45.9 — Crisis asmática aguda</option>
-              <option value="R10.4 — Otros dolores abdominales y los no especificados">R10.4 — Dolor abdominal agudo</option>
+              
+              <optgroup label="❤️ Cardiovascular y Hemodinámica Crítica">
+                <option value="I21.9 — Infarto agudo del miocardio sin otra especificación">I21.9 — Infarto agudo del miocardio (SCACEST / SCASEST)</option>
+                <option value="I20.0 — Angina inestable de esfuerzo / reposo">I20.0 — Angina inestable de esfuerzo o reposo</option>
+                <option value="I50.9 — Insuficiencia cardíaca congestiva descompensada">I50.9 — Insuficiencia cardíaca congestiva aguda</option>
+                <option value="I10.X — Crisis hipertensiva (Urgencia / Emergencia)">I10.X — Crisis hipertensiva (Emergencia / Urgencia)</option>
+                <option value="I49.9 — Arritmia cardíaca no especificada / Fibrilación auricular">I49.9 — Fibrilación auricular / Arritmia cardíaca aguda</option>
+                <option value="I26.9 — Tromboembolismo pulmonar (TEP)">I26.9 — Tromboembolismo pulmonar (TEP)</option>
+                <option value="R57.0 — Shock cardiogénico">R57.0 — Shock cardiogénico</option>
+              </optgroup>
+
+              <optgroup label="🧠 Neurología y Neurocirugía">
+                <option value="I64.X — Accidente vascular encefálico agudo (Ictus)">I64.X — Accidente vascular encefálico (Ictus isquémico / hemorrágico)</option>
+                <option value="S06.9 — Traumatismo intracraneal no especificado (TEC)">S06.9 — Traumatismo intracraneal (TEC moderado / severo)</option>
+                <option value="G40.9 — Crisis convulsiva / Estatus epiléptico">G40.9 — Crisis convulsiva activa / Estatus epiléptico</option>
+                <option value="G03.9 — Meningitis aguda no especificada">G03.9 — Meningitis bacteriana / viral aguda</option>
+                <option value="R55.X — Síncope y colapso cardiovascular">R55.X — Síncope y colapso</option>
+                <option value="G45.9 — Isquemia cerebral transitoria (AIT)">G45.9 — Isquemia cerebral transitoria (AIT)</option>
+              </optgroup>
+
+              <optgroup label="🚗 Trauma, Accidentes de Tránsito y Shock">
+                <option value="T14.9 — Traumatismo no especificado por accidente de tránsito">T14.9 — Politraumatismo por accidente de tránsito (SOAT)</option>
+                <option value="T07.X — Politraumatismo severo (Accidente múltiple)">T07.X — Politraumatismo severo / Lesiones múltiples</option>
+                <option value="S36.9 — Traumatismo abdominal cerrado / Hemoperitoneo">S36.9 — Traumatismo abdominal cerrado con sospecha de hemoperitoneo</option>
+                <option value="S27.0 — Neumotórax traumático a tensión / Hemotórax">S27.0 — Neumotórax a tensión / Hemotórax masivo</option>
+                <option value="T30.0 — Quemadura térmica extensa (Grado II / III)">T30.0 — Quemadura térmica extensa (>15% SC)</option>
+                <option value="S82.9 — Fractura de miembro inferior / diáfisis ósea">S82.9 — Fractura diafisiaria de fémur / tibia y peroné</option>
+                <option value="R57.1 — Shock hipovolémico / hemorrágico">R57.1 — Shock hipovolémico hemorrágico</option>
+              </optgroup>
+
+              <optgroup label="🩺 Cirugía General y Abdomen Agudo">
+                <option value="K35.8 — Apendicitis aguda">K35.8 — Apendicitis aguda</option>
+                <option value="R10.4 — Otros dolores abdominales y los no especificados">R10.4 — Dolor abdominal agudo / Abdomen agudo quirúrgico</option>
+                <option value="K80.0 — Colecistitis aguda litiásica">K80.0 — Colecistitis aguda litiásica / Cólico biliar</option>
+                <option value="K85.9 — Pancreatitis aguda no especificada">K85.9 — Pancreatitis aguda biliar / enólica</option>
+                <option value="K92.2 — Hemorragia digestiva alta (HDA) / Melena">K92.2 — Hemorragia digestiva alta activa (HDA / Melena)</option>
+                <option value="K92.0 — Hematemesis aguda">K92.0 — Hematemesis aguda</option>
+                <option value="K56.6 — Obstrucción intestinal aguda / Íleo mecánico">K56.6 — Obstrucción intestinal aguda / Íleo obstructivo</option>
+                <option value="A09.0 — Gastroenteritis aguda con deshidratación severa">A09.0 — Gastroenteritis aguda infecciosa con deshidratación</option>
+              </optgroup>
+
+              <optgroup label="🫁 Neumología y Vía Respiratoria">
+                <option value="J45.9 — Asma, no especificada (Crisis asmática)">J45.9 — Crisis asmática aguda severa</option>
+                <option value="J18.9 — Neumonía adquirida en la comunidad (NAC)">J18.9 — Neumonía adquirida en la comunidad (NAC) severa</option>
+                <option value="J44.1 — EPOC con exacerbación aguda sobreinfectada">J44.1 — Exacerbación aguda de EPOC</option>
+                <option value="J96.0 — Insuficiencia respiratoria aguda tipo I / II">J96.0 — Insuficiencia respiratoria aguda</option>
+                <option value="J81.X — Edema agudo de pulmón cardiogénico">J81.X — Edema agudo de pulmón (EAP)</option>
+              </optgroup>
+
+              <optgroup label="🦠 Infectología y Medicina Crítica">
+                <option value="A41.9 — Sepsis, no especificada">A41.9 — Sepsis de foco no especificado / Shock séptico</option>
+                <option value="N39.0 — Infección del tracto urinario complicada (ITU)">N39.0 — Infección de vías urinarias complicada (ITU)</option>
+                <option value="N10.X — Pielonefritis aguda grave">N10.X — Pielonefritis aguda grave</option>
+                <option value="A90.X — Dengue con signos de alarma / Dengue grave">A90.X — Dengue con signos de alarma / Dengue grave</option>
+                <option value="B34.9 — Síndrome febril agudo en estudio">B34.9 — Síndrome febril agudo prolongado en estudio</option>
+              </optgroup>
+
+              <optgroup label="🧪 Endocrinología, Metabolismo y Nefrología">
+                <option value="E10.1 — Diabetes mellitus con cetoacidosis diabética (CAD)">E10.1 — Cetoacidosis diabética (CAD)</option>
+                <option value="E11.0 — Diabetes tipo 2 con estado hiperosmolar (EHH)">E11.0 — Estado hiperosmolar hiperglucémico (EHH)</option>
+                <option value="E16.2 — Hipoglucemia severa sintomática">E16.2 — Hipoglucemia sintomática severa (<50 mg/dL)</option>
+                <option value="N17.9 — Insuficiencia renal aguda (IRA)">N17.9 — Insuficiencia renal aguda / Injuria renal aguda (LRA)</option>
+                <option value="N23.X — Cólico nefrítico agudo / Urolitiasis">N23.X — Cólico nefrítico agudo / Litiasis renal</option>
+                <option value="E87.6 — Trastorno hidroelectrolítico severo (Hipopotasemia)">E87.6 — Trastorno hidroelectrolítico severo</option>
+              </optgroup>
+
+              <optgroup label="🤰 Ginecología y Obstetricia (Claves Rojas / Azules / Amarillas)">
+                <option value="O14.9 — Preeclampsia severa / Síndrome HELLP (Clave Azul)">O14.9 — Preeclampsia severa / Síndrome HELLP (Clave Azul)</option>
+                <option value="O15.9 — Eclampsia en embarazo / puerperio (Clave Azul)">O15.9 — Eclampsia gestacional o puerperal (Clave Azul)</option>
+                <option value="O72.1 — Hemorragia posparto inmediata / Atonía uterina (Clave Roja)">O72.1 — Hemorragia posparto inmediata (Clave Roja)</option>
+                <option value="O00.9 — Embarazo ectópico roto (Clave Roja)">O00.9 — Embarazo ectópico roto con abdomen agudo (Clave Roja)</option>
+                <option value="O85.X — Sepsis puerperal / Endometritis (Clave Amarilla)">O85.X — Sepsis puerperal / Infección obstétrica (Clave Amarilla)</option>
+                <option value="O60.0 — Amenaza de parto pretérmino">O60.0 — Amenaza de parto pretérmino en evolución</option>
+              </optgroup>
+
+              <optgroup label="⚠️ Toxicología y Reacciones Severas">
+                <option value="T78.2 — Choque anafiláctico / Anafilaxia severa">T78.2 — Choque anafiláctico / Anafilaxia medicamentosa</option>
+                <option value="T65.9 — Intoxicación aguda por plaguicidas / organofosforados">T65.9 — Intoxicación aguda por plaguicidas / organofosforados</option>
+                <option value="T51.0 — Intoxicación etílica aguda complicada">T51.0 — Intoxicación etílica aguda con compromiso sensorial</option>
+              </optgroup>
+
+              <optgroup label="🧠 Psiquiatría y Salud Mental de Emergencia">
+                <option value="F41.0 — Trastorno de pánico / Crisis de angustia aguda">F41.0 — Trastorno de pánico / Crisis de ansiedad paroxística</option>
+                <option value="F19.0 — Agitación psicomotriz aguda">F19.0 — Agitación psicomotriz aguda</option>
+              </optgroup>
             </select>
           </div>
           <div class="form-field">
@@ -3669,7 +3746,75 @@
                 <label for="select_farmacia_catalogo">Seleccionar Medicamento / Solución EV:</label>
                 <input type="search" id="buscar_farmacia_input" placeholder="🔍 Buscar medicamento por nombre o acción..." class="input-full" style="margin-bottom:6px; font-size:0.82rem; padding:6px 10px; border-radius:6px;" oninput="filtrarCatalogoFarmacia(this.value)">
                 <select id="select_farmacia_catalogo" class="input-full" style="font-weight:600;">
-                  <!-- Se llena dinámicamente con los fármacos de FARMACIA -->
+                  <option value="">Seleccione medicamento o solución de emergencia...</option>
+                  
+                  <optgroup label="💧 Soluciones y Fluidoterapia EV">
+                    <option value="Cloruro de Sodio 0.9% (Suero Fisiológico) 1000ml EV">Cloruro de Sodio 0.9% 1000ml EV (Rehidratación / Expansión)</option>
+                    <option value="Lactato de Ringer (Hartmann) 1000ml EV">Lactato de Ringer 1000ml EV (Shock / Politrauma / Quemados)</option>
+                    <option value="Dextrosa al 5% 1000ml EV">Dextrosa al 5% 1000ml EV (Mantenimiento hídrico)</option>
+                    <option value="Dextrosa 33% Frasco Ampolla 20ml EV">Dextrosa 33% Ampolla EV (Hipoglucemia severa STAT)</option>
+                    <option value="Manitol al 20% Frasco 500ml EV">Manitol al 20% Frasco 500ml EV (Edema Cerebral / Hipertensión endocraneana)</option>
+                    <option value="Bicarbonato de Sodio 8.4% Ampolla 20ml EV">Bicarbonato de Sodio 8.4% Ampolla EV (Acidosis metabólica / Paro)</option>
+                  </optgroup>
+
+                  <optgroup label="🚨 Soporte Vital, Shock y Reanimación Cardíaca">
+                    <option value="Adrenalina (Epinefrina) 1mg/1ml Ampolla EV/SC">Adrenalina (Epinefrina) 1mg/1ml Ampolla EV (Paro cardiorrespiratorio / Anafilaxia)</option>
+                    <option value="Atropina Sulfato 0.5mg/1ml Ampolla EV">Atropina Sulfato 0.5mg/1ml Ampolla EV (Bradicardia sintomática)</option>
+                    <option value="Noradrenalina 4mg/4ml Ampolla EV">Noradrenalina 4mg/4ml Ampolla EV (Vasopresor de primera línea en Shock Séptico)</option>
+                    <option value="Amiodarona 150mg/3ml Ampolla EV">Amiodarona 150mg/3ml Ampolla EV (Antiarrítmico / FV / TV sin pulso)</option>
+                    <option value="Nitroglicerina 50mg/10ml Ampolla EV">Nitroglicerina 50mg/10ml Ampolla EV (SCACEST / Edema Agudo de Pulmón)</option>
+                    <option value="Furosemida 20mg/2ml Ampolla EV">Furosemida 20mg/2ml Ampolla EV (Diurético de asa / EAP / Crisis Hipertensiva)</option>
+                    <option value="Captopril 25mg Tableta Sublingual">Captopril 25mg Tableta Sublingual (Urgencia Hipertensiva)</option>
+                    <option value="Dobutamina 250mg/20ml Ampolla EV">Dobutamina 250mg/20ml Ampolla EV (Inotrópico en Shock Cardiogénico)</option>
+                  </optgroup>
+
+                  <optgroup label="💉 Analgésicos, AINEs y Sedoanalgesia">
+                    <option value="Metamizol Sódico (Dipirona) 2g/5ml Ampolla EV">Metamizol Sódico 2g/5ml Ampolla EV (Dolor agudo / Fiebre refractaria)</option>
+                    <option value="Ketorolaco Trometamol 30mg/1ml Ampolla EV">Ketorolaco 30mg/1ml Ampolla EV (Dolor cólico renal / Trauma)</option>
+                    <option value="Paracetamol (Acetaminofén) 1g Frasco EV">Paracetamol 1g Solución EV (Antipirético / Analgésico parenteral)</option>
+                    <option value="Tramadol Clorhidrato 100mg/2ml Ampolla EV">Tramadol 100mg/2ml Ampolla EV (Dolor moderado a severo)</option>
+                    <option value="Morfina Clorhidrato 10mg/1ml Ampolla EV">Morfina 10mg/1ml Ampolla EV (Dolor isquémico coronario / Politrauma)</option>
+                    <option value="Fentanilo 0.1mg/2ml Ampolla EV">Fentanilo 0.1mg/2ml Ampolla EV (Analgesia rápida / Secuencia de intubación)</option>
+                    <option value="Diclofenaco Sódico 75mg/3ml Ampolla IM">Diclofenaco 75mg/3ml Ampolla IM (Dolor osteomuscular / Cólico)</option>
+                  </optgroup>
+
+                  <optgroup label="🧠 Sedantes, Anticonvulsivantes y Bloqueadores">
+                    <option value="Diazepam 10mg/2ml Ampolla EV">Diazepam 10mg/2ml Ampolla EV (Crisis convulsiva aguda / Sedación)</option>
+                    <option value="Midazolam 5mg/5ml Ampolla EV">Midazolam 5mg/5ml Ampolla EV (Secuencia rápida de intubación / Estatus)</option>
+                    <option value="Fenitoína (Epamin) 250mg/5ml Ampolla EV">Fenitoína (Epamin) 250mg/5ml Ampolla EV (Anticonvulsivante de carga)</option>
+                    <option value="Sulfato de Magnesio 20% Ampolla EV">Sulfato de Magnesio 20% Ampolla EV (Preeclampsia severa / Eclampsia / Torsades)</option>
+                    <option value="Haloperidol 5mg/1ml Ampolla IM/EV">Haloperidol 5mg/1ml Ampolla IM/EV (Agitación psicomotriz aguda)</option>
+                  </optgroup>
+
+                  <optgroup label="🛡️ Gastroprotectores, Antieméticos y Antiespasmódicos">
+                    <option value="Omeprazol 40mg Frasco Vial EV">Omeprazol 40mg Frasco Vial EV (Hemorragia digestiva / Profilaxis úlcera)</option>
+                    <option value="Dimenhidrinato 50mg/5ml Ampolla EV">Dimenhidrinato 50mg/5ml Ampolla EV (Antiemético / Vértigo agudo)</option>
+                    <option value="Metoclopramida 10mg/2ml Ampolla EV">Metoclopramida 10mg/2ml Ampolla EV (Procinético / Náuseas y vómitos)</option>
+                    <option value="Hioscina N-Butilbromuro 20mg/1ml Ampolla EV">Hioscina N-Butilbromuro 20mg/1ml Ampolla EV (Cólico abdominal / Espasmo)</option>
+                  </optgroup>
+
+                  <optgroup label="🦠 Antibióticos y Antiinfecciosos de Emergencia">
+                    <option value="Ceftriaxona 1g Frasco Vial EV">Ceftriaxona 1g Frasco Vial EV (Sepsis / Neumonía / Infección urinaria grave)</option>
+                    <option value="Ciprofloxacino 200mg/100ml Frasco EV">Ciprofloxacino 200mg/100ml Solución EV (Infección abdominal / ITU complicada)</option>
+                    <option value="Metronidazol 500mg/100ml Frasco EV">Metronidazol 500mg/100ml Solución EV (Infección anaerobia / Abdomen agudo)</option>
+                    <option value="Meropenem 1g Frasco Vial EV">Meropenem 1g Frasco Vial EV (Sepsis nosocomial / Shock séptico refractario)</option>
+                    <option value="Vancomicina 1g Frasco Vial EV">Vancomicina 1g Frasco Vial EV (Sospecha MRSA / Sepsis severa)</option>
+                  </optgroup>
+
+                  <optgroup label="🫁 Corticoides y Manejo Respiratorio">
+                    <option value="Hidrocortisona 100mg Frasco Vial EV">Hidrocortisona 100mg Vial EV (Crisis asmática severa / Insuficiencia suprarrenal)</option>
+                    <option value="Dexametasona 4mg/2ml Ampolla EV">Dexametasona 4mg/2ml Ampolla EV (Laringotraqueítis / Edema de vía aérea / Anafilaxia)</option>
+                    <option value="Metilprednisolona 500mg Vial EV">Metilprednisolona 500mg Vial EV (Shock medular / Crisis bronquial severa)</option>
+                    <option value="Salbutamol Gotas para Nebulización 0.5%">Salbutamol Gotas para Nebulización (Broncoespasmo agudo severo)</option>
+                    <option value="Bromuro de Ipratropio Solución Inhalatoria">Bromuro de Ipratropio Solución Inhalatoria (Crisis asmática / EPOC)</option>
+                  </optgroup>
+
+                  <optgroup label="⚠️ Antídotos y Reversión Toxicológica">
+                    <option value="Flumazenil 0.5mg/5ml Ampolla EV">Flumazenil 0.5mg/5ml Ampolla EV (Antídoto intoxicación por benzodiacepinas)</option>
+                    <option value="Naloxona 0.4mg/1ml Ampolla EV">Naloxona 0.4mg/1ml Ampolla EV (Antídoto intoxicación por opioides / depresión respiratoria)</option>
+                    <option value="Gluconato de Calcio 10% Ampolla 10ml EV">Gluconato de Calcio 10% Ampolla EV (Hiperpotasemia con cambios ECG / Hipocalcemia)</option>
+                    <option value="Fitomenadiona (Vitamina K1) 10mg Ampolla EV">Fitomenadiona (Vitamina K1) 10mg Ampolla EV (Sobredosis de anticoagulantes / Hemorragia)</option>
+                  </optgroup>
                 </select>
               </div>
               <div class="form-field" style="margin-bottom:0;">
@@ -3762,7 +3907,43 @@
                 <label for="select_laboratorio_catalogo">Seleccionar Prueba de Laboratorio:</label>
                 <input type="search" id="buscar_laboratorio_input" placeholder="🔍 Buscar prueba de laboratorio (ej. Troponina, AGA, Hemograma)..." class="input-full" style="margin-bottom:6px; font-size:0.82rem; padding:6px 10px; border-radius:6px;" oninput="filtrarCatalogoLaboratorio(this.value)">
                 <select id="select_laboratorio_catalogo" class="input-full" style="font-weight:600;">
-                  <!-- Se llena dinámicamente con los exámenes de LABORATORIO -->
+                  <option value="">Seleccione examen o perfil de laboratorio de emergencia...</option>
+
+                  <optgroup label="🩸 Hematología y Coagulación de Urgencia">
+                    <option value="Hemograma Completo + Plaquetas Automatizado">Hemograma Completo + Recuento Plaquetario Automatizado</option>
+                    <option value="Perfil de Coagulación (TP, INR, TTPa, Fibrinógeno)">Perfil de Coagulación Completo (TP, INR, TTPa, Fibrinógeno)</option>
+                    <option value="Dímero D Cuantitativo (Sospecha TEP / TVP / CID)">Dímero D Cuantitativo (Sospecha TEP / Trombosis venosa profunda)</option>
+                    <option value="Grupo Sanguíneo y Factor Rh + Prueba Cruzada Mayor">Grupo Sanguíneo y Factor Rh + Prueba Cruzada (Transfusión)</option>
+                    <option value="Frotis de Sangre Periférica (Lámina)">Frotis de Sangre Periférica (Descarte hemólisis / leucemia)</option>
+                  </optgroup>
+
+                  <optgroup label="⚡ Gases Arteriales y Marcadores Críticos">
+                    <option value="Gases Arteriales (AGA) + Lactato Sérico + Electrolitos">Gases Arteriales (AGA) + Lactato Sérico + Electrolitos</option>
+                    <option value="Procalcitonina Cuantitativa (Sepsis / Shock)">Procalcitonina Cuantitativa (Marcador de Sepsis bacteriana)</option>
+                    <option value="Proteína C Reactiva (PCR) Ultrasensible">Proteína C Reactiva (PCR) Cuantitativa</option>
+                  </optgroup>
+
+                  <optgroup label="❤️ Marcadores Cardíacos de Infarto">
+                    <option value="Troponina I Ultrasensible (SCACEST / SCASEST)">Troponina I Ultrasensible (Infarto Agudo de Miocardio)</option>
+                    <option value="Troponina T Cuantitativa / Fracción Cardíaca">Troponina T Cuantitativa</option>
+                    <option value="CK-MB Fracción Masa + CPK Total">CK-MB Fracción Masa + CPK Total (Necrosis Miocárdica)</option>
+                  </optgroup>
+
+                  <optgroup label="🧪 Bioquímica, Función Renal y Hepática">
+                    <option value="Glucemia Sérica Rápida / Hemoglucotest">Glucemia Sérica Rápida / Hemoglucotest STAT</option>
+                    <option value="Perfil Renal (Urea y Creatinina Sérica)">Perfil Renal (Urea y Creatinina Sérica)</option>
+                    <option value="Electrolitos Séricos (Sodio, Potasio, Cloro, Calcio Iónico)">Electrolitos Séricos (Na, K, Cl, Ca iónico)</option>
+                    <option value="Perfil Hepático (TGO, TGP, Bilirrubinas, Fosfatasa)">Perfil Hepático Completo (TGO, TGP, Bilirrubinas, Fosfatasa)</option>
+                    <option value="Amilasa y Lipasa Sérica (Pancreatitis Aguda)">Amilasa y Lipasa Sérica (Descarte Pancreatitis Aguda)</option>
+                  </optgroup>
+
+                  <optgroup label="🚽 Orina, Embarazo y Pruebas Rápidas">
+                    <option value="Examen Completo de Orina (EGO) con Sedimento">Examen Completo de Orina (EGO) con Sedimento Patológico</option>
+                    <option value="Subunidad Beta HCG Cuantitativa en Sangre">Subunidad Beta HCG Cuantitativa (Sospecha Embarazo / Ectópico)</option>
+                    <option value="Descarte Toxicológico en Orina (Panel 5 Drogas)">Descarte Toxicológico en Orina (Panel Drogas de Abuso)</option>
+                    <option value="Prueba Rápida Dengue NS1 / IgM-IgG">Prueba Rápida Dengue NS1 y Anticuerpos IgM/IgG</option>
+                    <option value="Prueba Rápida de Influenza A/B + COVID-19 Ag">Prueba Rápida Dual Influenza A/B + COVID-19 Antígeno</option>
+                  </optgroup>
                 </select>
               </div>
               <div class="form-field" style="margin-bottom:0;">
@@ -3812,7 +3993,34 @@
                 <label for="select_imagenes_catalogo">Seleccionar Estudio Radiológico / Imagen:</label>
                 <input type="search" id="buscar_imagenes_input" placeholder="🔍 Buscar estudio radiológico (ej. TAC Cerebral, Rx Tórax, Eco FAST)..." class="input-full" style="margin-bottom:6px; font-size:0.82rem; padding:6px 10px; border-radius:6px;" oninput="filtrarCatalogoImagenes(this.value)">
                 <select id="select_imagenes_catalogo" class="input-full" style="font-weight:600;">
-                  <!-- Se llena dinámicamente con los estudios de IMAGENES -->
+                  <option value="">Seleccione estudio radiológico o ecográfico de emergencia...</option>
+
+                  <optgroup label="🩻 Radiología Digital (Rayos X) de Emergencia">
+                    <option value="Rx Tórax AP y Lateral (Bipedestación / Portátil)">Rx Tórax AP y Lateral (Evaluación Pulmonar / Portátil en Cama)</option>
+                    <option value="Rx Abdomen Simple (Decúbito y Bipedestación)">Rx Abdomen Simple (Decúbito y Bipedestación - Descarte Neumoperitoneo / Obstrucción)</option>
+                    <option value="Rx Columna Cervical 3 Incidencias (Trauma)">Rx Columna Cervical (AP, Lateral y Odontoides en Trauma)</option>
+                    <option value="Rx Pelvis y Cadera AP (Politraumatismo)">Rx Pelvis y Cadera AP (Descarte Fractura de Pelvis inestable)</option>
+                    <option value="Rx Extremidades (Huesos Largos / Articulación)">Rx de Miembro Superior / Inferior (Descarte Fractura / Luxación)</option>
+                    <option value="Rx Cráneo y Macizo Facial (Trauma)">Rx Cráneo y Macizo Facial (Descarte Fractura ósea)</option>
+                  </optgroup>
+
+                  <optgroup label="📡 Ultrasonografía y Ecografía de Urgencia">
+                    <option value="Ecografía FAST (Trauma / Detección Líquido Libre)">Ecografía FAST / E-FAST de Emergencia (Detección Hemoperitoneo / Hemotórax)</option>
+                    <option value="Ecografía Abdominal Completa y Vías Biliares">Ecografía Abdominal Completa (Colecistitis / Apendicitis / Páncreas)</option>
+                    <option value="Ecografía Renal y Vías Urinarias">Ecografía Renal y Vesical (Cólico Nefrítico / Hidronefrosis / Litiasis)</option>
+                    <option value="Ecografía Gineco-Obstétrica Transvaginal de Urgencia">Ecografía Transvaginal de Urgencia (Embarazo Ectópico / Quiste Roto / Sangrado)</option>
+                    <option value="Ecografía Doppler Vascular de Miembros Inferiores">Ecografía Doppler Vascular Venosa (Descarte TVP Miembros Inferiores)</option>
+                    <option value="Ecocardiograma Transtorácico de Emergencia">Ecocardiograma Transtorácico (Derrame Pericárdico / Taponamiento / Disfunción)</option>
+                  </optgroup>
+
+                  <optgroup label="🖥️ Tomografía Computarizada (TAC) de Urgencia">
+                    <option value="TAC Cerebral Sin Contraste (Descarte ACV / TEC Agudo)">TAC Cerebral Sin Contraste (Protocolo Stroke / TEC Agudo)</option>
+                    <option value="TAC Cerebral Con Contraste">TAC Cerebral Con Contraste EV (Masa / Infección / Aneurisma)</option>
+                    <option value="AngioTAC de Tórax (Protocolo Tromboembolismo Pulmonar - TEP)">AngioTAC Pulmonar (Descarte Tromboembolismo Pulmonar - TEP)</option>
+                    <option value="TAC Abdomen y Pelvis con Contraste EV">TAC Abdomino-Pélvica con Contraste EV (Abdomen Agudo / Trauma Cerrado)</option>
+                    <option value="TAC Columna Cervical y Dorsolumbar">TAC Columna Cervical / Torácica / Lumbar con Ventana Ósea</option>
+                    <option value="AngioTAC Cerebral y de Cuello (Código Ictus)">AngioTAC de Vasos Supraaórticos y Cerebrales (Código ACV)</option>
+                  </optgroup>
                 </select>
               </div>
               <div class="form-field" style="margin-bottom:0;">
@@ -4410,30 +4618,199 @@
           </button>
         </div>
 
-        <!-- 4. FALLECIMIENTO Y CANDADO MÉDICO-LEGAL ART 195 CPP -->
+                <!-- 4. FALLECIMIENTO Y CANDADO MÉDICO-LEGAL ART 195 CPP -->
         <div id="box_egreso_fallecido" style="display:none;">
+          <!-- A. BLOQUEO MÉDICO-LEGAL ART 195 CPP -->
           <div id="bloqueo_sinadef_box" class="bloqueo-sinadef-card">
-            <div style="display:flex; align-items:center; gap:8px; font-size:0.9rem; font-weight:900;">
-              <span>⚖️</span> BLOQUEO MÉDICO-LEGAL (Art. 195° del Código Procesal Penal):
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+              <div style="display:flex; align-items:center; gap:8px; font-size:0.92rem; font-weight:900;">
+                <span>⚖️</span> BLOQUEO MÉDICO-LEGAL (Art. 195° y 196° del Código Procesal Penal):
+              </div>
+              <span style="background:#fee2e2; color:#991b1b; padding:3px 10px; border-radius:9999px; font-size:0.72rem; font-weight:800; border:1px solid #f87171;">
+                CUSTODIA FISCAL OBLIGATORIA
+              </span>
             </div>
-            <p style="margin:6px 0 0; font-size:0.78rem;">
-              <strong>PROHIBIDO EMITIR CERTIFICADO SINADEF:</strong> La causa de defunción está vinculada a <strong>Accidente de Tránsito / Muerte Violenta o fallecido en menos de 24 horas sin diagnóstico definitivo</strong>. Se genera Oficio a la Fiscalía Provincial Penal de Turno y Policía Nacional para Levantamiento de Cadáver e internamiento en la Morgue Central (Instituto de Medicina Legal).
+            <p style="margin:8px 0 0; font-size:0.8rem; line-height:1.5;">
+              <strong>PROHIBIDO EMITIR CERTIFICADO SINADEF EN EL HOSPITAL:</strong> La defunción está vinculada a <strong>Accidente de Tránsito (SOAT), Causa Externa Violenta, Sospecha de Criminalidad o defunción en menos de 24 horas de ingreso sin diagnóstico definitivo</strong>. 
+              Por mandato imperativo de la ley, el cadáver queda en custodia del establecimiento de salud y se remite formalmente a la <strong>Fiscalía Provincial Penal de Turno</strong> y a la <strong>División de Medicina Legal (Morgue)</strong> para la diligencia de <strong>Levantamiento de Cadáver y Necropsia de Ley</strong>.
             </p>
-            <button type="button" class="btn-full-secondary" style="margin-top:10px; background:#ffffff; border-color:#dc2626; color:#991b1b; font-weight:800;" onclick="imprimirOficioFiscaliaLevantamiento()">
-              ⚖️ Emitir Oficio a Fiscalía y Acta de Levantamiento
-            </button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+              <button type="button" class="btn-full-secondary" style="background:#ffffff; border-color:#dc2626; color:#991b1b; font-weight:800;" onclick="imprimirOficioFiscaliaLevantamiento()">
+                ⚖️ Emitir Oficio a Fiscalía y Acta de Levantamiento
+              </button>
+              <button type="button" class="btn-full-secondary" style="background:#ffffff; border-color:#64748b; color:#334155; font-weight:700;" onclick="imprimirActaCustodiaCadaver()">
+                🏷️ Acta de Rotulado y Custodia de Pertenencias (PNP)
+              </button>
+            </div>
           </div>
 
-          <div id="sinadef_permitido_box" style="display:none; background:#f0fdf4; border:1px solid #86efac; border-radius:10px; padding:12px; margin-top:10px;">
-            <div style="color:#166534; font-weight:800; font-size:0.84rem;">
-              ✓ Defunción por Causa Natural Médica (&gt; 24h de estancia hospitalaria):
+          <!-- B. SINADEF PERMITIDO (CAUSA NATURAL > 24H) -->
+          <div id="sinadef_permitido_box" style="display:none; background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px; padding:14px; margin-top:12px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+              <div style="color:#166534; font-weight:800; font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+                <span>✓</span> Defunción por Causa Natural Médica (&gt; 24h de estancia hospitalaria):
+              </div>
+              <span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:9999px; font-size:0.72rem; font-weight:800; border:1px solid #86efac;">
+                SINADEF HABILITADO
+              </span>
             </div>
-            <p style="font-size:0.75rem; color:#14532d; margin:4px 0 8px;">
-              Fallecimiento por enfermedad común plenamente diagnosticada. Habilitado para registro directo en SINADEF.
+            <p style="font-size:0.8rem; color:#14532d; margin:6px 0 10px; line-height:1.5;">
+              Fallecimiento ocurrido en sala hospitalaria por evolución de enfermedad común plenamente diagnosticada, sin implicancia médico-legal. Habilitado para registro y firma digital en el <strong>Sistema Informático Nacional de Defunciones (SINADEF — Directiva N° 216-MINSA)</strong>.
             </p>
-            <button type="button" class="btn-full-secondary" onclick="imprimirCertificadoSinadef()">
-              📄 Emitir Certificado de Defunción SINADEF
-            </button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn-full-secondary" style="background:#16a34a; color:#ffffff; border-color:#15803d; font-weight:800;" onclick="imprimirCertificadoSinadef()">
+                📄 Emitir Certificado de Defunción SINADEF
+              </button>
+            </div>
+          </div>
+
+          <!-- C. PANEL INTEGRAL DE PARÁMETROS LEGALES Y PROCEDIMIENTOS DEL HOSPITAL Y EL SEGURO -->
+          <div style="margin-top:16px; background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; overflow:hidden;">
+            <div style="background:#0f172a; color:#f8fafc; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div style="font-size:0.88rem; font-weight:800; display:flex; align-items:center; gap:8px;">
+                <span>🏛️</span>
+                <span>Protocolo Clínico, Legal y de Aseguramiento ante Fallecimiento (Normativa Peruana)</span>
+              </div>
+              <span style="font-size:0.72rem; background:rgba(255,255,255,0.15); padding:3px 8px; border-radius:6px;">
+                NTS N° 042-MINSA · Art. 195 CPP · Ley N° 27604 · SUSALUD
+              </span>
+            </div>
+
+            <!-- TABS DE PROCEDIMIENTOS SEGÚN ENTE INVOLUCRADO -->
+            <div style="display:flex; border-bottom:1px solid #e2e8f0; background:#f8fafc; overflow-x:auto;" id="tabs_protocolo_fallecimiento">
+              <button type="button" class="tab-fallecimiento-btn active" style="padding:10px 16px; font-size:0.8rem; font-weight:700; border:none; background:#ffffff; color:#0284c7; border-bottom:2.5px solid #0284c7; cursor:pointer;" onclick="mostrarTabFallecimiento('tab_proc_hospital')">
+                🏥 1. Procedimientos Hospitalarios
+              </button>
+              <button type="button" class="tab-fallecimiento-btn" style="padding:10px 16px; font-size:0.8rem; font-weight:700; border:none; background:transparent; color:#64748b; cursor:pointer;" onclick="mostrarTabFallecimiento('tab_proc_seguro')">
+                🛡️ 2. Procedimientos según Seguro (SIS/EsSalud/SOAT/EPS)
+              </button>
+              <button type="button" class="tab-fallecimiento-btn" style="padding:10px 16px; font-size:0.8rem; font-weight:700; border:none; background:transparent; color:#64748b; cursor:pointer;" onclick="mostrarTabFallecimiento('tab_parametros_legales')">
+                ⚖️ 3. Parámetros Legales y Código Penal
+              </button>
+            </div>
+
+            <!-- CONTENIDO TAB 1: PROCEDIMIENTOS DEL HOSPITAL -->
+            <div id="tab_proc_hospital" style="padding:16px;">
+              <div style="font-size:0.82rem; font-weight:800; color:#0f172a; margin-bottom:8px;">
+                Pasos Asistenciales Obligatorios en el Servicio de Emergencia:
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px; font-size:0.78rem;">
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px;">
+                  <strong style="color:#0284c7;">1. Constatación y Cese Vital:</strong>
+                  <p style="margin:4px 0 0; color:#475569;">Verificación clínica de paro cardiorrespiratorio irreversible, ausencia de pulsos centrales, pupilas midriáticas no reactivas y trazo de asistolia en monitor ECG continuo.</p>
+                </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px;">
+                  <strong style="color:#0284c7;">2. Cierre y Foliado de Historia Clínica:</strong>
+                  <p style="margin:4px 0 0; color:#475569;">Registro de la hora exacta de defunción, detalle exhaustivo de maniobras de RCP avanzado (fármacos, desfibrilaciones), diagnóstico CIE-10 final y firma con CMP/RNE del médico tratante.</p>
+                </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px;">
+                  <strong style="color:#0284c7;">3. Rotulado y Custodia del Cadáver:</strong>
+                  <p style="margin:4px 0 0; color:#475569;">Colocación de doble brazalete hospitalario indeleble, amortajamiento según bioseguridad, traslado a cámara mortuoria/mortuorio y resguardo bajo custodia médica hasta entrega formal.</p>
+                </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px;">
+                  <strong style="color:#0284c7;">4. Inventario de Pertenencias y Cama:</strong>
+                  <p style="margin:4px 0 0; color:#475569;">Acta notariada/policial de inventario y custodia de objetos personales del fallecido con la PNP o deudos, y liberación informática inmediata de la cama en el sistema HIS.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- CONTENIDO TAB 2: PROCEDIMIENTOS DEL SEGURO -->
+            <div id="tab_proc_seguro" style="padding:16px; display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                <div style="font-size:0.82rem; font-weight:800; color:#0f172a;">
+                  Gestión Asistencial y Beneficios Funerarios según Aseguradora:
+                </div>
+                <div style="font-size:0.75rem; background:#e0f2fe; color:#0369a1; padding:4px 10px; border-radius:6px; font-weight:700;" id="lbl_seguro_fallecido_actual">
+                  Seguro Activo del Paciente: Identificando...
+                </div>
+              </div>
+
+              <!-- DETALLE COMPARATIVO DE SEGUROS -->
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; font-size:0.78rem;">
+                <!-- SIS -->
+                <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:12px;">
+                  <div style="font-weight:800; color:#166534; font-size:0.84rem; display:flex; align-items:center; gap:6px;">
+                    <span>🟢</span> SIS (Seguro Integral de Salud)
+                  </div>
+                  <ul style="margin:6px 0 0; padding-left:16px; color:#14532d; line-height:1.45;">
+                    <li><strong>Cierre de Cobertura:</strong> Cierre del FUA Asistencial con código de egreso <em>Fallecido</em>.</li>
+                    <li><strong>FUA de Sepelio:</strong> Generación del FUA de Sepelio para reconocimiento de gastos funerarios.</li>
+                    <li><strong>Prestación Económica de Sepelio (PES):</strong> Subsidio de hasta <strong>S/ 1,000</strong> a favor de la persona que sufragó ataúd, capilla, mortaja y sepultura/cremación.</li>
+                    <li><strong>Plazo:</strong> Hasta 60 días calendario para presentar expediente ante la UDR-SIS.</li>
+                  </ul>
+                </div>
+
+                <!-- ESSALUD -->
+                <div style="background:#eff6ff; border:1px solid #93c5fd; border-radius:8px; padding:12px;">
+                  <div style="font-weight:800; color:#1e40af; font-size:0.84rem; display:flex; align-items:center; gap:6px;">
+                    <span>🔵</span> EsSalud (Seguro Social de Salud)
+                  </div>
+                  <ul style="margin:6px 0 0; padding-left:16px; color:#1e3a8a; line-height:1.45;">
+                    <li><strong>Cierre en ESSI:</strong> Registro de defunción y cierre de acto médico en sistema hospitalario.</li>
+                    <li><strong>Subsidio por Sepelio EsSalud:</strong> Reembolso en efectivo de hasta <strong>S/ 2,070</strong> a favor del deudo o tercero que demuestre haber pagado los servicios funerarios.</li>
+                    <li><strong>Requisitos:</strong> Formulario 1010 firmado, boletas/facturas electrónicas originales a nombre del solicitante y copia de DNI.</li>
+                  </ul>
+                </div>
+
+                <!-- SOAT / CAT -->
+                <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px;">
+                  <div style="font-weight:800; color:#92400e; font-size:0.84rem; display:flex; align-items:center; gap:6px;">
+                    <span>🚗</span> SOAT / CAT (Accidente de Tránsito)
+                  </div>
+                  <ul style="margin:6px 0 0; padding-left:16px; color:#78350f; line-height:1.45;">
+                    <li><strong>Gastos Médicos Hospitalarios:</strong> Cobertura hasta <strong>5 UIT (S/ 26,750)</strong> hasta el momento del fallecimiento.</li>
+                    <li><strong>Indemnización por Muerte:</strong> <strong>4 UIT (S/ 21,400)</strong> abonadas directamente a beneficiarios según orden excluyente de prelación legal (1° cónyuge, 2° hijos, 3° padres, 4° hermanos).</li>
+                    <li><strong>Gastos de Sepelio:</strong> Hasta <strong>1 UIT (S/ 5,350)</strong> contra comprobantes de pago funerarios.</li>
+                    <li><strong>Documentos:</strong> Certificado de Necropsia IML, Denuncia Policial de Tránsito y Liquidación Médica.</li>
+                  </ul>
+                </div>
+
+                <!-- EPS / PRIVADA -->
+                <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:12px;">
+                  <div style="font-weight:800; color:#334155; font-size:0.84rem; display:flex; align-items:center; gap:6px;">
+                    <span>🏢</span> EPS / Clínica Privada / SITEDS
+                  </div>
+                  <ul style="margin:6px 0 0; padding-left:16px; color:#475569; line-height:1.45;">
+                    <li><strong>Cierre SITEDS:</strong> Notificación inmediata de egreso por fallecimiento y cese de cobertura de la póliza de salud.</li>
+                    <li><strong>Liquidación Final:</strong> Cierre de cuenta por emergencia, medicamentos y cama UCI conforme a deducible y coaseguro contratado.</li>
+                    <li><strong>Póliza de Vida / Sepelio:</strong> Emisión de Informe Médico de Defunción detallado para activar el seguro de vida o póliza de auxilio funerario privada.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- BOTÓN DE GENERACIÓN DE CONSTANCIA PARA SEGUROS -->
+              <div style="margin-top:14px; text-align:right;">
+                <button type="button" class="btn-full-primary" style="background:#0284c7; font-weight:700;" onclick="imprimirConstanciaSepelioSeguro()">
+                  📄 Emitir Constancia Hospitalaria de Sepelio para el Seguro
+                </button>
+              </div>
+            </div>
+
+            <!-- CONTENIDO TAB 3: PARÁMETROS LEGALES -->
+            <div id="tab_parametros_legales" style="padding:16px; display:none; font-size:0.78rem; color:#334155; line-height:1.5;">
+              <div style="font-size:0.82rem; font-weight:800; color:#0f172a; margin-bottom:8px;">
+                Marco Legal Nacional y Competencias Institucionales:
+              </div>
+              <div style="background:#f1f5f9; border-radius:8px; padding:12px; margin-bottom:10px;">
+                <strong>1. Código Procesal Penal (Decreto Legislativo N° 957):</strong>
+                <p style="margin:4px 0 0;">
+                  • <strong>Artículo 195° (Levantamiento de Cadáver):</strong> Cuando se trate de una muerte sospechosa de haber sido causada por un hecho punible o por accidente de tránsito, el Fiscal, con asistencia del médico legista y de la Policía Nacional, practicará el levantamiento del cadáver.<br>
+                  • <strong>Artículo 196° (Necropsia de Ley):</strong> La necropsia es obligatoria en las muertes por accidente de tránsito, homicidio, suicidio, sospechosas o violentas, y cuando el paciente fallezca dentro de las 24 horas de ingreso hospitalario sin causa médica fehaciente.
+                </p>
+              </div>
+              <div style="background:#f1f5f9; border-radius:8px; padding:12px; margin-bottom:10px;">
+                <strong>2. Ley General de Salud (Ley N° 26842, Art. 4° y 109°):</strong>
+                <p style="margin:4px 0 0;">
+                  Los establecimientos de salud están obligados a prestar atención médico-quirúrgica de emergencia hasta la estabilización o muerte del paciente. Prohíbe condicionar la atención médica al pago previo o pagaré.
+                </p>
+              </div>
+              <div style="background:#f1f5f9; border-radius:8px; padding:12px;">
+                <strong>3. Directiva Administrativa N° 216-MINSA/OGTI-V.01 (SINADEF):</strong>
+                <p style="margin:4px 0 0;">
+                  Establece los criterios para el registro informático del Certificado de Defunción. Todo médico que certifique una muerte violenta en SINADEF incurre en responsabilidad penal y administrativa funcional.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -4701,7 +5078,7 @@
   </div>
 
   <!-- MODAL DE ATENCIÓN GUARDADA EXITOSAMENTE -->
-  <div class="modal-hc-overlay" id="modal_registro_guardado" onclick="if(event.target===this)this.classList.remove('open','show')">
+  <div class="modal-hc-overlay" id="modal_registro_guardado" onclick="if(event.target===this)cerrarModalRegistroGuardado()">
     <div class="modal-hc-container" style="max-width: 700px;">
       <div class="modal-hc-header" style="background:#166534;">
         <div style="display:flex; align-items:center; gap:10px;">
@@ -4711,7 +5088,7 @@
             <div style="font-size:0.75rem; color:#bbf7d0;">Folio generado y vinculado a la Historia Clínica</div>
           </div>
         </div>
-        <button type="button" onclick="document.getElementById('modal_registro_guardado').classList.remove('open','show')" style="background:none; border:none; color:#ffffff; font-size:1.4rem; cursor:pointer;">✕</button>
+        <button type="button" onclick="cerrarModalRegistroGuardado()" style="background:none; border:none; color:#ffffff; font-size:1.4rem; cursor:pointer;">✕</button>
       </div>
       <div class="modal-hc-body" id="modal_registro_guardado_body">
         <!-- Inyectado dinámicamente -->

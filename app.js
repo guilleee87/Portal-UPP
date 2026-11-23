@@ -4176,12 +4176,47 @@ function ajustarVisibilidadEncabezadosApoyoDx() {
 
 function filtrarCatalogoFarmacia(query) {
   const q = String(query || "").trim().toLowerCase();
+  const select = document.getElementById("select_farmacia_catalogo");
+  if (select) {
+    Array.from(select.options).forEach(opt => {
+      if (!opt.value) return;
+      const texto = opt.textContent.toLowerCase();
+      opt.hidden = (!q || texto.includes(q)) ? false : true;
+    });
+  }
   const labels = document.querySelectorAll("#farmaciaGrid label");
   labels.forEach(label => {
     const text = (label.textContent || "").toLowerCase();
     label.style.display = (!q || text.includes(q)) ? "flex" : "none";
   });
 }
+
+function filtrarCatalogoLaboratorio(query) {
+  const q = String(query || "").trim().toLowerCase();
+  const select = document.getElementById("select_laboratorio_catalogo");
+  if (select) {
+    Array.from(select.options).forEach(opt => {
+      if (!opt.value) return;
+      const texto = opt.textContent.toLowerCase();
+      opt.hidden = (!q || texto.includes(q)) ? false : true;
+    });
+  }
+}
+
+function filtrarCatalogoImagenes(query) {
+  const q = String(query || "").trim().toLowerCase();
+  const select = document.getElementById("select_imagenes_catalogo");
+  if (select) {
+    Array.from(select.options).forEach(opt => {
+      if (!opt.value) return;
+      const texto = opt.textContent.toLowerCase();
+      opt.hidden = (!q || texto.includes(q)) ? false : true;
+    });
+  }
+}
+
+window.filtrarCatalogoLaboratorio = filtrarCatalogoLaboratorio;
+window.filtrarCatalogoImagenes = filtrarCatalogoImagenes;
 
 
 function filtrarTextoFarmacia(texto, btn) {
@@ -6781,10 +6816,53 @@ function cerrarModalRegularizacionDiferida() {
 
 
 function seleccionarCIE10(codigo, desc) {
+  if (!desc && typeof codigo === "string" && (codigo.includes("—") || codigo.includes(" - "))) {
+    const partes = codigo.split(/\s*[—\-]\s*/);
+    codigo = partes[0].trim();
+    desc = partes.slice(1).join(" — ").trim();
+  } else if (!desc) {
+    desc = codigo || "";
+  }
+  const textoCompleto = desc ? `${codigo} — ${desc}` : codigo;
   STATE.cie10Codigo = codigo;
   STATE.cie10Descripcion = desc;
+  STATE.cie10 = textoCompleto;
   const input = document.getElementById("cie10_input");
-  if (input) input.value = `${codigo} - ${desc}`;
+  if (input) input.value = textoCompleto;
+
+  const selCie = document.getElementById("cie10_select");
+  if (selCie && selCie.value !== textoCompleto) {
+    const optMatch = Array.from(selCie.options).find(o => o.value === textoCompleto || (codigo && o.value.startsWith(codigo)));
+    if (optMatch) selCie.value = optMatch.value;
+  }
+
+  // Bloque 5: Ciclo de vida IPRESS - Sustento Médico con CIE-10 y hora de indicación médica
+  const horaIndicacion = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  STATE.estadoFua = "CON_SUSTENTO_MEDICO";
+  STATE.estadoEssi = "CON_SUSTENTO_MEDICO";
+  STATE.horaSustentoMedico = horaIndicacion;
+
+  if (window.pacienteActivoId && Array.isArray(window.PACIENTES_COLA)) {
+    const px = window.PACIENTES_COLA.find(x => x.id === window.pacienteActivoId);
+    if (px) {
+      px.cie10 = textoCompleto;
+      px.cie10Codigo = codigo;
+      px.cie10Descripcion = desc;
+      px.estadoFua = "CON_SUSTENTO_MEDICO";
+      px.estadoEssi = "CON_SUSTENTO_MEDICO";
+      px.horaSustentoMedico = horaIndicacion;
+    }
+  }
+
+  if (typeof window.expedientesStore !== "undefined" && window.pacienteActivoId && window.expedientesStore[window.pacienteActivoId]) {
+    window.expedientesStore[window.pacienteActivoId].cie10 = textoCompleto;
+    window.expedientesStore[window.pacienteActivoId].cie10Codigo = codigo;
+    window.expedientesStore[window.pacienteActivoId].cie10Descripcion = desc;
+  }
+
+  if (window.COCKPIT && typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") {
+    window.COCKPIT.actualizarTarjetaResumenTriaje();
+  }
 }
 
 function abrirCatalogoRapidoKardex(cat) {
@@ -10307,9 +10385,22 @@ function actualizarVisibilidadBotonesEntorno() {
 window.actualizarVisibilidadBotonesEntorno = actualizarVisibilidadBotonesEntorno;
 
 function cambiarEntornoOperativo(modo) {
+  const modoAnterior = STATE.entornoOperativo || "publico";
   const nuevoModo = (modo === "privado") ? "privado" : "publico";
+  const debeBorrarAvance = (nuevoModo === "privado" && (modoAnterior === "publico" || STATE.numDni || STATE.identificador || (document.getElementById("dni_mod1")?.value) || (document.getElementById("ident_full")?.value)));
+
   STATE.entornoOperativo = nuevoModo;
   STATE.esClinicaPrivada = (nuevoModo === "privado");
+
+  if (debeBorrarAvance) {
+    if (typeof limpiarFormularioCompletoState === "function") {
+      limpiarFormularioCompletoState();
+    }
+    STATE.entornoOperativo = "privado";
+    STATE.esClinicaPrivada = true;
+    STATE.tipoSeguro = "Particular";
+    STATE.planPrivado = "base_80_20";
+  }
 
   // Actualizar estilos de los botones del selector
   const btnPub = document.getElementById("tab_entorno_publico");
@@ -10612,6 +10703,222 @@ window.imprimirActaAltaVoluntaria = imprimirActaAltaVoluntaria;
 window.imprimirCertificadoSinadef = imprimirCertificadoSinadef;
 window.imprimirOficioFiscaliaLevantamiento = imprimirOficioFiscaliaLevantamiento;
 window.imprimirFacturaOficial = imprimirFacturaOficial;
+
+// ---------------------------------------------------------------------------
+// PARÁMETROS LEGALES, PROCEDIMIENTOS HOSPITALARIOS Y DEL SEGURO ANTE FALLECIMIENTO
+// Sustento: NTS N° 042-MINSA, NTS N° 139-MINSA, Arts. 195/196 CPP, D.S. N° 024-2002-MTC, Ley N° 27604
+// ---------------------------------------------------------------------------
+
+function mostrarTabFallecimiento(tabId) {
+  const tabs = ['tab_proc_hospital', 'tab_proc_seguro', 'tab_parametros_legales'];
+  tabs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (id === tabId) ? 'block' : 'none';
+  });
+
+  const btns = document.querySelectorAll('#tabs_protocolo_fallecimiento .tab-fallecimiento-btn');
+  btns.forEach(b => {
+    b.classList.remove('active');
+    b.style.background = 'transparent';
+    b.style.color = '#64748b';
+    b.style.borderBottom = 'none';
+  });
+
+  const activeBtn = Array.from(btns).find(b => b.getAttribute('onclick')?.includes(tabId));
+  if (activeBtn) {
+    activeBtn.classList.add('active');
+    activeBtn.style.background = '#ffffff';
+    activeBtn.style.color = '#0284c7';
+    activeBtn.style.borderBottom = '2.5px solid #0284c7';
+  }
+
+  // Actualizar seguro actual en tab 2
+  const lblSeguro = document.getElementById('lbl_seguro_fallecido_actual');
+  if (lblSeguro) {
+    const st = (typeof window !== 'undefined' && window.STATE) ? window.STATE : {};
+    const seg = st.tipoSeguro || document.getElementById('tipo_seguro_select')?.value || 'Particular';
+    let detalle = `Seguro Activo: ${seg}`;
+    if (seg.toLowerCase().includes('sis')) detalle = 'Seguro Activo: SIS (Prestación de Sepelio hasta S/ 1,000)';
+    else if (seg.toLowerCase().includes('essalud')) detalle = 'Seguro Activo: EsSalud (Subsidio Sepelio hasta S/ 2,070)';
+    else if (seg.toLowerCase().includes('soat')) detalle = 'Seguro Activo: SOAT (Sepelio 1 UIT S/ 5,350 + Muerte 4 UIT)';
+    else if (seg.toLowerCase().includes('eps')) detalle = 'Seguro Activo: EPS Privada (Liquidación + Póliza de Auxilio)';
+    lblSeguro.textContent = detalle;
+  }
+}
+
+function imprimirActaCustodiaCadaver() {
+  const st = (typeof window !== 'undefined' && window.STATE) ? window.STATE : {};
+  const nombre = st.nombreReniec || st.identificador || "CADÁVER NO IDENTIFICADO (NN)";
+  const dni = st.numDni || st.identificador || "S/D";
+  const hc = st.historiaClinica || "HC-PROVISIONAL";
+  const fecha = new Date().toLocaleString('es-PE');
+  const medico = st.medicoTratante || "Médico Emergenciólogo de Guardia (CMP 0001)";
+
+  const w = window.open("", "_blank");
+  if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
+  w.document.write(`
+    <html>
+    <head>
+      <title>Acta de Rotulado, Custodia e Inventario de Cadáver - UPP</title>
+      <style>
+        body { font-family: 'Arial', sans-serif; padding: 35px; font-size: 13px; color: #1e293b; line-height: 1.5; }
+        .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px; }
+        .box { border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; margin-bottom: 14px; background: #f8fafc; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        th, td { border: 1px solid #94a3b8; padding: 6px 10px; }
+        th { background: #e2e8f0; text-align: left; }
+        .signatures { display: flex; justify-content: space-between; margin-top: 60px; text-align: center; }
+        .sig-box { width: 30%; border-top: 1px solid #000; padding-top: 6px; font-size: 11px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h3 style="margin:0;">HOSPITAL REGIONAL DOCENTE UPP — SERVICIO DE EMERGENCIA</h3>
+        <h4 style="margin:4px 0 0; color:#475569;">UNIDAD DE CUSTODIA MORTUORIA Y ASUNTOS MÉDICO-LEGALES</h4>
+        <h2 style="margin:12px 0 0; color:#0f172a;">ACTA INSTITUCIONAL DE ROTULADO, CUSTODIA DE CADÁVER E INVENTARIO DE PERTENENCIAS</h2>
+      </div>
+
+      <div class="box">
+        <p style="margin:0;"><strong>FECHA Y HORA DE EMISIÓN:</strong> ${fecha}</p>
+        <p style="margin:4px 0 0;"><strong>PACIENTE FALLECIDO:</strong> ${nombre} | <strong>DOCUMENTO:</strong> ${dni} | <strong>N° HC:</strong> ${hc}</p>
+        <p style="margin:4px 0 0;"><strong>UBICACIÓN DE CUSTODIA:</strong> Tópico de Cadáveres / Mortuorio de Emergencia UPP</p>
+        <p style="margin:4px 0 0;"><strong>CONDICIÓN DE INGRESO:</strong> ${st.esAccidenteTransito ? '🚗 Accidente de Tránsito (Ley SOAT) — Custodia Fiscal' : (st.esNN ? 'Paciente NN — Descarte de Identidad PNP' : 'Causa Médica Crítica')}</p>
+      </div>
+
+      <h4>1. Rotulado y Dispositivos de Bioseguridad Hospitalaria:</h4>
+      <p>Se deja constancia de la colocación de doble brazalete hospitalario termosensible indeleble en extremidad superior derecha e inferior izquierda, rotulado de bolsa de mortaja y custodia física en refrigerador mortuorio a temperatura controlada (2°C a 4°C).</p>
+
+      <h4>2. Inventario de Pertenencias y Valores Personales:</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Descripción de la Pertenencia / Prenda</th>
+            <th>Estado Físico</th>
+            <th>Destino de Custodia</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Documento de Identidad y Billetera con documentos personales</td>
+            <td>Conservado</td>
+            <td>Caja Fuerte de Emergencia</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Prendas de vestir retiradas durante la reanimación (Custodia Forense)</td>
+            <td>Embalado sellado</td>
+            <td>Cadena de Custodia PNP/Fiscalía</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Dispositivo móvil / Objetos de valor entregados bajo acta</td>
+            <td>Inventariado</td>
+            <td>Entrega bajo recibo</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>3. Mandato Legal y Notificación:</h4>
+      <p>En aplicación de la Directiva N° 216-MINSA y el Art. 195° del Código Procesal Penal, el presente establecimiento garantiza la inviolabilidad del cadáver y su trazabilidad para la diligencia de Levantamiento por el Ministerio Público o entrega a familiares con derecho legal acreditado.</p>
+
+      <div class="signatures">
+        <div class="sig-box">
+          ${medico}<br><strong>Médico Tratante / RNE</strong>
+        </div>
+        <div class="sig-box">
+          Lic. Enfermería de Guardia<br><strong>Jefatura de Tópico</strong>
+        </div>
+        <div class="sig-box">
+          Efectivo PNP / Familiar Acreditado<br><strong>Recepción / Custodia</strong>
+        </div>
+      </div>
+    </body>
+    </html>
+  `);
+  w.document.close();
+}
+
+function imprimirConstanciaSepelioSeguro() {
+  const st = (typeof window !== 'undefined' && window.STATE) ? window.STATE : {};
+  const nombre = st.nombreReniec || st.identificador || "PACIENTE ASISTIDO";
+  const dni = st.numDni || st.identificador || "S/D";
+  const hc = st.historiaClinica || "HC-PROVISIONAL";
+  const seguro = st.tipoSeguro || document.getElementById('tipo_seguro_select')?.value || 'MINSA (SIS)';
+  const fecha = new Date().toLocaleDateString('es-PE');
+  const hora = st.horaLlegada || new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  const cie = `${st.cie10Codigo || 'R99.X'} — ${st.cie10Descripcion || 'Causa básica en estudio'}`;
+  const medico = st.medicoTratante || "Médico Emergenciólogo de Guardia (CMP 0001)";
+
+  let textoPrestacion = "";
+  if (seguro.toLowerCase().includes('sis')) {
+    textoPrestacion = "Documento emitido para tramitación de la <strong>Prestación Económica de Sepelio (PES) del SIS</strong> conforme al D.S. N° 007-2012-SA, con cobertura de hasta S/ 1,000 para gastos de ataúd, capilla y sepultura.";
+  } else if (seguro.toLowerCase().includes('essalud')) {
+    textoPrestacion = "Documento emitido para tramitación del <strong>Subsidio por Sepelio EsSalud (Formulario 1010)</strong> conforme a la Ley N° 26790, con reembolso de hasta S/ 2,070 a favor de quien sufragó los gastos funerarios.";
+  } else if (seguro.toLowerCase().includes('soat')) {
+    textoPrestacion = "Documento emitido en mérito al <strong>D.S. N° 024-2002-MTC (Reglamento SOAT)</strong> para la cobertura de Gastos de Sepelio hasta por 1 UIT (S/ 5,350) e indemnización por Muerte por 4 UIT (S/ 21,400) a favor de los beneficiarios de ley.";
+  } else {
+    textoPrestacion = "Documento emitido como certificación de gastos médicos y asistencia de emergencia hospitalaria previa al fallecimiento para liquidación de póliza de asistencia y seguro de vida / sepelio privado.";
+  }
+
+  const w = window.open("", "_blank");
+  if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
+  w.document.write(`
+    <html>
+    <head>
+      <title>Constancia Hospitalaria de Cierre y Sepelio para el Seguro - UPP</title>
+      <style>
+        body { font-family: 'Arial', sans-serif; padding: 35px; font-size: 13px; color: #1e293b; line-height: 1.6; }
+        .header { text-align: center; border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 20px; }
+        .card { border: 1.5px solid #cbd5e1; padding: 14px; border-radius: 8px; margin-bottom: 16px; background: #f8fafc; }
+        .signatures { display: flex; justify-content: space-between; margin-top: 70px; text-align: center; }
+        .sig-box { width: 42%; border-top: 1px solid #000; padding-top: 8px; font-size: 11px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h3 style="margin:0; color:#0369a1;">HOSPITAL REGIONAL DOCENTE UPP</h3>
+        <h4 style="margin:2px 0 0; color:#475569;">DIRECCIÓN DE ADMINISTRACIÓN Y ADMISIÓN HOSPITALARIA</h4>
+        <h2 style="margin:12px 0 0; color:#0f172a;">CONSTANCIA MÉDICA HOSPITALARIA DE ATENCIÓN DE EMERGENCIA Y GASTOS DE SEPELIO</h2>
+      </div>
+
+      <p>La Dirección Médica y la Jefatura de Admisión Hospitalaria del Hospital Regional Docente UPP certifican que el/la paciente:</p>
+
+      <div class="card">
+        <p style="margin:0;"><strong>NOMBRE COMPLETO:</strong> ${nombre}</p>
+        <p style="margin:4px 0 0;"><strong>DOCUMENTO DE IDENTIDAD:</strong> ${dni} | <strong>HISTORIA CLÍNICA:</strong> ${hc}</p>
+        <p style="margin:4px 0 0;"><strong>RÉGIMEN DE ASEGURAMIENTO:</strong> <span style="color:#0284c7; font-weight:800;">${seguro}</span></p>
+        <p style="margin:4px 0 0;"><strong>FECHA Y HORA DE INGRESO A EMERGENCIA:</strong> ${fecha} · ${hora}</p>
+        <p style="margin:4px 0 0;"><strong>DIAGNÓSTICO CIE-10 DE INGRESO / EVENTO:</strong> ${cie}</p>
+        <p style="margin:4px 0 0;"><strong>CONDICIÓN DE EGRESO ASISTENCIAL:</strong> <strong>FALLECIMIENTO (ÓBITO EN ESTABLECIMIENTO)</strong></p>
+      </div>
+
+      <h4>Finalidad Institucional ante la Entidad Aseguradora:</h4>
+      <p>${textoPrestacion}</p>
+
+      <p>Se expide la presente constancia a solicitud de los familiares directos acreditados para los fines exclusivos de tramitación ante la entidad aseguradora correspondiente, en cumplimiento de la Ley N° 26842, Ley N° 27604 y regulaciones vigentes de SUSALUD.</p>
+
+      <div class="signatures">
+        <div class="sig-box">
+          ${medico}<br>
+          <strong>Médico Asistencial de Guardia<br>CMP / RNE</strong>
+        </div>
+        <div class="sig-box">
+          Oficina de Seguros y Facturación<br>
+          <strong>Hospital Regional Docente UPP<br>SUSALUD / IPRESS</strong>
+        </div>
+      </div>
+    </body>
+    </html>
+  `);
+  w.document.close();
+}
+
+window.mostrarTabFallecimiento = mostrarTabFallecimiento;
+window.imprimirActaCustodiaCadaver = imprimirActaCustodiaCadaver;
+window.imprimirConstanciaSepelioSeguro = imprimirConstanciaSepelioSeguro;
+
 
 
 // ==============================================================================
@@ -11204,7 +11511,11 @@ function agregarMedicamentoAKardex(med, dosis, via = 'EV', cum = 'CUM-GEN') {
 
 function solicitarEstudioImagen(tipo, cpms = 'CPMS-IMG') {
   const selImgEl = document.getElementById('select_imagenes_catalogo');
-  tipo = tipo || (selImgEl ? selImgEl.value : 'Radiografía de Emergencia');
+  tipo = tipo || (selImgEl ? selImgEl.value : '');
+  if (!tipo) {
+    alert('Por favor seleccione un estudio de imágenes.');
+    return false;
+  }
   const selIndEl = document.getElementById('input_indicacion_img');
   const indicacion = selIndEl ? selIndEl.value : 'Evaluación de Emergencia';
   const check = validarFarmacovigilanciaAlergias(tipo, 'imagen');
@@ -11215,9 +11526,91 @@ function solicitarEstudioImagen(tipo, cpms = 'CPMS-IMG') {
   }
 
   inyectarOrdenClinicaAutomatica('imagen', tipo, 'Imagenes', 150.00, cpms);
+  renderizarTablaOrdenesImagenes(tipo, indicacion);
   if (typeof actualizarFactura === 'function') actualizarFactura();
   return true;
 }
+
+function solicitarExamenLaboratorio(nombre, cpms = 'CPMS-LAB', prioridad) {
+  const selLabEl = document.getElementById('select_laboratorio_catalogo');
+  nombre = nombre || (selLabEl ? selLabEl.value : '');
+  if (!nombre) {
+    alert('Por favor seleccione una prueba de laboratorio.');
+    return false;
+  }
+  const selPrioEl = document.getElementById('select_prioridad_lab');
+  prioridad = prioridad || (selPrioEl ? selPrioEl.value : 'Urgente (30 min)');
+
+  const check = validarFarmacovigilanciaAlergias(nombre, 'laboratorio');
+  if (!check.permitido) {
+    alert(`🚨 ALERTA ROJA (NTS N° 139-MINSA):\n\n${check.detalle}\n\nPrueba analítica BLOQUEADA.`);
+    registrarLogAuditoria("Módulo 4", "FARMACOVIGILANCIA_BLOQUEO", check.detalle);
+    return false;
+  }
+
+  inyectarOrdenClinicaAutomatica('laboratorio', nombre, 'Laboratorio', 45.00, cpms);
+  renderizarTablaOrdenesLaboratorio(nombre, prioridad);
+  if (typeof actualizarFactura === 'function') actualizarFactura();
+  return true;
+}
+
+function renderizarTablaOrdenesLaboratorio(nuevoNombre, nuevaPrioridad) {
+  const tbody = document.getElementById('tabla_ordenes_lab_body');
+  if (!tbody) return;
+  const st = (typeof window !== 'undefined' && window.STATE) ? window.STATE : ((typeof STATE !== 'undefined') ? STATE : {});
+  if (!st.ordenesLaboratorio) st.ordenesLaboratorio = [];
+  
+  if (nuevoNombre) {
+    const orden = st.ordenesLaboratorio.find(x => x.nombre === nuevoNombre);
+    if (orden) orden.prioridad = nuevaPrioridad;
+  }
+
+  tbody.innerHTML = st.ordenesLaboratorio.map(o => `
+    <tr style="border-bottom:1px solid #e2e8f0;">
+      <td style="padding:8px 10px; font-weight:700; color:#0f172a;">🧪 ${o.nombre}</td>
+      <td style="padding:8px 10px;">
+        <span style="background:${(o.prioridad || '').includes('Urgente') ? '#fee2e2' : '#f1f5f9'}; color:${(o.prioridad || '').includes('Urgente') ? '#dc2626' : '#475569'}; padding:3px 8px; border-radius:4px; font-weight:800; font-size:11px;">
+          ${o.prioridad || 'Urgente (30 min)'}
+        </span>
+      </td>
+      <td style="padding:8px 10px; text-align:center;">
+        <span style="background:#e0f2fe; color:#0369a1; padding:3px 8px; border-radius:4px; font-weight:700; font-size:11px;">
+          ⏳ ${o.estado || 'Procesando STAT'}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderizarTablaOrdenesImagenes(nuevoNombre, nuevaIndicacion) {
+  const tbody = document.getElementById('tabla_ordenes_img_body');
+  if (!tbody) return;
+  const st = (typeof window !== 'undefined' && window.STATE) ? window.STATE : ((typeof STATE !== 'undefined') ? STATE : {});
+  if (!st.ordenesImagenes) st.ordenesImagenes = [];
+
+  if (nuevoNombre) {
+    const orden = st.ordenesImagenes.find(x => x.nombre === nuevoNombre);
+    if (orden) orden.indicacion = nuevaIndicacion;
+  }
+
+  tbody.innerHTML = st.ordenesImagenes.map(o => `
+    <tr style="border-bottom:1px solid #e2e8f0;">
+      <td style="padding:8px 10px; font-weight:700; color:#0f172a;">🩻 ${o.nombre}</td>
+      <td style="padding:8px 10px; font-size:11px; color:#334155;">
+        ${o.indicacion || 'Evaluación de Emergencia'}
+      </td>
+      <td style="padding:8px 10px; text-align:center;">
+        <span style="background:#fef3c7; color:#b45309; padding:3px 8px; border-radius:4px; font-weight:700; font-size:11px;">
+          📸 En cola de adquisición
+        </span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+window.solicitarExamenLaboratorio = solicitarExamenLaboratorio;
+window.renderizarTablaOrdenesLaboratorio = renderizarTablaOrdenesLaboratorio;
+window.renderizarTablaOrdenesImagenes = renderizarTablaOrdenesImagenes;
 
 window.validarFarmacovigilanciaAlergias = validarFarmacovigilanciaAlergias;
 window.agregarMedicamentoAKardex = agregarMedicamentoAKardex;

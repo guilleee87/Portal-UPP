@@ -991,6 +991,8 @@
     }
 
     guardarExpedienteSincrono(px, "EN_ATENCION_MEDICA", px.firmas.triaje, "SELLAR_TRIAJE");
+    if (typeof window.registrarEpisodioEnHistoriaClinica === "function") window.registrarEpisodioEnHistoriaClinica(px, "Triaje y Filiación");
+    if (typeof window.guardarEnHistoriaClinicaMaster === "function") window.guardarEnHistoriaClinicaMaster(px);
     if (typeof window.sincronizarDatosPacienteEnTodosLosModulos === "function") window.sincronizarDatosPacienteEnTodosLosModulos(px);
     renderizarBandejaPosta();
     aplicarPermisosYEnmascaramiento(obtenerRolActivo(), obtenerModoOperacion());
@@ -1085,6 +1087,8 @@
     }
 
     guardarExpedienteSincrono(px, "PENDIENTE_CAJA", px.firmas.medico, "ALTA_MEDICA");
+    if (typeof window.registrarEpisodioEnHistoriaClinica === "function") window.registrarEpisodioEnHistoriaClinica(px, "Atención Médica y Alta");
+    if (typeof window.guardarEnHistoriaClinicaMaster === "function") window.guardarEnHistoriaClinicaMaster(px);
     if (typeof window.sincronizarDatosPacienteEnTodosLosModulos === "function") window.sincronizarDatosPacienteEnTodosLosModulos(px);
     renderizarBandejaPosta();
     aplicarPermisosYEnmascaramiento(obtenerRolActivo(), obtenerModoOperacion());
@@ -1146,9 +1150,19 @@
     }
 
     guardarExpedienteSincrono(px, "CERRADO_FACTURADO", px.firmas.caja, "CIERRE_LIQUIDACION");
+    if (typeof window.registrarEpisodioEnHistoriaClinica === "function") window.registrarEpisodioEnHistoriaClinica(px, "Liquidación y Cierre Ley 29414");
+    if (typeof window.guardarEnHistoriaClinicaMaster === "function") window.guardarEnHistoriaClinicaMaster(px);
     if (typeof window.sincronizarDatosPacienteEnTodosLosModulos === "function") window.sincronizarDatosPacienteEnTodosLosModulos(px);
     renderizarBandejaPosta();
     aplicarPermisosYEnmascaramiento(obtenerRolActivo(), obtenerModoOperacion());
+
+    // Al culminar todo el flujo, la página se refresca y empieza nuevamente
+    if (typeof window.mostrarToastCola === "function") {
+      window.mostrarToastCola(`🏁 Flujo culminado para <strong>${px.nombre}</strong>. Reiniciando página para nuevo paciente...`);
+    }
+    setTimeout(() => {
+      window.location.reload();
+    }, 1600);
   };
 
   // ----------------------------------------------------------------------------
@@ -1605,7 +1619,9 @@
 
   function seleccionarExpediente(id) {
     if (typeof window.cambiarPacienteActivo === "function") {
-      window.cambiarPacienteActivo(id);
+      window.cambiarPacienteActivo(id, true);
+    } else {
+      window.pacienteActivoId = id;
     }
     actualizarBarraAccionPosta();
     renderizarTrackBoardLista();

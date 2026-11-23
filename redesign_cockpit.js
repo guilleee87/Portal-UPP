@@ -741,7 +741,131 @@
     });
   }
 
-  function refrescarValoresMonitor() {
+    function normalizarIdCamaClinica(val) {
+    if (!val || typeof val !== "string") return null;
+    const v = val.toUpperCase().trim();
+    const match = v.match(/\b(ST-0[12]|SOP-0[1-3]|OBS-0[1-6]|URPA-0[12]|UCI-0[12]|SILLON-01)\b/);
+    if (match) return match[1];
+    if (v.includes("ST-01") || (v.includes("SHOCK") && v.includes("1"))) return "ST-01";
+    if (v.includes("ST-02") || (v.includes("SHOCK") && v.includes("2"))) return "ST-02";
+    if (v.includes("SOP-01") || (v.includes("QUIR") && v.includes("1"))) return "SOP-01";
+    if (v.includes("SOP-02") || (v.includes("QUIR") && v.includes("2"))) return "SOP-02";
+    if (v.includes("SOP-03") || (v.includes("QUIR") && v.includes("3"))) return "SOP-03";
+    if (v.includes("OBS-01")) return "OBS-01";
+    if (v.includes("OBS-02")) return "OBS-02";
+    if (v.includes("OBS-03")) return "OBS-03";
+    if (v.includes("OBS-04")) return "OBS-04";
+    if (v.includes("OBS-05")) return "OBS-05";
+    if (v.includes("OBS-06")) return "OBS-06";
+    if (v.includes("URPA-01")) return "URPA-01";
+    if (v.includes("URPA-02")) return "URPA-02";
+    if (v.includes("UCI-01")) return "UCI-01";
+    if (v.includes("UCI-02")) return "UCI-02";
+    return null;
+  }
+
+  function actualizarCamasMonitorEnTiempoReal() {
+    const monBeds = document.getElementById("mon_beds_free");
+    const idsHospitalarios = [
+      "ST-01", "ST-02", "SOP-01", "SOP-02", "SOP-03",
+      "OBS-01", "OBS-02", "OBS-03", "OBS-04", "OBS-05", "OBS-06",
+      "URPA-01", "URPA-02", "UCI-01", "UCI-02"
+    ];
+
+    const recursos = window.RECURSOS_HOSPITALARIOS || (typeof RECURSOS_HOSPITALARIOS !== 'undefined' ? RECURSOS_HOSPITALARIOS : null);
+    const st = window.STATE || {};
+    const camasOcupadas = new Set();
+
+    // 1. Paciente activo en STATE (si no está dado de alta o liquidado)
+    const flujoActivo = st.estadoFlujo || "";
+    const estaAltaActivo = flujoActivo === "ALTA_CLINICA" || flujoActivo === "LIQUIDADO_CERRADO" || flujoActivo === "EGRESADO";
+    const camaActivoNormalizada = (!estaAltaActivo) ? normalizarIdCamaClinica(st.camaAsignadaId || st.camaAsignada || "") : null;
+    if (camaActivoNormalizada && idsHospitalarios.includes(camaActivoNormalizada)) {
+      camasOcupadas.add(camaActivoNormalizada);
+    }
+
+    // 2. Pacientes en PACIENTES_COLA
+    const cola = Array.isArray(window.PACIENTES_COLA) ? window.PACIENTES_COLA : [];
+    cola.forEach(px => {
+      const pxFlujo = px.estadoFlujo || "";
+      if (pxFlujo !== "ALTA_CLINICA" && pxFlujo !== "LIQUIDADO_CERRADO" && pxFlujo !== "EGRESADO") {
+        const idCama = normalizarIdCamaClinica(px.camaId || px.camaAsignada || px.camaNombre || "");
+        if (idCama && idsHospitalarios.includes(idCama)) {
+          camasOcupadas.add(idCama);
+        }
+      }
+    });
+
+    // 3. Pacientes en expedientesStore
+    if (typeof window.expedientesStore !== "undefined") {
+      Object.keys(window.expedientesStore).forEach(k => {
+        const exp = window.expedientesStore[k];
+        const expFlujo = exp.estadoFlujo || "";
+        if (expFlujo !== "ALTA_CLINICA" && expFlujo !== "LIQUIDADO_CERRADO" && expFlujo !== "EGRESADO") {
+          const idCama = normalizarIdCamaClinica(exp.camaId || exp.camaAsignada || exp.camaNombre || "");
+          if (idCama && idsHospitalarios.includes(idCama)) {
+            camasOcupadas.add(idCama);
+          }
+        }
+      });
+    }
+
+    // 4. Recursos hospitalarios con estado 'ocupada' explícito
+    if (recursos) {
+      idsHospitalarios.forEach(id => {
+        const r = recursos[id];
+        if (r && r.estado === "ocupada") {
+          const pacFlujo = r.paciente?.estadoFlujo || "";
+          if (pacFlujo === "ALTA_CLINICA" || pacFlujo === "LIQUIDADO_CERRADO") {
+            r.estado = "disponible";
+            r.paciente = null;
+          } else {
+            // Si la cama tiene un paciente registrado que no está de alta
+            if (r.paciente) {
+              camasOcupadas.add(id);
+            }
+          }
+        }
+      });
+
+      // Sincronizar estado bidireccional
+      idsHospitalarios.forEach(id => {
+        if (camasOcupadas.has(id)) {
+          if (recursos[id]) recursos[id].estado = "ocupada";
+        } else {
+          if (recursos[id]) {
+            recursos[id].estado = "disponible";
+            recursos[id].paciente = null;
+          }
+        }
+      });
+    }
+
+    const total = idsHospitalarios.length; // 15
+    const ocupadas = camasOcupadas.size;
+    const libres = Math.max(0, total - ocupadas);
+
+    if (monBeds) {
+      monBeds.textContent = `${libres}/${total} Libres`;
+      monBeds.style.color = libres === 0 ? "#EF4444" : libres <= 3 ? "#F59E0B" : "#10B981";
+    }
+
+    const pxCamaPill = document.getElementById("cockpit_pill_cama");
+    if (pxCamaPill) {
+      if (estaAltaActivo) {
+        pxCamaPill.innerHTML = "🛏️ <em>Cama liberada (Alta)</em>";
+      } else if (st.camaAsignada) {
+        pxCamaPill.innerHTML = `🛏️ <strong>${st.camaAsignada}</strong>`;
+      }
+    }
+
+    return { total, ocupadas, libres };
+  }
+
+  window.actualizarCamasMonitorEnTiempoReal = actualizarCamasMonitorEnTiempoReal;
+  window.normalizarIdCamaClinica = normalizarIdCamaClinica;
+
+function refrescarValoresMonitor() {
     const spo2 = document.getElementById("spo2_full")?.value || "--";
     const fc = document.getElementById("fc_full")?.value || "--";
     const pas = document.getElementById("pas_full")?.value || "--";
@@ -799,25 +923,8 @@
       }
     }
 
-    const monBeds = document.getElementById("mon_beds_free");
-    if (monBeds) {
-      const idsHospitalarios = [
-        "ST-01", "ST-02", "SOP-01", "SOP-02", "SOP-03",
-        "OBS-01", "OBS-02", "OBS-03", "OBS-04", "OBS-05", "OBS-06",
-        "URPA-01", "URPA-02", "UCI-01", "UCI-02"
-      ];
-      let ocupadas = 0;
-      const recursos = window.RECURSOS_HOSPITALARIOS || (typeof RECURSOS_HOSPITALARIOS !== 'undefined' ? RECURSOS_HOSPITALARIOS : null);
-      if (recursos) {
-        idsHospitalarios.forEach(id => {
-          if (recursos[id] && recursos[id].estado === "ocupada") ocupadas++;
-        });
-      }
-      const total = idsHospitalarios.length; // 15
-      const libres = Math.max(0, total - ocupadas);
-      monBeds.textContent = `${libres}/${total} Libres`;
-      monBeds.style.color = libres === 0 ? "#EF4444" : libres <= 3 ? "#F59E0B" : "#10B981";
-    }
+    // --- CÁLCULO Y DESCUENTO DE CAMAS LIBRES EN TIEMPO REAL (MONITOR FISIOLÓGICO) ---
+    actualizarCamasMonitorEnTiempoReal();
   }
 
   function actualizarContextoCockpit() {
@@ -866,12 +973,15 @@
     if (rolActual === "MEDICO") actualizarTarjetaResumenTriaje();
     if (rolActual === "CAJA") actualizarTarjetaResumenCaja();
 
-    // Actualización dinámica de las 4 fases del Stepper y sombreado cuando está Atendido
+    // Actualización dinámica de las 4 fases del Stepper y sombreado cuando está Atendido en tiempo real
     const colaActual = window.PACIENTES_COLA || [];
-    const pxActual = colaActual.find(x => x.id === window.pacienteActivoId) || {};
-    const efActual = pxActual.estadoFlujo || (state && state.estadoFlujo) || "PENDIENTE_TRIAJE";
-    const fActual = pxActual.firmas || (state && state.firmas) || {};
-    const cobValActual = Boolean(pxActual.coberturaValidada || (state && state.coberturaValidada));
+    const idActivo = window.pacienteActivoId;
+    const pxActual = idActivo ? colaActual.find(x => x.id === idActivo) : null;
+    
+    // Si no hay paciente seleccionado o recién se está ingresando, TODO empieza limpio en Fase 1
+    const efActual = pxActual ? (pxActual.estadoFlujo || "PENDIENTE_TRIAJE") : (state?.estadoFlujo || "PENDIENTE_TRIAJE");
+    const fActual = (pxActual && pxActual.firmas) ? pxActual.firmas : (state?.firmas || {});
+    const cobValActual = pxActual ? Boolean(pxActual.coberturaValidada) : Boolean(state?.coberturaValidada);
 
     const s1 = document.getElementById("step_status_1");
     const s2 = document.getElementById("step_status_2");
@@ -882,8 +992,13 @@
     const step3El = document.getElementById("cockpit_step_3");
     const step4El = document.getElementById("cockpit_step_4");
 
-    // Paso 1: Triaje
-    if (fActual.triaje || efActual !== "PENDIENTE_TRIAJE") {
+    const triajeSellado = Boolean(fActual.triaje) || efActual === "EN_ATENCION_MEDICA" || efActual === "PENDIENTE_CAJA" || efActual === "CERRADO_FACTURADO";
+    const admisionValidada = cobValActual || Boolean(fActual.admision);
+    const altaFirmada = Boolean(fActual.medico) || efActual === "PENDIENTE_CAJA" || efActual === "CERRADO_FACTURADO";
+    const estaCerrado = efActual === "CERRADO_FACTURADO";
+
+    // Paso 1: Triaje & Filiación
+    if (triajeSellado) {
       if (s1) { s1.textContent = "✓ Sellado"; s1.className = "cockpit-step-status completed"; }
       if (step1El) step1El.classList.add("completed");
     } else {
@@ -891,8 +1006,8 @@
       if (step1El) step1El.classList.remove("completed");
     }
 
-    // Paso 2: Admisión
-    if (cobValActual || fActual.admision) {
+    // Paso 2: Cobertura & Admisión
+    if (admisionValidada) {
       if (s2) { s2.textContent = "✓ Validado"; s2.className = "cockpit-step-status completed"; }
       if (step2El) step2El.classList.add("completed");
     } else if (efActual !== "PENDIENTE_TRIAJE") {
@@ -903,8 +1018,8 @@
       if (step2El) step2El.classList.remove("completed");
     }
 
-    // Paso 3: Médico
-    if (fActual.medico || efActual === "PENDIENTE_CAJA" || efActual === "CERRADO_FACTURADO") {
+    // Paso 3: Atención Médica & Alta
+    if (altaFirmada) {
       if (s3) { s3.textContent = "✓ Alta Firmada"; s3.className = "cockpit-step-status completed"; }
       if (step3El) step3El.classList.add("completed");
     } else if (efActual === "EN_ATENCION_MEDICA") {
@@ -915,8 +1030,8 @@
       if (step3El) step3El.classList.remove("completed");
     }
 
-    // Paso 4: Liquidación / Caja
-    if (efActual === "CERRADO_FACTURADO") {
+    // Paso 4: Liquidación & Auditoría (Caja)
+    if (estaCerrado) {
       if (s4) { s4.textContent = "✓ Atendido"; s4.className = "cockpit-step-status completed"; }
       if (step4El) step4El.classList.add("completed");
     } else if (efActual === "PENDIENTE_CAJA") {
@@ -927,13 +1042,13 @@
       if (step4El) step4El.classList.remove("completed");
     }
 
-    // Panel izquierdo: sombrear y cambiar a Atendido
+    // Panel izquierdo: sombrear y cambiar a Atendido ÚNICAMENTE si realmente está cerrado y facturado
     const stepperCard = document.getElementById("cockpit_stepper_card");
     const stepperTitle = document.getElementById("cockpit_stepper_title");
     if (stepperCard && stepperTitle) {
-      if (efActual === "CERRADO_FACTURADO") {
+      if (estaCerrado) {
         stepperCard.classList.add("atendido");
-        const pxId = pxActual.id || window.pacienteActivoId;
+        const pxId = pxActual ? pxActual.id : (window.pacienteActivoId || "");
         stepperTitle.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
             <span>Fases Asistenciales</span>

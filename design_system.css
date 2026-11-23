@@ -654,13 +654,36 @@ tr:hover td {
 
 /* Columna Izquierda (260px) — Stepper & ED Track Board */
 #cockpit_sidebar_left {
-  width: 260px !important;
+  width: 280px !important;
   flex-shrink: 0 !important;
   position: sticky !important;
-  top: 84px !important;
+  top: 76px !important;
+  max-height: calc(100vh - 84px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 16px !important;
+  gap: 14px !important;
+  padding-right: 6px !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--upp-border) transparent !important;
+}
+
+#cockpit_sidebar_left::-webkit-scrollbar {
+  width: 5px !important;
+}
+
+#cockpit_sidebar_left::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+#cockpit_sidebar_left::-webkit-scrollbar-thumb {
+  background-color: var(--upp-border) !important;
+  border-radius: 9999px !important;
+}
+
+#cockpit_sidebar_left::-webkit-scrollbar-thumb:hover {
+  background-color: var(--upp-text-muted) !important;
 }
 
 .cockpit-step-item {
