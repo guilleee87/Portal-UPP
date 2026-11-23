@@ -5078,7 +5078,7 @@
   </div>
 
   <!-- MODAL DE ATENCIÓN GUARDADA EXITOSAMENTE -->
-  <div class="modal-hc-overlay" id="modal_registro_guardado" onclick="if(event.target===this)this.classList.remove('open','show')">
+  <div class="modal-hc-overlay" id="modal_registro_guardado" onclick="if(event.target===this)cerrarModalRegistroGuardado()">
     <div class="modal-hc-container" style="max-width: 700px;">
       <div class="modal-hc-header" style="background:#166534;">
         <div style="display:flex; align-items:center; gap:10px;">
@@ -5088,7 +5088,7 @@
             <div style="font-size:0.75rem; color:#bbf7d0;">Folio generado y vinculado a la Historia Clínica</div>
           </div>
         </div>
-        <button type="button" onclick="document.getElementById('modal_registro_guardado').classList.remove('open','show')" style="background:none; border:none; color:#ffffff; font-size:1.4rem; cursor:pointer;">✕</button>
+        <button type="button" onclick="cerrarModalRegistroGuardado()" style="background:none; border:none; color:#ffffff; font-size:1.4rem; cursor:pointer;">✕</button>
       </div>
       <div class="modal-hc-body" id="modal_registro_guardado_body">
         <!-- Inyectado dinámicamente -->

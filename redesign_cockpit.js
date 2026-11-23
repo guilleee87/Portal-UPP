@@ -645,8 +645,10 @@
     if (elDni) {
       if (esNN) {
         elDni.innerHTML = `<span style="color:#ea580c; font-weight:800;">Identidad: ${px.identificador || "NN-XXX"} (Desconocido) — Validación RENIEC pendiente por Admisión (Ley N° 27604)</span>`;
+      } else if (px.dni || state.numDni) {
+        elDni.innerHTML = `<span style="color:#0f172a; font-weight:700;">${px.dni || state.numDni}</span> <span style="background:#dcfce7; color:#15803d; font-size:0.7rem; font-weight:800; padding:1px 6px; border-radius:4px; margin-left:6px;">✅ Validado en RENIEC</span>`;
       } else {
-        elDni.innerHTML = `<span style="color:#0f172a; font-weight:700;">${px.dni || state.numDni || "—"}</span> <span style="background:#dcfce7; color:#15803d; font-size:0.7rem; font-weight:800; padding:1px 6px; border-radius:4px; margin-left:6px;">✅ Validado en RENIEC</span>`;
+        elDni.innerHTML = `<span style="color:#64748b; font-style:italic; font-size:0.78rem;">Pendiente de identificación (Triaje / Admisión)</span>`;
       }
     }
 

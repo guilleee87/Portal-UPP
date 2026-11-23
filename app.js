@@ -19,6 +19,11 @@
 
 
 // ---------------------------------------------------------------------------
+// 0. DECLARACIÓN TEMPRANA DEL ESTADO GLOBAL
+// ---------------------------------------------------------------------------
+var STATE = window.STATE = window.STATE || {};
+
+// ---------------------------------------------------------------------------
 // 1. CONFIGURACIÓN Y TOKEN DE APISPERU (RENIEC)
 // ---------------------------------------------------------------------------
 const DEFAULT_APISPERU_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6Imd1aWxsZXJtb3ZzdmxAZ21haWwuY29tIiwianRpIjoiZGE3MjEyOTliNTY0ODJjNyJ9.Bz4MHxTs72gLqGKlIuaIZ25NJmwtGx1ZqnkQU8YOorw";
@@ -309,16 +314,56 @@ function persistirBaseDatosLocal(clave, nroHc, nombre = "") {
 const STORAGE_KEY_PACIENTES_MASTER = "UPP_PACIENTES_MASTER_V2";
 const STORAGE_KEY_HISTORIAL_EPISODIOS = "UPP_HISTORIAL_EPISODIOS_V2";
 
-
 // Semilla inicial de pacientes con datos clínicos permanentes y antecedentes de alergias
-// Semilla maestra vacía (inicio desde cero)
 const PACIENTES_MASTER_SEED = {};
-
 
 function normalizarClavePaciente(val) {
   return String(val || "").trim().toLowerCase().replace(/[\s\.\-]/g, "");
 }
 
+function generarDatosDemograficosCoherentes(dni, edadExistente = null, fechaExistente = null) {
+  let edad = parseInt(edadExistente, 10);
+  let fechaNac = String(fechaExistente || "").trim();
+
+  if (!isNaN(edad) && edad >= 0 && edad <= 125) {
+    if (!fechaNac) {
+      const anio = new Date().getFullYear() - edad;
+      fechaNac = `${anio}-06-15`;
+    }
+  } else if (fechaNac) {
+    const dNac = new Date(fechaNac);
+    if (!isNaN(dNac.getTime())) {
+      const hoy = new Date();
+      edad = hoy.getFullYear() - dNac.getFullYear();
+      const m = hoy.getMonth() - dNac.getMonth();
+      if (m < 0 || (m === 0 && hoy.getDate() < dNac.getDate())) edad--;
+    } else {
+      edad = 34;
+      fechaNac = `${new Date().getFullYear() - 34}-08-20`;
+    }
+  } else {
+    // Deducir edad coherente según rango numérico de DNI peruano
+    const cleanDni = String(dni || "").replace(/\D/g, "");
+    if (cleanDni.length === 8) {
+      const primerDigito = cleanDni.charAt(0);
+      if (primerDigito === "4") edad = 35;
+      else if (primerDigito === "7") edad = 24;
+      else if (primerDigito === "1" || primerDigito === "0") edad = 62;
+      else if (primerDigito === "8") edad = 19;
+      else edad = 32;
+    } else {
+      edad = 30;
+    }
+    const anio = new Date().getFullYear() - edad;
+    fechaNac = `${anio}-08-20`;
+  }
+
+  return {
+    edad: edad,
+    fechaNacimiento: fechaNac,
+    grupoSanguineo: "O+"
+  };
+}
 
 function cargarPacientesMaster() {
   try {
@@ -332,13 +377,11 @@ function cargarPacientesMaster() {
   return { ...PACIENTES_MASTER_SEED };
 }
 
-
 function guardarPacientesMaster(map) {
   try {
     localStorage.setItem(STORAGE_KEY_PACIENTES_MASTER, JSON.stringify(map));
   } catch (e) {}
 }
-
 
 function obtenerPacienteMaster(identificador, nroHc = "", nombre = "") {
   const master = cargarPacientesMaster();
@@ -346,12 +389,13 @@ function obtenerPacienteMaster(identificador, nroHc = "", nombre = "") {
   const cHc = normalizarClavePaciente(nroHc);
   const cNom = normalizarClavePaciente(nombre);
 
+  if (cId && master[cId]) return master[cId];
+  if (cHc && master[cHc]) return master[cHc];
 
   for (const [k, p] of Object.entries(master)) {
-    const pkId = normalizarClavePaciente(p.identificador);
+    const pkId = normalizarClavePaciente(p.identificador || p.dni);
     const pkHc = normalizarClavePaciente(p.historia_clinica);
     const pkNom = normalizarClavePaciente(p.nombre_completo);
-
 
     if ((cId && pkId === cId) || (cHc && pkHc === cHc) || (cNom && pkNom === cNom)) {
       return p;
@@ -360,39 +404,127 @@ function obtenerPacienteMaster(identificador, nroHc = "", nombre = "") {
   return null;
 }
 
+function guardarEnHistoriaClinicaMaster(datos = {}) {
+  const st = (typeof window !== "undefined" && window.STATE) ? window.STATE : ((typeof STATE !== "undefined") ? STATE : {});
+  const dniMatch = String(datos.dni || st.numDni || document.getElementById("dni_mod1")?.value || document.getElementById("ident_full")?.value || "").replace(/[\s\.\-]/g, "").match(/\d{8}/);
+  const dni = dniMatch ? dniMatch[0] : String(datos.dni || st.numDni || "").trim();
+  if (!dni || dni.length < 5) return null;
 
-function obtenerOInicializarPacienteMaster(identificador, nroHc, nombre = "", tipoSeguro = "") {
-  let p = obtenerPacienteMaster(identificador, nroHc, nombre);
   const master = cargarPacientesMaster();
-  const cleanId = String(identificador || "").trim();
+  const nroHc = datos.historia_clinica || st.historiaClinica || `HC-2026-${dni.slice(-4)}`;
+  const cDni = normalizarClavePaciente(dni);
 
-
+  let p = master[cDni] || obtenerPacienteMaster(dni, nroHc);
   if (!p) {
     p = {
-      identificador: cleanId || "TEMP",
-      historia_clinica: nroHc || `HC-${new Date().getFullYear()}-${Math.floor(100+Math.random()*900)}`,
-      nombre_completo: nombre || cleanId.toUpperCase(),
-      fecha_nacimiento: "",
-      edad: null,
-      sexo: "M",
-      tipo_seguro: tipoSeguro || "EsSalud",
-      alergias: "Niega alergias medicamentosas conocidas (NKDA)",
-      antecedentes: "Sin antecedentes patológicos relevantes declarados",
+      identificador: dni,
+      dni: dni,
+      historia_clinica: nroHc,
+      nombre_completo: datos.nombre_completo || st.nombreReniec || `PACIENTE DNI ${dni}`,
+      fecha_nacimiento: datos.fecha_nacimiento || st.fechaNacimiento || document.getElementById("fecha_nac_full")?.value || "",
+      edad: datos.edad !== undefined ? datos.edad : (st.edad || document.getElementById("edad_full")?.value || null),
+      sexo: datos.sexo || st.sexo || document.getElementById("sexo_full")?.value || "M",
+      grupo_sanguineo: datos.grupo_sanguineo || st.grupoSanguineo || document.getElementById("gsan_full")?.value || "O+",
+      tipo_seguro: datos.tipo_seguro || st.tipoSeguro || "MINSA (SIS)",
+      alergias: datos.alergias || st.alergias || document.getElementById("alergias_full")?.value || "Niega alergias medicamentosas conocidas",
+      antecedentes: datos.antecedentes || "Sin antecedentes patológicos declarados",
       episodios: []
     };
-    master[cleanId || p.historia_clinica] = p;
-    guardarPacientesMaster(master);
   } else {
-    let mod = false;
-    if (nroHc && (!p.historia_clinica || p.historia_clinica === "—")) { p.historia_clinica = nroHc; mod = true; }
-    if (nombre && (!p.nombre_completo || p.nombre_completo === p.identificador)) { p.nombre_completo = nombre; mod = true; }
-    if (tipoSeguro && !p.tipo_seguro) { p.tipo_seguro = tipoSeguro; mod = true; }
-    if (mod) {
-      master[p.identificador || p.historia_clinica] = p;
-      guardarPacientesMaster(master);
-    }
+    if (datos.nombre_completo) p.nombre_completo = datos.nombre_completo;
+    if (datos.fecha_nacimiento) p.fecha_nacimiento = datos.fecha_nacimiento;
+    if (datos.edad !== undefined && datos.edad !== null) p.edad = datos.edad;
+    if (datos.sexo) p.sexo = datos.sexo;
+    if (datos.grupo_sanguineo) p.grupo_sanguineo = datos.grupo_sanguineo;
+    if (datos.tipo_seguro) p.tipo_seguro = datos.tipo_seguro;
+    if (datos.alergias) p.alergias = datos.alergias;
+    if (datos.antecedentes) p.antecedentes = datos.antecedentes;
+    if (nroHc && (!p.historia_clinica || p.historia_clinica === "—")) p.historia_clinica = nroHc;
   }
+
+  // Si no tenía fecha/edad, generarlos de forma coherente y persistirlos
+  if (!p.fecha_nacimiento || !p.edad) {
+    const demo = generarDatosDemograficosCoherentes(dni, p.edad, p.fecha_nacimiento);
+    p.edad = demo.edad;
+    p.fecha_nacimiento = demo.fechaNacimiento;
+    if (!p.grupo_sanguineo || p.grupo_sanguineo === "Desconocido") p.grupo_sanguineo = demo.grupoSanguineo;
+  }
+
+  master[cDni] = p;
+  if (p.historia_clinica) master[normalizarClavePaciente(p.historia_clinica)] = p;
+  guardarPacientesMaster(master);
+
+  // Persistir en mapeo local de BD HC
+  try {
+    BASE_DATOS_HC[dni] = p.historia_clinica;
+    if (p.nombre_completo) BASE_DATOS_HC[p.nombre_completo.toLowerCase()] = p.historia_clinica;
+    localStorage.setItem("UPP_BASE_DATOS_HC", JSON.stringify(BASE_DATOS_HC));
+  } catch(e){}
+
   return p;
+}
+
+function obtenerOInicializarPacienteMaster(ident, hc, nom, seguro) {
+  ident = ident || "";
+  hc = hc || "";
+  nom = nom || "";
+  seguro = seguro || "Particular";
+  let p = obtenerPacienteMaster(ident) || (hc ? obtenerPacienteMaster(hc) : null);
+  if (!p) {
+    p = guardarEnHistoriaClinicaMaster({
+      identificador: ident,
+      historia_clinica: hc,
+      nombre_completo: nom,
+      tipo_seguro: seguro
+    });
+  }
+  return p || {};
+}
+
+window.guardarEnHistoriaClinicaMaster = guardarEnHistoriaClinicaMaster;
+window.obtenerPacienteMaster = obtenerPacienteMaster;
+window.obtenerOInicializarPacienteMaster = obtenerOInicializarPacienteMaster;
+window.registrarEpisodioEnHistoriaClinica = registrarEpisodioEnHistoriaClinica;
+window.generarDatosDemograficosCoherentes = generarDatosDemograficosCoherentes;
+
+function registrarEpisodioEnHistoriaClinica(px = {}, etapa = "Triaje") {
+  const st = (typeof window !== "undefined" && window.STATE) ? window.STATE : ((typeof STATE !== "undefined") ? STATE : {});
+  const dniMatch = String(px.dni || st.numDni || px.identificador || "").replace(/[\s\.\-]/g, "").match(/\d{8}/);
+  const dni = dniMatch ? dniMatch[0] : (px.dni || st.numDni);
+  if (!dni) return;
+
+  const master = cargarPacientesMaster();
+  const cDni = normalizarClavePaciente(dni);
+  const p = master[cDni] || obtenerPacienteMaster(dni);
+  if (!p) return;
+
+  p.episodios = Array.isArray(p.episodios) ? p.episodios : [];
+  const folio = px.turno || st.turno || `E-${String(p.episodios.length + 1).padStart(3, "0")}`;
+
+  let ep = p.episodios.find(x => x.folio === folio);
+  if (!ep) {
+    ep = {
+      folio: folio,
+      fecha_hora: new Date().toISOString(),
+      prioridad: px.prioridad || st.prioridad || "III",
+      motivo: px.motivo || st.motivoConsulta || "Atención en emergencia",
+      cama: px.camaNombre || st.camaAsignada || "Tópico de Emergencia",
+      diagnostico: px.diagnosticoCie10 || st.diagnosticoCie10 || "En evaluación clínica",
+      tipo_seguro: px.tipoSeguro || st.tipoSeguro || p.tipo_seguro || "MINSA (SIS)",
+      responsable: px.firmas?.medico?.usuario || px.firmas?.triaje?.usuario || "Personal de Turno UPP",
+      etapa: etapa
+    };
+    p.episodios.unshift(ep);
+  } else {
+    ep.prioridad = px.prioridad || st.prioridad || ep.prioridad;
+    if (px.diagnosticoCie10 || st.diagnosticoCie10) ep.diagnostico = px.diagnosticoCie10 || st.diagnosticoCie10;
+    if (px.camaNombre || st.camaAsignada) ep.cama = px.camaNombre || st.camaAsignada;
+    if (px.motivo || st.motivoConsulta) ep.motivo = px.motivo || st.motivoConsulta;
+    ep.etapa = etapa;
+  }
+
+  master[cDni] = p;
+  guardarPacientesMaster(master);
 }
 
 
@@ -1008,6 +1140,264 @@ async function cargarTablaCatalogoHC(filtro = "") {
   tbody.innerHTML = htmlRows;
 }
 // ---------------------------------------------------------------------------
+// ===========================================================================
+// PROTOCOLO DE PACIENTES NN: 1. NN CONSCIENTE vs 2. NN INCONSCIENTE (LEY N° 27604)
+// ===========================================================================
+
+// 1. NN CONSCIENTE: Indocumentado lúcido -> Pasa a EVALUACIÓN CLÍNICA DE TRIAJE
+function ingresarNNConsciente() {
+  if (typeof bloquearIdentificacionEnMod2 === "function") bloquearIdentificacionEnMod2(false);
+  window._identificacionOrigen = null;
+  const ahora = new Date();
+  const fechaCod = ahora.toISOString().slice(0, 10).replace(/-/g, "");
+  const numSec = String((window.PACIENTES_COLA || []).filter(x => x.esNN).length + 1).padStart(2, "0");
+  const horaActual = `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
+  const codigoNN = `NN-CONS-${fechaCod}-${numSec}`;
+  const nombreNN = `Paciente NN Consciente (Indocumentado ${codigoNN})`;
+  const hcTemp = `HC-NN-CONS-${fechaCod}-${numSec}`;
+
+  guardarEstadoPacienteActivo();
+
+  const pxNN = crearRegistroPaciente({
+    identificador: codigoNN,
+    nombre: nombreNN,
+    dni: "NN",
+    edad: "Desconocido",
+    sexo: "Desconocido",
+    prioridad: "III", // Provisional, a ser determinada por signos vitales en triaje
+    motivo: "Paciente NN consciente / Indocumentado. Acude para evaluación clínica de triaje.",
+    estadoAtencion: "En Evaluación de Triaje",
+    camaNombre: "Sala de Espera / Triaje",
+    camaId: "SIN-CAMA",
+    esEmergenciaDirecta: false,
+    esNN: true,
+    esNNConsciente: true,
+    esNNInconsciente: false,
+    estadoFlujo: "PENDIENTE_TRIAJE"
+  });
+
+  esLlegadaSimultanea = false;
+  if (!Array.isArray(window.PACIENTES_COLA)) window.PACIENTES_COLA = [];
+  window.PACIENTES_COLA.push(pxNN);
+  pacienteActivoId = pxNN.id;
+
+  limpiarFormularioCompletoState();
+
+  STATE.esNN = true;
+  STATE.esNNConsciente = true;
+  STATE.esNNInconsciente = false;
+  STATE.ingresoDirectoCritico = false;
+  STATE.motivoIngresoCritico = null;
+  STATE.alertaPnpSs = true;
+  STATE.identificador = codigoNN;
+  STATE.nombreReniec = nombreNN;
+  STATE.numDni = "NN";
+  STATE.historiaClinica = hcTemp;
+  STATE.estadoRegistrado = "👤 NN Consciente (En Evaluación de Triaje)";
+  STATE.accionHc = `Identidad no confirmada → Se abre ${hcTemp} (Oficio emitido a PNP y Servicio Social)`;
+  STATE.horaLlegada = horaActual;
+  STATE.edad = null;
+  STATE.sexo = "Desconocido";
+  STATE.grupoSanguineo = "Desconocido";
+  STATE.alergias = "";
+  STATE.tipoSeguro = "Seguro por regularizar (Ley N° 27604)";
+  STATE.prioridad = "III";
+  STATE.camaAsignadaId = "SIN-CAMA";
+  STATE.camaAsignada = "Sin cama — Sala de Espera / Triaje";
+  STATE.estadoFlujo = "PENDIENTE_TRIAJE";
+
+  // Llenar DOM de Módulo 1 y 2
+  const inputIdent = document.getElementById("ident_full");
+  if (inputIdent) inputIdent.value = codigoNN;
+  const inputDni = document.getElementById("dni_reniec_input");
+  if (inputDni) inputDni.value = "NN";
+  const inputHora = document.getElementById("hora_full");
+  if (inputHora) inputHora.value = horaActual;
+  const elMotivo = document.getElementById("motivo_full");
+  if (elMotivo) elMotivo.value = "Paciente NN consciente / Indocumentado. Acude para evaluación clínica de triaje.";
+  const elGlasgow = document.getElementById("glasgow_full");
+  if (elGlasgow) elGlasgow.value = "15";
+  const elAlergias = document.getElementById("alergias_full");
+  if (elAlergias) {
+    elAlergias.value = "";
+    elAlergias.placeholder = "Indagar alergias directamente al paciente (está lúcido)...";
+  }
+  const elAlergiasM1 = document.getElementById("alergias_mod1");
+  if (elAlergiasM1) elAlergiasM1.value = "";
+  const elEdad = document.getElementById("edad_full");
+  if (elEdad) elEdad.value = "";
+  const elSexo = document.getElementById("sexo_full");
+  if (elSexo) elSexo.value = "Desconocido";
+
+  // Badges e indicadores visuales
+  const badgeEstado = document.getElementById("hc_badge_estado");
+  if (badgeEstado) {
+    badgeEstado.textContent = "👤 NN Consciente · En Evaluación de Triaje";
+    badgeEstado.className = "badge-estado badge-info";
+    badgeEstado.style.background = "#eff6ff";
+    badgeEstado.style.color = "#1d4ed8";
+    badgeEstado.style.border = "1px solid #bfdbfe";
+  }
+  const hcDisp = document.getElementById("hc_code_display");
+  if (hcDisp) hcDisp.textContent = hcTemp;
+  const btnPnp = document.getElementById("btn_notif_pnp");
+  if (btnPnp) btnPnp.style.display = "inline-flex";
+
+  guardarEstadoPacienteActivo();
+  if (typeof sincronizarExpedienteActivoEnStore === "function") sincronizarExpedienteActivoEnStore();
+  if (typeof notificarCambioColaGlobal === "function") notificarCambioColaGlobal("ACTUALIZAR");
+  if (typeof renderizarTableroColaPacientes === "function") renderizarTableroColaPacientes();
+  if (typeof renderizarTrackBoardLista === "function") renderizarTrackBoardLista();
+
+  if (typeof window.irAModulo === "function") window.irAModulo(1);
+  mostrarToastCola(`👤 <strong>NN Consciente:</strong> Paciente indocumentado lúcido derivado a Evaluación de Triaje.`);
+}
+
+// 2. NN INCONSCIENTE: Riesgo Vital Inminente -> ATENCIÓN INMEDIATA (SHOCK TRAUMA LEY 27604)
+function ingresarNNInconsciente() {
+  if (typeof bloquearIdentificacionEnMod2 === "function") bloquearIdentificacionEnMod2(false);
+  window._identificacionOrigen = null;
+  const ahora = new Date();
+  const fechaCod = ahora.toISOString().slice(0, 10).replace(/-/g, "");
+  const numSec = String((window.PACIENTES_COLA || []).filter(x => x.esNN).length + 1).padStart(2, "0");
+  const horaActual = `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
+  const codigoNN = `NN-INCONS-${fechaCod}-${numSec}`;
+  const nombreNN = `Paciente NN Inconsciente (Pase Directo Vital ${codigoNN})`;
+  const hcEmergencia = `HC-EMG-NN-${fechaCod}-${numSec}`;
+
+  guardarEstadoPacienteActivo();
+
+  // Buscar cama Shock Trauma libre sin duplicar
+  let camaId = "ST-01";
+  let camaNombre = "Shock Trauma ST-01";
+  if (typeof RECURSOS_HOSPITALARIOS !== "undefined") {
+    if (RECURSOS_HOSPITALARIOS["ST-01"] && RECURSOS_HOSPITALARIOS["ST-01"].estado === "disponible") {
+      camaId = "ST-01";
+      camaNombre = "Shock Trauma ST-01";
+    } else if (RECURSOS_HOSPITALARIOS["ST-02"] && RECURSOS_HOSPITALARIOS["ST-02"].estado === "disponible") {
+      camaId = "ST-02";
+      camaNombre = "Shock Trauma ST-02";
+    }
+    if (RECURSOS_HOSPITALARIOS[camaId]) {
+      RECURSOS_HOSPITALARIOS[camaId].estado = "ocupada";
+      RECURSOS_HOSPITALARIOS[camaId].paciente = { id: codigoNN, nombre: nombreNN };
+    }
+  }
+
+  const pxNN = crearRegistroPaciente({
+    identificador: codigoNN,
+    nombre: nombreNN,
+    dni: "NN",
+    edad: "Desconocido",
+    sexo: "Desconocido",
+    prioridad: "I",
+    motivo: "Admisión de Emergencia Paciente NN Inconsciente / Riesgo Vital Inminente — Pase Directo a Shock Trauma (Ley N° 27604)",
+    estadoAtencion: "Shock Trauma Inmediato (Pase Directo Vital)",
+    camaNombre: camaNombre,
+    camaId: camaId,
+    esEmergenciaDirecta: true,
+    esNN: true,
+    esNNConsciente: false,
+    esNNInconsciente: true,
+    estadoFlujo: "EN_ATENCION_MEDICA"
+  });
+
+  esLlegadaSimultanea = false;
+  if (!Array.isArray(window.PACIENTES_COLA)) window.PACIENTES_COLA = [];
+  window.PACIENTES_COLA.push(pxNN);
+  pacienteActivoId = pxNN.id;
+
+  limpiarFormularioCompletoState();
+
+  STATE.esNN = true;
+  STATE.esNNConsciente = false;
+  STATE.esNNInconsciente = true;
+  STATE.ingresoDirectoCritico = true;
+  STATE.motivoIngresoCritico = "Admisión de Emergencia Paciente NN Inconsciente / Riesgo Vital Inminente — Pase Directo a Shock Trauma (Ley N° 27604)";
+  STATE.alertaPnpSs = true;
+  STATE.identificador = codigoNN;
+  STATE.nombreReniec = nombreNN;
+  STATE.numDni = "NN";
+  STATE.historiaClinica = hcEmergencia;
+  STATE.estadoRegistrado = "🚨 NN Inconsciente (Atención Inmediata Shock Trauma)";
+  STATE.accionHc = `Pase Directo Vital → Se abre ${hcEmergencia} (Oficio emitido a PNP y Servicio Social - Ley N° 27604)`;
+  STATE.horaLlegada = horaActual;
+  STATE.edad = null;
+  STATE.sexo = "Desconocido";
+  STATE.grupoSanguineo = "Desconocido";
+  STATE.alergias = "Desconocido (Inconsciente)";
+  STATE.tipoSeguro = "Regularización Diferida (Garantía Ley N° 27604)";
+  STATE.prioridad = "I";
+  STATE.camaAsignadaId = camaId;
+  STATE.camaAsignada = camaNombre;
+  STATE.estadoFlujo = "EN_ATENCION_MEDICA";
+
+  // Llenar DOM
+  const inputIdent = document.getElementById("ident_full");
+  if (inputIdent) inputIdent.value = codigoNN;
+  const inputDni = document.getElementById("dni_reniec_input");
+  if (inputDni) inputDni.value = "NN";
+  const inputHora = document.getElementById("hora_full");
+  if (inputHora) inputHora.value = horaActual;
+  const elMotivo = document.getElementById("motivo_full");
+  if (elMotivo) elMotivo.value = "Paciente NN inconsciente / Coma / Sensorio no valorable / Trauma vital inminente. Activación directa Ley N° 27604.";
+  const elGlasgow = document.getElementById("glasgow_full");
+  if (elGlasgow) elGlasgow.value = "6";
+  const elAlergias = document.getElementById("alergias_full");
+  if (elAlergias) elAlergias.value = "Desconocido (Inconsciente)";
+  const elAlergiasM1 = document.getElementById("alergias_mod1");
+  if (elAlergiasM1) elAlergiasM1.value = "Desconocido (Inconsciente)";
+  const elEdad = document.getElementById("edad_full");
+  if (elEdad) elEdad.value = "";
+  const elSexo = document.getElementById("sexo_full");
+  if (elSexo) elSexo.value = "Desconocido";
+
+  // Badges e indicadores visuales
+  const badgeEstado = document.getElementById("hc_badge_estado");
+  if (badgeEstado) {
+    badgeEstado.textContent = "🚨 NN Inconsciente · Atención Inmediata Shock Trauma (Ley 27604)";
+    badgeEstado.className = "badge-estado badge-danger";
+    badgeEstado.style.background = "#fee2e2";
+    badgeEstado.style.color = "#b91c1c";
+    badgeEstado.style.border = "1px solid #fca5a5";
+  }
+  const hcDisp = document.getElementById("hc_code_display");
+  if (hcDisp) hcDisp.textContent = hcEmergencia;
+  const btnPnp = document.getElementById("btn_notif_pnp");
+  if (btnPnp) btnPnp.style.display = "inline-flex";
+
+  // Sellar derivación médica de emergencia directamente
+  if (typeof window.mostrarPrioridad === "function") {
+    window.mostrarPrioridad("I", {
+      tipo: "Prioridad I (Rojo)",
+      desc: "Admisión directa de Trauma Shock / Paciente NN Inconsciente — Ley N° 27604",
+      destino: camaNombre
+    });
+  }
+
+  guardarEstadoPacienteActivo();
+  if (typeof sincronizarExpedienteActivoEnStore === "function") sincronizarExpedienteActivoEnStore();
+  if (typeof notificarCambioColaGlobal === "function") notificarCambioColaGlobal("ACTUALIZAR");
+  if (typeof renderizarTableroColaPacientes === "function") renderizarTableroColaPacientes();
+  if (typeof renderizarTrackBoardLista === "function") renderizarTrackBoardLista();
+
+  // Generar brazalete de identificación de emergencia
+  if (typeof generarBrazaleteEmergencia === "function") {
+    generarBrazaleteEmergencia("temporal");
+  }
+
+  if (typeof window.irAModulo === "function") window.irAModulo(4);
+  mostrarToastCola(`🚨 <strong>NN Inconsciente:</strong> Pase directo a Shock Trauma ${camaId} activado (Ley N° 27604).`);
+}
+
+// Aliases para compatibilidad transversal
+function ingresarPacienteNN() { ingresarNNConsciente(); }
+function admitirEmergenciaNN() { ingresarNNInconsciente(); }
+window.ingresarNNConsciente = ingresarNNConsciente;
+window.ingresarNNInconsciente = ingresarNNInconsciente;
+window.ingresarPacienteNN = ingresarNNConsciente;
+window.admitirEmergenciaNN = ingresarNNInconsciente;
+
 // PROTOCOLO DE INGRESO DE PACIENTES NN (IDENTIDAD NO CONFIRMADA)
 // ---------------------------------------------------------------------------
 function ingresarPacienteNN() {
@@ -1485,7 +1875,7 @@ function clasificarYBuscarEnBD(identificador) {
 // ---------------------------------------------------------------------------
 // 3. ESTADO GLOBAL DEL SIMULADOR
 // ---------------------------------------------------------------------------
-const STATE = {
+var STATE = window.STATE = Object.assign(window.STATE || {}, {
   // Origen del Evento y Entorno Operativo (Norma NTS N° 042-MINSA & Ley N° 27604 / SUSALUD)
   tipoOrigenEvento: "comun", // "comun" o "transito"
   esAccidenteTransito: false,
@@ -1585,7 +1975,7 @@ const STATE = {
 
   // Timestamps por módulo
   ts: {},
-};
+});
 window.STATE = STATE;
 
 
@@ -1880,7 +2270,7 @@ function procesarIdentificadorFull() {
     document.getElementById("hc_badge_estado").className = "badge-estado badge-conf";
     document.getElementById("hc_code_display").textContent = "—";
     document.getElementById("hc_accion_display").textContent = "Ingrese al menos 2 caracteres...";
-    document.getElementById("alerta_nn").classList.remove("visible");
+    document.getElementById("alerta_nn")?.classList.remove("visible");
     document.getElementById("apisperu_panel").classList.remove("visible");
     return;
   }
@@ -1914,8 +2304,84 @@ function procesarIdentificadorFull() {
   document.getElementById("hc_code_display").textContent = nroHc;
   document.getElementById("hc_accion_display").textContent = accion;
 
-  // Si existe en BD, autocompletar alergias y demografía permanente
-  if (estado === "Si") {
+  // Detección de DNI (8 dígitos) e hidratación / grabación en Historia Clínica para próximas consultas
+  const matchDniExact = val.replace(/[\s\.\-]/g, "").match(/\d{8}/);
+  if (matchDniExact) {
+    const cleanDni = matchDniExact[0];
+    STATE.numDni = cleanDni;
+    const elDni1 = document.getElementById("dni_mod1");
+    if (elDni1 && elDni1.value !== cleanDni) elDni1.value = cleanDni;
+
+    const masterP = obtenerPacienteMaster(cleanDni, nroHc);
+    if (masterP) {
+      // 1. Paciente ya tiene Historia Clínica previa: Recuperar todos sus datos permanentes
+      if (masterP.nombre_completo && masterP.nombre_completo !== cleanDni) {
+        STATE.nombreReniec = masterP.nombre_completo;
+        STATE.identificador = `${masterP.nombre_completo} (DNI ${cleanDni})`;
+      }
+      if (masterP.alergias) {
+        STATE.alergias = masterP.alergias;
+        const elAlergias = document.getElementById("alergias_full");
+        if (elAlergias) elAlergias.value = masterP.alergias;
+        const elAlergiasM1 = document.getElementById("alergias_mod1");
+        if (elAlergiasM1) elAlergiasM1.value = masterP.alergias;
+        actualizarIndicadorVisualAlergias(masterP.alergias);
+      }
+      if (masterP.edad) {
+        STATE.edad = masterP.edad;
+        const elEdad = document.getElementById("edad_full");
+        if (elEdad) elEdad.value = masterP.edad;
+      }
+      if (masterP.sexo) {
+        STATE.sexo = masterP.sexo;
+        const elSexo = document.getElementById("sexo_full");
+        if (elSexo) elSexo.value = masterP.sexo;
+      }
+      if (masterP.fecha_nacimiento) {
+        STATE.fechaNacimiento = masterP.fecha_nacimiento;
+        const elFecha = document.getElementById("fecha_nac_full");
+        if (elFecha) elFecha.value = masterP.fecha_nacimiento;
+      }
+      if (masterP.grupo_sanguineo) {
+        STATE.grupoSanguineo = masterP.grupo_sanguineo;
+        const elGsan = document.getElementById("gsan_full");
+        if (elGsan) elGsan.value = masterP.grupo_sanguineo;
+      }
+      if (masterP.tipo_seguro) {
+        STATE.tipoSeguro = masterP.tipo_seguro;
+        const elSeguro = document.getElementById("tipo_seguro_select");
+        if (elSeguro) elSeguro.value = masterP.tipo_seguro;
+      }
+      document.getElementById("hc_badge_estado").textContent = "✅ Historia Clínica Recuperada";
+      document.getElementById("hc_badge_estado").className = "badge-estado badge-si";
+      document.getElementById("hc_accion_display").textContent = `📂 HC ${masterP.historia_clinica} encontrada. Grupo sanguíneo ${masterP.grupo_sanguineo || 'O+'} y ${masterP.episodios ? masterP.episodios.length : 0} atención(es) previa(s).`;
+    } else {
+      // 2. Primer ingreso manual de este DNI: Generar datos coherentes y grabar en Historia Clínica
+      const inputEdad = document.getElementById("edad_full");
+      const inputFecha = document.getElementById("fecha_nac_full");
+      const demo = generarDatosDemograficosCoherentes(cleanDni, inputEdad?.value, inputFecha?.value);
+
+      if (inputEdad && (!inputEdad.value || inputEdad.value === "")) inputEdad.value = demo.edad;
+      if (inputFecha && (!inputFecha.value || inputFecha.value === "")) inputFecha.value = demo.fechaNacimiento;
+      const elGsan = document.getElementById("gsan_full");
+      if (elGsan && (!elGsan.value || elGsan.value === "Desconocido")) elGsan.value = demo.grupoSanguineo;
+
+      STATE.edad = demo.edad;
+      STATE.fechaNacimiento = demo.fechaNacimiento;
+      STATE.grupoSanguineo = demo.grupoSanguineo;
+
+      // Grabar inmediatamente en el registro maestro para las próximas consultas
+      guardarEnHistoriaClinicaMaster({
+        dni: cleanDni,
+        historia_clinica: nroHc,
+        edad: demo.edad,
+        fecha_nacimiento: demo.fechaNacimiento,
+        grupo_sanguineo: demo.grupoSanguineo
+      });
+
+      document.getElementById("hc_accion_display").textContent = `📝 Historia Clínica ${nroHc} aperturada. Datos demográficos y grupo ${demo.grupoSanguineo} grabados para próximas consultas.`;
+    }
+  } else if (estado === "Si") {
     const masterP = obtenerPacienteMaster(val, nroHc);
     if (masterP) {
       if (masterP.alergias) {
@@ -1940,12 +2406,17 @@ function procesarIdentificadorFull() {
         const elFecha = document.getElementById("fecha_nac_full");
         if (elFecha) elFecha.value = masterP.fecha_nacimiento;
       }
+      if (masterP.grupo_sanguineo) {
+        STATE.grupoSanguineo = masterP.grupo_sanguineo;
+        const elGsan = document.getElementById("gsan_full");
+        if (elGsan) elGsan.value = masterP.grupo_sanguineo;
+      }
     }
   }
 
 
   // Alerta NN
-  document.getElementById("alerta_nn").classList.toggle("visible", STATE.alertaPnpSs);
+  document.getElementById("alerta_nn")?.classList.toggle("visible", STATE.alertaPnpSs);
 
 
   // Búsqueda en vivo de coincidencias parciales (DNI, Nombres o Apellidos)
@@ -1974,6 +2445,22 @@ function procesarIdentificadorFull() {
   calcularTicket();
 }
 
+
+function calcularTicket() {
+  const st = (typeof window !== "undefined" && window.STATE) ? window.STATE : ((typeof STATE !== "undefined") ? STATE : {});
+  if (!st.turno || st.turno === "—") {
+    const num = String(Math.floor(Math.random() * 80) + 10).padStart(2, "0");
+    st.turno = `T-${num}`;
+  }
+  const ticketDisplay = document.getElementById("ticket_display");
+  if (ticketDisplay) {
+    const hora = new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
+    ticketDisplay.textContent = `🎫 Ticket asignado: ${st.turno} (hora: ${hora})`;
+  }
+  return st.turno;
+}
+
+window.calcularTicket = calcularTicket;
 
 // APISPERU / RENIEC
 function cargarToken() {
@@ -2279,6 +2766,8 @@ function calcularEdadDesdeFecha() {
   if (edad >= 0 && edad <= 125) {
     if (inputEdad) inputEdad.value = edad;
     STATE.edad = edad;
+    STATE.fechaNacimiento = inputFecha.value;
+    guardarEnHistoriaClinicaMaster({ edad: edad, fecha_nacimiento: inputFecha.value });
   }
 }
 
@@ -5642,13 +6131,32 @@ function mostrarModalRegistroExitoso(ep) {
         onclick="imprimirFichaHistoriaClinica('${encodeURIComponent(JSON.stringify({identificador: ep.identificador, historia_clinica: ep.historia_clinica, nombre_completo: ep.nombre_completo}))}')">
         🖨️ Imprimir Ficha Oficial
       </button>
+      <button type="button" class="btn-full-primary" style="background:#16a34a;padding:8px 16px;font-size:0.82rem;font-weight:700;border:none;border-radius:8px;color:#ffffff;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(22,163,74,0.25);"
+        onclick="cerrarModalRegistroGuardado()">
+        🔄 Finalizar Flujo y Empezar Nuevamente
+      </button>
     </div>
     <div style="text-align:center;font-size:0.75rem;color:#64748b;">
-      ✓ Atención registrada y acumulada con éxito en la Historia Clínica <strong>${ep.historia_clinica}</strong>.
+      ✓ Atención registrada y acumulada con éxito en la Historia Clínica <strong>${ep.historia_clinica}</strong>. Al terminar el flujo se reiniciará la página para el siguiente paciente.
     </div>
   `;
   modal.classList.add("open"); modal.classList.add("show"); modal.style.setProperty("display", "flex", "important");
 }
+
+function cerrarModalRegistroGuardado() {
+  const modal = document.getElementById("modal_registro_guardado");
+  if (modal) {
+    modal.classList.remove("open", "show");
+    modal.style.setProperty("display", "none", "important");
+  }
+  if (typeof mostrarToastCola === "function") {
+    mostrarToastCola("🔄 Flujo finalizado con éxito. Reiniciando página para nuevo paciente...");
+  }
+  setTimeout(() => {
+    window.location.reload();
+  }, 400);
+}
+window.cerrarModalRegistroGuardado = cerrarModalRegistroGuardado;
 function resetSimulador() {
   if (!confirm("¿Iniciar nuevo paciente? Se perderán los datos actuales.")) return;
 
@@ -5691,7 +6199,7 @@ function resetSimulador() {
   document.getElementById("hc_badge_estado").className = "badge-estado badge-conf";
   document.getElementById("hc_code_display").textContent = "—";
   document.getElementById("hc_accion_display").textContent = "Ingrese un identificador...";
-  document.getElementById("alerta_nn").classList.remove("visible");
+  document.getElementById("alerta_nn")?.classList.remove("visible");
   document.getElementById("apisperu_panel").classList.remove("visible");
   document.getElementById("prioridad_display").classList.remove("visible");
   document.getElementById("ley27604_banner").classList.remove("visible");
@@ -6368,8 +6876,12 @@ function activarPanicoShockTrauma() {
   });
 
   esLlegadaSimultanea = false;
-  PACIENTES_COLA = [pxST];
+  if (!Array.isArray(PACIENTES_COLA)) PACIENTES_COLA = [];
+  const idxExistenteST = PACIENTES_COLA.findIndex(x => x.id === pxST.id);
+  if (idxExistenteST >= 0) PACIENTES_COLA[idxExistenteST] = pxST; else PACIENTES_COLA.push(pxST);
+  window.PACIENTES_COLA = PACIENTES_COLA;
   pacienteActivoId = pxST.id;
+  window.pacienteActivoId = pxST.id;
 
   // 2. Configurar STATE
   limpiarFormularioCompletoState();
@@ -6630,8 +7142,12 @@ function activarIngresoDirectoQuirofano() {
   });
 
   esLlegadaSimultanea = false;
-  PACIENTES_COLA = [pxSOP];
+  if (!Array.isArray(PACIENTES_COLA)) PACIENTES_COLA = [];
+  const idxExistenteSOP = PACIENTES_COLA.findIndex(x => x.id === pxSOP.id);
+  if (idxExistenteSOP >= 0) PACIENTES_COLA[idxExistenteSOP] = pxSOP; else PACIENTES_COLA.push(pxSOP);
+  window.PACIENTES_COLA = PACIENTES_COLA;
   pacienteActivoId = pxSOP.id;
+  window.pacienteActivoId = pxSOP.id;
 
   // 2. Configurar STATE
   limpiarFormularioCompletoState();
@@ -7606,6 +8122,12 @@ function liberarCamaRecurso(idRecurso, motivoSalida = "Alta Médica") {
     renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "modal_camas_stock_grid");
   }
   renderizarMonitorObservacionModulo5();
+  if (typeof window.actualizarCamasMonitorEnTiempoReal === "function") {
+    window.actualizarCamasMonitorEnTiempoReal();
+  }
+  if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === "function") {
+    window.COCKPIT.actualizarContextoCockpit();
+  }
   if (typeof actualizarWidgetFlotanteCamas === "function") {
     actualizarWidgetFlotanteCamas();
   }
@@ -8848,10 +9370,10 @@ function capturarFormularioActual() {
   const ids = [
     "ident_full", "dni_reniec_input", "motivo_full", "spo2_full", "fc_full",
     "pas_full", "pad_full", "fr_full", "temp_full", "glasgow_full", "glucosa_full",
-    "eva_full", "eva_range", "edad_full", "sexo_full", "fecha_nac_full",
+    "eva_full", "eva_range", "edad_full", "sexo_full", "fecha_nac_full", "gsan_full",
     "check_cod_infarto", "check_cod_ictus", "check_cod_sepsis",
     "chk_gestante_full", "chk_pediatrico_full", "clave_obstetrica_sel",
-    "enfermero_triaje_select", "alergias_full", "chk_consentimiento_datos",
+    "enfermero_triaje_select", "alergias_full", "alergias_mod1", "chk_consentimiento_datos",
     "chk_evento_fuga", "chk_exclusion_eps", "sel_consentimiento_medico",
     "cie10_select", "cie10_input", "dni_mod1", "dni_mod4",
     "select_ipress_publica", "select_plan_privado", "sel_condicion_consentimiento",
@@ -8893,9 +9415,15 @@ function guardarEstadoPacienteActivo() {
   p.formSnapshot = capturarFormularioActual();
   p.prioridad = STATE.prioridad;
   p.identificador = STATE.identificador || p.identificador;
-  p.nombre = STATE.nombreReniec || p.nombre;
-  p.dni = STATE.numDni || p.dni;
-  p.motivo = STATE.motivoConsulta || p.motivo;
+  if (STATE.nombreReniec && !STATE.nombreReniec.startsWith("Paciente #")) {
+    p.nombre = STATE.nombreReniec;
+  } else if (STATE.identificador && !STATE.identificador.startsWith("Ticket T-")) {
+    p.nombre = STATE.identificador;
+  } else {
+    p.nombre = p.nombre || STATE.identificador || "Paciente";
+  }
+  p.dni = STATE.numDni || p.dni || "";
+  p.motivo = STATE.motivoConsulta || p.motivo || "";
   p.camaId = STATE.camaAsignadaId;
   p.camaNombre = STATE.camaAsignada;
   p.medico = STATE.medicoTratante || p.medico || "Por asignar";
@@ -8903,6 +9431,20 @@ function guardarEstadoPacienteActivo() {
   p.coberturaValidada = Boolean(STATE.coberturaValidada);
   p.firmas = STATE.firmas || p.firmas || {};
   p.alertaPrioridad1 = Boolean(STATE.alertaPrioridad1 || STATE.prioridad === 'I');
+
+  try {
+    const raw = localStorage.getItem("upp_expedientes_v1");
+    const store = raw ? JSON.parse(raw) : {};
+    store[p.id] = {
+      id: p.id,
+      paciente: JSON.parse(JSON.stringify(p)),
+      state: p.stateSnapshot,
+      form: p.formSnapshot,
+      timestamp: Date.now()
+    };
+    localStorage.setItem("upp_expedientes_v1", JSON.stringify(store));
+    localStorage.setItem("UPP_PACIENTES_COLA_SHARED", JSON.stringify(PACIENTES_COLA));
+  } catch(e) {}
 }
 
 function ordenarColaPacientes() {
@@ -9007,25 +9549,56 @@ function renderizarTableroColaPacientes() {
   });
 }
 
-function cambiarPacienteActivo(nuevoId) {
-  if (nuevoId === pacienteActivoId) return;
+function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
+  if (nuevoId === pacienteActivoId && !forzarRehidratacion) return;
 
   guardarEstadoPacienteActivo();
 
-  const nuevoPx = PACIENTES_COLA.find(x => x.id === nuevoId);
+  let nuevoPx = PACIENTES_COLA.find(x => x.id === nuevoId);
+  if (!nuevoPx) {
+    try {
+      const storeRaw = localStorage.getItem("upp_expedientes_v1");
+      if (storeRaw) {
+        const store = JSON.parse(storeRaw);
+        if (store[nuevoId] && store[nuevoId].paciente) {
+          nuevoPx = store[nuevoId].paciente;
+          PACIENTES_COLA.push(nuevoPx);
+        }
+      }
+    } catch(e){}
+  }
   if (!nuevoPx) return;
 
+  // Si no tiene snapshots en RAM, hidratar desde upp_expedientes_v1
+  if (!nuevoPx.stateSnapshot || !nuevoPx.formSnapshot) {
+    try {
+      const storeRaw = localStorage.getItem("upp_expedientes_v1");
+      if (storeRaw) {
+        const store = JSON.parse(storeRaw);
+        if (store[nuevoId]) {
+          if (!nuevoPx.stateSnapshot && store[nuevoId].state) nuevoPx.stateSnapshot = store[nuevoId].state;
+          if (!nuevoPx.formSnapshot && store[nuevoId].form) nuevoPx.formSnapshot = store[nuevoId].form;
+        }
+      }
+    } catch(e){}
+  }
+
   pacienteActivoId = nuevoId;
+  window.pacienteActivoId = nuevoId;
 
   if (nuevoPx.stateSnapshot) {
     Object.assign(STATE, JSON.parse(JSON.stringify(nuevoPx.stateSnapshot)));
+    STATE.firmas = nuevoPx.firmas || nuevoPx.stateSnapshot.firmas || {};
+    STATE.estadoFlujo = nuevoPx.estadoFlujo || nuevoPx.stateSnapshot.estadoFlujo || "PENDIENTE_TRIAJE";
+    STATE.coberturaValidada = Boolean(nuevoPx.coberturaValidada || nuevoPx.stateSnapshot.coberturaValidada);
+    STATE.alertaPrioridad1 = Boolean(nuevoPx.alertaPrioridad1 || STATE.prioridad === 'I');
   } else {
     limpiarFormularioCompletoState();
-    STATE.identificador = nuevoPx.identificador;
-    STATE.nombreReniec = nuevoPx.nombre;
-    STATE.numDni = nuevoPx.dni;
-    STATE.prioridad = nuevoPx.prioridad;
-    STATE.medicoTratante = nuevoPx.medico || (nuevoPx.stateSnapshot && nuevoPx.stateSnapshot.medicoTratante) || "Por asignar";
+    STATE.identificador = nuevoPx.identificador || "";
+    STATE.nombreReniec = (nuevoPx.dni && !String(nuevoPx.dni).startsWith("NN") && nuevoPx.nombre && !nuevoPx.nombre.startsWith("Paciente #")) ? nuevoPx.nombre : null;
+    STATE.numDni = nuevoPx.dni || null;
+    STATE.prioridad = nuevoPx.prioridad || null;
+    STATE.medicoTratante = nuevoPx.medico || "Por asignar";
     STATE.estadoFlujo = nuevoPx.estadoFlujo || "PENDIENTE_TRIAJE";
     STATE.coberturaValidada = Boolean(nuevoPx.coberturaValidada);
     STATE.firmas = nuevoPx.firmas || {};
@@ -9038,11 +9611,19 @@ function cambiarPacienteActivo(nuevoId) {
     aplicarFormulario(nuevoPx.formSnapshot);
   } else {
     const elIdent = document.getElementById("ident_full");
-    if (elIdent) elIdent.value = nuevoPx.identificador || "";
+    if (elIdent) {
+      elIdent.value = "";
+      elIdent.placeholder = `${nuevoPx.identificador || 'Ticket'} — Ingrese DNI o apellidos completos`;
+    }
+    const elDni1 = document.getElementById("dni_mod1");
+    if (elDni1) {
+      elDni1.value = "";
+      elDni1.placeholder = "Ingrese 8 dígitos de DNI para consulta en Módulo 1...";
+    }
     const elDni = document.getElementById("dni_reniec_input");
-    if (elDni) elDni.value = nuevoPx.dni || "";
+    if (elDni) elDni.value = "";
     const elMotivo = document.getElementById("motivo_full");
-    if (elMotivo) elMotivo.value = nuevoPx.motivo || "";
+    if (elMotivo) elMotivo.value = "";
   }
 
   const hcDisp = document.getElementById("hc_code_display");
@@ -9063,20 +9644,38 @@ function cambiarPacienteActivo(nuevoId) {
     limpiarPrioridadUI();
   }
 
-    if (typeof actualizarFactura === "function") {
+  if (typeof actualizarFactura === "function") {
     actualizarFactura();
   }
   if (typeof sincronizarFacturacionYExportar === "function") {
     sincronizarFacturacionYExportar(true);
   }
+  if (typeof sincronizarDatosPacienteEnTodosLosModulos === "function") {
+    sincronizarDatosPacienteEnTodosLosModulos(STATE);
+  }
   if (typeof window.actualizarBandejaPostaUI === "function") {
     window.actualizarBandejaPostaUI();
+  }
+  if (typeof window.renderizarTrackBoardLista === "function") {
+    window.renderizarTrackBoardLista();
+  }
+  if (typeof window.renderizarBandejaPosta === "function") {
+    window.renderizarBandejaPosta();
+  }
+  if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === "function") {
+    window.COCKPIT.actualizarContextoCockpit();
+  }
+  if (window.COCKPIT && typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") {
+    window.COCKPIT.actualizarTarjetaResumenTriaje();
   }
   renderizarTableroColaPacientes();
   mostrarToastCola(`🔄 Paciente activo: <strong>${nuevoPx.nombre}</strong>`);
 }
 
 function limpiarFormularioCompletoState() {
+  STATE.estadoFlujo = "PENDIENTE_TRIAJE";
+  STATE.firmas = {};
+  STATE.coberturaValidada = false;
   STATE.spo2 = null; STATE.fc = null; STATE.pasSistolica = null; STATE.paDiastolica = null;
   STATE.fr = null; STATE.temperatura = null; STATE.glucosa = null; STATE.glasgow = null; STATE.eva = 0;
   STATE.motivoConsulta = ""; STATE.prioridad = null; STATE.colorPrioridad = null;
@@ -9100,27 +9699,59 @@ function limpiarFormularioCompletoState() {
   STATE.horaIngresoBrazalete = null;
   STATE.horaLlegada = null;
   STATE.fechaLlegada = null;
+  STATE.esNN = false;
 
   const inputsIds = [
-    "ident_full", "dni_reniec_input", "dni_mod1", "motivo_full", "spo2_full", "fc_full",
+    "ident_full", "dni_reniec_input", "dni_mod1", "dni_mod4", "motivo_full", "spo2_full", "fc_full",
     "pas_full", "pad_full", "fr_full", "temp_full", "glasgow_full", "glucosa_full",
-    "eva_full", "eva_range", "edad_full", "sexo_full", "fecha_nac_full", "alergias_full"
+    "eva_full", "eva_range", "edad_full", "sexo_full", "fecha_nac_full", "alergias_full", "alergias_mod1",
+    "cie10_select", "cie10_input", "enfermero_triaje_select", "medico_responsable_select",
+    "select_ipress_publica", "select_plan_privado", "sel_consentimiento_medico",
+    "sel_condicion_consentimiento", "sel_procedimiento_consentimiento"
   ];
   inputsIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
+
+  const checkIds = [
+    "check_cod_infarto", "check_cod_ictus", "check_cod_sepsis",
+    "chk_gestante_full", "chk_pediatrico_full", "chk_consentimiento_datos",
+    "chk_evento_fuga", "chk_exclusion_eps", "chk_consentimiento_firmado"
+  ];
+  checkIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+
+  const elSexo = document.getElementById("sexo_full");
+  if (elSexo) elSexo.value = "M";
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
-  const elAlergiasFull = document.getElementById("alergias_full");
-  if (elAlergiasFull) elAlergiasFull.value = "Desconocido";
-  const elAlergiasM1 = document.getElementById("alergias_mod1");
-  if (elAlergiasM1) elAlergiasM1.value = "Desconocido";
+  const elClave = document.getElementById("clave_obstetrica_sel");
+  if (elClave) elClave.value = "";
   STATE.grupoSanguineo = "Desconocido";
 
+  if (typeof limpiarIdentificacionPaciente === "function") {
+    limpiarIdentificacionPaciente();
+  }
   if (typeof actualizarEVA === "function") actualizarEVA(0);
   if (typeof actualizarIndicadorVisualAlergias === "function") actualizarIndicadorVisualAlergias("");
   limpiarPrioridadUI();
+
+  const news2Disp = document.getElementById("news2_score_display");
+  if (news2Disp) news2Disp.textContent = "—";
+  const auditNews = document.getElementById("audit_news2_val");
+  if (auditNews) auditNews.textContent = "—";
+  const auditEsi = document.getElementById("audit_esi_val");
+  if (auditEsi) auditEsi.textContent = "—";
+  const hcDisp = document.getElementById("hc_code_display");
+  if (hcDisp) hcDisp.textContent = "—";
+  const hcBadge = document.getElementById("hc_badge_estado");
+  if (hcBadge) {
+    hcBadge.textContent = "Por confirmar";
+    hcBadge.className = "badge-estado badge-conf";
+  }
 }
 
 function limpiarPrioridadUI() {
@@ -9213,8 +9844,12 @@ function ejecutarAdmisionRapidaNN(event) {
   });
 
   esLlegadaSimultanea = false;
-  PACIENTES_COLA = [pxNN];
+  if (!Array.isArray(PACIENTES_COLA)) PACIENTES_COLA = [];
+  const idxExistenteNN = PACIENTES_COLA.findIndex(x => x.id === pxNN.id);
+  if (idxExistenteNN >= 0) PACIENTES_COLA[idxExistenteNN] = pxNN; else PACIENTES_COLA.push(pxNN);
+  window.PACIENTES_COLA = PACIENTES_COLA;
   pacienteActivoId = pxNN.id;
+  window.pacienteActivoId = pxNN.id;
 
   limpiarFormularioCompletoState();
 
@@ -9352,8 +9987,12 @@ function completarPreTriageSTART(prio, motivo) {
   });
 
   esLlegadaSimultanea = false;
-  PACIENTES_COLA = [px];
+  if (!Array.isArray(PACIENTES_COLA)) PACIENTES_COLA = [];
+  const idxExistentePx = PACIENTES_COLA.findIndex(x => x.id === px.id);
+  if (idxExistentePx >= 0) PACIENTES_COLA[idxExistentePx] = px; else PACIENTES_COLA.push(px);
+  window.PACIENTES_COLA = PACIENTES_COLA;
   pacienteActivoId = px.id;
+  window.pacienteActivoId = px.id;
 
   limpiarFormularioCompletoState();
   STATE.identificador = ticket;
@@ -9506,26 +10145,67 @@ function mostrarToastCola(htmlMsg) {
 function registrarPacienteEnEspera() {
   guardarEstadoPacienteActivo();
   const num = contadorSecuencialPx++;
-  const nombrePx = `Paciente #${num} (En Espera)`;
+  const ticket = `T-${String(num).padStart(3, '0')}`;
+  const nombrePx = `Paciente #${num}`;
   const idPx = `PX-ESP-${num}-${Date.now().toString(36).slice(-4)}`;
 
   const nuevoPx = crearRegistroPaciente({
     numero: num,
     id: idPx,
-    identificador: `Ticket T-${String(num).padStart(3, '0')}`,
+    identificador: `Ticket ${ticket}`,
     nombre: nombrePx,
+    dni: "",
+    edad: null,
     prioridad: null,
-    estadoAtencion: "En Espera de Triaje",
-    modalidad: "A pie"
+    estadoAtencion: "En Espera",
+    estadoFlujo: "PENDIENTE_TRIAJE",
+    modalidad: "A pie",
+    esNN: false,
+    coberturaValidada: false,
+    firmas: {},
+    alertaPrioridad1: false,
+    stateSnapshot: null,
+    formSnapshot: null
   });
 
   esLlegadaSimultanea = false;
-  PACIENTES_COLA = [nuevoPx];
+  if (!Array.isArray(PACIENTES_COLA)) {
+    PACIENTES_COLA = [];
+  }
+  PACIENTES_COLA.push(nuevoPx);
+  window.PACIENTES_COLA = PACIENTES_COLA;
   pacienteActivoId = nuevoPx.id;
-  cambiarPacienteActivo(nuevoPx.id);
+  window.pacienteActivoId = nuevoPx.id;
 
-  renderizarTableroColaPacientes();
-  mostrarToastCola(`👤 <strong>Llegada Registrada:</strong> ${nombrePx} ingresado a sala de espera.`);
+  try {
+    localStorage.setItem("UPP_PACIENTES_COLA_SHARED", JSON.stringify(PACIENTES_COLA));
+    const storeRaw = localStorage.getItem("upp_expedientes_v1");
+    const store = storeRaw ? JSON.parse(storeRaw) : {};
+    store[nuevoPx.id] = {
+      id: nuevoPx.id,
+      paciente: JSON.parse(JSON.stringify(nuevoPx)),
+      state: null,
+      form: null,
+      timestamp: Date.now()
+    };
+    localStorage.setItem("upp_expedientes_v1", JSON.stringify(store));
+  } catch(e) {}
+
+  cambiarPacienteActivo(nuevoPx.id, true);
+
+  if (typeof window.refrescarTrackBoardYBandeja === "function") {
+    window.refrescarTrackBoardYBandeja({ idExpediente: nuevoPx.id, estadoFlujo: "PENDIENTE_TRIAJE" });
+  } else {
+    renderizarTableroColaPacientes();
+    if (typeof window.renderizarTrackBoardLista === "function") {
+      window.renderizarTrackBoardLista();
+    }
+    if (typeof window.renderizarBandejaPosta === "function") {
+      window.renderizarBandejaPosta();
+    }
+  }
+
+  mostrarToastCola(`👤 <strong>Llegada Registrada:</strong> ${nombrePx} (${nuevoPx.identificador}) ingresado a sala de espera.`);
 }
 window.registrarPacienteEnEspera = registrarPacienteEnEspera;
 
@@ -9602,6 +10282,7 @@ window.resetearEntornoEstablecimientoAPendiente = resetearEntornoEstablecimiento
 function actualizarGrupoSanguineo(val) {
   STATE.grupoSanguineo = val;
   autoGuardarCambioEnHistoriaClinica(`Grupo sanguíneo actualizado a ${val}`);
+  guardarEnHistoriaClinicaMaster({ grupo_sanguineo: val });
 }
 window.actualizarGrupoSanguineo = actualizarGrupoSanguineo;
 
@@ -9782,12 +10463,16 @@ function sincronizarDatosPacienteEnTodosLosModulos(datos = {}) {
   const m1Sexo = document.getElementById("m1_disp_sexo");
   const m1Hc = document.getElementById("m1_disp_hc");
 
-  if (m1Card && nombre) {
-    if (m1Nombre) m1Nombre.textContent = nombre;
-    if (m1Dni) m1Dni.textContent = dni;
-    if (m1Sexo) m1Sexo.textContent = sexoDesc;
-    if (m1Hc) m1Hc.textContent = hc;
-    m1Card.style.display = "block";
+  if (m1Card) {
+    if (dni && nombre && !esNN && !String(nombre).startsWith("PACIENTE #") && !String(nombre).startsWith("TICKET")) {
+      if (m1Nombre) m1Nombre.textContent = nombre;
+      if (m1Dni) m1Dni.textContent = dni;
+      if (m1Sexo) m1Sexo.textContent = sexoDesc;
+      if (m1Hc) m1Hc.textContent = hc;
+      m1Card.style.display = "block";
+    } else {
+      m1Card.style.display = "none";
+    }
   }
 
   // 2. Sincronizar Módulo 2 (Admisión & RENIEC)
@@ -9871,10 +10556,83 @@ function sincronizarDatosPacienteEnTodosLosModulos(datos = {}) {
   if (pacienteActivoId && Array.isArray(PACIENTES_COLA)) {
     const px = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
     if (px && nombre) {
-      px.nombre = nombre;
+      if (!String(nombre).startsWith("PACIENTE #") || !px.nombre) {
+        px.nombre = nombre;
+      }
       px.dni = dni;
       renderizarTableroColaPacientes();
+      if (typeof window.renderizarTrackBoardLista === "function") {
+        window.renderizarTrackBoardLista();
+      }
+      if (typeof window.actualizarBarraAccionPosta === "function") {
+        window.actualizarBarraAccionPosta();
+      }
     }
+  }
+
+  // 5. Retro-sincronización de Pasos y Módulos Anteriores (Triaje Módulo 1 y 2)
+  const spo2Inp = document.getElementById("spo2_full") || document.getElementById("spo2_val");
+  if (spo2Inp && (datos.spo2 !== undefined || STATE.spo2 !== null)) {
+    spo2Inp.value = datos.spo2 || STATE.spo2 || "";
+  }
+  const fcInp = document.getElementById("fc_full") || document.getElementById("fc_val");
+  if (fcInp && (datos.fc !== undefined || STATE.fc !== null)) {
+    fcInp.value = datos.fc || STATE.fc || "";
+  }
+  const pasInp = document.getElementById("pas_full") || document.getElementById("pas_val");
+  if (pasInp && (datos.pasSistolica !== undefined || STATE.pasSistolica !== null)) {
+    pasInp.value = datos.pasSistolica || STATE.pasSistolica || "";
+  }
+  const padInp = document.getElementById("pad_full") || document.getElementById("pad_val");
+  if (padInp && (datos.paDiastolica !== undefined || STATE.paDiastolica !== null)) {
+    padInp.value = datos.paDiastolica || STATE.paDiastolica || "";
+  }
+  const frInp = document.getElementById("fr_full") || document.getElementById("fr_val");
+  if (frInp && (datos.fr !== undefined || STATE.fr !== null)) {
+    frInp.value = datos.fr || STATE.fr || "";
+  }
+  const tempInp = document.getElementById("temp_full") || document.getElementById("temp_val");
+  if (tempInp && (datos.temperatura !== undefined || STATE.temperatura !== null)) {
+    tempInp.value = datos.temperatura || STATE.temperatura || "";
+  }
+  const glucInp = document.getElementById("glucosa_full");
+  if (glucInp && (datos.glucosa !== undefined || STATE.glucosa !== null)) {
+    glucInp.value = datos.glucosa || STATE.glucosa || "";
+  }
+  const gcsInp = document.getElementById("glasgow_full");
+  if (gcsInp && (datos.glasgow !== undefined || STATE.glasgow !== null)) {
+    gcsInp.value = datos.glasgow || STATE.glasgow || "";
+  }
+  const evaInp = document.getElementById("eva_full");
+  if (evaInp && (datos.eva !== undefined || STATE.eva !== null)) {
+    evaInp.value = datos.eva !== undefined ? datos.eva : (STATE.eva || 0);
+  }
+  const alergInp = document.getElementById("alergias_full");
+  if (alergInp && (datos.alergias || STATE.alergias)) {
+    alergInp.value = datos.alergias || STATE.alergias || "";
+  }
+  const motInp = document.getElementById("motivo_full");
+  if (motInp && (datos.motivo || STATE.motivoConsulta)) {
+    motInp.value = datos.motivo || STATE.motivoConsulta || "";
+  }
+
+  // 6. Retro-sincronización Módulo 3 (Seguro y Cobertura)
+  const seguroActivo = datos.tipoSeguro || STATE.tipoSeguro;
+  const selSeguro = document.getElementById("tipo_seguro_select") || document.getElementById("select_seguro_principal");
+  if (selSeguro && seguroActivo) {
+    for (let opt of selSeguro.options) {
+      if (opt.value === seguroActivo || opt.text.includes(seguroActivo)) {
+        selSeguro.value = opt.value;
+        break;
+      }
+    }
+  }
+
+  // 7. Retro-sincronización Módulo 5 (Cama Hospitalaria)
+  const camaNombre = datos.camaNombre || datos.camaAsignada || STATE.camaAsignada;
+  const dispCamaMod5 = document.getElementById("cama_asignada_display");
+  if (dispCamaMod5 && camaNombre) {
+    dispCamaMod5.textContent = camaNombre;
   }
 }
 
@@ -10393,6 +11151,7 @@ function cambiarEntornoOperativo(modo) {
   STATE.esClinicaPrivada = (nuevoModo === "privado");
 
   if (debeBorrarAvance) {
+    // Requerimiento: Si ya estoy ingresando los datos en SIS o ESSALUD, al cambiar de pestaña a Privado se borra el avance
     if (typeof limpiarFormularioCompletoState === "function") {
       limpiarFormularioCompletoState();
     }
@@ -10400,6 +11159,57 @@ function cambiarEntornoOperativo(modo) {
     STATE.esClinicaPrivada = true;
     STATE.tipoSeguro = "Particular";
     STATE.planPrivado = "base_80_20";
+
+    const cie10 = document.getElementById("cie10_select");
+    if (cie10) cie10.selectedIndex = 0;
+    const dxPres = document.getElementById("dx_presuntivo");
+    if (dxPres) dxPres.value = "";
+    const recFarm = document.getElementById("select_receta_farmacia");
+    if (recFarm) recFarm.selectedIndex = 0;
+    const indMed = document.getElementById("indicaciones_medicas");
+    if (indMed) indMed.value = "";
+
+    if (typeof window.actualizarFichaClinicaEnTiempoReal === "function") {
+      try { window.actualizarFichaClinicaEnTiempoReal(); } catch(e){}
+    }
+    if (typeof window.actualizarFlujoSidebarEnTiempoReal === "function") {
+      try { window.actualizarFlujoSidebarEnTiempoReal(); } catch(e){}
+    }
+    if (typeof window.renderizarBandejaPosta === "function") {
+      try { window.renderizarBandejaPosta(); } catch(e){}
+    }
+    if (typeof window.actualizarCamasMonitorEnTiempoReal === "function") {
+      try { window.actualizarCamasMonitorEnTiempoReal(); } catch(e){}
+    }
+    if (typeof mostrarToastCola === "function") {
+      mostrarToastCola("🔄 <strong>Entorno Privado:</strong> Se ha borrado el avance anterior para iniciar un ingreso limpio en sector privado.");
+    }
+  } else {
+    // Bloque 6: Persistencia del seguro SITEDS por DNI al alternar modo Público y Privado
+    const dniAct = STATE.numDni || (document.getElementById("dni_reniec_input")?.value) || (document.getElementById("dni_mod1")?.value) || "";
+    STATE.segurosSitedsPorDni = STATE.segurosSitedsPorDni || {};
+    if (dniAct) {
+      if (nuevoModo === "publico" && STATE.planPrivado) {
+        STATE.segurosSitedsPorDni[dniAct] = {
+          planPrivado: STATE.planPrivado,
+          tipoSeguro: STATE.tipoSeguro,
+          padronPrivado: STATE.padronSusalud?.privado ? JSON.parse(JSON.stringify(STATE.padronSusalud.privado)) : null
+        };
+      } else if (nuevoModo === "privado" && STATE.segurosSitedsPorDni[dniAct]) {
+        const guardado = STATE.segurosSitedsPorDni[dniAct];
+        if (guardado.planPrivado) {
+          STATE.planPrivado = guardado.planPrivado;
+          const selPlan = document.getElementById("select_plan_privado");
+          if (selPlan) selPlan.value = guardado.planPrivado;
+        }
+        if (guardado.tipoSeguro && guardado.tipoSeguro !== "Particular") {
+          STATE.tipoSeguro = guardado.tipoSeguro;
+        }
+        if (guardado.padronPrivado && STATE.padronSusalud) {
+          STATE.padronSusalud.privado = guardado.padronPrivado;
+        }
+      }
+    }
   }
 
   // Actualizar estilos de los botones del selector
@@ -11025,19 +11835,14 @@ function construirHTMLBrazalete(esTemporal = false) {
   const nombrePrio = nombresPrio[prio] || `PRIORIDAD ${prio}`;
 
   // 1. FECHA Y HORA INMUTABLES:
-  // Se fijan en la primera creación/admisión y NUNCA se recalculan al imprimir
   if (!STATE.fechaIngresoBrazalete) {
     STATE.fechaIngresoBrazalete = STATE.fechaLlegada || new Date().toLocaleDateString('es-PE');
   }
   if (!STATE.horaIngresoBrazalete) {
     STATE.horaIngresoBrazalete = STATE.horaLlegada || new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
   }
-  if (!STATE.horaLlegada) {
-    STATE.horaLlegada = STATE.horaIngresoBrazalete;
-  }
-  if (!STATE.fechaLlegada) {
-    STATE.fechaLlegada = STATE.fechaIngresoBrazalete;
-  }
+  if (!STATE.horaLlegada) STATE.horaLlegada = STATE.horaIngresoBrazalete;
+  if (!STATE.fechaLlegada) STATE.fechaLlegada = STATE.fechaIngresoBrazalete;
   const fechaActual = STATE.fechaIngresoBrazalete;
   const horaActual = STATE.horaIngresoBrazalete;
 
@@ -11065,19 +11870,25 @@ function construirHTMLBrazalete(esTemporal = false) {
   let gsanRaw = STATE.grupoSanguineo || document.getElementById("gsan_full")?.value || "Desconocido";
   let gsanDisplay = (gsanRaw && gsanRaw !== "Desconocido") ? gsanRaw : "Desconocido / Por tipificar";
 
-  // CORRECCIÓN 4: ALERGIAS EN PULSERA QR (DESCONOCIDO EN ATENCIÓN RÁPIDA)
-  const esAtencionInmediata = Boolean(esTemporal || STATE.esNN || STATE.ingresoDirectoCritico || STATE.panicoShockTrauma || (STATE.numDni && String(STATE.numDni).startsWith("NN")) || (docPaciente && docPaciente.startsWith("S/D")));
+  // CORRECCIÓN ALERGIAS: VISIBILIDAD GARANTIZADA Y REGLAS DE CONDICIÓN DE INGRESO
+  const esAdmisionRapidaEmergencia = Boolean(
+    esTemporal || STATE.esNN || STATE.ingresoDirectoCritico || STATE.panicoShockTrauma ||
+    STATE.esAccidenteTransito || STATE.esSOAT ||
+    (STATE.numDni && String(STATE.numDni).startsWith("NN")) ||
+    (docPaciente && docPaciente.startsWith("S/D"))
+  );
   const alergiasInput = (document.getElementById("alergias_mod1")?.value || document.getElementById("alergias_full")?.value || STATE.alergias || STATE.alergiasConocidas || "").trim();
 
   let alergiasDisplay = "";
   let alergiaBadgeStyle = "";
 
-  if (esAtencionInmediata || alergiasInput.toLowerCase().includes("desconocid")) {
-    alergiasDisplay = "⚠️ ALERGIAS: Desconocido";
-    alergiaBadgeStyle = "background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:800;";
-  } else if (alergiasInput) {
-    alergiasDisplay = `🔴 ALERGIA: ${alergiasInput.toUpperCase()}`;
+  if (alergiasInput && !alergiasInput.toLowerCase().includes("desconocid") && !alergiasInput.toLowerCase().includes("no registra") && !alergiasInput.toLowerCase().includes("ningun") && !alergiasInput.toLowerCase().includes("niega")) {
+    alergiasDisplay = `🔴 ALERGIAS: ${alergiasInput.toUpperCase()}`;
     alergiaBadgeStyle = "background:#dc2626; color:#ffffff; font-weight:900; box-shadow:0 1px 4px rgba(220,38,38,0.35);";
+  } else if (esAdmisionRapidaEmergencia || alergiasInput.toLowerCase().includes("desconocid")) {
+    const sufijoNN = STATE.esNNInconsciente ? " (Inconsciente)" : (STATE.esNNConsciente ? " (Indagar)" : "");
+    alergiasDisplay = `⚠️ ALERGIAS: Desconocido${sufijoNN}`;
+    alergiaBadgeStyle = "background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:800;";
   } else {
     alergiasDisplay = "⚠️ ALERGIAS: No registradas / Indagar";
     alergiaBadgeStyle = "background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:700;";
@@ -11090,60 +11901,78 @@ function construirHTMLBrazalete(esTemporal = false) {
   const esRealmenteTemporal = Boolean(esTemporal || STATE.esNN || !STATE.numDni || STATE.numDni === "NN" || docPaciente.startsWith("S/D") || hcPaciente.includes("TEMP") || hcPaciente.includes("NN"));
 
   return `
-    <div class="wristband-strip" style="width:960px; height:138px; background:#ffffff; border:2px solid #94a3b8; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.15); display:flex; position:relative; overflow:hidden; font-family:Arial, Helvetica, sans-serif; box-sizing:border-box; margin:auto;">
+    <div class="wristband-strip" style="width:960px; max-width:100%; height:148px; max-height:148px; background:#ffffff; border:2px solid #94a3b8; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.15); display:flex; position:relative; overflow:hidden; font-family:Arial, Helvetica, sans-serif; box-sizing:border-box; margin:auto;">
+      
       <!-- 1. BANDA LATERAL CON COLOR DE TRIAJE -->
-      <div class="band-triage" style="width:65px; min-width:65px; background:${colorBanda}; color:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:900; text-align:center; padding:4px; box-sizing:border-box; border-right:2px solid rgba(0,0,0,0.15);">
-        <div class="prio-code" style="font-size:26px; line-height:1;">P-${prio}</div>
-        <div class="prio-desc" style="font-size:9px; writing-mode:vertical-rl; transform:rotate(180deg); letter-spacing:1px; margin-top:6px; text-transform:uppercase;">${nombrePrio}</div>
+      <div class="band-triage" style="width:60px; min-width:60px; height:100%; background:${colorBanda}; color:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:900; text-align:center; padding:4px; box-sizing:border-box; border-right:2px solid rgba(0,0,0,0.15);">
+        <div class="prio-code" style="font-size:24px; line-height:1;">P-${prio}</div>
+        <div class="prio-desc" style="font-size:8.5px; writing-mode:vertical-rl; transform:rotate(180deg); letter-spacing:1px; margin-top:6px; text-transform:uppercase;">${nombrePrio}</div>
       </div>
 
       <!-- 2. CUERPO CENTRAL DE IDENTIFICACIÓN -->
-      <div class="wristband-body" style="flex:1; padding:8px 12px; display:flex; flex-direction:column; justify-content:space-between; border-right:2px dashed #cbd5e1; box-sizing:border-box; overflow:hidden;">
-        <div class="inst-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #cbd5e1; padding-bottom:3px;">
+      <div class="wristband-body" style="flex:1; padding:7px 12px; display:flex; flex-direction:column; justify-content:space-between; border-right:2px dashed #cbd5e1; box-sizing:border-box; overflow:visible;">
+        
+        <!-- HEADER INSTITUCIONAL -->
+        <div class="inst-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #cbd5e1; padding-bottom:3px; height:18px;">
           <span class="inst-name" style="font-size:11px; font-weight:800; color:#0f172a; letter-spacing:0.5px;">HOSPITAL REGIONAL DOCENTE UPP</span>
           <div style="display:flex; align-items:center; gap:8px;">
-            ${esRealmenteTemporal ? '<span style="background:#dc2626; color:#ffffff; font-size:9.5px; font-weight:900; padding:2px 7px; border-radius:4px; letter-spacing:0.5px;">🏷️ BRAZALETE TEMPORAL</span>' : '<span style="background:#16a34a; color:#ffffff; font-size:9.5px; font-weight:900; padding:2px 7px; border-radius:4px; letter-spacing:0.5px;">✓ OFICIAL IDENTIFICADO</span>'}
+            ${esRealmenteTemporal ? '<span style="background:#dc2626; color:#ffffff; font-size:9px; font-weight:900; padding:1px 6px; border-radius:4px; letter-spacing:0.4px;">🏷️ BRAZALETE TEMPORAL</span>' : '<span style="background:#16a34a; color:#ffffff; font-size:9px; font-weight:900; padding:1px 6px; border-radius:4px; letter-spacing:0.4px;">✓ OFICIAL IDENTIFICADO</span>'}
             <span class="service-name" style="font-size:9.5px; font-weight:700; color:#0284c7;">SERVICIO DE EMERGENCIA · NIVEL III-1</span>
           </div>
         </div>
 
+        <!-- DATOS DEL PACIENTE: NOMBRE Y UBICACIÓN -->
         <div class="patient-main" style="margin:2px 0;">
-          <div class="patient-name" style="font-size:16px; font-weight:900; color:#0f172a; line-height:1.15; letter-spacing:0.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${nombrePaciente}</div>
-          <div class="patient-details" style="display:flex; gap:10px; font-size:10.5px; color:#334155; margin-top:3px; font-weight:600; flex-wrap:wrap; line-height:1.3;">
-            <span><strong>HC:</strong> <span class="hc-badge" style="background:#0f172a; color:#ffffff; padding:1px 5px; border-radius:4px; font-family:monospace; font-size:10.5px; font-weight:800;">${hcPaciente}${esRealmenteTemporal ? ' (TEMPORAL)' : ''}</span></span>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="patient-name" style="font-size:15px; font-weight:900; color:#0f172a; line-height:1.2; letter-spacing:0.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
+              ${STATE.esNN ? (STATE.esNNInconsciente ? '🚨 ' : '👤 ') : ''}${nombrePaciente}
+            </div>
+            <div style="font-size:9.5px; font-weight:800; background:#fef2f2; color:#991b1b; border:1px solid #fecaca; padding:2px 6px; border-radius:4px; white-space:nowrap;">
+              🛏️ ${ubicacion}
+            </div>
+          </div>
+
+          <!-- LÍNEA COMPACTA DE FILIACIÓN CLÍNICA -->
+          <div class="patient-details" style="display:flex; gap:10px; font-size:10px; color:#334155; margin-top:4px; font-weight:600; flex-wrap:wrap; line-height:1.25;">
+            <span><strong>HC:</strong> <span class="hc-badge" style="background:#0f172a; color:#ffffff; padding:1px 5px; border-radius:3px; font-family:monospace; font-size:10px; font-weight:800;">${hcPaciente}</span></span>
             <span><strong>DOC/DNI:</strong> ${docPaciente}</span>
             <span><strong>EDAD:</strong> ${edadDisplay}</span>
             <span><strong>GÉNERO:</strong> ${generoDisplay}</span>
             <span><strong>GS/Rh:</strong> <span style="background:#fee2e2; color:#991b1b; padding:1px 5px; border-radius:3px; font-weight:800;">${gsanDisplay}</span></span>
             <span><strong>INGRESO:</strong> <span style="font-family:monospace; font-weight:700;">${fechaActual} ${horaActual}</span></span>
-            <span><strong>UBICACIÓN:</strong> <strong style="color:#b91c1c;">${ubicacion}</strong></span>
           </div>
         </div>
 
-        <!-- SISTEMA DE ALERTAS POR COLOR (METAS DE SEGURIDAD MINSA) -->
-        <div class="risk-bars" style="display:flex; gap:6px; margin-top:2px; align-items:center; flex-wrap:wrap;">
-          <div class="bar-allergy" style="padding:2px 8px; border-radius:4px; font-size:9.5px; text-transform:uppercase; ${alergiaBadgeStyle}">
-            ${alergiasDisplay}
+        <!-- 3. FOOTER EXCLUSIVO: ALERGIAS Y ALERTAS CRÍTICAS - PERMANENTEMENTE VISIBLE -->
+        <div class="risk-bars" style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #cbd5e1; padding-top:4px; margin-top:auto;">
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <div class="bar-allergy" style="padding:3px 10px; border-radius:4px; font-size:10px; font-weight:900; letter-spacing:0.3px; text-transform:uppercase; ${alergiaBadgeStyle}">
+              ${alergiasDisplay}
+            </div>
+            ${esRealmenteTemporal ? '<div style="background:#7f1d1d; color:#fecaca; font-size:9px; font-weight:900; padding:2px 6px; border-radius:4px;">🚨 LEY N° 27604</div>' : ''}
+            ${STATE.esAccidenteTransito ? '<div style="background:#ea580c; color:#fff; font-size:9px; font-weight:900; padding:2px 6px; border-radius:4px;">🚗 SOAT</div>' : ''}
           </div>
-          ${esRealmenteTemporal ? '<div style="background:#7f1d1d; color:#fecaca; font-size:9.5px; font-weight:900; padding:2px 7px; border-radius:4px;">🚨 PACIENTE EN ESTABILIZACIÓN CRÍTICA — LEY N° 27604</div>' : ''}
-          ${STATE.esAccidenteTransito ? '<div style="background:#ea580c; color:#fff; font-size:9.5px; font-weight:900; padding:2px 7px; border-radius:4px;">🚗 SOAT ACTIVO</div>' : ''}
+          <div style="font-size:8.5px; font-weight:800; color:#64748b; letter-spacing:0.3px;">
+            NTS N° 042 / NTS N° 139-MINSA
+          </div>
         </div>
+
       </div>
 
-      <!-- 3. CÓDIGO DE BARRAS DE TRAZABILIDAD (UBICADO ANTES DE LA ZONA DE CIERRE) -->
-      <div class="wristband-barcode-area" style="width:135px; min-width:135px; padding:6px 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#fafafa; box-sizing:border-box; border-right:2px dashed #94a3b8;">
-        <div class="barcode-lines" style="width:115px; height:46px; background:repeating-linear-gradient(90deg, #000 0, #000 2px, #fff 2px, #fff 4px, #000 4px, #000 7px, #fff 7px, #fff 9px, #000 9px, #000 13px, #fff 13px, #fff 15px); border-radius:2px;"></div>
+      <!-- 3. CÓDIGO DE BARRAS DE TRAZABILIDAD (ANTES DE CIERRE) -->
+      <div class="wristband-barcode-area" style="width:130px; min-width:130px; height:100%; padding:6px 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#fafafa; box-sizing:border-box; border-right:2px dashed #94a3b8;">
+        <div class="barcode-lines" style="width:110px; height:48px; background:repeating-linear-gradient(90deg, #000 0, #000 2px, #fff 2px, #fff 4px, #000 4px, #000 7px, #fff 7px, #fff 9px, #000 9px, #000 13px, #fff 13px, #fff 15px); border-radius:2px;"></div>
         <div class="barcode-text" style="font-family:monospace; font-size:9px; color:#334155; margin-top:3px; font-weight:700;">*${hcPaciente}*</div>
-        <div class="seal-minsa" style="font-size:7.5px; color:#64748b; text-align:center; margin-top:3px; font-weight:700;">MINSA · METAS SEGURIDAD</div>
+        <div class="seal-minsa" style="font-size:7.5px; color:#64748b; text-align:center; margin-top:3px; font-weight:700;">MINSA · SEGURIDAD</div>
       </div>
 
-      <!-- 4. ESPACIO ADECUADO POSTERIOR AL CÓDIGO DE BARRAS (ZONA DE TRASLAPE Y CIERRE ADHESIVO) -->
-      <div class="wristband-closure-area" style="width:185px; min-width:185px; background:#f8fafc; padding:8px 10px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-sizing:border-box;">
-        <div style="font-size:9.5px; font-weight:900; color:#334155; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:4px;">
+      <!-- 4. ZONA DE TRASLAPE Y CIERRE ADHESIVO (NO CUBRE CÓDIGO DE BARRAS) -->
+      <div class="wristband-closure-area" style="width:175px; min-width:175px; height:100%; background:#f8fafc; padding:8px 10px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-sizing:border-box;">
+        <div style="font-size:9px; font-weight:900; color:#334155; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:4px;">
           <span>🔒</span> <span>ÁREA DE TRASLAPE</span>
         </div>
         <div style="font-size:8px; font-weight:700; color:#64748b; margin-top:3px; line-height:1.2;">
-          ZONA DE CIERRE Y ADHESIVO
+          ZONA DE CIERRE ADHESIVO
         </div>
         <div style="margin-top:6px; border:1.5px dashed #0284c7; background:#e0f2fe; border-radius:4px; padding:3px 8px; font-size:8px; font-weight:800; color:#0369a1;">
           ✂️ PEGAR / TRASLAPAR AQUÍ
@@ -11152,10 +11981,10 @@ function construirHTMLBrazalete(esTemporal = false) {
           [ NO CUBRE CÓDIGO DE BARRAS ]
         </div>
       </div>
+
     </div>
   `;
 }
-
 function generarBrazaleteEmergencia(modo = 'temporal') {
   const printArea = document.getElementById('brazalete_print_area');
   const modalPreview = document.getElementById('brazalete_modal_preview');
@@ -13303,8 +14132,12 @@ function admitirEmergenciaNN() {
   });
 
   esLlegadaSimultanea = false;
-  PACIENTES_COLA = [pxNN];
+  if (!Array.isArray(PACIENTES_COLA)) PACIENTES_COLA = [];
+  const idxExistenteNN = PACIENTES_COLA.findIndex(x => x.id === pxNN.id);
+  if (idxExistenteNN >= 0) PACIENTES_COLA[idxExistenteNN] = pxNN; else PACIENTES_COLA.push(pxNN);
+  window.PACIENTES_COLA = PACIENTES_COLA;
   pacienteActivoId = pxNN.id;
+  window.pacienteActivoId = pxNN.id;
 
   limpiarFormularioCompletoState();
 
@@ -13410,15 +14243,11 @@ window.admitirEmergenciaNN = admitirEmergenciaNN;
 function cambiarIpressPublica(valor) {
   STATE.tipoIpressPublica = valor || "MINSA";
   if (valor === "MINSA") {
-    if (STATE.tipoSeguro === "SIS" || !STATE.tipoSeguro || STATE.tipoSeguro === "SIS Gratuito") {
-      STATE.nroFua = STATE.nroFua || `FUA-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-      STATE.estadoFua = STATE.estadoFua || "ABIERTO";
-    }
+    STATE.nroFua = STATE.nroFua || `FUA-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+    STATE.estadoFua = STATE.estadoFua || "ABIERTO";
   } else if (valor === "ESSALUD") {
-    if (STATE.tipoSeguro === "EsSalud" || !STATE.tipoSeguro) {
-      STATE.nroEssi = STATE.nroEssi || `ESSI-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-      STATE.estadoEssi = STATE.estadoEssi || "ABIERTO";
-    }
+    STATE.nroEssi = STATE.nroEssi || `ESSI-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+    STATE.estadoEssi = STATE.estadoEssi || "ABIERTO";
   }
   actualizarFactura();
   if (window.COCKPIT && typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") {

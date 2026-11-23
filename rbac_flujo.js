@@ -1667,7 +1667,7 @@
       const esActivo = p.id === window.pacienteActivoId;
       const esSiguienteMed = (rol === "MEDICO" && p === primerCandidatoMedico);
 
-      const colorPrio = p.prioridad === "I" ? "#dc2626" : p.prioridad === "II" ? "#ea580c" : p.prioridad === "III" ? "#ca8a04" : p.prioridad === "IV" ? "#16a34a" : "#2563eb";
+      const colorPrio = p.prioridad === "I" ? "#dc2626" : p.prioridad === "II" ? "#ea580c" : p.prioridad === "III" ? "#ca8a04" : p.prioridad === "IV" ? "#16a34a" : p.prioridad === "V" ? "#2563eb" : "#64748b";
       const esAtendido = p.estadoFlujo === "CERRADO_FACTURADO";
       const bgCard = esAtendido ? (esActivo ? "#ecfdf5" : "#f0fdf4") : (esActivo ? "#eff6ff" : "#ffffff");
       const borderCard = esAtendido ? (esActivo ? "2px solid #16a34a" : "1.5px solid #86efac") : (esActivo ? "2px solid #3b82f6" : esSiguienteMed ? "2px solid #f59e0b" : "1px solid #e2e8f0");
@@ -1680,7 +1680,7 @@
         <div onclick="${clickAction}" style="display:flex; justify-content:space-between; align-items:center; background:${bgCard}; border:${borderCard}; border-radius:8px; padding:7px 10px; cursor:pointer; transition:all 0.15s ease; ${shadowCard}">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="background:${colorPrio}; color:#ffffff; font-size:0.7rem; font-weight:900; padding:2px 6px; border-radius:4px; font-variant-numeric:tabular-nums;">
-              ${p.prioridad ? "P-" + p.prioridad : "P-V"}
+              ${p.prioridad ? "P-" + p.prioridad : "⏳ S/P"}
             </span>
             <div>
               <div style="font-size:0.8rem; font-weight:800; color:#0f172a; line-height:1.2;">
