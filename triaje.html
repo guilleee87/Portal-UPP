@@ -3825,16 +3825,16 @@
           <!-- BOTONES DE ACCIÓN: DOCUMENTO, IMPRESIÓN Y CHECKLIST HC -->
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px;">
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button type="button" class="btn-full-secondary" onclick="abrirModalConsentimiento()" style="padding:8px 14px; font-weight:800; font-size:0.78rem; display:flex; align-items:center; gap:6px;">
+              <button type="button" id="btn_ver_doc_consentimiento" class="btn-full-secondary" onclick="abrirModalConsentimiento()" style="padding:8px 14px; font-weight:800; font-size:0.78rem; display:flex; align-items:center; gap:6px;">
                 <span>📋</span> <span>Ver Documento Legal</span>
               </button>
-              <button type="button" class="btn-full-primary" onclick="imprimirConsentimientoDirecto()" style="background:#0284c7; padding:8px 16px; font-weight:800; font-size:0.78rem; display:flex; align-items:center; gap:6px;">
+              <button type="button" id="btn_imprimir_doc_consentimiento" class="btn-full-primary" onclick="imprimirConsentimientoDirecto()" style="background:#0284c7; padding:8px 16px; font-weight:800; font-size:0.78rem; display:flex; align-items:center; gap:6px;">
                 <span>🖨️</span> <span>Imprimir Consentimiento para Firma</span>
               </button>
             </div>
 
             <!-- CASILLA DE VERIFICACIÓN (CHECKLIST OBLIGATORIO) -->
-            <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:800; color:#0f172a; font-size:0.8rem; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:8px 14px;">
+            <label id="lbl_chk_consentimiento_firmado" style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:800; color:#0f172a; font-size:0.8rem; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:8px 14px;">
               <input type="checkbox" id="chk_consentimiento_firmado" onchange="toggleConsentimientoFirmado(this.checked)" style="width:18px; height:18px; accent-color:#16a34a; cursor:pointer;">
               <span>📑 Se adjunta documento de Consentimiento debidamente firmado a la HC</span>
             </label>

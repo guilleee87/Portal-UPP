@@ -1918,11 +1918,12 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
   const sexoPx = master.sexo || p.sexo || "—";
   const pxVivo = (Array.isArray(PACIENTES_COLA) ? PACIENTES_COLA.find(x => (x.dni && x.dni === ident) || x.historiaClinica === hc || x.nombre === nom) : null) || {};
   const stVivo = (typeof STATE !== "undefined" && (STATE.numDni === ident || STATE.historiaClinica === hc)) ? STATE : {};
-  const enfermeraReg = master.enfermera_responsable || pxVivo.enfermeraTriaje || pxVivo.firmas?.triaje?.usuario || stVivo.firmas?.triaje?.usuario || "Lic. Ana Torres Morales (CEP 92410 — Triaje/Tópico)";
-  const medicoReg = master.medico_responsable || pxVivo.medico || pxVivo.medicoTratante || pxVivo.firmas?.medico?.usuario || stVivo.medicoTratante || "Dr. Carlos Vega Alva (CMP 58321 · RNE 23901)";
-  const diagReg = master.diagnostico_cie10 || pxVivo.cie10 || stVivo.cie10 || "En evaluación clínica / CIE-10";
-  const labsReg = master.resultados_texto ? [master.resultados_texto] : (Array.isArray(master.resultados_lab) ? master.resultados_lab : (Array.isArray(stVivo.ordenesLaboratorio) && stVivo.ordenesLaboratorio.length ? stVivo.ordenesLaboratorio.map(l => `${l.nombre} (${l.estado || 'Validado'})`) : ["Hemograma Completo: Leucocitos 8,400/mm³, Hb 13.8 g/dL, Plaquetas 245,000/mm³", "Glucosa Sérica: 96 mg/dL · Creatinina: 0.9 mg/dL"]));
-  const imgsReg = master.imagenes_texto ? [master.imagenes_texto] : (Array.isArray(master.estudios_imagenes) ? master.estudios_imagenes : (Array.isArray(stVivo.ordenesImagenes) && stVivo.ordenesImagenes.length ? stVivo.ordenesImagenes.map(im => `${im.nombre} (${im.estado || 'Informado'})`) : ["Rx Tórax / Estudio por Imágenes: Sin hallazgos agudos consolidativos (cuando aplique)"]));
+  const enfermeraReg = master.enfermera_responsable || pxVivo.enfermeraTriaje || pxVivo.firmas?.triaje?.usuario || stVivo.firmas?.triaje?.usuario || "—";
+  const medVivoVal = (pxVivo.medico && pxVivo.medico !== "Por asignar") ? pxVivo.medico : ((stVivo.medicoTratante && stVivo.medicoTratante !== "Por asignar") ? stVivo.medicoTratante : null);
+  const medicoReg = master.medico_responsable || medVivoVal || pxVivo.medicoTratante || pxVivo.firmas?.medico?.usuario || stVivo.firmas?.medico?.usuario || "—";
+  const diagReg = master.diagnostico_cie10 || pxVivo.cie10 || stVivo.cie10 || "—";
+  const labsReg = master.resultados_texto ? [master.resultados_texto] : (Array.isArray(master.resultados_lab) ? master.resultados_lab : (Array.isArray(stVivo.ordenesLaboratorio) && stVivo.ordenesLaboratorio.length ? stVivo.ordenesLaboratorio.map(l => `${l.nombre} (${l.estado || 'Validado'})`) : []));
+  const imgsReg = master.imagenes_texto ? [master.imagenes_texto] : (Array.isArray(master.estudios_imagenes) ? master.estudios_imagenes : (Array.isArray(stVivo.ordenesImagenes) && stVivo.ordenesImagenes.length ? stVivo.ordenesImagenes.map(im => `${im.nombre} (${im.estado || 'Informado'})`) : []));
   const kardexReg = master.kardex_texto ? [master.kardex_texto] : (Array.isArray(master.kardex_resumen) ? master.kardex_resumen : (Array.isArray(stVivo.kardexItems) && stVivo.kardexItems.length ? stVivo.kardexItems.map(k => `${k.nombre} — ${k.dosis || ''} ${k.frecuencia || ''} (${k.administrado ? 'Administrado' : 'Prescrito'})`) : []));
   const _rolVis = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === "function") ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
   const _esAudVis = (_rolVis === "AUDITOR" || _rolVis === "ADMIN");
@@ -1935,12 +1936,10 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
     const sVal = String(valActual ?? "").replace(/'/g, "\\'").replace(/\n/g, " ");
     return ` <button type="button" class="btn-hc-lapiz" data-campo="${prop}" onclick="abrirEditorCampoHCAuditor('${sId}','${sHc}','${sProp}','${sLbl}','${sVal}')" title="Rectificar ${label} (con motivo obligatorio y trazabilidad)" style="background:none;border:none;cursor:pointer;font-size:0.82rem;padding:0 3px;vertical-align:middle;">✏️</button>`;
   };
-  const consultasExt = Array.isArray(master.consultas_externas) && master.consultas_externas.length ? master.consultas_externas : [
-    { fecha: "12/10/2026", hora: "09:30:00", servicio: "Consulta Externa — Medicina Interna", profesional: "Dr. Javier Quispe Huamán (CMP 49120)", detalle: "Control ambulatorio preventivo, signos vitales estables, sin intercurrencias." }
-  ];
-  const ingresosReg = Array.isArray(master.ingresos_historia) && master.ingresos_historia.length ? master.ingresos_historia : [
-    { dia: pxVivo.fecha || new Date().toLocaleDateString("es-PE"), hora: pxVivo.horaLlegada || new Date().toLocaleTimeString("es-PE"), tipo: "Ingreso a Emergencia", modalidad: pxVivo.modalidad || "A pie / Ambulatorio", ubicacion: pxVivo.camaNombre || "Triaje / Tópico", enfermera: enfermeraReg }
-  ];
+  const consultasExt = Array.isArray(master.consultas_externas) ? master.consultas_externas : [];
+  const ingresosReg = Array.isArray(master.ingresos_historia) && master.ingresos_historia.length
+    ? master.ingresos_historia
+    : (pxVivo.id ? [{ dia: pxVivo.fecha || new Date().toLocaleDateString("es-PE"), hora: pxVivo.horaLlegada || "—", tipo: "Ingreso a Emergencia", modalidad: pxVivo.modalidad || "—", ubicacion: pxVivo.camaNombre || "—", enfermera: enfermeraReg }] : []);
   const episodios = obtenerEpisodiosDePaciente(ident, hc);
   const esAlergico = alergias && !alergias.toLowerCase().includes("niega") && !alergias.toLowerCase().includes("ninguna");
   let htmlEpisodios = "";
@@ -2071,22 +2070,22 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:14px;font-size:0.77rem;">
       <div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:8px;padding:10px 12px;">
         <div style="font-weight:800;color:#0369a1;margin-bottom:4px;">🏥 Registro de Ingresos (Día, Hora, Modalidad y Enfermería)</div>
-        ${ingresosReg.map(ing => `<div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;"><strong>${ing.dia} ${ing.hora}</strong> · ${ing.tipo} (${ing.modalidad}) → <em>${ing.ubicacion}</em><br><span style="color:#64748b;">Enf.: ${ing.enfermera}</span></div>`).join("")}
+        ${ingresosReg.length === 0 ? '<div style="color:#94a3b8;">—</div>' : ingresosReg.map(ing => `<div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;"><strong>${ing.dia} ${ing.hora}</strong> · ${ing.tipo} (${ing.modalidad}) → <em>${ing.ubicacion}</em>${ing.enfermera && ing.enfermera !== '—' ? `<br><span style="color:#64748b;">Enf.: ${ing.enfermera}</span>` : ''}</div>`).join("")}
       </div>
       <div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:8px;padding:10px 12px;">
         <div style="font-weight:800;color:#15803d;margin-bottom:4px;">🩺 Consultas Externas y Controles Previos</div>
-        ${consultasExt.map(ce => `<div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;"><strong>${ce.fecha} ${ce.hora}</strong> · ${ce.servicio}<br><span style="color:#334155;">${ce.detalle}</span> <span style="color:#64748b;">(${ce.profesional})</span></div>`).join("")}
+        ${consultasExt.length === 0 ? '<div style="color:#94a3b8;">—</div>' : consultasExt.map(ce => `<div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;"><strong>${ce.fecha} ${ce.hora}</strong> · ${ce.servicio}<br><span style="color:#334155;">${ce.detalle}</span>${ce.profesional ? ` <span style="color:#64748b;">(${ce.profesional})</span>` : ''}</div>`).join("")}
       </div>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:14px;font-size:0.77rem;">
       <div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:8px;padding:10px 12px;">
         <div style="font-weight:800;color:#7c2d12;margin-bottom:4px;">🧪 Resultados de Análisis de Laboratorio ${lapiz('resultados_texto','Resultados de Laboratorio',labsReg.join('; '))}</div>
-        <ul style="margin:4px 0 0 16px;padding:0;">${labsReg.map(l => `<li>${l}</li>`).join("")}</ul>
+        ${labsReg.length === 0 ? '<div style="color:#94a3b8;">—</div>' : `<ul style="margin:4px 0 0 16px;padding:0;">${labsReg.map(l => `<li>${l}</li>`).join("")}</ul>`}
       </div>
       <div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:8px;padding:10px 12px;">
         <div style="font-weight:800;color:#4338ca;margin-bottom:4px;">🩻 Estudios por Imágenes ${lapiz('imagenes_texto','Estudios por Imágenes',imgsReg.join('; '))} &amp; Kardex ${lapiz('kardex_texto','Kardex / Medicación',kardexReg.join('; '))}</div>
-        <ul style="margin:4px 0 0 16px;padding:0;">${imgsReg.map(im => `<li>${im}</li>`).join("")}</ul>
+        ${imgsReg.length === 0 ? '<div style="color:#94a3b8;">—</div>' : `<ul style="margin:4px 0 0 16px;padding:0;">${imgsReg.map(im => `<li>${im}</li>`).join("")}</ul>`}
         ${kardexReg.length ? `<div style="margin-top:6px;padding-top:4px;border-top:1px dashed #e2e8f0;"><strong>💊 Kardex:</strong> ${kardexReg.join(" | ")}</div>` : ""}
       </div>
     </div>
@@ -11373,6 +11372,7 @@ function limpiarFormularioCompletoState() {
   if (elGsan) elGsan.value = "Desconocido";
   const elClave = document.getElementById("clave_obstetrica_sel");
   if (elClave) elClave.value = "ninguna";
+  const _selProcCons = document.getElementById("sel_procedimiento_consentimiento"); if (_selProcCons) _selProcCons.value = "NO_APLICA_CONSULTA_NO_INVASIVA"; if (typeof actualizarCondicionConsentimiento === "function") actualizarCondicionConsentimiento("paciente_lucido");
   const _selDefaults = { mts_disc_hemorragia: "ninguna", mts_disc_conciencia: "alerta", mts_disc_agudeza: "habitual" };
   Object.keys(_selDefaults).forEach(k => { const el = document.getElementById(k); if (el) el.value = _selDefaults[k]; });
   // Colapsar todas las pestañas/subpaneles desplegables para iniciar como primer paciente
@@ -17730,6 +17730,20 @@ function actualizarCondicionConsentimiento(cond) {
   const banner = document.getElementById("consentimiento_alerta_banner");
   const badge = document.getElementById("badge_norma_consentimiento");
   const proc = document.getElementById("sel_procedimiento_consentimiento")?.value || "NO_APLICA_CONSULTA_NO_INVASIVA";
+  const esNoInvasivo = (proc === "NO_APLICA_CONSULTA_NO_INVASIVA");
+  const selCond = document.getElementById("sel_condicion_consentimiento");
+  const btnVer = document.getElementById("btn_ver_doc_consentimiento");
+  const btnImp = document.getElementById("btn_imprimir_doc_consentimiento");
+  const chkFirm = document.getElementById("chk_consentimiento_firmado");
+  const lblChk = document.getElementById("lbl_chk_consentimiento_firmado");
+  if (selCond) { selCond.disabled = esNoInvasivo; selCond.style.opacity = esNoInvasivo ? "0.55" : "1"; }
+  if (btnVer) { btnVer.disabled = esNoInvasivo; btnVer.style.opacity = esNoInvasivo ? "0.45" : "1"; btnVer.style.cursor = esNoInvasivo ? "not-allowed" : "pointer"; }
+  if (btnImp) { btnImp.disabled = esNoInvasivo; btnImp.style.opacity = esNoInvasivo ? "0.45" : "1"; btnImp.style.cursor = esNoInvasivo ? "not-allowed" : "pointer"; }
+  if (chkFirm) {
+    chkFirm.disabled = esNoInvasivo;
+    if (esNoInvasivo) { chkFirm.checked = false; STATE.consentimientoAdjuntoHC = false; }
+  }
+  if (lblChk) { lblChk.style.opacity = esNoInvasivo ? "0.5" : "1"; lblChk.style.cursor = esNoInvasivo ? "not-allowed" : "pointer"; }
   if (!banner) return;
 
   if (cond === "exonerado_emergencia") {
@@ -17765,6 +17779,7 @@ function actualizarCondicionConsentimiento(cond) {
   registrarLogAuditoria("Módulo 4", "CAMBIO_REGIMEN_CONSENTIMIENTO", `Régimen: ${cond}`);
 }
 window.actualizarCondicionConsentimiento = actualizarCondicionConsentimiento;
+if (typeof document !== "undefined") { document.addEventListener("DOMContentLoaded", () => { try { actualizarCondicionConsentimiento(); } catch(e){} }); }
 
 function toggleConsentimientoFirmado(checked) {
   STATE.consentimientoAdjuntoHC = Boolean(checked);
