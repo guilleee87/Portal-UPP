@@ -1099,7 +1099,8 @@
         padding: 6px 6px !important;
       }
       .patient-queue-card {
-        flex: 0 0 210px !important;
+        flex: none !important;
+        width: 100% !important;
         padding: 8px 10px !important;
       }
       .patient-queue-card .card-name {
@@ -1399,20 +1400,27 @@
       border-radius: 9999px;
     }
     .active-patients-btn-group {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 8px;
-      flex-wrap: wrap;
+      width: 100%;
     }
     .btn-caos-action {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       font-weight: 700;
-      padding: 7px 12px;
+      padding: 8px 12px;
+      min-height: 38px;
       border-radius: 8px;
       border: none;
       cursor: pointer;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      box-sizing: border-box;
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .btn-caos-action:hover {
@@ -1434,21 +1442,25 @@
     }
     .active-patients-cards-wrapper {
       display: flex;
-      gap: 10px;
-      overflow-x: auto;
-      padding-bottom: 6px;
-      scroll-snap-type: x mandatory;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 480px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 4px 6px 4px 2px;
+      container-type: inline-size;
     }
     .active-patients-cards-wrapper::-webkit-scrollbar {
-      height: 6px;
+      width: 6px;
     }
     .active-patients-cards-wrapper::-webkit-scrollbar-thumb {
       background: #cbd5e1;
       border-radius: 4px;
     }
     .patient-queue-card {
-      flex: 0 0 240px;
-      scroll-snap-align: start;
+      flex: none;
+      width: 100%;
+      box-sizing: border-box;
       background: #f8fafc;
       border: 1.5px solid #e2e8f0;
       border-radius: 10px;
@@ -1516,6 +1528,34 @@
     }
     .btn-close-card:hover {
       color: #dc2626;
+    }
+    .pq-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.3fr) minmax(0, 1.1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding-right: 18px;
+    }
+    .pq-col { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .pq-col span, .pq-col div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pq-ticket { font-size: 0.66rem; font-weight: 800; color: #0369a1; }
+    .pq-sub { font-size: 0.68rem; color: #64748b; }
+    .pq-flujo { font-size: 0.66rem; font-weight: 800; padding: 1px 6px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.06); display: inline-block; max-width: 100%; }
+    .pq-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .btn-pq-traza {
+      background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 6px;
+      font-size: 0.68rem; font-weight: 800; padding: 4px 8px; cursor: pointer; white-space: nowrap;
+    }
+    .btn-pq-traza:hover { background: #dbeafe; }
+    @media (max-width: 900px) {
+      .pq-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .pq-actions { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
+    }
+    @container (max-width: 560px) {
+      .pq-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); row-gap: 6px; }
+      .pq-row > .pq-col:first-child { grid-column: 1 / -1; }
+      .pq-col .card-prio-badge, .pq-col .pq-flujo { white-space: normal !important; overflow: visible !important; display: inline-block; max-width: 100%; line-height: 1.25; }
+      .pq-actions { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; border-top: 1px dashed #e2e8f0; padding-top: 5px; }
     }
 
     /* Modal Pre-Triage START */
@@ -2642,11 +2682,11 @@
           <button type="button" class="btn-caos-action btn-quirofano-action" onclick="activarIngresoDirectoQuirofano()" title="Admisión Inmediata de Emergencia a Quirófano SOP (Ley N° 27604)" style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%); color: #ffffff; font-weight: 800; border: 1px solid #9a3412; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);">
             🏥 Admitir Emergencia Quirófano SOP (P-I)
           </button>
-          <button type="button" class="btn-caos-action" onclick="ingresarNNConsciente()" title="Admisión de Paciente NN Consciente / Indocumentado (Pasa a Evaluación de Triaje)" style="background:#f0f9ff; color:#0369a1; border:1.5px solid #bae6fd; font-weight:800;">
-            👤 NN Consciente (Evaluación)
+          <button type="button" class="btn-caos-action" onclick="abrirModalPreEvaluacionNN('CONSCIENTE')" title="Pre-evaluación de Paciente NN Consciente" style="background:#f0f9ff; color:#0369a1; border:1.5px solid #bae6fd; font-weight:800;">
+            👤 NN Consciente
           </button>
-          <button type="button" class="btn-caos-action btn-nn-action" onclick="ingresarNNInconsciente()" title="Admisión Inmediata de Paciente NN Inconsciente a Shock Trauma (Ley N° 27604)">
-            🚨 NN Inconsciente (Inmediata P-I)
+          <button type="button" class="btn-caos-action btn-nn-action" onclick="abrirModalPreEvaluacionNN('INCONSCIENTE')" title="Pre-evaluación de Paciente NN Inconsciente">
+            🚨 NN Inconsciente
           </button>
           <button type="button" class="btn-caos-action btn-soat-action" onclick="admitirEmergenciaSoat()" title="Protocolo de Emergencia Accidente de Tránsito / Trauma Vial (Ley N° 27181 & D.S. N° 024-2002-MTC)" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; font-weight: 800; border: 1px solid #075985; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);">
             🚗 Accidente de Tránsito / Trauma Vial (SOAT)
@@ -3430,11 +3470,11 @@
             <div style="font-size:0.75rem; color:#9a3412;">Abre Historia Temporal, deja en blanco fecha/edad sin bloquear el flujo y emite oficio legal a PNP.</div>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="btn-full-secondary" style="border:2px solid #0284c7; background:#f0f9ff; color:#0369a1; font-weight:800; padding:8px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;" onclick="ingresarNNConsciente()" title="1. Paciente NN Consciente (Pasa a Evaluación de Triaje regular)">
-              <span>👤</span> <span>1. NN Consciente (A Evaluación)</span>
+            <button type="button" class="btn-full-secondary" style="border:2px solid #0284c7; background:#f0f9ff; color:#0369a1; font-weight:800; padding:8px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;" onclick="abrirModalPreEvaluacionNN('CONSCIENTE')" title="Pre-evaluación: Paciente NN Consciente">
+              <span>👤</span> <span>1. NN Consciente</span>
             </button>
-            <button type="button" class="btn-full-primary" style="background:linear-gradient(135deg, #b91c1c 0%, #dc2626 100%); border:1.5px solid #991c1c; color:#ffffff; font-weight:800; padding:8px 14px; border-radius:8px; box-shadow:0 2px 6px rgba(185,28,28,0.25); display:inline-flex; align-items:center; gap:6px;" onclick="ingresarNNInconsciente()" title="2. Paciente NN Inconsciente (Pase Directo a Shock Trauma P-I Ley N° 27604)">
-              <span>🚨</span> <span>2. NN Inconsciente (Atención Inmediata P-I)</span>
+            <button type="button" class="btn-full-primary" style="background:linear-gradient(135deg, #b91c1c 0%, #dc2626 100%); border:1.5px solid #991c1c; color:#ffffff; font-weight:800; padding:8px 14px; border-radius:8px; box-shadow:0 2px 6px rgba(185,28,28,0.25); display:inline-flex; align-items:center; gap:6px;" onclick="abrirModalPreEvaluacionNN('INCONSCIENTE')" title="Pre-evaluación: Paciente NN Inconsciente">
+              <span>🚨</span> <span>2. NN Inconsciente</span>
             </button>
             <button type="button" class="btn-full-secondary" id="btn_notif_pnp" style="display:none;" onclick="imprimirAlertaNN()">
               📄 Acta PNP / Servicio Social
@@ -3627,7 +3667,11 @@
               <button type="button" class="btn-full-primary" style="background:#38bdf8; color:#0f172a; height:40px; font-weight:800; padding:0 20px;" onclick="ejecutarConsultaSeguroConCaptcha()">
                 🔍 Validar y Acreditar Cobertura
               </button>
+              <button type="button" class="btn-full-secondary" style="background:rgba(255,255,255,0.15); color:#ffffff; height:40px; font-weight:800; padding:0 16px; border:1.5px solid rgba(56, 189, 248, 0.4); display:inline-flex; align-items:center; gap:6px; cursor:pointer;" onclick="jalarSeguroAleatorioSusalud()" title="Jalar aleatoriamente cualquier seguro (SIS, EsSalud, EPS o Particular) y aplicar sus restricciones financieras">
+                🎲 Jalar Seguro al Azar
+              </button>
             </div>
+            <div id="captcha_seguro_msg" class="captcha-seguro-msg" style="display:none; margin-top:8px; font-size:0.82rem; font-weight:700;"></div>
             <div id="captcha_error_seguro" style="display:none; color:#fca5a5; font-size:0.78rem; margin-top:8px; font-weight:700;"></div>
           </div>
 
@@ -4259,6 +4303,47 @@
           </div>
         </div>
 
+        <!-- ==================================================================== -->
+        <!-- PROTOCOLO DE EVALUACIÓN MÉDICA & JUNTA MÉDICA (NTS N° 042 / NTS N° 139) -->
+        <!-- ==================================================================== -->
+        <div class="protocolo-acciones-bar" style="background:#ffffff; border:1.5px solid #0284c7; border-radius:10px; padding:14px 16px; margin:16px 0; box-shadow:0 2px 8px rgba(2,132,199,0.08);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+            <div style="font-size:0.86rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+              <span>🩺</span>
+              <span>Protocolo Médico de Conducta y Asignación de Recursos (NTS N° 042 / NTS N° 139-MINSA):</span>
+            </div>
+            <span style="font-size:0.72rem; padding:3px 10px; border-radius:6px; background:#e0f2fe; color:#0369a1; font-weight:800; border:1px solid #bae6fd;">
+              Decisión Exclusiva del Cuerpo Médico
+            </span>
+          </div>
+
+          <!-- Mención destacada de CIE-10 en Módulo 4 -->
+          <div id="m4_cie10_destacado_card" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:8px 12px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <span style="font-size:0.70rem; font-weight:800; color:#0369a1; text-transform:uppercase; letter-spacing:0.5px;">🏷️ Diagnóstico Principal CIE-10 (Sustento de Conducta y Cobertura FUA/ESSI/SITEDS):</span>
+              <div id="m4_cie10_texto_destacado" style="font-size:0.95rem; font-weight:900; color:#0f172a; margin-top:2px;">
+                Por determinar mediante Evaluación Médica o selección de catálogo
+              </div>
+            </div>
+            <span id="m4_cie10_badge_cobertura" style="background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; padding:3px 10px; border-radius:9999px; font-size:0.72rem; font-weight:800;">
+              ✓ Cobertura Asistencial
+            </span>
+          </div>
+
+          <!-- Botones interactivos de Protocolo Médico y Junta Médica -->
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" id="btn_protocolo_eval_medica" class="btn-full-primary" style="flex:1; min-width:260px; padding:11px 16px; font-size:0.84rem; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:8px;" onclick="ejecutarEvaluacionMedicaProtocolizada()">
+              <span>🩺</span> <span>Ejecutar Protocolo de Evaluación Médica / Asignar Cama</span>
+            </button>
+            <button type="button" id="btn_protocolo_junta_medica" class="btn-full-secondary" style="flex:1; min-width:260px; padding:11px 16px; font-size:0.84rem; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:8px; border-color:#6366f1; color:#4338ca; background:#f5f3ff;" onclick="ejecutarJuntaMedicaNTS139()">
+              <span>👥</span> <span>Convocar Junta Médica (Casos Complejos / NTS N° 139)</span>
+            </button>
+          </div>
+
+          <!-- Contenedor dinámico de Acta de Junta Médica o Dictamen con Firmas Digitales -->
+          <div id="box_acta_junta_medica" style="display:none; margin-top:14px;"></div>
+        </div>
+
         <!-- SELECTOR OBLIGATORIO DE DESTINO POST-TÓPICO -->
         <div style="background:#f8fafc; border:2px solid #0284c7; border-radius:10px; padding:14px; margin-top:16px;">
           <div style="font-size:0.84rem; font-weight:800; color:#0284c7; margin-bottom:8px;">
@@ -4751,6 +4836,10 @@
           <div style="font-weight:800; font-size:0.84rem; color:#15803d; margin-bottom:8px;">
             📄 Epicrisis Médica de Emergencia y Tratamiento Ambulatorio:
           </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px; margin-bottom:10px; font-size:0.80rem; display:flex; justify-content:space-between; align-items:center;">
+            <span><span style="color:#64748b; font-weight:700;">🏷️ Diagnóstico Definitivo de Alta (CIE-10):</span> <strong id="m7_cie10_display" style="color:#0f172a;">Por determinar</strong></span>
+            <span style="font-size:0.70rem; color:#15803d; font-weight:800; background:#ecfdf5; padding:2px 8px; border-radius:4px; border:1px solid #bbf7d0;">✓ Epicrisis Validada</span>
+          </div>
           <div class="form-grid-2">
             <div class="form-field">
               <label>Condición al Egreso:</label>
@@ -5075,6 +5164,10 @@
               <strong id="m8_disp_prio" style="color:#ea580c;">Por evaluar</strong>
             </div>
             <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.72rem; color:#64748b; font-weight:700;">DIAGNÓSTICO CIE-10 (SUSTENTO COBERTURA)</div>
+              <strong id="m8_disp_cie10" style="color:#0f172a;">Por determinar</strong>
+            </div>
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #e2e8f0;">
               <div style="font-size:0.72rem; color:#64748b; font-weight:700;">SEGURO ACREDITADO</div>
               <strong id="m8_disp_seguro" style="color:#15803d;">Sin acreditar</strong>
             </div>
@@ -5377,6 +5470,85 @@
             ⚠️ Confirmar y Reiniciar Guardia (Demo)
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AUDITORÍA FORENSE Y TRAZABILIDAD CLÍNICA INTEGRAL (NTS N° 139-MINSA) -->
+  <div class="modal-hc-overlay" id="modal_trazabilidad_auditor" style="display:none; z-index:99999;">
+    <div class="modal-hc-container" style="max-width:1200px; width:96%; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.45); border-radius:12px; overflow:hidden;">
+      <!-- Encabezado Calm-Tech Oscuro -->
+      <div style="background:#0f172a; color:#ffffff; display:flex; justify-content:space-between; align-items:center; padding:14px 20px; border-bottom:2px solid #6366f1;">
+        <div>
+          <h3 style="margin:0; font-size:1.02rem; font-weight:800; display:flex; align-items:center; gap:9px; letter-spacing:0.02em;">
+            <span style="font-size:1.25rem;">📜</span>
+            <span>Auditoría Forense &amp; Trazabilidad Clínica Integral de Emergencias</span>
+          </h3>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:3px; display:flex; align-items:center; gap:8px;">
+            <span>Ley N° 29733 (Datos Personales)</span>
+            <span>•</span>
+            <span>NTS N° 139-MINSA (Expediente Clínico)</span>
+            <span>•</span>
+            <span>Ley N° 27269 (Firmas Digitales)</span>
+            <span>•</span>
+            <span>SUSALUD TEDEF</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="background:#1e1b4b; color:#c7d2fe; border:1px solid #4338ca; font-size:0.72rem; font-weight:800; padding:4px 10px; border-radius:9999px;">
+            🛡️ Rol: AUDITOR MÉDICO INSTITUCIONAL
+          </span>
+          <button type="button" onclick="cerrarModalTrazabilidadAuditor()" style="color:#94a3b8; background:none; border:none; font-size:1.6rem; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#94a3b8'">&times;</button>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros y Selección Rápida de Pacientes -->
+      <div style="padding:12px 20px; border-bottom:1px solid #e2e8f0; background:#f8fafc; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label for="select_paciente_trazabilidad" style="font-size:0.82rem; font-weight:800; color:#1e293b; white-space:nowrap;">
+              Paciente a Inspeccionar:
+            </label>
+            <select id="select_paciente_trazabilidad" onchange="cambiarPacienteSeleccionadoTrazabilidad(this.value)" class="form-control" style="font-size:0.82rem; padding:6px 12px; border-radius:6px; min-width:340px; max-width:480px; font-weight:700; color:#0f172a; border:1.5px solid #cbd5e1; background:#ffffff;">
+              <!-- Se inyectan grupos: Hoy Activos, Hoy Egresados, Histórico Días Anteriores -->
+            </select>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:6px;">
+            <input type="text" id="filtro_trazabilidad_busqueda" placeholder="🔍 Buscar por DNI, Nombre o Ticket..." oninput="filtrarPacientesTrazabilidad(this.value)" style="font-size:0.80rem; padding:6px 12px; border-radius:6px; border:1px solid #cbd5e1; width:220px; background:#ffffff;">
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span id="badge_resumen_trazabilidad_origen" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-weight:800; font-size:0.74rem; padding:4px 10px; border-radius:9999px;">
+            Guardia Actual
+          </span>
+          <button type="button" class="btn-full-secondary" onclick="imprimirFichaTrazabilidad()" style="font-size:0.75rem; padding:5px 10px; display:inline-flex; align-items:center; gap:5px; font-weight:700;" title="Imprimir expediente y auditoría forense">
+            <span>🖨️</span> Imprimir Ficha
+          </button>
+          <button type="button" class="btn-full-secondary" onclick="exportarTrazabilidadJSON()" style="font-size:0.75rem; padding:5px 10px; display:inline-flex; align-items:center; gap:5px; font-weight:700;" title="Exportar log forense estructurado en formato JSON">
+            <span>📥</span> Exportar JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- Contenedor Principal del Expediente y Línea de Tiempo (Scrollable) -->
+      <div id="contenedor_ficha_trazabilidad" style="padding:18px 22px; overflow-y:auto; flex:1; min-height:360px; max-height:68vh; background:#ffffff;">
+        <!-- Se inyecta la ficha de trazabilidad completa dinámicamente -->
+      </div>
+
+      <!-- Pie de Modal -->
+      <div style="padding:10px 20px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="font-size:0.72rem; color:#64748b; display:flex; align-items:center; gap:6px;">
+          <span>🔒 Criptografía SHA-256</span>
+          <span>•</span>
+          <span>Inmutabilidad de Registros según NTS N° 139-MINSA</span>
+          <span>•</span>
+          <span>Validación Biométrica RENIEC / SUSALUD SITEDS</span>
+        </div>
+        <button type="button" class="btn-full-secondary" onclick="cerrarModalTrazabilidadAuditor()" style="padding:6px 16px; font-weight:700; font-size:0.80rem;">
+          Cerrar Auditoría
+        </button>
       </div>
     </div>
   </div>
@@ -5719,59 +5891,147 @@
 
 
   <!-- ==========================================================================
-       MODAL DE ADMISIÓN RÁPIDA NN (INDOCUMENTADO / LEY N° 27604)
+       VENTANA FLOTANTE DE PRE-EVALUACIÓN RÁPIDA NN (LEY N° 27604)
        ========================================================================== -->
   <div class="modal-hc-overlay" id="modalAdmisionNN" style="display:none;" onclick="if(event.target===this) cerrarModalAdmisionNN()">
-    <div class="modal-hc-container" style="max-width: 520px;">
-      <div class="modal-hc-header" style="background:#dc2626; color:#ffffff;">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:1.4rem;">🚨</span>
+    <div class="modal-hc-container" style="max-width: 560px; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25), 0 8px 10px -6px rgba(0,0,0,0.2);">
+      
+      <!-- HEADER -->
+      <div class="modal-hc-header" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color:#ffffff; padding: 14px 18px; border-bottom: 2px solid #334155; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.5rem;">🩺</span>
           <div>
-            <strong style="font-size:1rem;">Admisión Rápida de Paciente Indocumentado / NN</strong>
-            <div style="font-size:0.75rem; opacity:0.9;">Ley N° 27604: Prohibición absoluta de condicionar o demorar la emergencia</div>
+            <strong style="font-size:1.02rem; letter-spacing:-0.01em; display:block;">Pre-evaluación de Paciente Indocumentado / NN</strong>
+            <div style="font-size:0.74rem; color:#94a3b8; margin-top:2px;">Ley N° 27604 · Clasificación Rápida: Estado de Conciencia &amp; Código Rojo</div>
           </div>
         </div>
-        <button type="button" onclick="cerrarModalAdmisionNN()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer;">&times;</button>
+        <button type="button" onclick="cerrarModalAdmisionNN()" aria-label="Cerrar modal" style="background:none; border:none; color:#94a3b8; font-size:1.6rem; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#94a3b8'">&times;</button>
       </div>
-      <div class="modal-hc-body" style="padding:16px;">
+
+      <!-- BODY -->
+      <div class="modal-hc-body" style="padding:18px 20px; background:#ffffff;">
         <form id="form_admision_nn" novalidate onsubmit="ejecutarAdmisionRapidaNN(event)">
-          <div style="margin-bottom:12px;">
-            <label style="font-weight:700; font-size:0.82rem; display:block; margin-bottom:6px;">Sexo Aparente:</label>
-            <div style="display:flex; gap:10px;">
-              <label style="flex:1; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px; display:flex; align-items:center; gap:8px; cursor:pointer;" id="lbl_nn_sexo_desc">
-                <input type="radio" name="nn_sexo" value="Desconocido" checked> <strong>Desconocido</strong>
+          
+          <!-- 1. ESTADO DE CONCIENCIA (CONSCIENTE VS INCONSCIENTE) -->
+          <div style="margin-bottom:16px;">
+            <label style="font-weight:700; font-size:0.82rem; color:#1e293b; display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+              <span>🧠</span> <span>1. Estado de Conciencia del Paciente:</span>
+              <span style="font-size:0.72rem; color:#64748b; font-weight:400;">(Selecciona una opción)</span>
+            </label>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+              
+              <!-- Opción A: Consciente -->
+              <label id="lbl_nn_estado_cons" style="border:2px solid #0284c7; border-radius:10px; padding:12px; display:flex; align-items:flex-start; gap:10px; cursor:pointer; transition:all 0.2s; background:#f0f9ff; box-shadow:0 0 0 2px rgba(2, 132, 199, 0.2);">
+                <input type="radio" name="nn_conciencia" id="nn_conciencia_cons" value="CONSCIENTE" checked onchange="onCambioConcienciaNN('CONSCIENTE')" style="margin-top:3px; accent-color:#0284c7; width:17px; height:17px;">
+                <div>
+                  <strong style="display:block; font-size:0.88rem; color:#0f172a;">👤 Consciente</strong>
+                  <span style="font-size:0.72rem; color:#64748b; line-height:1.3; display:block; margin-top:2px;">Responde al llamado, lúcido o reactivo.</span>
+                </div>
               </label>
-              <label style="flex:1; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px; display:flex; align-items:center; gap:8px; cursor:pointer;" id="lbl_nn_sexo_m">
-                <input type="radio" name="nn_sexo" value="M"> <strong>Masculino</strong>
+
+              <!-- Opción B: Inconsciente -->
+              <label id="lbl_nn_estado_incons" style="border:2px solid #cbd5e1; border-radius:10px; padding:12px; display:flex; align-items:flex-start; gap:10px; cursor:pointer; transition:all 0.2s; background:#ffffff;">
+                <input type="radio" name="nn_conciencia" id="nn_conciencia_incons" value="INCONSCIENTE" onchange="onCambioConcienciaNN('INCONSCIENTE')" style="margin-top:3px; accent-color:#dc2626; width:17px; height:17px;">
+                <div>
+                  <strong style="display:block; font-size:0.88rem; color:#0f172a;">🚨 Inconsciente</strong>
+                  <span style="font-size:0.72rem; color:#64748b; line-height:1.3; display:block; margin-top:2px;">Coma / Glasgow ≤ 8 / Sin respuesta motora ni verbal.</span>
+                </div>
               </label>
-              <label style="flex:1; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px; display:flex; align-items:center; gap:8px; cursor:pointer;" id="lbl_nn_sexo_f">
-                <input type="radio" name="nn_sexo" value="F"> <strong>Femenino</strong>
-              </label>
-            </div>
-          </div>
-          <div style="margin-bottom:12px;">
-            <label style="font-weight:700; font-size:0.82rem; display:block; margin-bottom:6px;">Edad Estimada (Aprox.):</label>
-            <div style="display:flex; gap:6px;">
-              <button type="button" class="chip-filtro-recurso" onclick="document.getElementById('nn_edad_input').value='20'">~20a</button>
-              <button type="button" class="chip-filtro-recurso" onclick="document.getElementById('nn_edad_input').value='35'">~35a</button>
-              <button type="button" class="chip-filtro-recurso" onclick="document.getElementById('nn_edad_input').value='50'">~50a</button>
-              <button type="button" class="chip-filtro-recurso" onclick="document.getElementById('nn_edad_input').value='70'">~70a</button>
-              <input type="text" id="nn_edad_input" value="" placeholder="Desconocido" style="width:70px; padding:6px; border:1.5px solid #cbd5e1; border-radius:6px; font-weight:700; text-align:center;">
+
             </div>
           </div>
 
-          <div style="margin-bottom:16px;">
-            <label style="font-weight:700; font-size:0.82rem; display:block; margin-bottom:6px;">Observaciones del Px:</label>
-            <input type="text" id="nn_estado_input" value="Inconsciente / Politraumatizado / Sin Respuesta Verbal" style="width:100%; padding:8px; border:1.5px solid #cbd5e1; border-radius:8px;">
+          <!-- 2. CHECK DE CÓDIGO ROJO -->
+          <div id="card_check_codigo_rojo" style="background:#f8fafc; border:2px solid #cbd5e1; border-radius:10px; padding:12px 14px; margin-bottom:16px; transition:all 0.2s;">
+            <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer; margin:0;">
+              <input type="checkbox" id="nn_check_codigo_rojo" onchange="actualizarPreEvaluacionNNUI()" style="width:20px; height:20px; margin-top:2px; accent-color:#dc2626; cursor:pointer;">
+              <div>
+                <strong id="lbl_nn_check_rojo" style="font-size:0.92rem; color:#b91c1c; display:flex; align-items:center; gap:6px;">
+                  <span>🚨</span> <span>¿Es Código Rojo? (Riesgo Vital Inminente)</span>
+                </strong>
+                <p style="margin:3px 0 0; font-size:0.74rem; color:#475569; line-height:1.35;">
+                  Compromiso de vía aérea, shock, insuficiencia respiratoria severa, hemorragia exanguinante o trauma vital (Ley N° 27604).
+                </p>
+              </div>
+            </label>
           </div>
+
+          <!-- 3. BANNER DINÁMICO DE DECISIÓN DE VÍA ASISTENCIAL -->
+          <div id="banner_decision_rojo" style="display:none; background:#fef2f2; border:1.5px solid #fca5a5; border-radius:10px; padding:10px 14px; margin-bottom:16px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.2rem;">⚡</span>
+              <div>
+                <strong style="color:#b91c1c; font-size:0.84rem;">Vía Asistencial: ATENCIÓN INMEDIATA (Código Rojo · P-I)</strong>
+                <div style="font-size:0.73rem; color:#991c1b; margin-top:2px; line-height:1.35;">
+                  Pase directo a <strong>Shock Trauma (ST-01/ST-02)</strong> sin demoras. Prioridad I (0 min) garantizada por Ley N° 27604.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="banner_decision_regular" style="display:block; background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px; padding:10px 14px; margin-bottom:16px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.2rem;">📋</span>
+              <div>
+                <strong style="color:#15803d; font-size:0.84rem;">Vía Asistencial: FLUJO REGULAR DE TRIAJE</strong>
+                <div style="font-size:0.73rem; color:#166534; margin-top:2px; line-height:1.35;">
+                  Pasa a <strong>Sala de Espera / Triaje Regular</strong> para evaluación de discriminadores MTS y constantes vitales. Cero camas asignadas en Triaje.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. DATOS DEMOGRÁFICOS RÁPIDOS (META 1 OMS - SIN BLOQUEOS) -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+            
+            <!-- Sexo Aparente -->
+            <div>
+              <label style="font-weight:700; font-size:0.78rem; color:#334155; display:block; margin-bottom:6px;">Sexo Aparente:</label>
+              <div style="display:flex; gap:6px;">
+                <label style="flex:1; border:1px solid #cbd5e1; border-radius:6px; padding:6px 4px; display:flex; align-items:center; justify-content:center; gap:4px; font-size:0.74rem; cursor:pointer;" id="lbl_nn_sexo_desc">
+                  <input type="radio" name="nn_sexo" value="Desconocido" checked> Desc.
+                </label>
+                <label style="flex:1; border:1px solid #cbd5e1; border-radius:6px; padding:6px 4px; display:flex; align-items:center; justify-content:center; gap:4px; font-size:0.74rem; cursor:pointer;" id="lbl_nn_sexo_m">
+                  <input type="radio" name="nn_sexo" value="M"> Masc.
+                </label>
+                <label style="flex:1; border:1px solid #cbd5e1; border-radius:6px; padding:6px 4px; display:flex; align-items:center; justify-content:center; gap:4px; font-size:0.74rem; cursor:pointer;" id="lbl_nn_sexo_f">
+                  <input type="radio" name="nn_sexo" value="F"> Fem.
+                </label>
+              </div>
+            </div>
+
+            <!-- Edad Estimada -->
+            <div>
+              <label style="font-weight:700; font-size:0.78rem; color:#334155; display:block; margin-bottom:6px;">Edad Estimada (Aprox.):</label>
+              <div style="display:flex; gap:4px;">
+                <button type="button" class="chip-filtro-recurso" onclick="document.getElementById('nn_edad_input').value='20'" style="padding:4px 6px; font-size:0.72rem;">~20a</button>
+                <button type="button" class="chip-filtro-recurso" onclick="document.getElementById('nn_edad_input').value='35'" style="padding:4px 6px; font-size:0.72rem;">~35a</button>
+                <button type="button" class="chip-filtro-recurso" onclick="document.getElementById('nn_edad_input').value='50'" style="padding:4px 6px; font-size:0.72rem;">~50a</button>
+                <input type="text" id="nn_edad_input" value="" placeholder="S/D" style="width:48px; padding:4px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; text-align:center; font-size:0.74rem;">
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 5. OBSERVACIONES / MOTIVO -->
+          <div style="margin-bottom:18px;">
+            <label style="font-weight:700; font-size:0.78rem; color:#334155; display:block; margin-bottom:6px;">Motivo / Observaciones del Paciente:</label>
+            <input type="text" id="nn_estado_input" value="Paciente NN consciente / Indocumentado. Acude para evaluación clínica de triaje." style="width:100%; box-sizing:border-box; padding:8px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:0.8rem; color:#1e293b;">
+          </div>
+
+          <!-- 6. BOTONES DE ACCIÓN -->
           <div style="display:flex; gap:10px;">
-            <button type="button" onclick="cerrarModalAdmisionNN()" class="btn-full-secondary" style="flex:1;">Cancelar</button>
-            <button type="submit" class="btn-full-primary" style="flex:2; background:#dc2626; border-color:#b91c1c; font-weight:800;">
-              ⚡ Admitir Emergencia (P-I)
+            <button type="button" onclick="cerrarModalAdmisionNN()" class="btn-full-secondary" style="flex:1; padding:10px 14px; font-size:0.84rem; font-weight:700; border:1.5px solid #cbd5e1; border-radius:8px; cursor:pointer;">
+              Cancelar
+            </button>
+            <button type="submit" id="btn_confirmar_nn_preeval" class="btn-full-primary" style="flex:2; padding:10px 16px; font-size:0.84rem; font-weight:800; border-radius:8px; cursor:pointer; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border:1px solid #075985; color:#ffffff; box-shadow:0 2px 6px rgba(2,132,199,0.25);">
+              📋 Derivar a Flujo Regular de Triaje (En Evaluación)
             </button>
           </div>
+
         </form>
       </div>
+
     </div>
   </div>
 

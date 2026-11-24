@@ -391,56 +391,245 @@ input[type="number"],
 }
 
 /* Barra Táctica de Ingresos Rápidos (Moderna y Limpia) */
+/* Barra Táctica de Ingresos Rápidos y Atención de Emergencias (Calm-Tech Simétrico) */
 .cockpit-tactical-bar {
   background: #FFFFFF;
-  border: 1px solid var(--cockpit-card-border);
+  border: 1px solid var(--cockpit-card-border, #E2E8F0);
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.cockpit-tactical-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 10px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F1F5F9;
 }
 
-.cockpit-tactical-group {
+.cockpit-tactical-title-box {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+}
+
+.cockpit-tactical-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.cockpit-tactical-title {
+  font-size: 0.80rem;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: 0.02em;
+}
+
+.cockpit-tactical-sub {
+  font-size: 0.70rem;
+  color: #64748B;
+}
+
+.cockpit-tactical-utility {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tactical-util-btn {
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  color: #334155;
+  font-size: 0.70rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.tactical-util-btn:hover {
+  background: #F1F5F9;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
+
+.tactical-util-btn.btn-util-reset {
+  background: #FFF1F2;
+  border-color: #FDA4AF;
+  color: #BE123C;
+  font-weight: 800;
+}
+
+.tactical-util-btn.btn-util-reset:hover {
+  background: #FEE2E2;
+  border-color: #F87171;
+}
+
+.cockpit-tactical-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .cockpit-tactical-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .cockpit-tactical-btn {
   background: #FFFFFF;
   border: 1.5px solid #CBD5E1;
   color: #334155;
-  padding: 8px 14px;
+  height: 38px;
+  padding: 0 10px;
   border-radius: 8px;
-  font-size: 12.5px;
+  font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  white-space: nowrap;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .cockpit-tactical-btn:hover {
   background: #F8FAFC;
   border-color: #94A3B8;
   color: #0F172A;
+  transform: translateY(-1px);
 }
 
-/* Botón único de énfasis rojo para P-I Shock Trauma */
 .cockpit-tactical-btn.btn-p1-danger {
+  background: #FEE2E2;
+  border-color: #F87171;
+  color: #991B1B;
+  font-weight: 800;
+}
+
+.cockpit-tactical-btn.btn-p1-danger:hover {
   background: #DC2626;
   border-color: #B91C1C;
   color: #FFFFFF;
 }
 
-.cockpit-tactical-btn.btn-p1-danger:hover {
-  background: #B91C1C;
+.cockpit-tactical-btn.btn-sop-action {
+  background: #FFEDD5;
+  border-color: #FB923C;
+  color: #9A3412;
+  font-weight: 800;
+}
+
+.cockpit-tactical-btn.btn-sop-action:hover {
+  background: #EA580C;
+  border-color: #C2410C;
+  color: #FFFFFF;
+}
+
+.cockpit-tactical-btn.btn-main-cta {
+  background: #0284C7;
+  border-color: #0369A1;
+  color: #FFFFFF;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3);
+}
+
+.cockpit-tactical-btn.btn-main-cta:hover {
+  background: #0369A1;
+  border-color: #075985;
+}
+
+.cockpit-tactical-btn.btn-nn-eval {
+  background: #F0F9FF;
+  border-color: #BAE6FD;
+  border-left: 3.5px solid #0284C7;
+  color: #0369A1;
+  font-weight: 800;
+}
+
+.cockpit-tactical-btn.btn-nn-eval:hover {
+  background: #E0F2FE;
+}
+
+.cockpit-tactical-btn.btn-nn-shock {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  border-left: 3.5px solid #DC2626;
+  color: #B91C1C;
+  font-weight: 800;
+}
+
+.cockpit-tactical-btn.btn-nn-shock:hover {
+  background: #FEE2E2;
+}
+
+.cockpit-tactical-btn.btn-desempate {
+  background: #EEF2FF;
+  border-color: #C7D2FE;
+  color: #4338CA;
+  font-weight: 800;
+}
+
+.cockpit-tactical-btn.btn-desempate:hover {
+  background: #E0E7FF;
+}
+
+.cockpit-tactical-btn.btn-pulsera {
+  background: #0F172A;
+  border-color: #0284C7;
+  color: #38BDF8;
+  font-weight: 800;
+}
+
+.cockpit-tactical-btn.btn-pulsera:hover {
+  background: #1E293B;
+  color: #7DD3FC;
+}
+
+html.dark .cockpit-tactical-bar {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+html.dark .cockpit-tactical-header {
+  border-bottom-color: #334155;
+}
+
+html.dark .cockpit-tactical-title {
+  color: #F8FAFC;
+}
+
+html.dark .cockpit-tactical-sub {
+  color: #94A3B8;
+}
+
+html.dark .tactical-util-btn {
+  background: #0F172A;
+  border-color: #334155;
+  color: #CBD5E1;
+}
+
+html.dark .cockpit-tactical-btn {
+  background: #0F172A;
+  border-color: #334155;
+  color: #E2E8F0;
 }
 
 /* Ocultamiento y muestra estricta por Fase activa sin romper el DOM */
@@ -1324,4 +1513,220 @@ html.dark .mts-subpanel-toggle-btn:hover,
   border-color: #38bdf8 !important;
   color: #38bdf8 !important;
   background: #0f172a !important;
+}
+
+
+/* ===== FILA DE PACIENTES EN ATENCIÓN ACTIVA & ESTADO DEL FLUJO (DEBAJO DE BOTONERA TÁCTICA) ===== */
+.cockpit-active-queue-card {
+  background: #FFFFFF;
+  border: 1px solid var(--cockpit-card-border, #E2E8F0);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cockpit-queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.cockpit-queue-track {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x mandatory;
+}
+
+.cockpit-queue-track::-webkit-scrollbar {
+  height: 6px;
+}
+
+.cockpit-queue-track::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+.cockpit-px-card {
+  flex: 0 0 240px;
+  scroll-snap-align: start;
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.cockpit-px-card:hover {
+  background: #FFFFFF;
+  border-color: #94A3B8;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.cockpit-px-card.active-px {
+  background: #FFFFFF;
+  border: 2px solid #0284C7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2), 0 4px 12px rgba(2, 132, 199, 0.1);
+}
+
+.cockpit-px-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cockpit-px-prio {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.cockpit-px-timer {
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #64748B;
+}
+
+.cockpit-px-name {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cockpit-px-dni-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.70rem;
+  color: #64748B;
+}
+
+.cockpit-px-flow-pill {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+}
+
+.cockpit-px-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.70rem;
+  padding-top: 4px;
+  border-top: 1px dashed #E2E8F0;
+}
+
+html.dark .cockpit-active-queue-card {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+html.dark .cockpit-queue-header {
+  border-bottom-color: #334155;
+}
+
+html.dark .cockpit-px-card {
+  background: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+html.dark .cockpit-px-card:hover {
+  background: #1E293B;
+}
+
+html.dark .cockpit-px-card.active-px {
+  background: #1E293B;
+  border-color: #38BDF8 !important;
+}
+
+html.dark .cockpit-px-name {
+  color: #F1F5F9;
+}
+
+
+/* ===== AJUSTES ERGONÓMICOS DE ENCUADRE: CARDS COMPACTAS SIN DATOS DESBORDADOS ===== */
+#trackboard_pacientes_lista {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  margin: 6px 0 !important;
+  max-height: 220px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 2px !important;
+}
+
+#activePatientsCardsList {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  max-height: 460px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 2px 4px 2px 2px !important;
+}
+
+.patient-queue-card {
+  flex: none !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 8px 10px !important;
+  border-radius: 8px !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  gap: 3px !important;
+}
+
+.patient-queue-card .card-name {
+  font-size: 0.80rem !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.2 !important;
+}
+
+.cockpit-px-card {
+  flex: 0 0 220px !important;
+  max-width: 225px !important;
+  height: 112px !important;
+  max-height: 115px !important;
+  padding: 8px 10px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  gap: 4px !important;
+}
+
+.cockpit-px-name {
+  font-size: 0.80rem !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.2 !important;
 }

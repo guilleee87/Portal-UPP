@@ -1,0 +1,1732 @@
+/* ==============================================================================
+   REDESIGN COCKPIT CLÍNICO — UPP FCS
+   redesign_cockpit.css
+   Estándares: WCAG 2.1 AA · IEC 62366-1 · NTS N° 042-MINSA · NTS N° 139-MINSA
+   ============================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+/* ------------------------------------------------------------------------------
+   1. VARIABLES GLOBALES Y PALETA CALM-TECH ANTI-FATIGA
+   ------------------------------------------------------------------------------ */
+:root {
+  --cockpit-bg: #F4F7FA;
+  --cockpit-card-bg: #FFFFFF;
+  --cockpit-card-border: #E2E8F0;
+  --cockpit-divider: #F1F5F9;
+  --cockpit-sub-bg: #F8FAFC;
+  --cockpit-text: #0F172A;
+  --cockpit-text-muted: #475569;
+  --cockpit-cyan-primary: #0E7490;
+  --cockpit-cyan-hover: #155E75;
+  --cockpit-cyan-light: #ECFEFF;
+  --cockpit-cyan-border: #A5F3FC;
+  --cockpit-monitor-bg: #0F172A;
+  --cockpit-monitor-border: #1E293B;
+  --cockpit-monitor-text: #F8FAFC;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  background-color: var(--cockpit-bg) !important;
+  color: var(--cockpit-text) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ocultar elementos obsoletos de scroll vertical para dar paso a la cabina fluida */
+header.w-full,
+nav.top-steps-navbar,
+#barra_control_rbac {
+  display: none !important;
+}
+
+/* Tipografía monoespaciada para valores numéricos, signos, códigos y montos */
+.font-mono,
+.vital-value,
+.news2-score,
+.monto-dinero,
+.cockpit-num,
+input[type="number"],
+#pas_full, #pad_full, #fc_full, #fr_full, #temp_full, #spo2_full, #glasgow_full, #glucosa_full,
+#cie10_codigo, #ident_full, .kardex-table td:nth-child(2) {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* ------------------------------------------------------------------------------
+   2. BARRA SUPERIOR FIJA (64px) — CONTEXTO EN VIVO Y ROL
+   ------------------------------------------------------------------------------ */
+#cockpit_top_bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 64px;
+  background: #FFFFFF;
+  border-bottom: 1px solid var(--cockpit-card-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.cockpit-top-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cockpit-logo-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--cockpit-text);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.cockpit-logo-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--cockpit-cyan-primary);
+  color: #FFFFFF;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.cockpit-sector-segment {
+  display: inline-flex;
+  background: #F1F5F9;
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+}
+
+.cockpit-sector-btn {
+  border: none;
+  background: transparent;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cockpit-sector-btn.active {
+  background: #FFFFFF;
+  color: var(--cockpit-cyan-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Contexto central del paciente */
+.cockpit-top-center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cockpit-patient-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 12.5px;
+}
+
+.cockpit-px-name {
+  font-weight: 800;
+  color: #0F172A;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cockpit-px-bed {
+  color: #64748B;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Zona derecha de roles y simulador */
+.cockpit-top-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cockpit-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--cockpit-cyan-light);
+  color: var(--cockpit-cyan-primary);
+  border: 1px solid var(--cockpit-cyan-border);
+}
+
+.cockpit-btn-login {
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #334155;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cockpit-btn-login:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.cockpit-sim-select {
+  border: 1.5px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #0F172A;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------------------
+   3. ARQUITECTURA DE GRID EN 3 ZONAS (MAX-WIDTH 1560px)
+   ------------------------------------------------------------------------------ */
+#cockpit_layout {
+  max-width: 1680px;
+  margin: 0 auto;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 16px 20px 60px 20px;
+  box-sizing: border-box;
+}
+
+/* Columna Izquierda: Stepper 4 Fases + Tablero de Atención Simultánea & Cola (390px, Scroll Independiente) */
+#cockpit_sidebar_left {
+  width: 390px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 84px;
+  max-height: calc(100vh - 95px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-right: 4px;
+}
+
+/* Tablero de Atención Simultánea & Cola en el Sidebar Izquierdo */
+#activePatientsPanel {
+  background: #FFFFFF;
+  border: 1px solid var(--cockpit-card-border, #E2E8F0);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+#activePatientsPanel .active-patients-top-bar {
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+#activePatientsPanel .active-patients-cards-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  padding-right: 2px;
+}
+
+#activePatientsPanel .bandeja-posta-card {
+  padding: 12px 14px !important;
+  border-radius: 10px !important;
+}
+
+.cockpit-stepper-card {
+  background: #FFFFFF;
+  border: 1px solid var(--cockpit-card-border);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.cockpit-stepper-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94A3B8;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  padding-left: 6px;
+}
+
+.cockpit-step-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  margin-bottom: 4px;
+}
+
+.cockpit-step-item:last-child {
+  margin-bottom: 0;
+}
+
+.cockpit-step-item:hover {
+  background: #F8FAFC;
+}
+
+.cockpit-step-item.active {
+  background: var(--cockpit-cyan-light);
+  border-color: var(--cockpit-cyan-border);
+}
+
+.cockpit-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #E2E8F0;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cockpit-step-item.active .cockpit-step-num {
+  background: var(--cockpit-cyan-primary);
+  color: #FFFFFF;
+}
+
+.cockpit-step-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cockpit-step-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+  line-height: 1.25;
+}
+
+.cockpit-step-sub {
+  font-size: 11px;
+  color: #64748B;
+  line-height: 1.3;
+}
+
+.cockpit-step-status {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  margin-top: 3px;
+  display: inline-block;
+}
+
+.cockpit-step-status.completed {
+  background: #ECFDF5;
+  color: #047857;
+}
+
+.cockpit-step-status.in-progress {
+  background: #E0F2FE;
+  color: #0284C7;
+}
+
+.cockpit-step-status.sealed {
+  background: #F1F5F9;
+  color: #475569;
+}
+
+
+/* Columna Central: Espacio de Trabajo Enfocado (flex: 1) */
+#cockpit_workspace_center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Barra Táctica de Ingresos Rápidos (Moderna y Limpia) */
+/* Barra Táctica de Ingresos Rápidos y Atención de Emergencias (Calm-Tech Simétrico) */
+.cockpit-tactical-bar {
+  background: #FFFFFF;
+  border: 1px solid var(--cockpit-card-border, #E2E8F0);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.cockpit-tactical-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.cockpit-tactical-title-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cockpit-tactical-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.cockpit-tactical-title {
+  font-size: 0.80rem;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: 0.02em;
+}
+
+.cockpit-tactical-sub {
+  font-size: 0.70rem;
+  color: #64748B;
+}
+
+.cockpit-tactical-utility {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tactical-util-btn {
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  color: #334155;
+  font-size: 0.70rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.tactical-util-btn:hover {
+  background: #F1F5F9;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
+
+.tactical-util-btn.btn-util-reset {
+  background: #FFF1F2;
+  border-color: #FDA4AF;
+  color: #BE123C;
+  font-weight: 800;
+}
+
+.tactical-util-btn.btn-util-reset:hover {
+  background: #FEE2E2;
+  border-color: #F87171;
+}
+
+.cockpit-tactical-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .cockpit-tactical-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.cockpit-tactical-btn {
+  background: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+  color: #334155;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.cockpit-tactical-btn:hover {
+  background: #F8FAFC;
+  border-color: #94A3B8;
+  color: #0F172A;
+  transform: translateY(-1px);
+}
+
+.cockpit-tactical-btn.btn-p1-danger {
+  background: #FEE2E2;
+  border-color: #F87171;
+  color: #991B1B;
+  font-weight: 800;
+}
+
+.cockpit-tactical-btn.btn-p1-danger:hover {
+  background: #DC2626;
+  border-color: #B91C1C;
+  color: #FFFFFF;
+}
+
+.cockpit-tactical-btn.btn-sop-action {
+  background: #FFEDD5;
+  border-color: #FB923C;
+  color: #9A3412;
+  font-weight: 800;
+}
+
+.cockpit-tactical-btn.btn-sop-action:hover {
+  background: #EA580C;
+  border-color: #C2410C;
+  color: #FFFFFF;
+}
+
+.cockpit-tactical-btn.btn-main-cta {
+  background: #0284C7;
+  border-color: #0369A1;
+  color: #FFFFFF;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3);
+}
+
+.cockpit-tactical-btn.btn-main-cta:hover {
+  background: #0369A1;
+  border-color: #075985;
+}
+
+.cockpit-tactical-btn.btn-nn-eval {
+  background: #F0F9FF;
+  border-color: #BAE6FD;
+  border-left: 3.5px solid #0284C7;
+  color: #0369A1;
+  font-weight: 800;
+}
+
+.cockpit-tactical-btn.btn-nn-eval:hover {
+  background: #E0F2FE;
+}
+
+.cockpit-tactical-btn.btn-nn-shock {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  border-left: 3.5px solid #DC2626;
+  color: #B91C1C;
+  font-weight: 800;
+}
+
+.cockpit-tactical-btn.btn-nn-shock:hover {
+  background: #FEE2E2;
+}
+
+.cockpit-tactical-btn.btn-desempate {
+  background: #EEF2FF;
+  border-color: #C7D2FE;
+  color: #4338CA;
+  font-weight: 800;
+}
+
+.cockpit-tactical-btn.btn-desempate:hover {
+  background: #E0E7FF;
+}
+
+.cockpit-tactical-btn.btn-pulsera {
+  background: #0F172A;
+  border-color: #0284C7;
+  color: #38BDF8;
+  font-weight: 800;
+}
+
+.cockpit-tactical-btn.btn-pulsera:hover {
+  background: #1E293B;
+  color: #7DD3FC;
+}
+
+html.dark .cockpit-tactical-bar {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+html.dark .cockpit-tactical-header {
+  border-bottom-color: #334155;
+}
+
+html.dark .cockpit-tactical-title {
+  color: #F8FAFC;
+}
+
+html.dark .cockpit-tactical-sub {
+  color: #94A3B8;
+}
+
+html.dark .tactical-util-btn {
+  background: #0F172A;
+  border-color: #334155;
+  color: #CBD5E1;
+}
+
+html.dark .cockpit-tactical-btn {
+  background: #0F172A;
+  border-color: #334155;
+  color: #E2E8F0;
+}
+
+/* Ocultamiento y muestra estricta por Fase activa sin romper el DOM */
+.cockpit-phase-container {
+  display: none !important;
+}
+
+.cockpit-phase-container.cockpit-phase-active {
+  display: flex !important;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Tarjetas de Módulos rediseñadas con estilo Calm-Tech */
+.module-section {
+  background: #FFFFFF !important;
+  border: 1px solid var(--cockpit-card-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  padding: 22px 24px !important;
+  margin-bottom: 0 !important;
+}
+
+.module-section-header {
+  border-bottom: 1px solid var(--cockpit-divider) !important;
+  padding-bottom: 14px !important;
+  margin-bottom: 18px !important;
+}
+
+/* Grilla limpia de 4 columnas para signos vitales del Módulo 1 */
+.cockpit-vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 768px) {
+  .cockpit-vitals-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.cockpit-vital-box {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cockpit-vital-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.cockpit-vital-input {
+  height: 42px;
+  font-size: 16px;
+  font-weight: 700;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #FFFFFF;
+}
+
+.cockpit-vital-hint {
+  font-size: 10.5px;
+  color: #94A3B8;
+  margin-top: 4px;
+}
+
+/* Columna Derecha: Monitor Fisiológico en Vivo + Acción Principal (330px) */
+#cockpit_sidebar_right {
+  width: 330px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Tarjeta del Monitor Fisiológico (Fondo oscuro suave #0F172A) */
+.cockpit-monitor-card {
+  background: var(--cockpit-monitor-bg);
+  border: 1px solid var(--cockpit-monitor-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  color: var(--cockpit-monitor-text);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.4);
+}
+
+.cockpit-monitor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #1E293B;
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+.cockpit-monitor-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #38BDF8;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cockpit-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+  animation: pulseBeacon 1.8s infinite;
+}
+
+@keyframes pulseBeacon {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.cockpit-monitor-vitals-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.cockpit-monitor-item {
+  background: #1E293B;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.cockpit-m-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94A3B8;
+  margin-bottom: 2px;
+}
+
+.cockpit-m-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: #F8FAFC;
+  line-height: 1.1;
+}
+
+.cockpit-m-unit {
+  font-size: 10px;
+  color: #64748B;
+  margin-left: 2px;
+}
+
+/* Puntuaciones NEWS2 y ESI en el monitor */
+.cockpit-monitor-scores {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.cockpit-score-box {
+  flex: 1;
+  background: #1E293B;
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.cockpit-score-num {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.cockpit-score-sub {
+  font-size: 10px;
+  color: #94A3B8;
+  font-weight: 600;
+}
+
+/* Camas libres resumidas */
+.cockpit-beds-summary {
+  font-size: 11.5px;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #1E293B;
+  padding-top: 10px;
+}
+
+/* Panel de Acción Principal de Posta (Fijo al pie del monitor) */
+.cockpit-action-card {
+  background: #FFFFFF;
+  border: 1px solid var(--cockpit-card-border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.cockpit-primary-action-btn {
+  width: 100%;
+  height: 46px;
+  background: var(--cockpit-cyan-primary);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 2px 6px rgba(14, 116, 144, 0.25);
+}
+
+.cockpit-primary-action-btn:hover {
+  background: var(--cockpit-cyan-hover);
+}
+
+.cockpit-action-meta {
+  font-size: 11px;
+  color: #64748B;
+  text-align: center;
+  margin-top: 8px;
+  line-height: 1.35;
+}
+
+/* ------------------------------------------------------------------------------
+   4. RESPONSIVE (< 1100px) — COLAPSO A 1 COLUMNA
+   ------------------------------------------------------------------------------ */
+@media (max-width: 1100px) {
+  #cockpit_layout {
+    flex-direction: column;
+    padding: 14px 16px;
+  }
+
+  #cockpit_sidebar_left,
+  #cockpit_sidebar_right {
+    width: 100%;
+    position: static;
+  }
+
+  .cockpit-stepper-card {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .cockpit-step-item {
+    flex-shrink: 0;
+    margin-bottom: 0;
+  }
+}
+
+
+/* ------------------------------------------------------------------------------
+   9. TARJETAS COMPACTAS RESUMEN POR ROL (MÉDICO Y CAJA)
+   ------------------------------------------------------------------------------ */
+.cockpit-summary-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.cockpit-summary-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.cockpit-summary-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cockpit-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.cockpit-summary-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.cockpit-summary-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.cockpit-summary-val {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.cockpit-seal-box {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: #166534;
+}
+
+.cockpit-btn-theme {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.cockpit-btn-theme:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* ------------------------------------------------------------------------------
+   10. MODO OSCURO CLÍNICO ANTI-FATIGA (WCAG 2.1 AA)
+   ------------------------------------------------------------------------------ */
+[data-theme="dark"] {
+  --bg-primary: #0B1120;
+  --bg-surface: #111827;
+  --bg-surface-soft: #1E293B;
+  --border-subtle: #1E293B;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --accent-cyan: #06B6D4;
+}
+
+[data-theme="dark"] body {
+  background-color: #0B1120 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] #cockpit_top_bar {
+  background: #111827 !important;
+  border-bottom: 1px solid #1E293B !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-logo-badge {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-patient-pill {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-stepper-card,
+[data-theme="dark"] .cockpit-monitor-card,
+[data-theme="dark"] .cockpit-action-card,
+[data-theme="dark"] .cockpit-tactical-bar,
+[data-theme="dark"] .cockpit-summary-card,
+[data-theme="dark"] .section-container,
+[data-theme="dark"] .module-card,
+[data-theme="dark"] .panel-container,
+[data-theme="dark"] .bandeja-posta-container,
+[data-theme="dark"] .modal-hc-container,
+[data-theme="dark"] .ui-modal-card {
+  background-color: #111827 !important;
+  border-color: #1E293B !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-stepper-title,
+[data-theme="dark"] .cockpit-monitor-title,
+[data-theme="dark"] .cockpit-step-name,
+[data-theme="dark"] .cockpit-summary-title,
+[data-theme="dark"] .section-title,
+[data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3 {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-summary-item {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] .cockpit-summary-val {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-step-item {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .cockpit-step-item.active {
+  border-color: #06B6D4 !important;
+  background-color: rgba(6, 182, 212, 0.15) !important;
+}
+
+[data-theme="dark"] .cockpit-step-item.active .cockpit-step-name {
+  color: #38BDF8 !important;
+}
+
+[data-theme="dark"] .cockpit-tactical-btn {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-tactical-btn:hover {
+  background: #334155 !important;
+}
+
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .input-full,
+[data-theme="dark"] select,
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="search"],
+[data-theme="dark"] textarea {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cockpit-btn-theme {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .bandeja-tab-btn {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .bandeja-tab-btn.active {
+  background: #06B6D4 !important;
+  color: #0F172A !important;
+}
+
+[data-theme="dark"] .bandeja-px-row {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .bandeja-px-row.active {
+  background: rgba(6, 182, 212, 0.15) !important;
+  border-color: #06B6D4 !important;
+}
+
+[data-theme="dark"] .recurso-card {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+
+/* ==============================================================================
+   11. CALM-TECH CLÍNICO EXPANDIDO — WCAG 2.1 AA / IEC 62366-1 (AUDITORÍA VISUAL)
+   ============================================================================== */
+
+/* Tipografía JetBrains Mono + tabular-nums en toda métrica, código y valor financiero */
+.font-mono,
+.vital-value,
+.news2-score,
+.monto-dinero,
+.cockpit-num,
+.score-badge,
+.estancia-badge,
+.prio-code,
+.prio-numero,
+#prio_numero,
+#mon_news2_val,
+#mon_gcs_val,
+#mon_shock_val,
+#mon_beds_free,
+#mon_vitals_summary,
+#m4_disp_dni,
+#m4_disp_hc,
+#c_triage_px_dni,
+#c_triage_news2_score,
+#c_triage_vitals_resumen,
+#txt_total_factura,
+#soat_consumido_val,
+#soat_saldo_val,
+#soat_tope_val,
+input[type="number"],
+input[type="search"],
+.kardex-table td:nth-child(2),
+.kardex-table td:nth-child(4),
+.tabla-ordenes-body td {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.01em;
+}
+
+/* Reducción de Ruido Espacial: Eliminación de bordes dobles/triples y cajas anidadas */
+.reniec-consulta-card,
+.consentimiento-legal-card,
+.entorno-operativo-card,
+.soat-meter-card,
+.estancia-meter-card,
+.bloqueo-sinadef-card,
+.start-step-card {
+  border: 1px solid var(--cockpit-card-border) !important;
+  background: var(--cockpit-card-bg) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  padding: 16px 20px !important;
+  margin-bottom: 14px !important;
+}
+
+/* Sub-contenedores y áreas secundarias: separadores limpios y fondos suaves */
+.cockpit-summary-item,
+.reniec-consulta-card > div:first-child,
+#consentimiento_alerta_banner,
+#box_soat_fuga_alert,
+#entorno_sector_info_banner {
+  border: 1px solid var(--cockpit-divider) !important;
+  border-radius: 8px !important;
+}
+
+/* Alineación de Grillas Clínicas y Espaciado Ergonomico */
+.form-grid-2 {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 14px !important;
+}
+
+.form-grid-3 {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 14px !important;
+}
+
+.form-grid-4 {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 14px !important;
+}
+
+.codigos-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 12px !important;
+}
+
+.codigo-card {
+  border: 1px solid var(--cockpit-card-border) !important;
+  border-radius: 10px !important;
+  padding: 12px 14px !important;
+  background: var(--cockpit-card-bg) !important;
+  transition: all 0.15s ease !important;
+}
+
+.codigo-card:hover {
+  border-color: var(--cockpit-cyan-primary) !important;
+  background: var(--cockpit-sub-bg) !important;
+}
+
+/* Contraste y Ergonomía de Inputs y Selects (WCAG 2.1 AA) */
+.input-full,
+.form-input,
+select.input-full,
+textarea.input-full {
+  min-height: 42px !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 0.85rem !important;
+  color: #0F172A !important;
+  background-color: #FFFFFF !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  box-sizing: border-box !important;
+}
+
+.input-full:focus-visible,
+.form-input:focus-visible,
+select.input-full:focus-visible,
+textarea.input-full:focus-visible {
+  border-color: var(--cockpit-cyan-primary) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.15) !important;
+}
+
+/* Botones: Alto Contraste y Semáforo Clínico Exclusivo */
+.btn-full-primary {
+  background-color: var(--cockpit-cyan-primary) !important;
+  color: #FFFFFF !important;
+  border: 1px solid var(--cockpit-cyan-primary) !important;
+  border-radius: 8px !important;
+  min-height: 42px !important;
+  padding: 10px 18px !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.btn-full-primary:hover {
+  background-color: var(--cockpit-cyan-hover) !important;
+  border-color: var(--cockpit-cyan-hover) !important;
+}
+
+.btn-full-secondary {
+  background-color: #FFFFFF !important;
+  color: #1E293B !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 8px !important;
+  min-height: 42px !important;
+  padding: 10px 16px !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.btn-full-secondary:hover {
+  background-color: #F8FAFC !important;
+  border-color: #94A3B8 !important;
+  color: #0F172A !important;
+}
+
+/* Soporte Universal de Modo Oscuro (.dark, html.dark y [data-theme="dark"]) */
+html.dark,
+.dark,
+[data-theme="dark"] {
+  --cockpit-bg: #0B1120 !important;
+  --cockpit-card-bg: #111827 !important;
+  --cockpit-card-border: #1E293B !important;
+  --cockpit-divider: #1E293B !important;
+  --cockpit-sub-bg: #1E293B !important;
+  --cockpit-text: #F8FAFC !important;
+  --cockpit-text-muted: #94A3B8 !important;
+  --cockpit-cyan-primary: #06B6D4 !important;
+  --cockpit-cyan-hover: #22D3EE !important;
+  --cockpit-cyan-light: rgba(6, 182, 212, 0.15) !important;
+  --cockpit-cyan-border: #0891B2 !important;
+}
+
+html.dark body,
+.dark body,
+[data-theme="dark"] body {
+  background-color: #0B1120 !important;
+  color: #F8FAFC !important;
+}
+
+html.dark .module-section,
+.dark .module-section,
+[data-theme="dark"] .module-section,
+html.dark .reniec-consulta-card,
+.dark .reniec-consulta-card,
+[data-theme="dark"] .reniec-consulta-card,
+html.dark .consentimiento-legal-card,
+.dark .consentimiento-legal-card,
+[data-theme="dark"] .consentimiento-legal-card,
+html.dark .codigo-card,
+.dark .codigo-card,
+[data-theme="dark"] .codigo-card,
+html.dark .soat-meter-card,
+.dark .soat-meter-card,
+[data-theme="dark"] .soat-meter-card,
+html.dark .cockpit-stepper-card,
+.dark .cockpit-stepper-card,
+[data-theme="dark"] .cockpit-stepper-card,
+html.dark .cockpit-monitor-card,
+.dark .cockpit-monitor-card,
+[data-theme="dark"] .cockpit-monitor-card,
+html.dark .cockpit-tactical-bar,
+.dark .cockpit-tactical-bar,
+[data-theme="dark"] .cockpit-tactical-bar,
+html.dark .cockpit-summary-card,
+.dark .cockpit-summary-card,
+[data-theme="dark"] .cockpit-summary-card,
+html.dark #cockpit_top_bar,
+.dark #cockpit_top_bar,
+[data-theme="dark"] #cockpit_top_bar {
+  background-color: #111827 !important;
+  border-color: #1E293B !important;
+  color: #F8FAFC !important;
+}
+
+html.dark .input-full,
+.dark .input-full,
+[data-theme="dark"] .input-full,
+html.dark select.input-full,
+.dark select.input-full,
+[data-theme="dark"] select.input-full,
+html.dark textarea.input-full,
+.dark textarea.input-full,
+[data-theme="dark"] textarea.input-full {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+html.dark .input-full:focus-visible,
+.dark .input-full:focus-visible,
+[data-theme="dark"] .input-full:focus-visible {
+  border-color: #06B6D4 !important;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25) !important;
+}
+
+html.dark .btn-full-secondary,
+.dark .btn-full-secondary,
+[data-theme="dark"] .btn-full-secondary {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+html.dark .btn-full-secondary:hover,
+.dark .btn-full-secondary:hover,
+[data-theme="dark"] .btn-full-secondary:hover {
+  background-color: #334155 !important;
+  color: #FFFFFF !important;
+}
+
+html.dark label,
+.dark label,
+[data-theme="dark"] label {
+  color: #CBD5E1 !important;
+}
+
+/* Adaptación responsive limpia */
+@media (max-width: 1024px) {
+  .form-grid-4,
+  .form-grid-3,
+  .codigos-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .form-grid-4,
+  .form-grid-3,
+  .form-grid-2,
+  .codigos-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ==================================================================== */
+/* ESTILOS MTS (MANCHESTER TRIAGE SYSTEM) & CALM-TECH CLINICAL UI       */
+/* ==================================================================== */
+.btn-info-vital {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1px solid #94a3b8;
+  background-color: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: all 0.15s ease-in-out;
+  user-select: none;
+}
+
+.btn-info-vital:hover,
+.btn-info-vital:focus {
+  background-color: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+.mts-subpanel-toggle-btn {
+  transition: all 0.15s ease-in-out;
+}
+
+.mts-subpanel-toggle-btn:hover {
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
+  background-color: #f0f9ff !important;
+}
+
+.mts-disc-row-vital {
+  transition: background-color 0.15s ease-in-out;
+}
+
+.mts-disc-row-vital:hover {
+  background-color: #fee2e2 !important;
+}
+
+/* Modo oscuro para controles MTS */
+html.dark .mts-block-container,
+.dark .mts-block-container,
+[data-theme="dark"] .mts-block-container {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .btn-info-vital,
+.dark .btn-info-vital,
+[data-theme="dark"] .btn-info-vital {
+  background-color: #334155;
+  color: #94a3b8;
+  border-color: #475569;
+}
+
+html.dark .btn-info-vital:hover,
+.dark .btn-info-vital:hover,
+[data-theme="dark"] .btn-info-vital:hover {
+  background-color: #38bdf8;
+  color: #0f172a;
+  border-color: #38bdf8;
+}
+
+html.dark .mts-subpanel-toggle-btn,
+.dark .mts-subpanel-toggle-btn,
+[data-theme="dark"] .mts-subpanel-toggle-btn {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+html.dark .mts-subpanel-toggle-btn:hover,
+.dark .mts-subpanel-toggle-btn:hover,
+[data-theme="dark"] .mts-subpanel-toggle-btn:hover {
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+  background: #0f172a !important;
+}
+
+
+/* ===== FILA DE PACIENTES EN ATENCIÓN ACTIVA & ESTADO DEL FLUJO (DEBAJO DE BOTONERA TÁCTICA) ===== */
+.cockpit-active-queue-card {
+  background: #FFFFFF;
+  border: 1px solid var(--cockpit-card-border, #E2E8F0);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cockpit-queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.cockpit-queue-track {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x mandatory;
+}
+
+.cockpit-queue-track::-webkit-scrollbar {
+  height: 6px;
+}
+
+.cockpit-queue-track::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+.cockpit-px-card {
+  flex: 0 0 240px;
+  scroll-snap-align: start;
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.cockpit-px-card:hover {
+  background: #FFFFFF;
+  border-color: #94A3B8;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.cockpit-px-card.active-px {
+  background: #FFFFFF;
+  border: 2px solid #0284C7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2), 0 4px 12px rgba(2, 132, 199, 0.1);
+}
+
+.cockpit-px-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cockpit-px-prio {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.cockpit-px-timer {
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #64748B;
+}
+
+.cockpit-px-name {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cockpit-px-dni-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.70rem;
+  color: #64748B;
+}
+
+.cockpit-px-flow-pill {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+}
+
+.cockpit-px-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.70rem;
+  padding-top: 4px;
+  border-top: 1px dashed #E2E8F0;
+}
+
+html.dark .cockpit-active-queue-card {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+html.dark .cockpit-queue-header {
+  border-bottom-color: #334155;
+}
+
+html.dark .cockpit-px-card {
+  background: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+html.dark .cockpit-px-card:hover {
+  background: #1E293B;
+}
+
+html.dark .cockpit-px-card.active-px {
+  background: #1E293B;
+  border-color: #38BDF8 !important;
+}
+
+html.dark .cockpit-px-name {
+  color: #F1F5F9;
+}
+
+
+/* ===== AJUSTES ERGONÓMICOS DE ENCUADRE: CARDS COMPACTAS SIN DATOS DESBORDADOS ===== */
+#trackboard_pacientes_lista {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  margin: 6px 0 !important;
+  max-height: 220px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 2px !important;
+}
+
+#activePatientsCardsList {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  max-height: 460px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 2px 4px 2px 2px !important;
+}
+
+.patient-queue-card {
+  flex: none !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 8px 10px !important;
+  border-radius: 8px !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  gap: 3px !important;
+}
+
+.patient-queue-card .card-name {
+  font-size: 0.80rem !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.2 !important;
+}
+
+.cockpit-px-card {
+  flex: 0 0 220px !important;
+  max-width: 225px !important;
+  height: 112px !important;
+  max-height: 115px !important;
+  padding: 8px 10px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  gap: 4px !important;
+}
+
+.cockpit-px-name {
+  font-size: 0.80rem !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.2 !important;
+}
