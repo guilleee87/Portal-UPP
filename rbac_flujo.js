@@ -655,28 +655,28 @@
       <section class="bandeja-posta-card" id="bandeja_posta_container">
         
         <!-- Cabecera de la Bandeja -->
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="font-size:1.15rem;">📮</span>
             <div>
-              <strong style="font-size:0.92rem; color:#0f172a;">Bandeja de Posta Clínica en Tiempo Real</strong>
-              <div style="font-size:0.72rem; color:#64748b;">Flujo Asistencial Integrado · Ley N° 27604 (Emergencia Vital) &amp; NTS N° 139-MINSA</div>
+              <strong style="font-size:0.86rem; color:#0f172a;">Bandeja de Posta Clínica en Tiempo Real</strong>
+              <div style="font-size:0.70rem; color:#64748b;">Flujo Asistencial Integrado · Ley N° 27604 &amp; NTS N° 139-MINSA</div>
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:6px;">
-            <span id="badge_p1_urgente" style="display:none; background:#fee2e2; color:#b91c1c; border:1.5px solid #f87171; border-radius:9999px; font-size:0.72rem; font-weight:900; padding:3px 10px; animation:pulseAlert 1.5s infinite;">
-              🚨 ALERTA P-I: RIESGO VITAL ACTIVO
-            </span>
-            <button type="button" onclick="abrirModalHistoricoDiasAnteriores()" class="btn-full-secondary" style="font-size:0.72rem; padding:4px 8px; border-radius:6px; cursor:pointer; background:#f0fdf4; color:#15803d; border:1px solid #86efac; font-weight:700;" title="Consultar atenciones de días anteriores">
-              📅 Días Anteriores
+            <button type="button" onclick="abrirModalHistoricoDiasAnteriores()" class="btn-full-secondary" style="font-size:0.68rem; height:26px; padding:2px 8px; border-radius:6px; cursor:pointer; background:#f0fdf4; color:#15803d; border:1px solid #86efac; font-weight:700; white-space:nowrap; display:inline-flex; align-items:center; gap:3px;" title="Consultar atenciones de días anteriores">
+              <span>📅</span> <span>Histórico</span>
             </button>
-            <button type="button" onclick="abrirModalReinicioSimulacion()" class="btn-full-secondary" style="font-size:0.72rem; padding:4px 8px; border-radius:6px; cursor:pointer; background:#fff1f2; color:#be123c; border:1px solid #fda4af; font-weight:800;" title="⚠️ Botón exclusivo de simulación y demostración: Reiniciar guardia">
-              ⚠️ ! Reiniciar Guardia (Demo)
+            <button type="button" onclick="abrirModalReinicioSimulacion()" class="btn-full-secondary" style="font-size:0.68rem; height:26px; padding:2px 8px; border-radius:6px; cursor:pointer; background:#fff1f2; color:#be123c; border:1px solid #fda4af; font-weight:800; white-space:nowrap; display:inline-flex; align-items:center; gap:3px;" title="⚠️ Botón exclusivo de simulación y demostración: Reiniciar guardia">
+              <span>⚠️</span> <span>Demo</span>
             </button>
-            <button type="button" onclick="recargarColaCompartidaDesdeStorage()" class="btn-full-secondary" style="font-size:0.72rem; padding:4px 8px; border-radius:6px; cursor:pointer;" title="Sincronizar bandeja con otras pestañas">
-              🔄 Sincronizar
+            <button type="button" onclick="recargarColaCompartidaDesdeStorage()" class="btn-full-secondary" style="font-size:0.68rem; height:26px; padding:2px 8px; border-radius:6px; cursor:pointer; background:#ffffff; color:#334155; border:1px solid #cbd5e1; font-weight:700; white-space:nowrap; display:inline-flex; align-items:center; gap:3px;" title="Sincronizar bandeja con otras pestañas">
+              <span>🔄</span> <span>Sync</span>
             </button>
           </div>
+        </div>
+        <div id="badge_p1_urgente" style="display:none; width:100%; box-sizing:border-box; background:#fee2e2; color:#b91c1c; border:1.5px solid #f87171; border-radius:6px; font-size:0.70rem; font-weight:900; padding:4px 10px; animation:pulseAlert 1.5s infinite; text-align:center; white-space:nowrap; margin-bottom:8px;">
+          🚨 ALERTA P-I: RIESGO VITAL ACTIVO EN COLA
         </div>
 
         <!-- Pestañas de Estaciones / Estado de Flujo -->
@@ -747,6 +747,7 @@
 
   window.renderizarBandejaPosta = function() { return renderizarBandejaPosta(); };
   function renderizarBandejaPosta() {
+    if (!document.getElementById("bandeja_posta_container")) return;
     const cola = window.PACIENTES_COLA || [];
     
     // Contadores
@@ -785,7 +786,7 @@
 
     const badgeP1 = document.getElementById("badge_p1_urgente");
     if (badgeP1) {
-      badgeP1.style.display = hayP1Urgente ? "inline-block" : "none";
+      badgeP1.style.display = hayP1Urgente ? "block" : "none";
     }
 
     // Actualizar botones de tabs
@@ -1090,8 +1091,17 @@
 
     const ident = obtenerIdentidadFirmante("TRIAJE");
     px.estadoFlujo = "EN_ATENCION_MEDICA";
-    if (px.nroFua || window.STATE?.nroFua) px.estadoFua = px.estadoFua || "ABIERTO";
-    if (px.nroEssi || window.STATE?.nroEssi) px.estadoEssi = px.estadoEssi || "ABIERTO";
+    const _segTri = String(px.tipoSeguro || window.STATE?.tipoSeguro || "").toLowerCase();
+    if (_segTri.includes("sis") || px.nroFua || window.STATE?.nroFua) {
+      px.nroFua = px.nroFua || window.STATE?.nroFua || `FUA-0410-${String(Date.now()).slice(-6)}`;
+      px.estadoFua = "TRIAJE_REGISTRADO";
+      if (window.STATE) { window.STATE.nroFua = px.nroFua; window.STATE.estadoFua = px.estadoFua; }
+    }
+    if (_segTri.includes("essalud") || px.nroEssi || window.STATE?.nroEssi) {
+      px.nroEssi = px.nroEssi || window.STATE?.nroEssi || `ESSI-${String(Date.now()).slice(-7)}`;
+      px.estadoEssi = "TRIAJE_REGISTRADO";
+      if (window.STATE) { window.STATE.nroEssi = px.nroEssi; window.STATE.estadoEssi = px.estadoEssi; }
+    }
     px.firmas = px.firmas || {};
     px.firmas.triaje = {
       usuario: ident.usuario,
@@ -1127,6 +1137,16 @@
 
     const ident = obtenerIdentidadFirmante("ADMISION");
     px.coberturaValidada = true;
+    const _segAdm = String(px.tipoSeguro || window.STATE?.tipoSeguro || "").toLowerCase();
+    if (_segAdm.includes("sis") && !px.esNN) {
+      px.nroFua = px.nroFua || window.STATE?.nroFua || window.STATE?.numerFua || `FUA-0410-${String(Date.now()).slice(-6)}`;
+      px.estadoFua = "APERTURA_ADMISION";
+      if (window.STATE) { window.STATE.nroFua = px.nroFua; window.STATE.numerFua = px.nroFua; window.STATE.estadoFua = px.estadoFua; }
+    } else if (_segAdm.includes("essalud") && !px.esNN) {
+      px.nroEssi = px.nroEssi || window.STATE?.nroEssi || `ESSI-${String(Date.now()).slice(-7)}`;
+      px.estadoEssi = "ACREDITADO_ADMISION";
+      if (window.STATE) { window.STATE.nroEssi = px.nroEssi; window.STATE.estadoEssi = px.estadoEssi; }
+    }
     px.firmas = px.firmas || {};
     px.firmas.admision = {
       usuario: ident.usuario,
@@ -1668,7 +1688,7 @@
     inyectarEstilosRBAC();
     inyectarModalLogin();
     inyectarBarraControlHeader();
-    inyectarBandejaPostaClinica();
+    const _oldBp = document.getElementById("bandeja_posta_container"); if (_oldBp) _oldBp.remove();
 
     // Sincronizar cola inicial si existe en storage
     recargarColaCompartidaDesdeStorage();
@@ -1729,30 +1749,50 @@
 
   function seleccionarExpedienteYVisualizarPorRol(id) {
     seleccionarExpediente(id);
-    const rol = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === 'function') 
-      ? window.RBAC_FLUJO.obtenerRolActivo() 
-      : (typeof obtenerRolActivo === 'function' ? obtenerRolActivo() : 'AUDITOR');
+    const rol = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === "function")
+      ? window.RBAC_FLUJO.obtenerRolActivo()
+      : (typeof obtenerRolActivo === "function" ? obtenerRolActivo() : "AUDITOR");
 
-    // Adaptar vista y fase según el rol activo
-    if (window.COCKPIT && typeof window.COCKPIT.irAFase === "function") {
-      if (rol === "TRIAJE") window.COCKPIT.irAFase(1);
-      else if (rol === "ADMISION") window.COCKPIT.irAFase(2);
-      else if (rol === "MEDICO") window.COCKPIT.irAFase(3);
-      else if (rol === "CAJA") window.COCKPIT.irAFase(4);
-      else if (rol === "AUDITOR") window.COCKPIT.irAFase(1);
+    const px = (window.PACIENTES_COLA || []).find(x => x.id === id);
+    const ef = px ? (px.estadoFlujo || "PENDIENTE_TRIAJE") : "PENDIENTE_TRIAJE";
+
+    // Si aún no termina el flujo, cargar la fase y estación clínica donde se encuentra actualmente
+    let faseDestino = 1;
+    let moduloDestino = 1;
+    if (ef === "PENDIENTE_TRIAJE") {
+      faseDestino = 1; moduloDestino = 1;
+    } else if (ef === "ADMISION" || ef === "PENDIENTE_ADMISION") {
+      faseDestino = 2; moduloDestino = 2;
+    } else if (ef === "EN_ATENCION_MEDICA") {
+      faseDestino = 3; moduloDestino = 4;
+    } else if (ef === "PENDIENTE_CAJA") {
+      faseDestino = 4; moduloDestino = 8;
+    } else if (ef === "CERRADO_FACTURADO") {
+      faseDestino = 4; moduloDestino = 8;
     }
 
+    // Si el operador tiene un rol operativo congruente con la atención:
+    if (rol === "TRIAJE" && ef === "PENDIENTE_TRIAJE") { faseDestino = 1; moduloDestino = 1; }
+    else if (rol === "ADMISION" && (ef === "ADMISION" || ef === "PENDIENTE_ADMISION")) { faseDestino = 2; moduloDestino = 2; }
+    else if (rol === "MEDICO" && ef === "EN_ATENCION_MEDICA") { faseDestino = 3; moduloDestino = 4; }
+    else if (rol === "CAJA" && ef === "PENDIENTE_CAJA") { faseDestino = 4; moduloDestino = 8; }
+
+    if (window.COCKPIT && typeof window.COCKPIT.irAFase === "function") {
+      window.COCKPIT.irAFase(faseDestino);
+    }
     if (typeof window.irAModulo === "function") {
-      if (rol === "TRIAJE") window.irAModulo(1);
-      else if (rol === "ADMISION") window.irAModulo(3);
-      else if (rol === "MEDICO") window.irAModulo(4);
-      else if (rol === "CAJA") window.irAModulo(8);
+      window.irAModulo(moduloDestino);
+    }
+    if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === "function") {
+      window.COCKPIT.actualizarContextoCockpit();
+    }
+    if (window.COCKPIT && typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") {
+      window.COCKPIT.actualizarTarjetaResumenTriaje();
     }
 
     if (typeof window.mostrarToast === "function") {
-      const px = (window.PACIENTES_COLA || []).find(x => x.id === id);
       const nombre = px ? px.nombre : "Paciente";
-      window.mostrarToast("info", "Paciente Seleccionado", `Cargado: ${nombre} adaptado a vista de ${rol}.`);
+      window.mostrarToast("info", "Paciente Seleccionado", `Cargada estación de ${nombre}: ${ef.replace(/_/g, " ")}.`);
     }
   }
   window.seleccionarExpedienteYVisualizarPorRol = seleccionarExpedienteYVisualizarPorRol;
@@ -1813,36 +1853,65 @@
       const esAtendido = p.estadoFlujo === "CERRADO_FACTURADO";
       const bgCard = esAtendido ? (esActivo ? "#ecfdf5" : "#f0fdf4") : (esActivo ? "#eff6ff" : "#ffffff");
       const borderCard = esAtendido ? (esActivo ? "2px solid #16a34a" : "1.5px solid #86efac") : (esActivo ? "2px solid #3b82f6" : esSiguienteMed ? "2px solid #f59e0b" : "1px solid #e2e8f0");
-      const shadowCard = esAtendido ? "box-shadow: 0 2px 8px rgba(22, 101, 52, 0.08);" : "";
+      const shadowCard = esAtendido ? "box-shadow: 0 2px 6px rgba(22, 101, 52, 0.06);" : "";
+
+      // Normalizar textos largos para evitar descuadres
+      const rawDest = (p.camaNombre || p.estadoAtencion || "En atención").trim();
+      let destCorto = "🛏️ En atención";
+      if (rawDest.includes("Shock") || rawDest.includes("ST-")) destCorto = "🚨 Shock Trauma";
+      else if (rawDest.includes("Quirófano") || rawDest.includes("SOP")) destCorto = "🏥 Quirófano SOP";
+      else if (rawDest.includes("Obs. Varones") || rawDest.includes("Observación Varones")) destCorto = "🛏️ Obs. Varones";
+      else if (rawDest.includes("Obs. Mujeres") || rawDest.includes("Observación Mujeres")) destCorto = "🛏️ Obs. Mujeres";
+      else if (rawDest.includes("Observación")) destCorto = "🛏️ Observación";
+      else if (rawDest.includes("Tópico") || rawDest.includes("Topico")) destCorto = "🩺 Tópico";
+      else if (rawDest.includes("Espera")) destCorto = "⏳ Sala Espera";
+      else if (rawDest.length > 18) destCorto = rawDest.substring(0, 16) + "…";
+      else destCorto = rawDest;
+
+      const rawNombre = (p.nombre || "Paciente").trim();
+      const nombreCorto = rawNombre.length > 22 ? rawNombre.substring(0, 20) + "…" : rawNombre;
+
+      const badgeFlujoLabels = {
+        "PENDIENTE_TRIAJE": "🩺 Triaje",
+        "ADMISION": "📋 Admisión",
+        "EN_ATENCION_MEDICA": "👨‍⚕️ Médico",
+        "PENDIENTE_CAJA": "💳 Caja",
+        "CERRADO_FACTURADO": "🏁 Cerrado"
+      };
+      const efKey = p.estadoFlujo || "PENDIENTE_TRIAJE";
+      const flujoCorto = esAtendido ? "✓ Atendido" : (badgeFlujoLabels[efKey] || efKey.replace(/_/g, " "));
 
       html += `
-        <div onclick="seleccionarExpedienteYVisualizarPorRol('${p.id}')" style="display:flex; justify-content:space-between; align-items:center; background:${bgCard}; border:${borderCard}; border-radius:8px; padding:7px 12px; cursor:pointer; transition:all 0.15s ease; ${shadowCard} gap:10px;">
+        <div onclick="seleccionarExpedienteYVisualizarPorRol('${p.id}')" style="display:flex; justify-content:space-between; align-items:center; background:${bgCard}; border:${borderCard}; border-radius:8px; padding:6px 10px; cursor:pointer; transition:all 0.15s ease; ${shadowCard} gap:8px; box-sizing:border-box; width:100%; min-height:46px;">
           
-          <!-- Información Principal del Paciente (Sin recortes ni truncamiento forzado) -->
-          <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
-            <span style="background:${colorPrio}; color:#ffffff; font-size:0.72rem; font-weight:900; padding:2px 7px; border-radius:4px; font-variant-numeric:tabular-nums; flex-shrink:0;">
-              ${p.prioridad ? "P-" + p.prioridad : "⏳ S/P"}
+          <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+            <span style="background:${colorPrio}; color:#ffffff; font-size:0.68rem; font-weight:900; padding:2px 6px; border-radius:4px; font-variant-numeric:tabular-nums; flex-shrink:0;">
+              ${p.prioridad ? "P-" + p.prioridad : "S/P"}
             </span>
-            <div style="min-width:0;">
-              <div style="font-size:0.83rem; font-weight:800; color:#0f172a; line-height:1.2;">
-                ${turno} · ${p.nombre || "Paciente"}
-                ${esSiguienteMed ? `<span style="font-size:0.68rem; background:#fef3c7; color:#92400e; padding:1px 5px; border-radius:4px; margin-left:4px;">👉 Siguiente</span>` : ""}
-                ${esActivo ? `<span style="font-size:0.66rem; background:#0284c7; color:#ffffff; padding:1px 6px; border-radius:4px; margin-left:4px; font-weight:800;">✓ ACTIVO</span>` : ""}
+            <div style="min-width:0; flex:1;">
+              <div style="display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                <span style="font-size:0.70rem; color:#64748b; font-weight:700;">${turno}</span>
+                <span style="font-size:0.78rem; font-weight:800; color:#0f172a; overflow:hidden; text-overflow:ellipsis;" title="${rawNombre}">
+                  ${nombreCorto}
+                </span>
+                ${esSiguienteMed ? `<span style="font-size:0.60rem; background:#fef3c7; color:#92400e; padding:1px 4px; border-radius:3px; flex-shrink:0;">👉 Sig.</span>` : ""}
+                ${esActivo ? `<span style="font-size:0.60rem; background:#0284c7; color:#ffffff; padding:1px 5px; border-radius:3px; font-weight:800; flex-shrink:0;">ACTIVO</span>` : ""}
               </div>
-              <div style="font-size:0.72rem; color:#64748b; margin-top:2px;">
-                ${p.camaNombre ? `🛏️ ${p.camaNombre}` : "🛏️ Sin cama"} · ${p.estadoAtencion || "En atención"} · DNI: <strong>${p.dni || p.numDni || "NN"}</strong>
+              <div style="font-size:0.68rem; color:#64748b; display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;">
+                <span style="color:#0369a1; font-weight:700;">${destCorto}</span>
+                <span>·</span>
+                <span>DNI: <strong>${p.dni || p.numDni || "NN"}</strong></span>
               </div>
             </div>
           </div>
 
-          <!-- Acciones de Consulta y Estado (Diseño limpio original) -->
-          <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-            <button type="button" onclick="event.stopPropagation(); abrirHistorialFlujoPaciente('${p.id}');" class="btn-full-secondary" style="font-size:0.70rem; font-weight:700; padding:3px 8px; border-radius:5px; cursor:pointer; background:#f8fafc; border:1px solid #cbd5e1; color:#0369a1; display:inline-flex; align-items:center; gap:4px;" title="Consultar todos los datos ingresados hasta el momento y trazabilidad con día y hora">
-              <span>👁️</span> <span>Consultar</span>
-            </button>
-            <span style="font-size:0.70rem; font-weight:700; padding:3px 8px; border-radius:4px; ${esAtendido ? 'color:#15803d; background:#dcfce7; border:1px solid #86efac;' : 'color:#475569; background:#f1f5f9;'}">
-              ${esAtendido ? '✓ Atendido' : (p.estadoFlujo || "PENDIENTE_TRIAJE").replace(/_/g, " ")}
+          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+            <span style="font-size:0.66rem; font-weight:800; padding:2px 6px; border-radius:4px; white-space:nowrap; ${esAtendido ? 'color:#15803d; background:#dcfce7; border:1px solid #86efac;' : 'color:#0369a1; background:#e0f2fe; border:1px solid #bae6fd;'}">
+              ${flujoCorto}
             </span>
+            <button type="button" onclick="event.stopPropagation(); abrirHistorialFlujoPaciente('${p.id}');" class="btn-full-secondary" style="font-size:0.66rem; font-weight:700; padding:2px 6px; height:24px; border-radius:4px; cursor:pointer; background:#f8fafc; border:1px solid #cbd5e1; color:#0369a1; display:inline-flex; align-items:center; justify-content:center;" title="Consultar trazabilidad">
+              👁️
+            </button>
           </div>
 
         </div>

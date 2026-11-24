@@ -2672,8 +2672,11 @@
       <div class="active-patients-top-bar">
         <div style="display:flex; align-items:center; gap:8px;">
           <span class="widget-beacon-dot" style="display:inline-block; width:10px; height:10px; background:#16a34a; border-radius:50%; box-shadow:0 0 0 3px rgba(34,197,94,0.3);"></span>
-          <strong style="color:#0f172a; font-size:0.92rem;">TABLERO DE ATENCIÓN SIMULTÁNEA &amp; COLA DE EMERGENCIAS</strong>
+          <strong style="color:#0f172a; font-size:0.92rem;">TABLERO DE ATENCIÓN Y COLA DE EMERGENCIAS</strong>
           <span class="badge-active-count" id="lbl_total_px_activos">1 Paciente en atención</span>
+          <button type="button" onclick="if(typeof abrirModalHistoricoDiasAnteriores==='function')abrirModalHistoricoDiasAnteriores()" style="font-size:0.68rem; height:24px; padding:2px 7px; border-radius:6px; cursor:pointer; background:#f0fdf4; color:#15803d; border:1px solid #86efac; font-weight:700;" title="Consultar atenciones de días anteriores">📅 Histórico</button>
+          <button type="button" onclick="if(typeof abrirModalReinicioSimulacion==='function')abrirModalReinicioSimulacion()" style="font-size:0.68rem; height:24px; padding:2px 7px; border-radius:6px; cursor:pointer; background:#fff1f2; color:#be123c; border:1px solid #fda4af; font-weight:800;" title="Reiniciar simulación de guardia">⚠️ Demo</button>
+          <button type="button" onclick="if(typeof recargarColaCompartidaDesdeStorage==='function')recargarColaCompartidaDesdeStorage()" style="font-size:0.68rem; height:24px; padding:2px 7px; border-radius:6px; cursor:pointer; background:#ffffff; color:#334155; border:1px solid #cbd5e1; font-weight:700;" title="Sincronizar cola entre pestañas">🔄 Sync</button>
         </div>
         <div class="active-patients-btn-group">
           <button type="button" class="btn-caos-action btn-shock-action" onclick="activarPanicoShockTrauma()" title="Admisión Inmediata de Emergencia a Shock Trauma (Ley N° 27604)" style="background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%); color: #ffffff; font-weight: 800; border: 1px solid #991c1c; box-shadow: 0 2px 6px rgba(185, 28, 28, 0.25);">
@@ -2694,7 +2697,7 @@
           <button type="button" class="btn-caos-action btn-start-action" onclick="abrirModalPreTriageSTART()" title="Pre-Triage de Cola en 15 segundos (Método START/Manchester)">
             ⚡ Pre-Triage de Cola (15s)
           </button>
-          <button type="button" class="btn-caos-action btn-newpx-action" onclick="registrarPacienteEnEspera()" title="Registrar llegada de paciente a sala de espera" style="background:#0284c7; color:#ffffff; border:none; font-weight:800;">
+          <button type="button" class="btn-caos-action btn-newpx-action" onclick="abrirModalLlegadaEnEspera()" title="Registrar llegada de paciente a sala de espera (elegir modalidad de ingreso)" style="background:#0284c7; color:#ffffff; border:none; font-weight:800;">
             ➕ Registrar Paciente en Espera
           </button>
           <button type="button" class="btn-caos-action btn-desempate-action" onclick="abrirModalLlegadasSimultaneasDesempate()" title="Protocolo de Desempate ante Llegadas Simultáneas (NTS N° 042-MINSA &amp; NTS N° 031-MINSA)" style="background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); color: #ffffff; font-weight: 800; border: 1px solid #3730a3; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);">
@@ -3221,35 +3224,35 @@
                 <label for="spo2_full" style="font-size:0.75rem; font-weight:700; margin:0;">Saturación SpO2 (%):</label>
                 <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('spo2', event)" title="Ver rangos clínicos SpO2" aria-label="Info SpO2">!</button>
               </div>
-              <input type="number" id="spo2_full" class="input-full" placeholder="98" min="0" max="100" oninput="recalcularPrioridad()">
+              <input type="number" id="spo2_full" class="input-full" placeholder="98" min="0" max="100" oninput="recalcularPrioridad()" onblur="validarSignosVitalesEnVivo(true)">
             </div>
             <div class="form-field" id="card_fc" style="margin:0;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
                 <label for="fc_full" style="font-size:0.75rem; font-weight:700; margin:0;">Frec. Cardíaca (lpm):</label>
                 <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('fc', event)" title="Ver rangos clínicos FC" aria-label="Info FC">!</button>
               </div>
-              <input type="number" id="fc_full" class="input-full" placeholder="78" min="0" max="260" oninput="recalcularPrioridad()">
+              <input type="number" id="fc_full" class="input-full" placeholder="78" min="0" max="260" oninput="recalcularPrioridad()" onblur="validarSignosVitalesEnVivo(true)">
             </div>
             <div class="form-field" id="card_pas" style="margin:0;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
                 <label for="pas_full" style="font-size:0.75rem; font-weight:700; margin:0;">PA Sistólica (mmHg):</label>
                 <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('pa', event)" title="Ver rangos clínicos PA" aria-label="Info PA Sistólica">!</button>
               </div>
-              <input type="number" id="pas_full" class="input-full" placeholder="120" min="0" max="280" oninput="recalcularPrioridad()">
+              <input type="number" id="pas_full" class="input-full" placeholder="120" min="0" max="280" oninput="recalcularPrioridad()" onblur="validarSignosVitalesEnVivo(true)">
             </div>
             <div class="form-field" id="card_pad" style="margin:0;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
                 <label for="pad_full" style="font-size:0.75rem; font-weight:700; margin:0;">PA Diastólica (mmHg):</label>
                 <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('pa', event)" title="Ver rangos clínicos PA" aria-label="Info PA Diastólica">!</button>
               </div>
-              <input type="number" id="pad_full" class="input-full" placeholder="80" min="0" max="180" oninput="recalcularPrioridad()">
+              <input type="number" id="pad_full" class="input-full" placeholder="80" min="0" max="180" oninput="recalcularPrioridad()" onblur="validarSignosVitalesEnVivo(true)">
             </div>
             <div class="form-field" id="card_temp" style="margin:0;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
                 <label for="temp_full" style="font-size:0.75rem; font-weight:700; margin:0;">Temperatura (°C):</label>
                 <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('temp', event)" title="Ver rangos clínicos Temperatura" aria-label="Info Temperatura">!</button>
               </div>
-              <input type="number" step="0.1" id="temp_full" class="input-full" placeholder="36.5" min="25" max="45" oninput="recalcularPrioridad()">
+              <input type="number" step="0.1" id="temp_full" class="input-full" placeholder="36.5" min="25" max="45" oninput="recalcularPrioridad()" onblur="validarSignosVitalesEnVivo(true)">
             </div>
           </div>
 
@@ -3267,21 +3270,21 @@
                   <label for="fr_full" style="font-size:0.75rem; font-weight:700; margin:0;">Frec. Respiratoria (rpm):</label>
                   <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('fr', event)" title="Ver rangos clínicos FR" aria-label="Info FR">!</button>
                 </div>
-                <input type="number" id="fr_full" class="input-full" placeholder="18" min="0" max="70" oninput="recalcularPrioridad()">
+                <input type="number" id="fr_full" class="input-full" placeholder="18" min="0" max="70" oninput="recalcularPrioridad()" onblur="validarSignosVitalesEnVivo(true)">
               </div>
               <div class="form-field" id="card_glasgow" style="margin:0;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
                   <label for="glasgow_full" style="font-size:0.75rem; font-weight:700; margin:0;">Escala Glasgow (3-15):</label>
                   <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('glasgow', event)" title="Ver rangos clínicos Glasgow" aria-label="Info Glasgow">!</button>
                 </div>
-                <input type="number" id="glasgow_full" class="input-full" placeholder="15" min="3" max="15" oninput="recalcularPrioridad()">
+                <input type="number" id="glasgow_full" class="input-full" placeholder="15" min="3" max="15" oninput="recalcularPrioridad()" onblur="validarSignosVitalesEnVivo(true)">
               </div>
               <div class="form-field" id="card_glucosa" style="margin:0;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
                   <label for="glucosa_full" style="font-size:0.75rem; font-weight:700; margin:0;">Glicemia Capilar (mg/dL):</label>
                   <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('glucosa', event)" title="Ver rangos clínicos Glucosa" aria-label="Info Glucosa">!</button>
                 </div>
-                <input type="number" id="glucosa_full" class="input-full" placeholder="105" min="0" max="800" oninput="recalcularPrioridad()">
+                <input type="number" id="glucosa_full" class="input-full" placeholder="105" min="0" max="800" oninput="recalcularPrioridad()" onblur="validarSignosVitalesEnVivo(true)">
               </div>
             </div>
           </div>
@@ -3310,6 +3313,7 @@
           </button>
         </div>
 
+        <div id="banner_error_vitales" style="display:none; background:#fee2e2; border:2px solid #dc2626; border-radius:10px; padding:12px 16px; margin-bottom:12px; color:#991b1b;"><div style="font-weight:800; font-size:0.92rem;">⛔ EVALUACIÓN BLOQUEADA: DIGITACIÓN BIOLÓGICAMENTE IMPOSIBLE</div><div style="font-size:0.80rem; color:#7f1d1d; margin-top:4px;">Corrija los campos señalados para habilitar el algoritmo de Triaje:</div><div id="banner_error_vitales_detalles"></div></div>
         <!-- DESPLIEGUE VISUAL DE LA PRIORIDAD EVALUADA -->
         <div id="prioridad_display" class="prioridad-display">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
@@ -6208,6 +6212,41 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: MODALIDAD DE LLEGADA PARA PACIENTE EN ESPERA -->
+  <div class="modal-hc-overlay" id="modalLlegadaEnEspera" style="display:none;" onclick="if(event.target===this) cerrarModalLlegadaEnEspera()">
+    <div class="modal-hc-card" style="max-width:520px; width:94%; padding:0; overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#0284c7 0%,#0369a1 100%); color:#fff; padding:14px 18px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong style="font-size:0.96rem;">➕ Registrar Paciente en Espera — Modalidad de Llegada</strong>
+          <div style="font-size:0.74rem; opacity:0.9;">Seleccione cómo ingresó el paciente al Servicio de Emergencia</div>
+        </div>
+        <button type="button" onclick="cerrarModalLlegadaEnEspera()" style="background:none; border:none; color:#fff; font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+      <div style="padding:16px 18px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <button type="button" onclick="confirmarLlegadaEnEspera('A pie')" style="padding:14px 12px; border:1.5px solid #cbd5e1; border-radius:10px; background:#f8fafc; cursor:pointer; text-align:left;">
+          <div style="font-size:1.2rem;">🚶</div>
+          <div style="font-weight:800; color:#0f172a; font-size:0.86rem;">A pie / Ambulatorio</div>
+          <div style="font-size:0.72rem; color:#64748b;">Ingresa por sus propios medios</div>
+        </button>
+        <button type="button" onclick="confirmarLlegadaEnEspera('Ambulancia')" style="padding:14px 12px; border:1.5px solid #fca5a5; border-radius:10px; background:#fef2f2; cursor:pointer; text-align:left;">
+          <div style="font-size:1.2rem;">🚑</div>
+          <div style="font-weight:800; color:#991b1b; font-size:0.86rem;">Ambulancia (SAMU / Bomberos)</div>
+          <div style="font-size:0.72rem; color:#7f1d1d;">Traslado asistido en camilla</div>
+        </button>
+        <button type="button" onclick="confirmarLlegadaEnEspera('Policía / Serenazgo')" style="padding:14px 12px; border:1.5px solid #93c5fd; border-radius:10px; background:#eff6ff; cursor:pointer; text-align:left;">
+          <div style="font-size:1.2rem;">🚓</div>
+          <div style="font-weight:800; color:#1e40af; font-size:0.86rem;">Policía Nacional / Serenazgo</div>
+          <div style="font-size:0.72rem; color:#1e3a8a;">Conducción policial o municipal</div>
+        </button>
+        <button type="button" onclick="confirmarLlegadaEnEspera('Particular')" style="padding:14px 12px; border:1.5px solid #cbd5e1; border-radius:10px; background:#f8fafc; cursor:pointer; text-align:left;">
+          <div style="font-size:1.2rem;">🚗</div>
+          <div style="font-weight:800; color:#0f172a; font-size:0.86rem;">Vehículo Particular</div>
+          <div style="font-size:0.72rem; color:#64748b;">Traído por familiares o terceros</div>
+        </button>
       </div>
     </div>
   </div>

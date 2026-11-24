@@ -3443,7 +3443,8 @@ const RANGOS_BIOLOGICOS = {
  * Nivel 1 — Error de Digitación (Bloqueante): Valores físicamente imposibles.
  * Nivel 2 — Signos de Paro / Agonía (No Bloqueante): PAS=0, FC=0, FR=0, Glasgow=3 activa Código Rojo Shock Trauma.
  */
-function validarSignosVitalesEnVivo() {
+let _timerValidarVitales = null;
+function validarSignosVitalesEnVivo(modoEstricto = false) {
   const errores = [];
   let primerElementoInvalido = null;
   let esParoOAgonia = false;
@@ -3470,6 +3471,18 @@ function validarSignosVitalesEnVivo() {
       marcarCampoError(el, card, errBox, msg);
       errores.push(msg);
       if (!primerElementoInvalido) primerElementoInvalido = el;
+      continue;
+    }
+
+    // Si el usuario sigue escribiendo en este campo (ej. digitando "6" rumbo a "600"), no disparar error prematuro por < min
+    if (!modoEstricto && document.activeElement === el && val < def.min && val >= 0) {
+      el.classList.remove("is-invalid");
+      if (card) card.classList.remove("has-error");
+      if (errBox) { errBox.style.display = "none"; errBox.innerHTML = ""; }
+      clearTimeout(_timerValidarVitales);
+      _timerValidarVitales = setTimeout(() => {
+        validarSignosVitalesEnVivo(true);
+      }, 900);
       continue;
     }
 
@@ -3537,7 +3550,7 @@ function validarSignosVitalesEnVivo() {
 
   if (!esValido) {
     if (banner) {
-      banner.classList.add("visible");
+      banner.classList.add("visible"); banner.style.display = "block";
       if (bannerDetalles) {
         bannerDetalles.innerHTML = `<ul style="margin:4px 0 0 16px;padding:0;color:#991b1b;font-weight:700;">` +
           errores.map(e => `<li>${e}</li>`).join("") + `</ul>`;
@@ -3550,7 +3563,7 @@ function validarSignosVitalesEnVivo() {
     }
   } else {
     if (banner) {
-      banner.classList.remove("visible");
+      banner.classList.remove("visible"); banner.style.display = "none";
       if (bannerDetalles) bannerDetalles.innerHTML = "";
     }
     if (btnEval) {
@@ -3574,20 +3587,19 @@ function marcarCampoError(el, card, errBox, mensaje) {
 
 function mostrarErrorBiologicoEnPrioridad(errores) {
   const pd = document.getElementById("prioridad_display");
-  if (!pd) return;
-  pd.style.background = "#fee2e2";
-  pd.style.borderColor = "#dc2626";
-  pd.innerHTML = `
-    <div style="color:#991b1b;font-weight:800;font-size:16px;">
-      ⛔ EVALUACIÓN BLOQUEADA: DIGITACIÓN BIOLÓGICAMENTE IMPOSIBLE
-    </div>
-    <div style="color:#7f1d1d;font-size:13px;margin-top:6px;text-align:left;">
-      Corrija los campos señalados en rojo para habilitar el algoritmo de Triaje:
-      <ul style="margin:4px 0 0 16px;">
-        ${errores.map(e => `<li>${e}</li>`).join("")}
-      </ul>
-    </div>
-  `;
+  if (pd) {
+    pd.style.display = "none";
+    pd.classList.remove("visible", "prio-I", "prio-II", "prio-III", "prio-IV", "prio-V");
+  }
+  const banner = document.getElementById("banner_error_vitales");
+  const det = document.getElementById("banner_error_vitales_detalles");
+  if (banner) {
+    banner.classList.add("visible"); banner.style.display = "block";
+    if (det && Array.isArray(errores)) {
+      det.innerHTML = `<ul style="margin:4px 0 0 16px;padding:0;color:#991b1b;font-weight:700;">` +
+        errores.map(e => `<li>${e}</li>`).join("") + `</ul>`;
+    }
+  }
 }
 
 function cargarPresetVitales(tipo) {
@@ -4756,7 +4768,7 @@ function renderizarStockCamas() {
 
 
 function asignarCama() {
-  const validacion = validarSignosVitalesEnVivo();
+  const validacion = validarSignosVitalesEnVivo(true);
   if (!validacion.esValido) {
     alert("⛔ Asignación de cama bloqueada: Corrija primero los signos vitales fuera del rango biológico.");
     return;
@@ -5788,7 +5800,10 @@ function generarFacturaPDF() {
 
       <br><br>
       <div style="display:flex;justify-content:space-between;margin-top:30px;">
-        <div style="text-align:center;">_______________________<br><small>Firma del Paciente / Responsable</small></div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;width:100%;">
+        <div>${typeof generarSelloFirmaDigitalHTML === "function" ? generarSelloFirmaDigitalHTML("CAJA") : ""}</div>
+        <div style="text-align:center;min-width:210px;"><div style="border-bottom:1.5px solid #000;height:40px;"></div><small style="font-weight:700;">Firma del Paciente / Responsable</small><br><span style="font-size:9px;color:#64748b;">(En blanco — firma física)</span></div>
+      </div>
         <div style="text-align:center;">_______________________<br><small>Jefe de Caja y Facturación HIS</small></div>
       </div>
     </body></html>
@@ -9483,8 +9498,10 @@ function imprimirEpicrisisReceta() {
           <span style="font-size:11px;font-weight:bold;color:#475569;display:block;margin-bottom:4px;">Firma Digital del Médico Tratante (Ley N° 27269):</span>
           ${typeof generarSelloFirmaDigitalHTML === "function" ? generarSelloFirmaDigitalHTML("MEDICO", { fechaHora: fecha }) : ""}
         </div>
-        <div style="border-top:1px solid #000;width:220px;padding-top:4px;text-align:center;">
-          Firma del Paciente / Familiar<br>Conformidad de Alta
+        <div style="text-align:center;width:240px;">
+          <div style="border-bottom:1.5px solid #000;height:44px;"></div>
+          <div style="padding-top:4px;font-size:11px;font-weight:700;">Firma del Paciente / Familiar</div>
+          <div style="font-size:9px;color:#64748b;">(En blanco — firma física; RENIEC sin firma digital ciudadana)</div>
         </div>
       </div>
     </body></html>
@@ -10800,12 +10817,12 @@ function limpiarFormularioCompletoState() {
   STATE.esNN = false;
 
   const inputsIds = [
-    "ident_full", "dni_reniec_input", "dni_mod1", "dni_mod4", "motivo_full", "spo2_full", "fc_full",
+    "ident_full", "dni_reniec_input", "dni_mod1", "dni_mod4", "motivo_full", "motivo_mts_select", "spo2_full", "fc_full",
     "pas_full", "pad_full", "fr_full", "temp_full", "glasgow_full", "glucosa_full",
     "eva_full", "eva_range", "edad_full", "sexo_full", "fecha_nac_full", "alergias_full", "alergias_mod1",
     "cie10_select", "cie10_input", "enfermero_triaje_select", "medico_responsable_select",
     "select_ipress_publica", "select_plan_privado", "sel_consentimiento_medico",
-    "sel_condicion_consentimiento", "sel_procedimiento_consentimiento"
+    "sel_condicion_consentimiento", "sel_procedimiento_consentimiento", "sem_gestacion", "lcf_gestacion"
   ];
   inputsIds.forEach(id => {
     const el = document.getElementById(id);
@@ -10817,7 +10834,12 @@ function limpiarFormularioCompletoState() {
     "chk_gestante_full", "chk_pediatrico_full", "chk_consentimiento_datos",
     "chk_evento_fuga", "chk_exclusion_eps", "chk_consentimiento_firmado",
     "ant_cardio", "ant_resp", "ant_diab", "ant_neuro",
-    "check_gestante", "check_pediatrico"
+    "check_gestante", "check_pediatrico", "mts_disc_vital",
+    "tep_apariencia", "tep_respiracion", "tep_circulacion",
+    "ped_no_reactivo", "ped_lactante_fiebre", "ped_purpura", "ped_tiraje_severo",
+    "ped_llanto_irritable", "ped_sospecha_maltrato",
+    "obst_clave_roja", "obst_alto_riesgo", "obst_estable",
+    "alerta_anafilaxia", "alerta_trauma_mayor", "alerta_neutropenia"
   ];
   checkIds.forEach(id => {
     const el = document.getElementById(id);
@@ -10837,6 +10859,24 @@ function limpiarFormularioCompletoState() {
   if (elGsan) elGsan.value = "Desconocido";
   const elClave = document.getElementById("clave_obstetrica_sel");
   if (elClave) elClave.value = "ninguna";
+  const _selDefaults = { mts_disc_hemorragia: "ninguna", mts_disc_conciencia: "alerta", mts_disc_agudeza: "habitual" };
+  Object.keys(_selDefaults).forEach(k => { const el = document.getElementById(k); if (el) el.value = _selDefaults[k]; });
+  // Colapsar todas las pestañas/subpaneles desplegables para iniciar como primer paciente
+  ["subpanel_mts_pediatrico", "subpanel_mts_gestante", "subpanel_mts_alertas", "subpanel_signos_adicionales"].forEach(pid => {
+    const sp = document.getElementById(pid);
+    if (sp) sp.style.display = "none";
+  });
+  ["spo2_full", "fc_full", "pas_full", "pad_full", "fr_full", "temp_full", "glucosa_full", "glasgow_full", "eva_full"].forEach(vid => {
+    const vel = document.getElementById(vid);
+    if (vel) vel.classList.remove("is-invalid");
+    const err = document.getElementById("error_" + vid);
+    if (err) { err.style.display = "none"; err.innerHTML = ""; }
+  });
+  document.querySelectorAll(".has-error").forEach(c => c.classList.remove("has-error"));
+  const bErr = document.getElementById("banner_error_vitales");
+  if (bErr) bErr.classList.remove("visible"); bErr.style.display = "none";
+  const bParo = document.getElementById("banner_paro_agonia");
+  if (bParo) bParo.style.display = "none";
   STATE.grupoSanguineo = "Desconocido";
 
   if (typeof limpiarIdentificacionPaciente === "function") {
@@ -11242,9 +11282,14 @@ function completarPreTriageSTART(prio, motivo) {
     identificador: ticket,
     nombre: nombrePx,
     prioridad: prio,
+    estadoFlujo: prio === 'I' ? "EN_ATENCION_MEDICA" : "PENDIENTE_TRIAJE",
     motivo: `Pre-Triage START: ${motivo}`,
     modalidad: "A pie",
-    estadoAtencion: prio === 'I' ? "Shock Trauma" : (prio === 'II' ? "Tópico Inmediato" : "En Espera")
+    esPreTriage: true,
+    tipoPreTriage: "START / CTAS-MINSA",
+    camaId: prio === 'I' ? "ST-01" : "SIN-CAMA",
+    camaNombre: prio === 'I' ? "Shock Trauma (Pre-Triage P-I)" : "Sin cama — Cola de Espera / Triaje",
+    estadoAtencion: prio === 'I' ? "Shock Trauma" : "En Espera"
   });
 
   esLlegadaSimultanea = false;
@@ -11275,8 +11320,19 @@ function completarPreTriageSTART(prio, motivo) {
     });
   }
 
-  renderizarTableroColaPacientes();
-  mostrarToastCola(`⚡ <strong>Pre-Triage START Completado:</strong> ${ticket} asignado a <strong>P-${prio}</strong>.`);
+  try {
+    localStorage.setItem("UPP_PACIENTES_COLA_SHARED", JSON.stringify(PACIENTES_COLA));
+    const storeRaw = localStorage.getItem("upp_expedientes_v1");
+    const store = storeRaw ? JSON.parse(storeRaw) : {};
+    store[px.id] = { id: px.id, paciente: JSON.parse(JSON.stringify(px)), state: JSON.parse(JSON.stringify(STATE)), form: capturarFormularioActual(), timestamp: Date.now() };
+    localStorage.setItem("upp_expedientes_v1", JSON.stringify(store));
+  } catch(e) {}
+  if (typeof window.refrescarTrackBoardYBandeja === "function") {
+    window.refrescarTrackBoardYBandeja({ idExpediente: px.id, estadoFlujo: px.estadoFlujo });
+  } else {
+    renderizarTableroColaPacientes();
+  }
+  mostrarToastCola(`⚡ <strong>Pre-Triage START Completado:</strong> ${ticket} asignado a <strong>P-${prio}</strong> e ingresado a la cola de atención.`);
 }
 
 function simularLlegadaMasiva() {
@@ -11403,7 +11459,24 @@ function mostrarToastCola(htmlMsg) {
   }, 4500);
 }
 
-function registrarPacienteEnEspera() {
+function abrirModalLlegadaEnEspera() {
+  const m = document.getElementById("modalLlegadaEnEspera");
+  if (m) m.style.display = "flex";
+  else registrarPacienteEnEspera();
+}
+function cerrarModalLlegadaEnEspera() {
+  const m = document.getElementById("modalLlegadaEnEspera");
+  if (m) m.style.display = "none";
+}
+function confirmarLlegadaEnEspera(modalidad) {
+  cerrarModalLlegadaEnEspera();
+  registrarPacienteEnEspera(modalidad);
+}
+window.abrirModalLlegadaEnEspera = abrirModalLlegadaEnEspera;
+window.cerrarModalLlegadaEnEspera = cerrarModalLlegadaEnEspera;
+window.confirmarLlegadaEnEspera = confirmarLlegadaEnEspera;
+
+function registrarPacienteEnEspera(modalidadElegida = null) {
   guardarEstadoPacienteActivo();
   const num = contadorSecuencialPx++;
   const ticket = `T-${String(num).padStart(3, '0')}`;
@@ -11421,7 +11494,7 @@ function registrarPacienteEnEspera() {
     prioridad: null,
     estadoAtencion: "En Espera",
     estadoFlujo: "PENDIENTE_TRIAJE",
-    modalidad: "A pie",
+    modalidad: modalidadElegida || document.querySelector(".modalidad-btn.selected")?.getAttribute("data-mod") || "A pie",
     camaId: "SIN-CAMA",
     camaNombre: "Sin cama — Sala de Espera / Triaje",
     esNN: false,
@@ -11459,6 +11532,8 @@ function registrarPacienteEnEspera() {
   // Paciente en espera NO evaluado: sin prioridad hasta que enfermería complete el triaje
   STATE.prioridad = null; STATE.colorPrioridad = null; STATE.alertaPrioridad1 = false;
   STATE.ingresoDirectoCritico = false; STATE.panicoShockTrauma = false;
+  STATE.modalidadIngreso = nuevoPx.modalidad;
+  if (typeof selectModalidad === "function") selectModalidad(nuevoPx.modalidad);
   nuevoPx.prioridad = null; nuevoPx.alertaPrioridad1 = false;
   limpiarPrioridadUI();
 
@@ -12869,6 +12944,28 @@ function actualizarVistaSegunEntornoOperativo() {
     }
   }
 
+  const _pub = padron.publico || {};
+  if (padron.tipo_aseguramiento === "SOLO_SIS") {
+    STATE.nroFua = _pub.codigo || STATE.nroFua || `FUA-0410-${String(Date.now()).slice(-6)}`;
+    STATE.numerFua = STATE.nroFua;
+    STATE.estadoFua = STATE.estadoFua || "APERTURA_ADMISION";
+    STATE.nroEssi = null; STATE.estadoEssi = null;
+  } else if (padron.tipo_aseguramiento === "SOLO_ESSALUD") {
+    STATE.nroEssi = _pub.codigo || STATE.nroEssi || `ESSI-${String(Date.now()).slice(-7)}`;
+    STATE.estadoEssi = STATE.estadoEssi || "ACREDITADO_ADMISION";
+    STATE.nroFua = null; STATE.estadoFua = null;
+  }
+  if (typeof pacienteActivoId !== "undefined" && pacienteActivoId && Array.isArray(PACIENTES_COLA)) {
+    const _pxAct = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
+    if (_pxAct) {
+      _pxAct.tipoSeguro = STATE.tipoSeguro;
+      _pxAct.coberturaValidada = true;
+      _pxAct.nroFua = STATE.nroFua || null;
+      _pxAct.estadoFua = STATE.estadoFua || null;
+      _pxAct.nroEssi = STATE.nroEssi || null;
+      _pxAct.estadoEssi = STATE.estadoEssi || null;
+    }
+  }
   // Refrescar en Módulo 3 si está desplegado
   renderizarBoxAcreditacionSusalud(padron);
 }
@@ -14571,35 +14668,54 @@ function obtenerListaTodosPacientesAuditoria() {
 
   listaHoy.forEach(p => {
     const idPx = p.id;
+    const esVivo = (typeof pacienteActivoId !== "undefined" && idPx === pacienteActivoId && typeof STATE !== "undefined");
+    const stSnap = p.stateSnapshot || {};
     const exp = (typeof expedientesStore !== "undefined" && expedientesStore[idPx]) ? expedientesStore[idPx] : {};
-    const esAlta = (p.estadoFlujo === "CERRADO_FACTURADO" || p.estadoFlujo === "ATENDIDO_ALTA" || p.estadoAtencion === "Alta" || p.altaClinicaConcluida);
-    const esFallecido = Boolean(p.fallecido || exp.fallecido || p.estadoFlujo === "FALLECIDO" || exp.estadoSalida === "Deceso — SINADEF" || (p.destino && p.destino.includes("SINADEF")));
+    const src = esVivo ? STATE : stSnap;
+    const ef = p.estadoFlujo || src.estadoFlujo || "PENDIENTE_TRIAJE";
+    const esAlta = (ef === "CERRADO_FACTURADO" || ef === "ATENDIDO_ALTA" || p.estadoAtencion === "Alta" || p.altaClinicaConcluida);
+    const esFallecido = Boolean(p.fallecido || exp.fallecido || ef === "FALLECIDO" || exp.estadoSalida === "Deceso — SINADEF" || (p.destino && p.destino.includes("SINADEF")));
+    const firmas = p.firmas || src.firmas || {};
+    const cobValidada = Boolean(p.coberturaValidada || src.coberturaValidada);
+    const rawSeg = src.tipoSeguro || p.tipoSeguro || exp.tipoSeguro || "";
+    const segReal = (cobValidada && rawSeg && !rawSeg.includes("Pendiente") && !rawSeg.includes("Por confirmar"))
+      ? rawSeg
+      : (p.esNN ? "Paciente NN — Pendiente de identificación" : "⏳ Pendiente de búsqueda y validación (Admisión)");
+    const nroFuaReal = src.nroFua || p.nroFua || src.numerFua || null;
+    const nroEssiReal = src.nroEssi || p.nroEssi || null;
+    const formatoRegimen = nroFuaReal ? `FUA ${nroFuaReal} (${src.estadoFua || p.estadoFua || 'ACTIVO'})`
+      : (nroEssiReal ? `Formato ESSI ${nroEssiReal} (${src.estadoEssi || p.estadoEssi || 'ACTIVO'})` : null);
 
     pacientes.push({
       id: idPx,
+      esTiempoReal: true,
+      firmas,
+      coberturaValidada: cobValidada,
+      nroFua: nroFuaReal,
+      nroEssi: nroEssiReal,
       origen: esAlta ? "HOY_ALTA" : "HOY_ACTIVO",
-      origenLabel: esAlta ? "Hoy (Egresado / Alta)" : "Hoy (Atención Activa)",
+      origenLabel: esAlta ? "Hoy (Egresado / Alta)" : "Hoy (Atención Activa en Tiempo Real)",
       fecha: p.fecha || exp.fecha || fechaHoy,
-      horaLlegada: p.horaLlegada || exp.horaLlegada || (p.timestampLlegada ? new Date(p.timestampLlegada).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "08:00:00"),
-      horaTriaje: p.horaTriaje || exp.horaTriaje || "08:05:00",
-      horaAtencion: p.horaAtencion || exp.horaAtencion || "08:10:00",
-      horaAlta: p.horaAlta || exp.horaAlta || (esAlta ? new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "--:--:--"),
-      ticket: p.ticket || exp.ticket || "T-001",
-      nombre: p.nombre || exp.nombreReniec || exp.identificador || "PACIENTE SIN NOMBRE",
-      numDni: p.numDni || p.dni || exp.numDni || (p.esNN ? "NN-INDOCUMENTADO" : "S/D"),
-      historiaClinica: p.historiaClinica || exp.historiaClinica || `HC-EMG-${fechaHoy.replace(/-/g, '')}-${idPx.slice(-4)}`,
-      edad: p.edad || exp.edad || "—",
-      sexo: p.sexo || exp.sexo || "—",
-      prioridad: p.prioridad || exp.prioridad || "V",
-      colorPrioridad: p.colorPrioridad || exp.colorPrioridad || "AZUL",
-      camaAsignada: p.camaAsignada || p.camaNombre || exp.camaAsignada || "Sala de Espera",
-      motivo: p.motivo || exp.motivoConsulta || "Atención de Emergencia",
-      diagnosticoCie10: exp.diagnosticoCie10 || p.diagnosticoCie10 || p.cie10 || "Evaluación Clínica de Emergencia",
-      medicoTratante: exp.medicoResponsable || p.medicoTratante || "Dr. Carlos Vega Alva (CMP 58321 · RNE 23901 - Emergenciología)",
-      enfermeraTriaje: exp.enfermeraTriaje || p.enfermeraTriaje || "Lic. Ana Torres Morales (CEP 92410)",
-      seguro: p.tipoSeguro || exp.tipoSeguro || "SIS",
-      tipoCobertura: exp.tipoCobertura || "Cobertura Ley N° 27604 / Cobertura Regular",
-      estadoFlujo: esFallecido ? "FALLECIDO" : (p.estadoFlujo || exp.estadoFlujo || "EN_CURSO"),
+      horaLlegada: p.horaLlegada || exp.horaLlegada || (p.timestampLlegada ? new Date(p.timestampLlegada).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "--:--:--"),
+      horaTriaje: firmas.triaje ? new Date(firmas.triaje.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : (p.horaTriaje || exp.horaTriaje || "⏳ Pendiente"),
+      horaAtencion: firmas.medico ? new Date(firmas.medico.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : (p.horaAtencion || exp.horaAtencion || "⏳ Pendiente"),
+      horaAlta: p.horaAlta || exp.horaAlta || (esAlta ? new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "En curso"),
+      ticket: p.turno || p.ticket || exp.ticket || (p.identificador ? String(p.identificador).replace(/^Ticket\s*/i, "") : "T-001"),
+      nombre: (esVivo ? STATE.nombreReniec : null) || p.nombre || exp.nombreReniec || p.identificador || "PACIENTE SIN NOMBRE",
+      numDni: (esVivo ? STATE.numDni : null) || p.numDni || p.dni || exp.numDni || (p.esNN ? "NN-INDOCUMENTADO" : "Pendiente"),
+      historiaClinica: (esVivo && STATE.historiaClinica && STATE.historiaClinica !== "—") ? STATE.historiaClinica : (p.historiaClinica || exp.historiaClinica || `HC-EMG-${fechaHoy.replace(/-/g, '')}-${idPx.slice(-4)}`),
+      edad: (esVivo ? STATE.edad : null) || p.edad || exp.edad || "—",
+      sexo: (esVivo ? STATE.sexo : null) || p.sexo || exp.sexo || "—",
+      prioridad: (esVivo ? STATE.prioridad : null) || p.prioridad || exp.prioridad || null,
+      colorPrioridad: (esVivo ? STATE.colorPrioridad : null) || p.colorPrioridad || exp.colorPrioridad || null,
+      camaAsignada: (esVivo ? STATE.camaAsignada : null) || p.camaAsignada || p.camaNombre || exp.camaAsignada || "Sala de Espera / Triaje (Sin cama)",
+      motivo: (esVivo ? STATE.motivoConsulta : null) || p.motivo || exp.motivoConsulta || "Por evaluar en triaje",
+      diagnosticoCie10: (esVivo ? STATE.cie10 : null) || exp.diagnosticoCie10 || p.diagnosticoCie10 || p.cie10 || "Por determinar (Atención Médica)",
+      medicoTratante: (firmas.medico?.usuario) || ((esVivo && STATE.medicoTratante && STATE.medicoTratante !== "Por asignar") ? STATE.medicoTratante : null) || p.medico || p.medicoTratante || "⏳ Por asignar",
+      enfermeraTriaje: (firmas.triaje?.usuario) || p.enfermeraTriaje || exp.enfermeraTriaje || (p.prioridad ? "Lic. Enfermería de Triaje" : "⏳ Por evaluar"),
+      seguro: segReal,
+      tipoCobertura: formatoRegimen || (cobValidada ? (exp.tipoCobertura || "Validado en Admisión / SUSALUD") : "Sin validar aún"),
+      estadoFlujo: esFallecido ? "FALLECIDO" : ef,
       fallecido: esFallecido,
       sinadef: p.sinadef || exp.sinadef || (esFallecido ? "SINADEF-2026-904128" : null),
       horaFallecimiento: p.horaFallecimiento || exp.horaFallecimiento || (esFallecido ? "09:42:15" : null),
@@ -14625,16 +14741,16 @@ function obtenerListaTodosPacientesAuditoria() {
       })(),
       alergias: exp.alergias || exp.alergiasConocidas || p.alergias || "Niega alergias conocidas",
       vitales: {
-        spo2: p.spo2 || exp.spo2 || 98,
-        fc: p.fc || exp.fc || 80,
-        pas: p.pas || exp.pasSistolica || 120,
-        pad: p.pad || exp.paDiastolica || 80,
-        fr: p.fr || exp.fr || 18,
-        temp: p.temp || exp.temperatura || 36.6,
-        glasgow: p.glasgow || exp.glasgow || 15,
-        eva: p.eva || exp.eva || 0,
-        glucosa: p.glucosa || exp.glucosa || 100,
-        news2: p.news2Score || exp.news2Score || 0
+        spo2: (esVivo ? STATE.spo2 : stSnap.spo2) ?? p.spo2 ?? exp.spo2 ?? null,
+        fc: (esVivo ? STATE.fc : stSnap.fc) ?? p.fc ?? exp.fc ?? null,
+        pas: (esVivo ? STATE.pasSistolica : stSnap.pasSistolica) ?? p.pas ?? exp.pasSistolica ?? null,
+        pad: (esVivo ? STATE.paDiastolica : stSnap.paDiastolica) ?? p.pad ?? exp.paDiastolica ?? null,
+        fr: (esVivo ? STATE.fr : stSnap.fr) ?? p.fr ?? exp.fr ?? null,
+        temp: (esVivo ? STATE.temperatura : stSnap.temperatura) ?? p.temp ?? exp.temperatura ?? null,
+        glasgow: (esVivo ? STATE.glasgow : stSnap.glasgow) ?? p.glasgow ?? exp.glasgow ?? null,
+        eva: (esVivo ? STATE.eva : stSnap.eva) ?? p.eva ?? exp.eva ?? null,
+        glucosa: (esVivo ? STATE.glucosa : stSnap.glucosa) ?? p.glucosa ?? exp.glucosa ?? null,
+        news2: p.news2Score ?? exp.news2Score ?? null
       },
       indicaciones: exp.indicacionesMedicas || p.indicaciones || "Atención clínica protocolizada según NTS N° 042-MINSA.",
       kardexAdministrados: p.kardexAdministrados || exp.kardexAdministrados || (typeof STATE !== "undefined" && STATE.kardexAdministrados ? STATE.kardexAdministrados : []),
@@ -14832,18 +14948,32 @@ function renderizarFichaTrazabilidad(px) {
     "IV": { bg: "#dcfce7", text: "#166534", border: "#4ade80", label: "Prioridad IV — Urgencia Menor Ambulatoria (Atención ≤ 60 min)", chip: "VERDE" },
     "V": { bg: "#dbeafe", text: "#1e40af", border: "#60a5fa", label: "Prioridad V — No Urgente / Consultorio (Atención ≤ 120 min)", chip: "AZUL" }
   };
-  const prioCfg = prioColors[px.prioridad] || { bg: "#f1f5f9", text: "#334155", border: "#cbd5e1", label: `Prioridad ${px.prioridad}`, chip: "GRIS" };
+  const prioCfg = prioColors[px.prioridad] || { bg: "#f1f5f9", text: "#475569", border: "#cbd5e1", label: px.prioridad ? `Prioridad ${px.prioridad}` : "⏳ Sin Prioridad (Por evaluar en Triaje)", chip: "PENDIENTE" };
 
   // Formatear procedimientos con horas exactas
   let procsHTML = "";
-  const listaProcs = (px.procedimientos && px.procedimientos.length > 0)
-    ? px.procedimientos
-    : [
-        { hora: `${fechaBase} ${horaLlegada}`, nombre: "Admisión institucional y apertura de historia clínica de emergencia", profesional: "Srta. Sofía Quispe Méndez (Admisión)" },
-        { hora: `${fechaBase} ${px.horaTriaje || '08:17:00'}`, nombre: `Evaluación de Triaje MTS / Clasificación ${prioCfg.label}`, profesional: px.enfermeraTriaje || "Lic. Ana Torres Morales (CEP 92410)" },
-        { hora: `${fechaBase} ${px.horaAtencion || '08:20:00'}`, nombre: `Instalación en ${px.camaAsignada || 'Tópico de Emergencia'} y monitoreo de signos vitales`, profesional: px.enfermeraTriaje || "Lic. Ana Torres Morales (CEP 92410)" },
-        { hora: `${fechaBase} ${px.horaAtencion || '08:25:00'}`, nombre: `Evaluación Médica Integral, formulación de hipótesis diagnóstica CIE-10 y conducta asistencial`, profesional: px.medicoTratante || "Dr. Carlos Vega Alva (CMP 58321)" }
-      ];
+  let listaProcs = [];
+  if (px.procedimientos && px.procedimientos.length > 0) {
+    listaProcs = px.procedimientos;
+  } else if (px.esTiempoReal) {
+    listaProcs.push({ hora: `${fechaBase} ${horaLlegada}`, nombre: "Ingreso a Emergencia y registro en cola de atención", profesional: "Sistema de Recepción / Triaje" });
+    if (px.prioridad || px.firmas?.triaje) {
+      listaProcs.push({ hora: `${fechaBase} ${px.horaTriaje}`, nombre: `Evaluación de Triaje — ${prioCfg.label}`, profesional: px.enfermeraTriaje });
+    }
+    if (px.coberturaValidada || px.firmas?.admision) {
+      listaProcs.push({ hora: `${fechaBase} ${px.firmas?.admision ? new Date(px.firmas.admision.fecha).toLocaleTimeString('es-PE') : horaLlegada}`, nombre: `Validación de Seguro: ${px.seguro} (${px.tipoCobertura})`, profesional: px.firmas?.admision?.usuario || "Admisión SUSALUD" });
+    }
+    if (px.firmas?.medico) {
+      listaProcs.push({ hora: `${fechaBase} ${px.horaAtencion}`, nombre: `Atención Médica y Alta (${px.diagnosticoCie10})`, profesional: px.medicoTratante });
+    }
+  } else {
+    listaProcs = [
+      { hora: `${fechaBase} ${horaLlegada}`, nombre: "Admisión institucional y apertura de historia clínica de emergencia", profesional: "Srta. Sofía Quispe Méndez (Admisión)" },
+      { hora: `${fechaBase} ${px.horaTriaje || '08:17:00'}`, nombre: `Evaluación de Triaje MTS / Clasificación ${prioCfg.label}`, profesional: px.enfermeraTriaje || "Lic. Ana Torres Morales (CEP 92410)" },
+      { hora: `${fechaBase} ${px.horaAtencion || '08:20:00'}`, nombre: `Instalación en ${px.camaAsignada || 'Tópico de Emergencia'} y monitoreo de signos vitales`, profesional: px.enfermeraTriaje || "Lic. Ana Torres Morales (CEP 92410)" },
+      { hora: `${fechaBase} ${px.horaAtencion || '08:25:00'}`, nombre: `Evaluación Médica Integral, formulación de hipótesis diagnóstica CIE-10 y conducta asistencial`, profesional: px.medicoTratante || "Dr. Carlos Vega Alva (CMP 58321)" }
+    ];
+  }
 
   procsHTML = listaProcs.map(pr => `
     <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px;">
@@ -14873,7 +15003,7 @@ function renderizarFichaTrazabilidad(px) {
     } else {
       itemsKardex = px.kardexAdministrados;
     }
-  } else {
+  } else if (!px.esTiempoReal) {
     itemsKardex = [
       { hora: `${fechaBase} 08:25:00`, medicamento: "Cloruro de Sodio 0.9% 1000 ml", dosis: "1000 ml", via: "Endovenoso continuo (EV)", enfermera: px.enfermeraTriaje || "Lic. Ana Torres Morales (CEP 92410)", estado: "Administrado y Validado" },
       { hora: `${fechaBase} 08:35:00`, medicamento: "Terapia Sintomática Analgésica / Protectora", dosis: "Según prescripción", via: "Endovenoso lento (EV)", enfermera: px.enfermeraTriaje || "Lic. Ana Torres Morales (CEP 92410)", estado: "Administrado y Validado" }
@@ -14893,7 +15023,7 @@ function renderizarFichaTrazabilidad(px) {
         </tr>
       </thead>
       <tbody>
-        ${itemsKardex.map((k, idx) => `
+        ${itemsKardex.length === 0 ? '<tr><td colspan="6" style="padding:12px;text-align:center;color:#64748b;font-style:italic;">Sin medicación administrada aún en esta atención.</td></tr>' : itemsKardex.map((k, idx) => `
           <tr style="border-bottom:1px solid #e2e8f0; background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
             <td style="padding:8px 10px; font-family:monospace; font-weight:800; color:#0f172a;">${k.hora.includes(' ') ? k.hora : `${fechaBase} ${k.hora}`}</td>
             <td style="padding:8px 10px; font-weight:800; color:#1e293b;">${k.medicamento}</td>
@@ -15107,7 +15237,7 @@ function renderizarFichaTrazabilidad(px) {
         </div>
         <div style="background:#fff; border:1px solid #cbd5e1; padding:6px 8px; border-radius:6px;">
           <div style="color:#64748b; font-size:0.70rem;">Glasgow / EVA</div>
-          <div style="font-weight:900; font-size:0.95rem; color:#0f172a;">${vit.glasgow ?? '15'}/15 · EVA:${vit.eva ?? '0'}</div>
+          <div style="font-weight:900; font-size:0.95rem; color:#0f172a;">${vit.glasgow ?? '—'}/15 · EVA:${vit.eva ?? '—'}</div>
         </div>
         <div style="background:#fff; border:1px solid #cbd5e1; padding:6px 8px; border-radius:6px;">
           <div style="color:#64748b; font-size:0.70rem;">NEWS2 Score</div>
@@ -17027,7 +17157,7 @@ function construirHTMLDocumentoConsentimiento() {
             <div style="border-bottom:1.5px solid #000; height:50px;"></div>
             <div style="margin-top:4px; font-weight:700;">Firma del Paciente / Representante</div>
             <div>DNI: _______________________</div>
-            <div style="font-size:8.5px; color:#64748b;">Parentesco: ___________________</div>
+            <div style="font-size:8.5px; color:#64748b;">(En blanco — RENIEC aún no implementa firma digital ciudadana)</div>
           </td>
           <td style="width:28%; vertical-align:middle; padding:0 6px;">
             <div style="width:68px; height:78px; border:1.5px dashed #475569; margin:auto; display:flex; align-items:center; justify-content:center; font-size:8px; color:#64748b; text-align:center;">
@@ -17035,10 +17165,7 @@ function construirHTMLDocumentoConsentimiento() {
             </div>
           </td>
           <td style="width:36%; vertical-align:bottom; padding:0 8px;">
-            <div style="border-bottom:1.5px solid #000; height:50px;"></div>
-            <div style="margin-top:4px; font-weight:700;">Firma y Sello del Médico Tratante</div>
-            <div>${medResponsable}</div>
-            <div style="font-size:8.5px; color:#64748b;">Colegio Médico del Perú (CMP)</div>
+            ${typeof generarSelloFirmaDigitalHTML === "function" ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: medResponsable }) : '<div style="border-bottom:1.5px solid #000; height:50px;"></div><div>' + medResponsable + '</div>'}
           </td>
         </tr>
       </table>
