@@ -442,6 +442,11 @@
           🛡️ Rol: AUDITOR
         </span>
 
+        <!-- Botón Historia Clínica -->
+        <button type="button" id="btn_cockpit_historia_clinica" onclick="if(typeof abrirHistoriaClinicaPacienteActual==='function')abrirHistoriaClinicaPacienteActual()" title="Ver Historia Clínica completa del paciente" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; font-size:12px; font-weight:800; border-radius:6px; border:1.5px solid #0284c7; background:#0284c7; color:#ffffff; cursor:pointer; box-shadow:0 1px 3px rgba(2,132,199,0.3);">
+          <span>📖</span> Historia Clínica
+        </button>
+
         <!-- Botón Trazabilidad Integral en Modo Auditor -->
         <button type="button" class="cockpit-btn-trazabilidad" id="btn_cockpit_trazabilidad" onclick="abrirModalTrazabilidadAuditor()" title="Auditoría Forense y Trazabilidad Clínica Integral (NTS N° 139-MINSA)" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; font-size:12px; font-weight:800; border-radius:6px; border:1.5px solid #4338ca; background:#4f46e5; color:#ffffff; cursor:pointer; box-shadow:0 1px 3px rgba(79,70,229,0.35);">
           <span>📜</span> Trazabilidad
