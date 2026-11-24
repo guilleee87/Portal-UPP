@@ -667,17 +667,29 @@
 
     if (todosModulosExpandidos) {
       if (btn) btn.innerHTML = "⤡ Contraer Fases";
-      if (phase1) phase1.style.display = "block";
-      if (phase2) phase2.style.display = "block";
-      if (phase3) phase3.style.display = "block";
-      if (phase4) phase4.style.display = "block";
+      [phase1, phase2, phase3, phase4].forEach(p => {
+        if (p) {
+          p.classList.add("cockpit-phase-active");
+          p.style.display = "";
+        }
+      });
 
       for (let i = 1; i <= 8; i++) {
         const sec = document.getElementById(`sec_mod${i}`);
+        const body = document.getElementById(`body_mod${i}`);
+        const arrow = document.getElementById(`arrow_mod${i}`);
         if (sec) sec.style.display = "block";
+        if (body) { body.classList.add("open"); body.style.display = "block"; }
+        if (arrow) arrow.classList.add("open");
       }
     } else {
       if (btn) btn.innerHTML = "⤢ Expandir Todo";
+      [phase1, phase2, phase3, phase4].forEach(p => {
+        if (p) {
+          p.classList.remove("cockpit-phase-active");
+          p.style.display = "";
+        }
+      });
       irAFase(faseActiva);
     }
   }
@@ -1141,6 +1153,12 @@ function refrescarValoresMonitor() {
       const esAuditor = rolActual === "AUDITOR" || rolActual === "ADMIN" || (window.RBAC_FLUJO && window.RBAC_FLUJO.obtenerModoOperacion() === "DEMO");
       simSelect.style.display = esAuditor ? "inline-block" : "none";
     }
+
+    const soloAuditor = (rolActual === "AUDITOR" || rolActual === "ADMIN");
+    const btnHcGlobal = document.getElementById("btn_cockpit_historia_clinica");
+    if (btnHcGlobal) btnHcGlobal.style.display = soloAuditor ? "inline-flex" : "none";
+    const btnHcTablero = document.getElementById("btn_tablero_hc");
+    if (btnHcTablero) btnHcTablero.style.display = soloAuditor ? "inline-block" : "none";
 
     if (rolActual === "MEDICO") actualizarTarjetaResumenTriaje();
     if (rolActual === "CAJA") actualizarTarjetaResumenCaja();

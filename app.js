@@ -654,13 +654,18 @@ function buscarHistoriasClinicasCentro() {
     `;
     row.onclick = () => {
       cerrarRepositorioHistoriasClinicas();
-      visualizarHistoriaClinica(p);
+      visualizarHistoriaClinica(p, { desdeArchivoAuditor: true });
     };
     cont.appendChild(row);
   });
 }
 
 function abrirRepositorioHistoriasClinicas() {
+  const rolAct = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === "function") ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
+  if (rolAct !== "AUDITOR" && rolAct !== "ADMIN") {
+    alert("🔒 Acceso Restringido (Ley N° 29733 & NTS N° 139-MINSA): El archivo general de Historias Clínicas solo puede consultarse desde el rol AUDITOR.");
+    return;
+  }
   const m = document.getElementById("modal_repositorio_hc");
   if (!m) return;
   const inp = document.getElementById("input_buscar_hc_centro");
@@ -677,6 +682,118 @@ window.obtenerTodasHistoriasClinicasCentro = obtenerTodasHistoriasClinicasCentro
 window.buscarHistoriasClinicasCentro = buscarHistoriasClinicasCentro;
 window.abrirRepositorioHistoriasClinicas = abrirRepositorioHistoriasClinicas;
 window.cerrarRepositorioHistoriasClinicas = cerrarRepositorioHistoriasClinicas;
+
+function obtenerIpEstacionAuditor() {
+  if (window._ipEstacionAuditorCache) return window._ipEstacionAuditorCache;
+  const host = (typeof location !== "undefined" && location.hostname && location.hostname !== "localhost" && location.hostname !== "127.0.0.1")
+    ? location.hostname
+    : "192.168.10.42";
+  window._ipEstacionAuditorCache = host;
+  return host;
+}
+
+function renderizarBloqueAuditoriaEdicionHC(master, ident, hc) {
+  const rolAct = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === "function") ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
+  const mods = Array.isArray(master?.modificaciones_auditoria) ? master.modificaciones_auditoria : [];
+  const modsHtml = mods.length === 0
+    ? '<div style="font-size:0.75rem;color:#64748b;font-style:italic;">Sin modificaciones registradas en esta Historia Clínica.</div>'
+    : mods.map(m => `
+        <div style="background:#ffffff;border:1px solid #cbd5e1;border-left:4px solid #4f46e5;border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:0.76rem;">
+          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-weight:800;color:#1e1b4b;">
+            <span>👤 Modificado por: ${m.usuario}</span>
+            <span style="font-family:monospace;color:#0369a1;">🌐 IP PC: ${m.ip_pc} · 📅 ${m.dia} ⏱️ ${m.hora}</span>
+          </div>
+          <div style="color:#334155;margin-top:4px;">${m.detalle}</div>
+        </div>
+      `).join("");
+
+  if (rolAct !== "AUDITOR" && rolAct !== "ADMIN") {
+    return mods.length > 0 ? `<div style="margin-top:10px;padding:10px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;"><strong>🛡️ Registro de Modificaciones (Auditoría):</strong>${modsHtml}</div>` : "";
+  }
+
+  const safeId = String(ident || hc).replace(/'/g, "\\'");
+  const safeHc = String(hc || "").replace(/'/g, "\\'");
+  return `
+    <div style="background:#eef2ff;border:1.5px solid #a5b4fc;border-radius:10px;padding:12px 14px;margin-top:12px;">
+      <div style="font-size:0.84rem;font-weight:900;color:#312e81;margin-bottom:8px;">
+        🛡️ Enmienda / Modificación de Historia Clínica (Solo Rol Auditor — Trazabilidad Inmutable)
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div>
+          <label style="font-size:0.72rem;font-weight:700;color:#1e1b4b;">Alergias Registradas:</label>
+          <input type="text" id="hc_audit_edit_alergias" class="input-full" value="${(master?.alergias || '').replace(/"/g, '&quot;')}" style="font-size:0.78rem;">
+        </div>
+        <div>
+          <label style="font-size:0.72rem;font-weight:700;color:#1e1b4b;">Antecedentes Relevantes:</label>
+          <input type="text" id="hc_audit_edit_antecedentes" class="input-full" value="${(master?.antecedentes || '').replace(/"/g, '&quot;')}" style="font-size:0.78rem;">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+        <input type="text" id="hc_audit_edit_obs" class="input-full" placeholder="Motivo / Nota de modificación de auditoría..." style="flex:1;min-width:200px;font-size:0.78rem;">
+        <button type="button" id="btn_guardar_mod_auditor_hc" class="btn-full-primary" style="background:#4338ca;padding:8px 14px;font-size:0.78rem;font-weight:800;" onclick="guardarModificacionAuditorHC('${safeId}','${safeHc}')">
+          💾 Guardar Modificación
+        </button>
+      </div>
+      <div id="hc_audit_modificaciones_lista">
+        <div style="font-size:0.74rem;font-weight:800;color:#312e81;margin-bottom:4px;">Bitácora de Modificaciones (Usuario, IP de PC, Día y Hora):</div>
+        ${modsHtml}
+      </div>
+    </div>
+  `;
+}
+
+function guardarModificacionAuditorHC(ident, hc) {
+  const rolAct = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === "function") ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
+  if (rolAct !== "AUDITOR" && rolAct !== "ADMIN") {
+    alert("Solo el rol AUDITOR puede modificar la Historia Clínica desde el archivo.");
+    return;
+  }
+  const ses = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerSesionActiva === "function") ? window.RBAC_FLUJO.obtenerSesionActiva() : null;
+  const nombreAuditor = ses?.nombre || ses?.usuario || "Dra. Elena Ríos Salazar (Auditora Médica · CMP 41209)";
+  const ipPc = obtenerIpEstacionAuditor();
+  const ahora = new Date();
+  const diaStr = ahora.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const horaStr = ahora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+  const nuevasAlergias = (document.getElementById("hc_audit_edit_alergias")?.value || "").trim();
+  const nuevosAntec = (document.getElementById("hc_audit_edit_antecedentes")?.value || "").trim();
+  const notaObs = (document.getElementById("hc_audit_edit_obs")?.value || "").trim() || "Actualización de datos clínicos por Auditoría";
+
+  const master = cargarPacientesMaster();
+  const cId = normalizarClavePaciente(ident);
+  const cHc = normalizarClavePaciente(hc);
+  const p = master[cId] || master[cHc] || obtenerOInicializarPacienteMaster(ident, hc, ident, "Por validar");
+
+  const cambios = [];
+  if (nuevasAlergias && nuevasAlergias !== p.alergias) {
+    cambios.push(`Alergias: "${p.alergias || '—'}" → "${nuevasAlergias}"`);
+    p.alergias = nuevasAlergias;
+  }
+  if (nuevosAntec && nuevosAntec !== p.antecedentes) {
+    cambios.push(`Antecedentes: "${p.antecedentes || '—'}" → "${nuevosAntec}"`);
+    p.antecedentes = nuevosAntec;
+  }
+  const detalle = cambios.length > 0 ? `${cambios.join(" | ")} · Nota: ${notaObs}` : notaObs;
+
+  p.modificaciones_auditoria = Array.isArray(p.modificaciones_auditoria) ? p.modificaciones_auditoria : [];
+  p.modificaciones_auditoria.unshift({
+    usuario: nombreAuditor,
+    ip_pc: ipPc,
+    dia: diaStr,
+    hora: horaStr,
+    detalle
+  });
+
+  if (cId) master[cId] = p;
+  if (cHc) master[cHc] = p;
+  guardarPacientesMaster(master);
+
+  if (typeof registrarLogAuditoria === "function") {
+    registrarLogAuditoria("Archivo HC", "MODIFICACION_HC_AUDITOR", `${nombreAuditor} | IP ${ipPc} | ${diaStr} ${horaStr} | ${detalle}`);
+  }
+  visualizarHistoriaClinica(p, { desdeArchivoAuditor: true });
+}
+window.guardarModificacionAuditorHC = guardarModificacionAuditorHC;
 window.generarDatosDemograficosCoherentes = generarDatosDemograficosCoherentes;
 
 function registrarEpisodioEnHistoriaClinica(px = {}, etapa = "Triaje") {
@@ -1759,7 +1876,7 @@ function cerrarModalVisualizarHC() {
 }
 
 
-function visualizarHistoriaClinica(pacienteEncoded) {
+function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
   let p;
   try {
     p = typeof pacienteEncoded === "string" ? JSON.parse(decodeURIComponent(pacienteEncoded)) : pacienteEncoded;
@@ -1894,14 +2011,18 @@ function visualizarHistoriaClinica(pacienteEncoded) {
         </h4>
         <span style="font-size:0.75rem;color:#64748b;font-style:italic;">Cronología clínica acumulativa</span>
       </div>
-      <div style="max-height:360px;overflow-y:auto;padding-right:4px;">
+      <div style="max-height:300px;overflow-y:auto;padding-right:4px;">
         ${htmlEpisodios}
       </div>
     </div>
+    ${renderizarBloqueAuditoriaEdicionHC(master, ident, hc)}
   `;
   // Asignar eventos de botones del modal
   const btnCargar = document.getElementById("btn_modal_cargar_paciente");
   if (btnCargar) {
+    const rolActModal = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === "function") ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
+    const bloquearIngresoDesdeHC = Boolean(opciones.desdeArchivoAuditor || rolActModal === "AUDITOR");
+    if (bloquearIngresoDesdeHC) { btnCargar.style.setProperty("display", "none", "important"); } else { btnCargar.style.removeProperty("display"); }
     btnCargar.onclick = () => {
       cerrarModalVisualizarHC();
       seleccionarPacienteDeBusqueda(pacienteEncoded);
