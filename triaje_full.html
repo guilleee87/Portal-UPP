@@ -2902,146 +2902,346 @@
 
 
 
-        <!-- 3. MOTIVO DE CONSULTA -->
-        <div class="form-field">
-          <label for="motivo_full">Motivo Principal de Consulta / Anamnesis Breve:</label>
-          <input type="text" id="motivo_full" class="input-full" placeholder="Ej. Dolor torácico opresivo / Dificultad respiratoria súbita / Politraumatismo por atropello" oninput="STATE.motivoConsulta = this.value">
-        </div>
-
-        <!-- 4. 8 SIGNOS VITALES FISIOLÓGICOS (GRILLA 4x2) -->
-        <div style="font-size:0.82rem; font-weight:800; color:#0f172a; margin: 12px 0 8px; text-transform:uppercase; letter-spacing:0.5px;">
-          🩺 Evaluación de Constantes Vitales Fisiológicas:
-        </div>
-        <div class="form-grid-4 vital-signs-grid">
-          <div class="form-field" id="card_spo2">
-            <label for="spo2_full">Saturación SpO2 (%):</label>
-            <input type="number" id="spo2_full" class="input-full" placeholder="98" min="0" max="100">
-            <span class="field-hint">Alerta: &lt; 90% Hipoxemia severa</span>
-          </div>
-          <div class="form-field" id="card_fc">
-            <label for="fc_full">Frec. Cardíaca (lpm):</label>
-            <input type="number" id="fc_full" class="input-full" placeholder="78" min="0" max="260">
-            <span class="field-hint">Alerta: &gt; 130 o &lt; 45 lpm</span>
-          </div>
-          <div class="form-field" id="card_pas">
-            <label for="pas_full">PA Sistólica (mmHg):</label>
-            <input type="number" id="pas_full" class="input-full" placeholder="120" min="0" max="280">
-            <span class="field-hint">Alerta: &lt; 80 o &gt; 180 mmHg</span>
-          </div>
-          <div class="form-field" id="card_pad">
-            <label for="pad_full">PA Diastólica (mmHg):</label>
-            <input type="number" id="pad_full" class="input-full" placeholder="80" min="0" max="180">
-            <span class="field-hint">Alerta: &gt; 110 mmHg</span>
-          </div>
-          <div class="form-field" id="card_fr">
-            <label for="fr_full">Frec. Respiratoria (rpm):</label>
-            <input type="number" id="fr_full" class="input-full" placeholder="18" min="0" max="70">
-            <span class="field-hint">Alerta: &gt; 30 o &lt; 10 rpm</span>
-          </div>
-          <div class="form-field" id="card_temp">
-            <label for="temp_full">Temperatura (°C):</label>
-            <input type="number" step="0.1" id="temp_full" class="input-full" placeholder="36.5" min="25" max="44">
-            <span class="field-hint">Alerta: &gt; 39.5°C o &lt; 35°C</span>
-          </div>
-          <div class="form-field" id="card_glasgow">
-            <label for="glasgow_full">Escala de Glasgow (3-15):</label>
-            <input type="number" id="glasgow_full" class="input-full" placeholder="15" min="3" max="15">
-            <span class="field-hint">Alerta: &lt;= 8 Coma (Shock Trauma)</span>
-          </div>
-          <div class="form-field" id="card_glucosa">
-            <label for="glucosa_full">Glicemia Capilar (mg/dL):</label>
-            <input type="number" id="glucosa_full" class="input-full" placeholder="105" min="0" max="800">
-            <span class="field-hint">Alerta: &lt; 54 (Hipo) o &gt; 400 (Ceto)</span>
-          </div>
-        </div>
-
-        <!-- 5. ESCALA VISUAL ANALÓGICA DEL DOLOR (EVA) -->
-        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 16px; margin: 12px 0;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label for="eva_range" style="font-weight:700; font-size:0.82rem; color:#0f172a;">
-              Escala Visual Analógica del Dolor (EVA 0 a 10):
+                <!-- ==================================================================== -->
+        <!-- PASO 1 MTS: MOTIVO DE PRESENTACIÓN (11 CATEGORÍAS CLAVE MANCHESTER) -->
+        <!-- ==================================================================== -->
+        <div class="mts-block-container" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label for="motivo_mts_select" style="font-size:0.82rem; font-weight:800; color:#0f172a; margin:0;">
+              🎯 Paso 1 — Motivo de Presentación MTS (Manchester Triage System):
             </label>
-            <span id="eva_label" style="font-weight:800; font-size:0.88rem; color:#0284c7;">Sin dolor (0/10)</span>
+            <span style="font-size:0.70rem; font-weight:700; color:#0284c7; background:#e0f2fe; padding:2px 8px; border-radius:4px;">
+              ⏱️ Triaje 2-3 min · NTS N° 042-MINSA
+            </span>
           </div>
-          <div style="display:flex; align-items:center; gap:12px; margin-top:6px;">
-            <input type="range" id="eva_range" min="0" max="10" value="0" style="flex:1;" oninput="actualizarEVA(this.value)">
-            <input type="number" id="eva_full" min="0" max="10" value="0" style="width:55px; text-align:center;" class="input-full" oninput="actualizarEVA(this.value)">
-          </div>
-          <div style="font-size:0.72rem; color:#64748b; margin-top:4px;">
-            * Nota de Auditoría NTS N° 042-MINSA: Un dolor severo (EVA 8 a 10) eleva automáticamente al paciente al menos a Prioridad II o III aun con signos normales.
-          </div>
-        </div>
-
-        <!-- 6. ACTIVADORES DE CÓDIGOS TIEMPO-DEPENDIENTES -->
-        <div style="font-size:0.82rem; font-weight:800; color:#0f172a; margin: 14px 0 6px; text-transform:uppercase;">
-          ⏱️ Activadores de Códigos Tiempo-Dependientes (Ruta Crítica Inmediata):
-        </div>
-        <div class="codigos-grid">
-          <label class="codigo-card" id="card_cod_infarto">
-            <input type="checkbox" id="check_cod_infarto" onchange="toggleCodigoTiempo('infarto', this.checked)">
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
             <div>
-              <strong>⚡ Código Infarto</strong>
-              <span>Dolor torácico opresivo retroesternal → Orden obligatoria de EKG en &lt; 10 min</span>
+              <select id="motivo_mts_select" class="input-full" onchange="seleccionarMotivoMTS(this.value)" style="font-weight:600; font-size:0.82rem; height:38px;">
+                <option value="">-- Seleccione Motivo de Presentación MTS --</option>
+                <option value="dolor_toracico">🫀 Dolor torácico</option>
+                <option value="disnea">🫁 Disnea / Dificultad respiratoria</option>
+                <option value="trauma">🩹 Trauma / Heridas / Lesiones</option>
+                <option value="dolor_abdominal">🤢 Dolor abdominal</option>
+                <option value="neurologico">🧠 Cefalea / Déficit neurológico</option>
+                <option value="fiebre">🌡️ Fiebre / Infección</option>
+                <option value="sangrado">🩸 Sangrado / Hemorragia</option>
+                <option value="intoxicacion_alergia">⚠️ Intoxicación / Alergia</option>
+                <option value="embarazo">🤰 Embarazo / Obstétrico</option>
+                <option value="pediatrico">👶 Pediátrico (&lt; 14 años)</option>
+                <option value="menor">🩹 Problema menor / Malestar local</option>
+              </select>
             </div>
-          </label>
-          <label class="codigo-card" id="card_cod_ictus">
-            <input type="checkbox" id="check_cod_ictus" onchange="toggleCodigoTiempo('ictus', this.checked)">
             <div>
-              <strong>🧠 Código Ictus / ACV</strong>
-              <span>Escala de Cincinnati (+) (asimetría facial, brazo, habla) → Alerta a Tomógrafo</span>
+              <input type="text" id="motivo_full" class="input-full" placeholder="Detalle anamnesis breve o síntoma guía..." oninput="recalcularPrioridad()" style="font-size:0.82rem; height:38px;">
             </div>
-          </label>
-          <label class="codigo-card" id="card_cod_sepsis">
-            <input type="checkbox" id="check_cod_sepsis" onchange="toggleCodigoTiempo('sepsis', this.checked)">
-            <div>
-              <strong>🧫 Código Sepsis (qSOFA)</strong>
-              <span>Criterios qSOFA (FR &gt;= 22, PAS &lt;= 100, Glasgow &lt; 15) → Lactato y hemocultivo</span>
-            </div>
-          </label>
+          </div>
         </div>
 
-        <!-- 7. VARIABLES POBLACIONALES Y ATENCIÓN PREFERENTE (LEY N° 27408) -->
-        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin: 12px 0;">
-          <div style="font-size:0.82rem; font-weight:800; color:#0f172a; margin-bottom:8px;">
-            🏛️ Poblaciones Vulnerables y Atención Preferente (Ley N° 27408 y Ley N° 28683):
+        <!-- ==================================================================== -->
+        <!-- PASO 2 MTS: 6 DISCRIMINADORES GENERALES MTS (HIERARQUÍA DE GRAVEDAD) -->
+        <!-- ==================================================================== -->
+        <div class="mts-block-container" style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+          <div style="font-size:0.82rem; font-weight:800; color:#0f172a; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span>⚡ Paso 2 — 6 Discriminadores Generales MTS (El más grave determina el nivel):</span>
+            <span style="font-size:0.70rem; color:#64748b; font-weight:600;">Jerarquía: Rojo &gt; Naranja &gt; Amarillo &gt; Verde &gt; Azul</span>
           </div>
-          <div style="display:flex; gap:16px; flex-wrap:wrap;">
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;">
-              <input type="checkbox" id="check_gestante" onchange="toggleGestante(this.checked)">
-              <strong>Gestante / Puérpera</strong>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;">
-              <input type="checkbox" id="check_pediatrico" onchange="togglePediatrico(this.checked)">
-              <strong>Ajuste Pediátrico (&lt; 14 años)</strong>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;">
-              <input type="checkbox" id="check_aislamiento">
-              <strong>Aislamiento Epidemiológico (Transmisible)</strong>
+
+          <!-- Discriminador 1: Compromiso Vital / Vía Aérea / Shock (P-I Rojo) -->
+          <div style="margin-bottom:8px;">
+            <label class="mts-disc-row-vital" style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:#fef2f2; border:1px solid #fecaca; border-radius:6px; cursor:pointer;">
+              <input type="checkbox" id="mts_disc_vital" onchange="recalcularPrioridad()" style="width:16px; height:16px; accent-color:#dc2626;">
+              <span style="font-size:0.80rem; font-weight:800; color:#b91c1c;">
+                🚨 Compromiso Vital / Obstrucción Vía Aérea / Paro inminente / Shock profundo → <strong>Rojo (P-I Inmediato 0 min)</strong>
+              </span>
             </label>
           </div>
 
-          <!-- Campos dinámicos de Gestante -->
-          <div id="box_gestante" style="display:none; margin-top:10px; padding:10px; background:#fff1f2; border:1px solid #fecdd3; border-radius:8px;">
-            <div style="font-size:0.78rem; font-weight:800; color:#9f1239; margin-bottom:6px;">
-              🤰 Protocolo de Emergencia Obstétrica — Claves Hospitalarias:
+          <!-- Grilla de Discriminadores 2 a 6 -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:8px;">
+            <!-- Disc 2: Hemorragia -->
+            <div class="form-field" style="margin:0;">
+              <label for="mts_disc_hemorragia" style="font-size:0.75rem; font-weight:700; color:#0f172a;">
+                🩸 2. Hemorragia:
+              </label>
+              <select id="mts_disc_hemorragia" class="input-full" onchange="recalcularPrioridad()" style="font-size:0.78rem;">
+                <option value="ninguna">Sin hemorragia activa</option>
+                <option value="exanguinante">🔴 Exanguinante → Rojo (P-I)</option>
+                <option value="mayor">🟠 Mayor incontrolable → Naranja (P-II)</option>
+                <option value="menor">🟡 Menor incontrolable → Amarillo (P-III)</option>
+              </select>
             </div>
+
+            <!-- Disc 3: Nivel de Conciencia -->
+            <div class="form-field" style="margin:0;">
+              <label for="mts_disc_conciencia" style="font-size:0.75rem; font-weight:700; color:#0f172a;">
+                🧠 3. Conciencia / Glasgow:
+              </label>
+              <select id="mts_disc_conciencia" class="input-full" onchange="recalcularPrioridad()" style="font-size:0.78rem;">
+                <option value="alerta">🟢 Alerta / Normal (Glasgow 15)</option>
+                <option value="no_responde">🔴 No responde / GCS ≤ 8 → Rojo (P-I)</option>
+                <option value="alteracion_subita">🟠 Alteración súbita / GCS 9–13 → Naranja (P-II)</option>
+                <option value="historia_inconsciencia">🟡 Historia de inconsciencia → Amarillo (P-III)</option>
+              </select>
+            </div>
+
+            <!-- Disc 6: Agudeza / Tiempo evolución -->
+            <div class="form-field" style="margin:0;">
+              <label for="mts_disc_agudeza" style="font-size:0.75rem; font-weight:700; color:#0f172a;">
+                ⏱️ 6. Agudeza / Evolución:
+              </label>
+              <select id="mts_disc_agudeza" class="input-full" onchange="recalcularPrioridad()" style="font-size:0.78rem;">
+                <option value="habitual">Habitual / Sin cambio súbito</option>
+                <option value="subito_agudo">🟠 Inicio súbito agudo → Eleva (P-II)</option>
+                <option value="reciente">🟢 Reciente &lt; 7 días → Verde (P-IV)</option>
+                <option value="cronico">🔵 Crónico estable → Azul (P-V)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Disc 4: Dolor EVA (0 a 10) -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; margin-top:6px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label for="eva_range" style="font-weight:700; font-size:0.78rem; color:#0f172a; margin:0;">
+                🎯 4. Dolor (Escala EVA):
+              </label>
+              <span id="eva_label" style="font-weight:800; font-size:0.80rem; color:#0284c7;">Sin dolor (0/10)</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:4px;">
+              <input type="range" id="eva_range" min="0" max="10" value="0" style="flex:1;" oninput="actualizarEVA(this.value)">
+              <input type="number" id="eva_full" min="0" max="10" value="0" style="width:50px; text-align:center; font-weight:800; font-size:0.82rem;" oninput="actualizarEVA(this.value)">
+            </div>
+            <div style="font-size:0.70rem; color:#64748b; margin-top:2px;">
+              EVA 8–10: Naranja (P-II) | EVA 4–7: Amarillo (P-III) | EVA 1–3: Verde (P-IV) | 0: Estable
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================================================================== -->
+        <!-- 3 SUB-PANELES CLICABLES DE DISCRIMINADORES ESPECÍFICOS MTS          -->
+        <!-- (Ocultos por defecto, 1 clic para abrir)                           -->
+        <!-- ==================================================================== -->
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+          <button type="button" id="btn_toggle_mts_pediatrico" class="mts-subpanel-toggle-btn" onclick="toggleMtsSubpanel('pediatrico')" style="padding:6px 12px; font-size:0.78rem; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; cursor:pointer;">
+            👶 [+ Pediátrico (&lt; 14 años)]
+          </button>
+          <button type="button" id="btn_toggle_mts_gestante" class="mts-subpanel-toggle-btn" onclick="toggleMtsSubpanel('gestante')" style="padding:6px 12px; font-size:0.78rem; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; cursor:pointer;">
+            🤰 [+ Gestante / Claves Obstétricas MINSA]
+          </button>
+          <button type="button" id="btn_toggle_mts_alertas" class="mts-subpanel-toggle-btn" onclick="toggleMtsSubpanel('alertas')" style="padding:6px 12px; font-size:0.78rem; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; cursor:pointer;">
+            ⚡ [+ Alertas Específicas MTS]
+          </button>
+        </div>
+
+        <!-- SUBPANEL 1: PEDIÁTRICO (< 14 AÑOS) + TEP -->
+        <div id="subpanel_mts_pediatrico" style="display:none; background:#f0f9ff; border:1.5px solid #bae6fd; border-radius:10px; padding:12px 14px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div style="font-size:0.80rem; font-weight:800; color:#0369a1;">
+              👶 Protocolo Pediátrico MTS + Triángulo de Evaluación Pediátrica (TEP):
+            </div>
+            <input type="checkbox" id="check_pediatrico" onchange="togglePediatrico(this.checked)" style="display:none;">
+          </div>
+          <!-- TEP (3 switches) -->
+          <div style="background:#ffffff; border:1px solid #e0f2fe; border-radius:8px; padding:8px 10px; margin-bottom:8px;">
+            <div style="font-size:0.74rem; font-weight:800; color:#0f172a; margin-bottom:4px;">
+              🔺 Triángulo de Evaluación Pediátrica (TEP) — 1 alterado: Naranja | ≥ 2 alterados: Rojo:
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:6px;">
+              <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; cursor:pointer;">
+                <input type="checkbox" id="tep_apariencia" onchange="recalcularPrioridad()">
+                <span>Tono / Mirada alterada</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; cursor:pointer;">
+                <input type="checkbox" id="tep_respiracion" onchange="recalcularPrioridad()">
+                <span>Trabajo respiratorio (tiraje/quejido)</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; cursor:pointer;">
+                <input type="checkbox" id="tep_circulacion" onchange="recalcularPrioridad()">
+                <span>Circulación cutánea (palidez/moteado)</span>
+              </label>
+            </div>
+          </div>
+          <!-- Discriminadores Pediátricos Clicables -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:6px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0;">
+              <input type="checkbox" id="ped_no_reactivo" onchange="recalcularPrioridad()" style="accent-color:#dc2626;">
+              <span style="color:#b91c1c; font-weight:700;">Niño no reactivo / convulsión / estridor (Rojo)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0;">
+              <input type="checkbox" id="ped_lactante_fiebre" onchange="recalcularPrioridad()" style="accent-color:#ea580c;">
+              <span style="color:#c2410c; font-weight:700;">Lactante &lt; 3 meses con T ≥ 38.0°C (Naranja)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0;">
+              <input type="checkbox" id="ped_purpura" onchange="recalcularPrioridad()" style="accent-color:#ea580c;">
+              <span style="color:#c2410c; font-weight:700;">Exantema petequial / púrpura no blanqueable (Naranja)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0;">
+              <input type="checkbox" id="ped_tiraje_severo" onchange="recalcularPrioridad()" style="accent-color:#ea580c;">
+              <span style="color:#c2410c; font-weight:700;">Tiraje severo / dificultad respiratoria (Naranja)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0;">
+              <input type="checkbox" id="ped_llanto_irritable" onchange="recalcularPrioridad()" style="accent-color:#ca8a04;">
+              <span style="color:#a16207; font-weight:700;">Llanto inconsolable / irritable caliente (Amarillo)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0;">
+              <input type="checkbox" id="ped_sospecha_maltrato" onchange="recalcularPrioridad()" style="accent-color:#ca8a04;">
+              <span style="color:#a16207; font-weight:700;">Historia discordante / sospecha maltrato (Amarillo)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- SUBPANEL 2: GESTANTE / CLAVES OBSTÉTRICAS MINSA -->
+        <div id="subpanel_mts_gestante" style="display:none; background:#fff1f2; border:1.5px solid #fecdd3; border-radius:10px; padding:12px 14px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div style="font-size:0.80rem; font-weight:800; color:#9f1239;">
+              🤰 Gestante / Protocolo de Emergencia Obstétrica MINSA:
+            </div>
+            <input type="checkbox" id="check_gestante" onchange="toggleGestante(this.checked)" style="display:none;">
+          </div>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:6px; margin-bottom:8px;">
+            <div class="form-field" style="margin:0;">
+              <label style="font-size:0.72rem; font-weight:700;">Semanas de Gestación:</label>
+              <input type="number" id="sem_gestacion" class="input-full" placeholder="32" min="1" max="42" style="font-size:0.78rem;">
+            </div>
+            <div class="form-field" style="margin:0;">
+              <label style="font-size:0.72rem; font-weight:700;">Latidos Fetales (LCF lpm):</label>
+              <input type="number" id="lcf_gestacion" class="input-full" placeholder="140" min="0" max="200" style="font-size:0.78rem;">
+            </div>
+            <div class="form-field" style="margin:0;">
+              <label style="font-size:0.72rem; font-weight:700;">Clave Obstétrica MINSA:</label>
+              <select id="clave_obstetrica_sel" class="input-full" onchange="recalcularPrioridad()" style="font-size:0.78rem;">
+                <option value="ninguna">Sin clave activada</option>
+                <option value="roja">🔴 Clave Roja (Hemorragia / Shock)</option>
+                <option value="azul">🔵 Clave Azul (Preeclampsia Severa / Eclampsia)</option>
+                <option value="amarilla">🟡 Clave Amarilla (Sepsis Obstétrica)</option>
+              </select>
+            </div>
+          </div>
+          <!-- Discriminadores fijos obstétricos -->
+          <div style="display:grid; grid-template-columns: 1fr; gap:6px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:6px 10px; border-radius:6px; border:1px solid #fecdd3;">
+              <input type="checkbox" id="obst_clave_roja" onchange="recalcularPrioridad()" style="accent-color:#dc2626;">
+              <span style="color:#b91c1c; font-weight:700;">🔴 Emergencia Extrema: Convulsión activa (eclampsia), shock, parto inminente, prolapso cordón o hemorragia masiva → <strong>Rojo (P-I)</strong></span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:6px 10px; border-radius:6px; border:1px solid #fed7aa;">
+              <input type="checkbox" id="obst_alto_riesgo" onchange="recalcularPrioridad()" style="accent-color:#ea580c;">
+              <span style="color:#c2410c; font-weight:700;">🟠 Alto Riesgo: PA ≥ 160/110 o ≥ 140/90 con síntomas premonitorios, dolor severo, sangrado &gt; 20 sem o sepsis → <strong>Naranja (P-II)</strong></span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:6px 10px; border-radius:6px; border:1px solid #fef08a;">
+              <input type="checkbox" id="obst_estable" onchange="recalcularPrioridad()" style="accent-color:#ca8a04;">
+              <span style="color:#a16207; font-weight:700;">🟡 Estable: Pérdida LA franca sin alarma, sangrado leve o contracciones iniciales estables → <strong>Amarillo (P-III)</strong></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- SUBPANEL 3: ALERTAS ESPECÍFICAS MTS -->
+        <div id="subpanel_mts_alertas" style="display:none; background:#fefce8; border:1.5px solid #fef08a; border-radius:10px; padding:12px 14px; margin-bottom:12px;">
+          <div style="font-size:0.80rem; font-weight:800; color:#854d0e; margin-bottom:6px;">
+            ⚡ Alertas Específicas MTS / Códigos Tiempo-Dependientes:
+          </div>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:6px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:6px 10px; border-radius:6px; border:1px solid #fecaca;">
+              <input type="checkbox" id="alerta_anafilaxia" onchange="recalcularPrioridad()" style="accent-color:#dc2626;">
+              <span style="color:#b91c1c; font-weight:700;">🚨 Anafilaxia / Estridor / Edema glotis (P-I Rojo)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:6px 10px; border-radius:6px; border:1px solid #fed7aa;" id="card_cod_infarto">
+              <input type="checkbox" id="check_cod_infarto" onchange="toggleCodigoTiempo('infarto', this.checked)">
+              <span style="color:#c2410c; font-weight:700;">⚡ Dolor Torácico Cardíaco (Código Infarto - P-II)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:6px 10px; border-radius:6px; border:1px solid #fed7aa;" id="card_cod_ictus">
+              <input type="checkbox" id="check_cod_ictus" onchange="toggleCodigoTiempo('ictus', this.checked)">
+              <span style="color:#c2410c; font-weight:700;">🧠 Déficit Focal &lt; 4.5 h (Código Ictus - P-II)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:6px 10px; border-radius:6px; border:1px solid #fed7aa;">
+              <input type="checkbox" id="alerta_trauma_mayor" onchange="recalcularPrioridad()" style="accent-color:#ea580c;">
+              <span style="color:#c2410c; font-weight:700;">💥 Mecanismo Trauma Mayor / Penetrante (P-II)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:6px 10px; border-radius:6px; border:1px solid #fed7aa;">
+              <input type="checkbox" id="alerta_neutropenia" onchange="recalcularPrioridad()" style="accent-color:#ea580c;">
+              <span style="color:#c2410c; font-weight:700;">🛡️ Neutropenia Febril / Inmunosupresión (P-II)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.74rem; cursor:pointer; background:#fff; padding:6px 10px; border-radius:6px; border:1px solid #fed7aa;" id="card_cod_sepsis">
+              <input type="checkbox" id="check_cod_sepsis" onchange="toggleCodigoTiempo('sepsis', this.checked)">
+              <span style="color:#c2410c; font-weight:700;">🧫 Criterios qSOFA (Código Sepsis - P-II)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ==================================================================== -->
+        <!-- 4 SIGNOS VITALES DIRIGIDOS VISIBLES (SpO2, FC, PA, Temp) CON BOTÓN ! -->
+        <!-- SIN LEYENDAS TEXTUALES DEBAJO                                       -->
+        <!-- ==================================================================== -->
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:12px;">
+          <div style="font-size:0.80rem; font-weight:800; color:#0f172a; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span>🩺 Signos Vitales Fisiológicos Dirigidos:</span>
+            <span style="font-size:0.70rem; color:#64748b; font-weight:500;">Vacíos no bloquean · Se evalúan en vivo</span>
+          </div>
+          <div class="form-grid-4 vital-signs-grid" style="margin-bottom:8px;">
+            <div class="form-field" id="card_spo2" style="margin:0;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                <label for="spo2_full" style="font-size:0.75rem; font-weight:700; margin:0;">Saturación SpO2 (%):</label>
+                <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('spo2', event)" title="Ver rangos clínicos SpO2" aria-label="Info SpO2">!</button>
+              </div>
+              <input type="number" id="spo2_full" class="input-full" placeholder="98" min="0" max="100" oninput="recalcularPrioridad()">
+            </div>
+            <div class="form-field" id="card_fc" style="margin:0;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                <label for="fc_full" style="font-size:0.75rem; font-weight:700; margin:0;">Frec. Cardíaca (lpm):</label>
+                <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('fc', event)" title="Ver rangos clínicos FC" aria-label="Info FC">!</button>
+              </div>
+              <input type="number" id="fc_full" class="input-full" placeholder="78" min="0" max="260" oninput="recalcularPrioridad()">
+            </div>
+            <div class="form-field" id="card_pas" style="margin:0;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                <label for="pas_full" style="font-size:0.75rem; font-weight:700; margin:0;">PA Sistólica (mmHg):</label>
+                <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('pa', event)" title="Ver rangos clínicos PA" aria-label="Info PA Sistólica">!</button>
+              </div>
+              <input type="number" id="pas_full" class="input-full" placeholder="120" min="0" max="280" oninput="recalcularPrioridad()">
+            </div>
+            <div class="form-field" id="card_pad" style="margin:0;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                <label for="pad_full" style="font-size:0.75rem; font-weight:700; margin:0;">PA Diastólica (mmHg):</label>
+                <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('pa', event)" title="Ver rangos clínicos PA" aria-label="Info PA Diastólica">!</button>
+              </div>
+              <input type="number" id="pad_full" class="input-full" placeholder="80" min="0" max="180" oninput="recalcularPrioridad()">
+            </div>
+            <div class="form-field" id="card_temp" style="margin:0;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                <label for="temp_full" style="font-size:0.75rem; font-weight:700; margin:0;">Temperatura (°C):</label>
+                <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('temp', event)" title="Ver rangos clínicos Temperatura" aria-label="Info Temperatura">!</button>
+              </div>
+              <input type="number" step="0.1" id="temp_full" class="input-full" placeholder="36.5" min="25" max="45" oninput="recalcularPrioridad()">
+            </div>
+          </div>
+
+          <!-- BOTÓN COLAPSABLE PARA SIGNOS SECUNDARIOS (FR, GLASGOW, GLUCEMIA) -->
+          <div style="margin-top:6px;">
+            <button type="button" id="btn_toggle_signos_secundarios" class="mts-subpanel-toggle-btn" onclick="toggleMtsSubpanel('signos_adicionales')" style="padding:5px 10px; font-size:0.75rem; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; color:#475569; cursor:pointer;">
+              📊 [+ Signos adicionales / Glucemia]
+            </button>
+          </div>
+
+          <div id="subpanel_signos_adicionales" style="display:none; margin-top:8px; padding-top:8px; border-top:1px dashed #cbd5e1;">
             <div class="form-grid-3">
-              <div class="form-field">
-                <label>Semanas de Gestación:</label>
-                <input type="number" id="sem_gestacion" class="input-full" placeholder="32" min="1" max="42">
+              <div class="form-field" id="card_fr" style="margin:0;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                  <label for="fr_full" style="font-size:0.75rem; font-weight:700; margin:0;">Frec. Respiratoria (rpm):</label>
+                  <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('fr', event)" title="Ver rangos clínicos FR" aria-label="Info FR">!</button>
+                </div>
+                <input type="number" id="fr_full" class="input-full" placeholder="18" min="0" max="70" oninput="recalcularPrioridad()">
               </div>
-              <div class="form-field">
-                <label>Latidos Fetales (LCF lpm):</label>
-                <input type="number" id="lcf_gestacion" class="input-full" placeholder="140" min="0" max="200">
+              <div class="form-field" id="card_glasgow" style="margin:0;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                  <label for="glasgow_full" style="font-size:0.75rem; font-weight:700; margin:0;">Escala Glasgow (3-15):</label>
+                  <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('glasgow', event)" title="Ver rangos clínicos Glasgow" aria-label="Info Glasgow">!</button>
+                </div>
+                <input type="number" id="glasgow_full" class="input-full" placeholder="15" min="3" max="15" oninput="recalcularPrioridad()">
               </div>
-              <div class="form-field">
-                <label>Activación de Clave Obstétrica:</label>
-                <select id="clave_obstetrica_sel" class="input-full">
-                  <option value="ninguna">Sin clave activada</option>
-                  <option value="roja">🔴 Clave Roja (Hemorragia / Shock)</option>
-                  <option value="azul">🔵 Clave Azul (Preeclampsia Severa / Eclampsia)</option>
-                  <option value="amarilla">🟡 Clave Amarilla (Sepsis Obstétrica)</option>
-                </select>
+              <div class="form-field" id="card_glucosa" style="margin:0;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                  <label for="glucosa_full" style="font-size:0.75rem; font-weight:700; margin:0;">Glicemia Capilar (mg/dL):</label>
+                  <button type="button" class="btn-info-vital" onclick="mostrarInfoVital('glucosa', event)" title="Ver rangos clínicos Glucosa" aria-label="Info Glucosa">!</button>
+                </div>
+                <input type="number" id="glucosa_full" class="input-full" placeholder="105" min="0" max="800" oninput="recalcularPrioridad()">
               </div>
             </div>
           </div>
@@ -3053,14 +3253,13 @@
             <label for="alergias_mod1" style="font-weight:700; margin:0; font-size:0.82rem; color:#0f172a;">
               ⚠️ Alergias Conocidas / Medicamentosas (Impresión en Pulsera):
             </label>
-            <span id="alergias_mod1_tag" style="display:none; font-size:0.72rem; font-weight:800; background:#fee2e2; color:#b91c1c; border:1px solid #ef4444; border-radius:6px; padding:2px 8px;">
+            <span id="alergias_mod1_tag" style="display:none; font-size:0.72rem; font-weight:800; background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:4px;">
               🔴 ALERTA CRÍTICA
             </span>
           </div>
-          <input type="text" id="alergias_mod1" class="input-full" placeholder="Ej. Niega alergias conocidas / Alérgico a Penicilina o AINEs (o vacío para 'No registradas / Indagar')" oninput="actualizarAlergiasEnTiempoReal(this.value)">
-          <div id="alergias_mod1_banner" style="display:none; margin-top:6px; padding:6px 12px; border-radius:6px; background:#fff1f2; border:1px solid #fecdd3; color:#9f1239; font-size:0.78rem; font-weight:700;"></div>
+          <input type="text" id="alergias_mod1" class="input-full" placeholder="Ej. Niega alergias conocidas / Penicilina / AINEs" oninput="actualizarAlergiasMod1(this.value)">
+          <div id="alergias_mod1_banner" style="display:none; margin-top:6px; padding:6px 12px; border-radius:6px; font-size:0.75rem; font-weight:700; background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;"></div>
         </div>
-
         <!-- 8. BOTÓN DE EVALUACIÓN Y RESULTADO DE TRIAJE -->
         <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
           <button type="button" class="btn-full-primary" style="flex:1; padding:12px; font-size:0.92rem;" onclick="evaluarPacienteCompleto()">
@@ -5535,7 +5734,7 @@
         <button type="button" onclick="cerrarModalAdmisionNN()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer;">&times;</button>
       </div>
       <div class="modal-hc-body" style="padding:16px;">
-        <form id="form_admision_nn" onsubmit="ejecutarAdmisionRapidaNN(event)">
+        <form id="form_admision_nn" novalidate onsubmit="ejecutarAdmisionRapidaNN(event)">
           <div style="margin-bottom:12px;">
             <label style="font-weight:700; font-size:0.82rem; display:block; margin-bottom:6px;">Sexo Aparente:</label>
             <div style="display:flex; gap:10px;">

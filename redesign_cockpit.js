@@ -118,16 +118,16 @@
     `;
     workspaceCenter.appendChild(tacticalBar);
 
-    // 1.4.1 Mover y Reubicar el Panel de Pacientes en Curso (Carrusel)
-    // Ubicación: ENTRE LOS BOTONES TÁCTICOS Y ANTES DE EMPEZAR EL MÓDULO 1
+    // 1.4.1 Mover y Reubicar el Panel de Pacientes en Curso al Sidebar Izquierdo
+    // Ubicación: EN EL SIDEBAR IZQUIERDO CON ANCHO ERGONÓMICO Y SCROLL INDEPENDIENTE
     const activePanel = document.getElementById("activePatientsPanel");
     if (activePanel) {
       // Ocultar botones duplicados de la cabecera vieja para dejar solo el carrusel limpio y contador
       const oldBtns = activePanel.querySelector(".active-patients-btn-group");
       if (oldBtns) oldBtns.style.display = "none";
       activePanel.style.display = "block";
-      activePanel.style.margin = "6px 0 10px 0";
-      workspaceCenter.appendChild(activePanel);
+      activePanel.style.margin = "0";
+      sidebarLeft.appendChild(activePanel);
     }
 
     // Tarjeta Resumen Sellado de Triaje (Solo visible en Rol MÉDICO)
@@ -402,6 +402,11 @@
           🛡️ Rol: AUDITOR
         </span>
 
+        <!-- Botón Expandir/Contraer Todo en Modo Auditor -->
+        <button type="button" class="cockpit-btn-expand-all" id="btn_expand_collapse_all" onclick="window.COCKPIT.toggleExpandirTodoModulos()" title="Expandir o contraer todos los módulos para auditoría panorámica" style="display:inline-flex; align-items:center; gap:4px; padding:5px 10px; font-size:12px; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; cursor:pointer;">
+          ⤢ Expandir Todo
+        </button>
+
         <!-- Botón Modo Oscuro / Claro -->
         <button type="button" class="cockpit-btn-theme" id="btn_toggle_dark_mode" onclick="window.COCKPIT.toggleDarkMode()" title="Cambiar tema">
           ☀️ Claro
@@ -595,6 +600,51 @@
   // ----------------------------------------------------------------------------
   // 4. CONTROL DE FASES (MODO AUDITOR / SUPERVISIÓN)
   // ----------------------------------------------------------------------------
+  let todosModulosExpandidos = false;
+
+  function toggleExpandirTodoModulos() {
+    todosModulosExpandidos = !todosModulosExpandidos;
+    const btn = document.getElementById("btn_expand_collapse_all");
+
+    const phase1 = document.getElementById("cockpit_phase_1");
+    const phase2 = document.getElementById("cockpit_phase_2");
+    const phase3 = document.getElementById("cockpit_phase_3");
+    const phase4 = document.getElementById("cockpit_phase_4");
+
+    if (todosModulosExpandidos) {
+      if (btn) btn.innerHTML = "⤡ Contraer Fases";
+      if (phase1) phase1.style.display = "block";
+      if (phase2) phase2.style.display = "block";
+      if (phase3) phase3.style.display = "block";
+      if (phase4) phase4.style.display = "block";
+
+      for (let i = 1; i <= 8; i++) {
+        const sec = document.getElementById(`sec_mod${i}`);
+        if (sec) sec.style.display = "block";
+      }
+    } else {
+      if (btn) btn.innerHTML = "⤢ Expandir Todo";
+      irAFase(faseActiva);
+    }
+  }
+
+  function irAModulo(numeroModulo) {
+    const num = Number(numeroModulo);
+    let fase = 1;
+    if (num === 3 || num === 5) fase = 2;
+    else if (num === 4 || num === 6 || num === 7) fase = 3;
+    else if (num === 8) fase = 4;
+
+    if (!todosModulosExpandidos) {
+      irAFase(fase);
+    }
+    const sec = document.getElementById(`sec_mod${num}`);
+    if (sec) {
+      sec.style.display = "block";
+      sec.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
   function irAFase(numeroFase) {
     faseActiva = Number(numeroFase);
 
@@ -611,7 +661,7 @@
       } else {
         if (stepEl) stepEl.classList.remove("active");
         if (phaseEl) {
-          if (rolActivoVista === "AUDITOR" || rolActivoVista === "ADMIN") {
+          if (!todosModulosExpandidos && (rolActivoVista === "AUDITOR" || rolActivoVista === "ADMIN")) {
             phaseEl.style.display = "none";
           }
           phaseEl.classList.remove("cockpit-phase-active");
@@ -620,7 +670,12 @@
     }
 
     actualizarBotonAccionPrincipal();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const activePhaseEl = document.getElementById(`cockpit_phase_${faseActiva}`);
+    if (activePhaseEl) {
+      activePhaseEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   // ----------------------------------------------------------------------------
@@ -1266,6 +1321,8 @@ function refrescarValoresMonitor() {
 
   window.COCKPIT = {
     irAFase,
+    irAModulo,
+    toggleExpandirTodoModulos,
     ejecutarAccionPrincipal,
     seleccionarSector,
     cambiarVistaSimulada,

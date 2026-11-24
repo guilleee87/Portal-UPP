@@ -2144,11 +2144,11 @@ const RUTAS = {
 
 // Definición de prioridades
 const PRIORIDADES = {
-  "I": { nombre: "EMERGENCIA VITAL", color: "I", hex: "#dc2626", destino: "Trauma Shock / Reanimación", clase: "pnum-I" },
-  "II": { nombre: "URGENCIA MAYOR", color: "II", hex: "#ea580c", destino: "Tópico Crítico", clase: "pnum-II" },
-  "III": { nombre: "URGENCIA MENOR", color: "III", hex: "#ca8a04", destino: "Observación / Medicina General", clase: "pnum-III" },
-  "IV": { nombre: "URGENCIA LEVE", color: "IV", hex: "#16a34a", destino: "Tópico Rápido", clase: "pnum-IV" },
-  "V": { nombre: "NO URGENTE", color: "V", hex: "#2563eb", destino: "Consulta Administrativa / Derivación", clase: "pnum-V" },
+  "I": { nombre: "INMEDIATO (MTS)", color: "I", hex: "#dc2626", destino: "Trauma Shock", clase: "pnum-I", sla: "Inmediato — 0 min (NTS N° 042-MINSA)" },
+  "II": { nombre: "MUY URGENTE (MTS)", color: "II", hex: "#ea580c", destino: "Cola Prioritaria (0 camas en Triaje)", clase: "pnum-II", sla: "Máx. 10 min (NTS N° 042-MINSA)" },
+  "III": { nombre: "URGENTE (MTS)", color: "III", hex: "#ca8a04", destino: "Cola / Tópico (0 camas en Triaje)", clase: "pnum-III", sla: "Máx. 30 min (SLA Perú NTS N° 042)" },
+  "IV": { nombre: "POCO URGENTE (MTS)", color: "IV", hex: "#16a34a", destino: "Ambulatorio (0 camas en Triaje)", clase: "pnum-IV", sla: "Máx. 60 min (NTS: ≤ 120 min)" },
+  "V": { nombre: "NO URGENTE (MTS)", color: "V", hex: "#2563eb", destino: "Consulta Externa (0 camas en Triaje)", clase: "pnum-V", sla: "Máx. 120 min (NTS: ≤ 240 min)" },
 };
 
 
@@ -2501,7 +2501,7 @@ async function consultarReniec() {
   }
 
   // Extraer 8 dígitos continuos (permite espacios, puntos o guiones accidentales)
-  const dniMatch = rawInput.replace(/[\s\.\-]/g, "").match(/\d{8}/);
+  let dniMatch = rawInput.replace(/[\s\.\-]/g, "").match(/\d{8}/);
 
   // Si no hay DNI y el paciente está marcado como NN o indocumentado, informar sin pedir DNI (Ley N° 27604)
   if (!dniMatch && (STATE.esNN || rawInput.toUpperCase().startsWith("NN") || rawInput.toUpperCase().includes("INDOCUMENTADO") || rawInput.toUpperCase().includes("NO IDENTIFICADO"))) {
@@ -2523,8 +2523,9 @@ async function consultarReniec() {
     return;
   }
 
-  // Extraer 8 dígitos continuos (permite espacios, puntos o guiones accidentales)
-  const dniMatch = rawInput.replace(/[\s\.\-]/g, "").match(/\d{8}/);
+  if (!dniMatch) {
+    dniMatch = rawInput.replace(/[\s\.\-]/g, "").match(/\d{8}/);
+  }
   if (!dniMatch) {
     if (panel) {
       panel.style.display = "block";
@@ -3772,10 +3773,36 @@ function evaluarTriajeEstandar(datos = {}) {
   const esGestante = Boolean(datos.esGestante);
 
   // =========================================================================
-  // 1. COMPUERTA A (ESI 1 -> PRIORIDAD I - Rojo, SLA: Inmediato 0 min)
-  // Amenaza vital inmediata real
+  // 1. COMPUERTA A (MTS ROJO / ESI 1 -> PRIORIDAD I - Rojo, SLA: Inmediato 0 min)
+  // Amenaza vital inmediata real / Discriminadores MTS Nivel 1
   // =========================================================================
   const amenazasA = [];
+
+  // Discriminadores MTS - Nivel 1 (Rojo - P-I Inmediato 0 min)
+  if (datos.mts_vital) {
+    amenazasA.push("Compromiso Vital Inmediato MTS (Vía aérea / Shock profundo)");
+  }
+  if (datos.mts_hemorragia === "exanguinante") {
+    amenazasA.push("Hemorragia Exanguinante Incontrolable MTS");
+  }
+  if (datos.mts_conciencia === "no_responde") {
+    amenazasA.push("No Responde / Pérdida Total de Conciencia MTS");
+  }
+  if (typeof datos.tep_lados_alterados === "number" && datos.tep_lados_alterados >= 2) {
+    amenazasA.push(`TEP Pediátrico Crítico (≥ 2 lados alterados: ${datos.tep_lados_alterados})`);
+  }
+  if (datos.ped_no_reactivo) {
+    amenazasA.push("Niño no reactivo / Convulsión activa / Estridor en reposo MTS");
+  }
+  if (datos.obst_clave_roja) {
+    amenazasA.push("Emergencia Obstétrica Extrema MTS (Clave Roja / Eclampsia / Shock)");
+  }
+  if (datos.alerta_anafilaxia) {
+    amenazasA.push("Anafilaxia Severa / Edema de Glotis / Estridor");
+  }
+  if (temp !== null && (temp >= 41.0 || temp < 35.0)) {
+    amenazasA.push(`Temperatura Extrema MTS (${temp} °C - Hipertermia Maligna / Hipotermia Severa)`);
+  }
 
   if (datos.panicoShockTrauma || datos.esParoOAgonia) {
     amenazasA.push("Paro Cardiorrespiratorio Inminente / Botón de Pánico Shock Trauma");
@@ -3855,10 +3882,54 @@ function evaluarTriajeEstandar(datos = {}) {
   );
 
   // =========================================================================
-  // 2. COMPUERTA B (ESI 2 -> PRIORIDAD II - Naranja, SLA: Máx. 10 min)
-  // Alto riesgo o dolor severo
+  // 2. COMPUERTA B (MTS NARANJA / ESI 2 -> PRIORIDAD II - Naranja, SLA: Máx. 10 min)
+  // Alto riesgo o dolor severo / Discriminadores MTS Nivel 2
   // =========================================================================
   const criteriosB = [];
+
+  // Discriminadores MTS - Nivel 2 (Naranja - P-II Muy Urgente ≤ 10 min)
+  if (datos.mts_hemorragia === "mayor") {
+    criteriosB.push("Hemorragia Mayor Incontrolable MTS");
+  }
+  if (datos.mts_conciencia === "alteracion_subita") {
+    criteriosB.push("Alteración Súbita de Conciencia MTS (GCS 9-13)");
+  }
+  if (datos.mts_agudeza === "subito_agudo") {
+    criteriosB.push("Inicio Súbito Agudo de Alta Urgencia MTS");
+  }
+  if (typeof datos.tep_lados_alterados === "number" && datos.tep_lados_alterados === 1) {
+    criteriosB.push("TEP Pediátrico con 1 Lado Alterado (Dificultad Respiratoria / Disfunción)");
+  }
+  if (datos.ped_lactante_fiebre) {
+    criteriosB.push("Lactante < 3 meses con Fiebre ≥ 38.0 °C MTS");
+  }
+  if (datos.ped_purpura) {
+    criteriosB.push("Exantema Petequial / Púrpura no blanqueable MTS");
+  }
+  if (datos.ped_tiraje_severo) {
+    criteriosB.push("Tiraje Severo / Dificultad Respiratoria Pediátrica MTS");
+  }
+  if (datos.obst_alto_riesgo) {
+    criteriosB.push("Alto Riesgo Obstétrico MINSA (PA severa / Sepsis / Sangrado)");
+  }
+  if (datos.alerta_infarto) {
+    criteriosB.push("Dolor Torácico Cardíaco Típico (Código Infarto MTS)");
+  }
+  if (datos.alerta_ictus) {
+    criteriosB.push("Déficit Neurológico Focal Agudo < 4.5 h (Código Ictus MTS)");
+  }
+  if (datos.alerta_sepsis) {
+    criteriosB.push("Criterios de Sepsis qSOFA MTS");
+  }
+  if (datos.alerta_trauma_mayor) {
+    criteriosB.push("Mecanismo de Trauma Mayor / Penetrante MTS");
+  }
+  if (datos.alerta_neutropenia) {
+    criteriosB.push("Neutropenia Febril / Inmunosupresión Crítica MTS");
+  }
+  if (temp !== null && temp >= 38.5 && temp < 41.0) {
+    criteriosB.push(`Temperatura Muy Caliente MTS (${temp} °C)`);
+  }
 
   if (!esFisiologicamenteIntacto) {
     if (news2.scoreTotal >= 5 && news2.scoreTotal <= 6) {
@@ -3902,6 +3973,12 @@ function evaluarTriajeEstandar(datos = {}) {
   
   // Prioridad III (Amarillo, SLA: ≤ 30 min / NTS: hasta 60 min)
   const esPrioridad3 = (
+    datos.mts_hemorragia === "menor" ||
+    datos.mts_conciencia === "historia_inconsciencia" ||
+    Boolean(datos.ped_llanto_irritable) ||
+    Boolean(datos.ped_sospecha_maltrato) ||
+    Boolean(datos.obst_estable) ||
+    (temp !== null && temp >= 38.0 && temp < 38.5) ||
     news2.scoreTotal >= 2 ||
     (eva !== null && eva >= 4 && eva <= 7) ||
     (glucosa !== null && glucosa >= 250 && glucosa <= 400) ||
@@ -3912,6 +3989,12 @@ function evaluarTriajeEstandar(datos = {}) {
 
   if (esPrioridad3) {
     const motivosC = [];
+    if (datos.mts_hemorragia === "menor") motivosC.push("Hemorragia Menor Incontrolable MTS");
+    if (datos.mts_conciencia === "historia_inconsciencia") motivosC.push("Historia de Inconsciencia Recuperada MTS");
+    if (datos.ped_llanto_irritable) motivosC.push("Llanto Inconsolable / Irritable Caliente MTS");
+    if (datos.ped_sospecha_maltrato) motivosC.push("Historia Discordante / Sospecha de Maltrato MTS");
+    if (datos.obst_estable) motivosC.push("Condición Obstétrica Estable MTS");
+    if (temp !== null && temp >= 38.0 && temp < 38.5) motivosC.push(`Fiebre ≥ 38.0 °C (${temp} °C)`);
     if (news2.scoreTotal >= 2) motivosC.push(`NEWS2 Leve/Moderado (${news2.scoreTotal} pts)`);
     if (eva !== null && eva >= 4 && eva <= 7) motivosC.push(`Dolor Moderado EVA ${eva}/10`);
     if (glucosa !== null && glucosa >= 250 && glucosa <= 400) motivosC.push(`Hiperglucemia Moderada (${glucosa} mg/dL)`);
@@ -3922,7 +4005,7 @@ function evaluarTriajeEstandar(datos = {}) {
       prioridad: "III",
       esiNivel: 3,
       compuerta: "COMPUERTA C (Estabilidad Relativa / Múltiples Recursos)",
-      slaNormativo: "Máx. 30 min (NTS: ≤ 60 min)",
+      slaNormativo: "Máx. 30 min (SLA Perú NTS N° 042)",
       news2,
       motivos: motivosC,
       resumenClinico: "Urgencia Menor. Requiere laboratorio, imágenes o medicación en tópico."
@@ -3931,6 +4014,8 @@ function evaluarTriajeEstandar(datos = {}) {
 
   // Prioridad IV (Verde, SLA: ≤ 60 min / NTS: hasta 120 min)
   const esPrioridad4 = (
+    datos.mts_agudeza === "reciente" ||
+    (temp !== null && temp >= 37.5 && temp < 38.0) ||
     news2.scoreTotal === 1 ||
     (eva !== null && eva >= 1 && eva <= 3) ||
     (glucosa !== null && glucosa >= 180 && glucosa < 250)
@@ -3938,6 +4023,8 @@ function evaluarTriajeEstandar(datos = {}) {
 
   if (esPrioridad4) {
     const motivosD1 = [];
+    if (datos.mts_agudeza === "reciente") motivosD1.push("Problema Reciente < 7 Días MTS");
+    if (temp !== null && temp >= 37.5 && temp < 38.0) motivosD1.push(`Febrícula (${temp} °C)`);
     if (news2.scoreTotal === 1) motivosD1.push(`NEWS2 Mínimo (${news2.scoreTotal} pt)`);
     if (eva !== null && eva >= 1 && eva <= 3) motivosD1.push(`Dolor Leve EVA ${eva}/10`);
     if (glucosa !== null && glucosa >= 180 && glucosa < 250) motivosD1.push(`Hiperglucemia Leve (${glucosa} mg/dL)`);
@@ -3961,7 +4048,7 @@ function evaluarTriajeEstandar(datos = {}) {
     compuerta: "COMPUERTA D2 (No Urgente / 0 Recursos)",
     slaNormativo: "Máx. 120 min (NTS: ≤ 240 min)",
     news2,
-    motivos: ["Constantes vitales normales (NEWS2 = 0 pts)", "Sin dolor o dolor EVA 0", "Sin requerimiento de recursos inmediatos de emergencia"],
+    motivos: (datos.mts_agudeza === "cronico") ? ["Crónico Estable sin Deterioro Agudo MTS"] : ["Constantes vitales normales (NEWS2 = 0 pts)", "Sin dolor o dolor EVA 0", "Sin requerimiento de recursos inmediatos de emergencia"],
     resumenClinico: "No Urgencia. Consulta administrativa, reevaluación o retiro de puntos."
   };
 }
@@ -4067,8 +4154,54 @@ function recalcularPrioridad() {
   }
 
   const motivo = (document.getElementById("motivo_full")?.value || "").toLowerCase();
+  const motivoMts = document.getElementById("motivo_mts_select")?.value || "";
   const esGestante = Boolean(STATE.esGestante || document.getElementById("check_gestante")?.checked);
   const claveObstetrica = STATE.claveObstetrica || document.getElementById("clave_obstetrica_sel")?.value || null;
+
+  // Lectura de Discriminadores Generales MTS
+  const mtsVital = Boolean(document.getElementById("mts_disc_vital")?.checked);
+  const mtsHemorragia = document.getElementById("mts_disc_hemorragia")?.value || "ninguna";
+  const mtsConciencia = document.getElementById("mts_disc_conciencia")?.value || "alerta";
+  const mtsAgudeza = document.getElementById("mts_disc_agudeza")?.value || "habitual";
+
+  // Lectura TEP Pediátrico
+  const tepApariencia = Boolean(document.getElementById("tep_apariencia")?.checked);
+  const tepRespiracion = Boolean(document.getElementById("tep_respiracion")?.checked);
+  const tepCirculacion = Boolean(document.getElementById("tep_circulacion")?.checked);
+  const tepLadosAlterados = (tepApariencia ? 1 : 0) + (tepRespiracion ? 1 : 0) + (tepCirculacion ? 1 : 0);
+
+  // Discriminadores Pediátricos MTS
+  const pedNoReactivo = Boolean(document.getElementById("ped_no_reactivo")?.checked);
+  const pedLactanteFiebre = Boolean(document.getElementById("ped_lactante_fiebre")?.checked);
+  const pedPurpura = Boolean(document.getElementById("ped_purpura")?.checked);
+  const pedTirajeSevero = Boolean(document.getElementById("ped_tiraje_severo")?.checked);
+  const pedLlantoIrritable = Boolean(document.getElementById("ped_llanto_irritable")?.checked);
+  const pedSospechaMaltrato = Boolean(document.getElementById("ped_sospecha_maltrato")?.checked);
+
+  // Discriminadores Gestante / Obstétricos MINSA
+  const obstClaveRoja = Boolean(document.getElementById("obst_clave_roja")?.checked);
+  const obstAltoRiesgo = Boolean(document.getElementById("obst_alto_riesgo")?.checked);
+  const obstEstable = Boolean(document.getElementById("obst_estable")?.checked);
+
+  // Alertas Específicas MTS
+  const alertaAnafilaxia = Boolean(document.getElementById("alerta_anafilaxia")?.checked);
+  const alertaTraumaMayor = Boolean(document.getElementById("alerta_trauma_mayor")?.checked);
+  const alertaNeutropenia = Boolean(document.getElementById("alerta_neutropenia")?.checked);
+  const alertaInfarto = Boolean(STATE.codigoInfarto || document.getElementById("check_cod_infarto")?.checked);
+  const alertaIctus = Boolean(STATE.codigoIctus || document.getElementById("check_cod_ictus")?.checked);
+  const alertaSepsis = Boolean(STATE.codigoSepsis || document.getElementById("check_cod_sepsis")?.checked);
+
+  const tieneDiscriminadorMTS = (
+    Boolean(motivoMts) ||
+    mtsVital ||
+    (mtsHemorragia !== "ninguna") ||
+    (mtsConciencia !== "alerta") ||
+    (mtsAgudeza !== "habitual") ||
+    tepLadosAlterados > 0 ||
+    pedNoReactivo || pedLactanteFiebre || pedPurpura || pedTirajeSevero || pedLlantoIrritable || pedSospechaMaltrato ||
+    obstClaveRoja || obstAltoRiesgo || obstEstable ||
+    alertaAnafilaxia || alertaTraumaMayor || alertaNeutropenia
+  );
 
   const antCardio = document.getElementById("ant_cardio")?.checked || false;
   const antResp = document.getElementById("ant_resp")?.checked || false;
@@ -4088,7 +4221,8 @@ function recalcularPrioridad() {
     spo2 !== null || fc !== null || pas !== null || pad !== null ||
     fr !== null || temp !== null || glucosa !== null || glasgow !== null ||
     (eva !== null && eva > 0) || (motivo && motivo.trim() !== "") ||
-    Boolean(STATE.codigoInfarto) || Boolean(STATE.codigoIctus) || Boolean(STATE.codigoSepsis) ||
+    tieneDiscriminadorMTS ||
+    alertaInfarto || alertaIctus || alertaSepsis ||
     Boolean(claveObstetrica) || Boolean(STATE.ingresoDirectoCritico) || Boolean(STATE.panicoShockTrauma)
   );
 
@@ -4108,21 +4242,42 @@ function recalcularPrioridad() {
     return;
   }
 
-  // PARTE 2 y 3: Evaluar con Motor Estándar ESI v5 + NEWS2 + ADA + MINSA
+  // PARTE 2 y 3: Evaluar con Motor Manchester MTS + NTS N° 042-MINSA
   const datosTriaje = {
     spo2, fc, pas, pad, fr, temp, glucosa, glasgow, eva,
-    esPediatrico: Boolean(STATE.edad !== null && STATE.edad !== undefined && STATE.edad < 14),
+    esPediatrico: Boolean(STATE.edad !== null && STATE.edad !== undefined && STATE.edad < 14) || tepLadosAlterados > 0 || pedNoReactivo || pedLactanteFiebre || pedPurpura || pedTirajeSevero || pedLlantoIrritable || pedSospechaMaltrato,
     edad: (typeof STATE.edad === "number") ? STATE.edad : 30,
     motivo,
-    esGestante,
-    claveObstetrica,
-    codigoInfarto: Boolean(STATE.codigoInfarto),
-    codigoIctus: Boolean(STATE.codigoIctus),
-    codigoSepsis: Boolean(STATE.codigoSepsis),
+    esGestante: esGestante || obstClaveRoja || obstAltoRiesgo || obstEstable,
+    claveObstetrica: claveObstetrica || (obstClaveRoja ? "roja" : obstAltoRiesgo ? "azul" : obstEstable ? "amarilla" : null),
+    codigoInfarto: alertaInfarto,
+    codigoIctus: alertaIctus,
+    codigoSepsis: alertaSepsis,
     panicoShockTrauma: Boolean(STATE.panicoShockTrauma),
     esParoOAgonia: Boolean(validacion.esParoOAgonia),
     ingresoDirectoCritico: Boolean(STATE.ingresoDirectoCritico),
-    motivoIngresoCritico: STATE.motivoIngresoCritico || "Activación directa de Trauma Shock / Riesgo Vital Inmediato — Ley N° 27604"
+    motivoIngresoCritico: STATE.motivoIngresoCritico || "Activación directa de Trauma Shock / Riesgo Vital Inmediato — Ley N° 27604",
+    // MTS Discriminadores
+    mts_vital: mtsVital,
+    mts_hemorragia: mtsHemorragia,
+    mts_conciencia: mtsConciencia,
+    mts_agudeza: mtsAgudeza,
+    tep_lados_alterados: tepLadosAlterados,
+    ped_no_reactivo: pedNoReactivo,
+    ped_lactante_fiebre: pedLactanteFiebre,
+    ped_purpura: pedPurpura,
+    ped_tiraje_severo: pedTirajeSevero,
+    ped_llanto_irritable: pedLlantoIrritable,
+    ped_sospecha_maltrato: pedSospechaMaltrato,
+    obst_clave_roja: obstClaveRoja,
+    obst_alto_riesgo: obstAltoRiesgo,
+    obst_estable: obstEstable,
+    alerta_anafilaxia: alertaAnafilaxia,
+    alerta_infarto: alertaInfarto,
+    alerta_ictus: alertaIctus,
+    alerta_sepsis: alertaSepsis,
+    alerta_trauma_mayor: alertaTraumaMayor,
+    alerta_neutropenia: alertaNeutropenia
   };
 
   const resultado = evaluarTriajeEstandar(datosTriaje);
@@ -9597,12 +9752,12 @@ let intervalCronometrosCola = null;
 
 const ORDEN_PRIORIDADES = { "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, null: 99 };
 const COLORES_PRIORIDAD = {
-  "I": { bg: "#fee2e2", border: "#fecaca", text: "#b91c1c", label: "P-I ROJO" }, // bg-red-100 text-red-700 border-red-200
-  "II": { bg: "#ffedd5", border: "#fed7aa", text: "#c2410c", label: "P-II NARANJA" }, // bg-orange-100 text-orange-700 border-orange-200
-  "III": { bg: "#fef9c3", border: "#fef08a", text: "#a16207", label: "P-III AMARILLO" }, // bg-yellow-100 text-yellow-700 border-yellow-200
-  "IV": { bg: "#dcfce7", border: "#bbf7d0", text: "#15803d", label: "P-IV VERDE" }, // bg-emerald-100 text-emerald-700 border-emerald-200
-  "V": { bg: "#dbeafe", border: "#bfdbfe", text: "#1d4ed8", label: "P-V AZUL" }, // bg-blue-100 text-blue-700 border-blue-200
-  null: { bg: "#f1f5f9", border: "#e2e8f0", text: "#64748b", label: "POR EVALUAR" }
+  "I": { bg: "#fee2e2", border: "#fecaca", text: "#b91c1c", label: "🔴 P-I Inmediato (0 min)" },
+  "II": { bg: "#ffedd5", border: "#fed7aa", text: "#c2410c", label: "🟠 P-II Muy Urgente (≤ 10 min)" },
+  "III": { bg: "#fef9c3", border: "#fef08a", text: "#a16207", label: "🟡 P-III Urgente (≤ 30 min)" },
+  "IV": { bg: "#dcfce7", border: "#bbf7d0", text: "#15803d", label: "🟢 P-IV Poco Urgente (≤ 60 min)" },
+  "V": { bg: "#dbeafe", border: "#bfdbfe", text: "#1d4ed8", label: "🔵 P-V No Urgente (≤ 120 min)" },
+  null: { bg: "#f1f5f9", border: "#cbd5e1", text: "#475569", label: "⏳ SIN PRIORIDAD" }
 };
 
 function generarIdPaciente() {
@@ -9645,9 +9800,14 @@ function crearRegistroPaciente(datos = {}) {
 function capturarFormularioActual() {
   const inputs = {};
   const ids = [
-    "ident_full", "dni_reniec_input", "motivo_full", "spo2_full", "fc_full",
+    "ident_full", "dni_reniec_input", "motivo_full", "motivo_mts_select", "spo2_full", "fc_full",
     "pas_full", "pad_full", "fr_full", "temp_full", "glasgow_full", "glucosa_full",
     "eva_full", "eva_range", "edad_full", "sexo_full", "fecha_nac_full", "gsan_full",
+    "mts_disc_vital", "mts_disc_hemorragia", "mts_disc_conciencia", "mts_disc_agudeza",
+    "tep_apariencia", "tep_respiracion", "tep_circulacion",
+    "ped_no_reactivo", "ped_lactante_fiebre", "ped_purpura", "ped_tiraje_severo",
+    "ped_llanto_irritable", "ped_sospecha_maltrato", "obst_clave_roja", "obst_alto_riesgo",
+    "obst_estable", "alerta_anafilaxia", "alerta_trauma_mayor", "alerta_neutropenia",
     "check_cod_infarto", "check_cod_ictus", "check_cod_sepsis",
     "chk_gestante_full", "chk_pediatrico_full", "clave_obstetrica_sel",
     "enfermero_triaje_select", "alergias_full", "alergias_mod1", "chk_consentimiento_datos",
@@ -9944,20 +10104,50 @@ function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
   } else {
     const elIdent = document.getElementById("ident_full");
     if (elIdent) {
-      elIdent.value = "";
+      elIdent.value = nuevoPx.dni || "";
       elIdent.placeholder = `${nuevoPx.identificador || 'Ticket'} — Ingrese DNI o apellidos completos`;
     }
     const elDni1 = document.getElementById("dni_mod1");
     if (elDni1) {
-      elDni1.value = "";
+      elDni1.value = nuevoPx.dni || "";
       elDni1.placeholder = "Ingrese 8 dígitos de DNI para consulta en Módulo 1...";
     }
     const elDni = document.getElementById("dni_reniec_input");
-    if (elDni) elDni.value = "";
+    if (elDni) elDni.value = nuevoPx.dni || "";
     const elDni4 = document.getElementById("dni_mod4");
-    if (elDni4) elDni4.value = "";
+    if (elDni4) elDni4.value = nuevoPx.dni || "";
     const elMotivo = document.getElementById("motivo_full");
-    if (elMotivo) elMotivo.value = "";
+    if (elMotivo) elMotivo.value = nuevoPx.motivo || "";
+
+    if (nuevoPx.edad) {
+      const elEdad = document.getElementById("edad_full");
+      if (elEdad) elEdad.value = nuevoPx.edad;
+    }
+    if (nuevoPx.sexo) {
+      const elSexo = document.getElementById("sexo_full");
+      if (elSexo) elSexo.value = nuevoPx.sexo;
+    }
+    if (nuevoPx.alergias) {
+      const elAlerg = document.getElementById("alergias_full");
+      if (elAlerg) elAlerg.value = nuevoPx.alergias;
+      const elAlerg1 = document.getElementById("alergias_mod1");
+      if (elAlerg1) elAlerg1.value = nuevoPx.alergias;
+    }
+    if (nuevoPx.cie10) {
+      const elCie = document.getElementById("cie10_select") || document.getElementById("cie10_input");
+      if (elCie) elCie.value = nuevoPx.cie10;
+    }
+  }
+
+  // Si el paciente aún no concluye el flujo, navegar de inmediato a su estación clínica activa
+  const efPxActual = nuevoPx.estadoFlujo || "PENDIENTE_TRIAJE";
+  if (efPxActual !== "CERRADO_FACTURADO" && window.COCKPIT && typeof window.COCKPIT.irAFase === "function") {
+    let fDestinoPx = 1;
+    if (efPxActual === "PENDIENTE_TRIAJE") fDestinoPx = 1;
+    else if (efPxActual === "ADMISION" || efPxActual === "PENDIENTE_ADMISION") fDestinoPx = 2;
+    else if (efPxActual === "EN_ATENCION_MEDICA") fDestinoPx = 3;
+    else if (efPxActual === "PENDIENTE_CAJA") fDestinoPx = 4;
+    window.COCKPIT.irAFase(fDestinoPx);
   }
 
   const hcDisp = document.getElementById("hc_code_display");
@@ -13022,10 +13212,10 @@ function reiniciarGuardiaSimulacionDesdeCero() {
     if (typeof window.COCKPIT !== "undefined" && typeof window.COCKPIT.mostrarToast === "function") {
       window.COCKPIT.mostrarToast("⚠️ Guardia reiniciada desde cero para simulación. Camas liberadas.", "info");
     } else {
-      alert("⚠️ Guardia reiniciada exitosamente desde cero para la simulación.
+      alert(`⚠️ Guardia reiniciada exitosamente desde cero para la simulación.
 - Todas las camas han sido liberadas.
 - Pacientes archivados en el Historial de Días Anteriores.
-- Formulario listo para nuevas atenciones.");
+- Formulario listo para nuevas atenciones.`);
     }
   } catch(err) {
     console.error("[REINICIO_GUARDIA] Error:", err);
@@ -15440,3 +15630,145 @@ if (document.readyState === "loading") {
 } else {
   if (typeof verificarInicioNuevoDia === "function") verificarInicioNuevoDia();
 }
+
+// ====================================================================
+// FUNCIONES DE APOYO MTS (MANCHESTER TRIAGE SYSTEM) & RESILIENCIA PESTAÑA
+// ====================================================================
+
+function mostrarInfoVital(tipo, event) {
+  if (event && event.stopPropagation) event.stopPropagation();
+  const infoMap = {
+    spo2: "SpO2 (Saturación de Oxígeno):\n• Normal: 95 - 100% (EPOC: 88 - 92%)\n• Alerta Amarilla: 92 - 94%\n• Alerta Crítica (P-I): < 90%",
+    fc: "Frecuencia Cardíaca (FC):\n• Normal Adulto: 60 - 100 lpm\n• Taquicardia / Bradicardia: 101 - 130 o 45 - 59 lpm\n• Alerta Crítica (P-I / Shock): > 130 o < 45 lpm",
+    pa: "Presión Arterial (PA):\n• Óptima / Normal: < 120/80 mmHg (Normotenso 90-139 / 60-89)\n• Crisis Hipertensiva (P-II): ≥ 180 sistólica o ≥ 110 diastólica\n• Hipotensión / Shock (P-I): Sistólica < 90 mmHg",
+    temp: "Temperatura (°C):\n• Normal: 36.0 - 37.5 °C\n• Febrícula: 37.6 - 37.9 °C\n• Fiebre: 38.0 - 38.4 °C (Amarillo)\n• Muy caliente: 38.5 - 40.9 °C (Naranja)\n• Hipertermia maligna / Hipotermia extrema: ≥ 41.0 °C o < 35.0 °C (Rojo)",
+    fr: "Frecuencia Respiratoria (FR):\n• Normal Adulto: 12 - 20 rpm\n• Taquipnea moderada: 21 - 24 rpm\n• Alerta Crítica (P-I): ≥ 25 rpm o ≤ 8 rpm",
+    glasgow: "Escala de Coma de Glasgow (GCS):\n• Normal: 15/15\n• Alteración leve/moderada: 9 - 13/15 (Naranja P-II)\n• Coma / Riesgo Vía Aérea: ≤ 8/15 (Rojo P-I)",
+    glucosa: "Glicemia Capilar (mg/dL):\n• Normal ayuno: 70 - 140 mg/dL\n• Hipoglucemia Nivel 2: 54 - 69 mg/dL (Naranja P-II)\n• Hipoglucemia Grado 3 (< 54) o Estado Hiperosmolar (> 600): Rojo (P-I)\n• Hiperglucemia > 400 mg/dL: Naranja (P-II)"
+  };
+  const texto = infoMap[tipo] || "Información de referencia clínica normada NTS N° 042-MINSA.";
+  alert(texto);
+}
+window.mostrarInfoVital = mostrarInfoVital;
+
+function toggleMtsSubpanel(tipo) {
+  const panelId = (tipo === "pediatrico") ? "subpanel_mts_pediatrico"
+    : (tipo === "gestante") ? "subpanel_mts_gestante"
+    : (tipo === "alertas") ? "subpanel_mts_alertas"
+    : (tipo === "signos_adicionales") ? "subpanel_signos_adicionales"
+    : null;
+  if (!panelId) return;
+  const el = document.getElementById(panelId);
+  if (!el) return;
+  const estaVisible = (el.style.display !== "none" && el.style.display !== "");
+  el.style.display = estaVisible ? "none" : "block";
+
+  if (tipo === "pediatrico") {
+    const chk = document.getElementById("check_pediatrico");
+    if (chk && !estaVisible) chk.checked = true;
+  } else if (tipo === "gestante") {
+    const chk = document.getElementById("check_gestante");
+    if (chk && !estaVisible) chk.checked = true;
+  }
+  if (typeof recalcularPrioridad === "function") recalcularPrioridad();
+}
+window.toggleMtsSubpanel = toggleMtsSubpanel;
+
+function seleccionarMotivoMTS(val) {
+  const motivosTextos = {
+    dolor_toracico: "Dolor torácico opresivo retroesternal",
+    disnea: "Disnea aguda / Dificultad respiratoria",
+    trauma: "Trauma / Herida contusa o cortante",
+    dolor_abdominal: "Dolor abdominal agudo",
+    neurologico: "Cefalea intensa / Déficit neurológico focal",
+    fiebre: "Fiebre persistente / Síndrome febril",
+    sangrado: "Sangrado activo / Hemorragia",
+    intoxicacion_alergia: "Reacción alérgica / Sospecha de intoxicación",
+    embarazo: "Molestias del embarazo / Contracciones",
+    pediatrico: "Malestar pediátrico / Fiebre / Decaimiento",
+    menor: "Problema menor / Consulta no urgente"
+  };
+  const elInput = document.getElementById("motivo_full");
+  if (elInput && (!elInput.value || elInput.value.trim() === "" || Object.values(motivosTextos).includes(elInput.value.trim()))) {
+    if (val && motivosTextos[val]) {
+      elInput.value = motivosTextos[val];
+    }
+  }
+
+  if (val === "pediatrico") {
+    const p = document.getElementById("subpanel_mts_pediatrico");
+    if (p) p.style.display = "block";
+    const chk = document.getElementById("check_pediatrico");
+    if (chk) chk.checked = true;
+  } else if (val === "embarazo") {
+    const p = document.getElementById("subpanel_mts_gestante");
+    if (p) p.style.display = "block";
+    const chk = document.getElementById("check_gestante");
+    if (chk) chk.checked = true;
+  } else if (val === "dolor_toracico" || val === "neurologico") {
+    const p = document.getElementById("subpanel_mts_alertas");
+    if (p) p.style.display = "block";
+    if (val === "dolor_toracico") {
+      const chk = document.getElementById("check_cod_infarto");
+      if (chk) { chk.checked = true; if (typeof toggleCodigoTiempo === "function") toggleCodigoTiempo("infarto", true); }
+    } else if (val === "neurologico") {
+      const chk = document.getElementById("check_cod_ictus");
+      if (chk) { chk.checked = true; if (typeof toggleCodigoTiempo === "function") toggleCodigoTiempo("ictus", true); }
+    }
+  }
+  if (typeof recalcularPrioridad === "function") recalcularPrioridad();
+}
+window.seleccionarMotivoMTS = seleccionarMotivoMTS;
+
+function sincronizarAlReanudarPestana() {
+  try {
+    if (typeof window.recargarColaCompartidaDesdeStorage === 'function') {
+      window.recargarColaCompartidaDesdeStorage();
+    }
+    if (typeof window.renderizarTableroColaPacientes === 'function') {
+      window.renderizarTableroColaPacientes();
+    }
+    if (typeof window.renderizarTableroCamasYQuirofanos === 'function') {
+      window.renderizarTableroCamasYQuirofanos();
+    }
+    if (typeof window.renderizarStockCamas === 'function') {
+      window.renderizarStockCamas();
+    }
+    if (typeof window.actualizarWidgetFlotanteCamas === 'function') {
+      window.actualizarWidgetFlotanteCamas();
+    }
+    if (typeof window.tickCronometrosCamas === 'function') {
+      window.tickCronometrosCamas();
+    }
+    if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === 'function') {
+      window.COCKPIT.actualizarContextoCockpit();
+    }
+  } catch (err) {
+    console.warn("Aviso en sincronizarAlReanudarPestana:", err);
+  }
+}
+window.sincronizarAlReanudarPestana = sincronizarAlReanudarPestana;
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    sincronizarAlReanudarPestana();
+  }
+});
+
+window.addEventListener("focus", () => {
+  sincronizarAlReanudarPestana();
+});
+
+// Debounce 150ms en resize
+let resizeTimerMts = null;
+window.addEventListener("resize", () => {
+  if (resizeTimerMts) clearTimeout(resizeTimerMts);
+  resizeTimerMts = setTimeout(() => {
+    if (typeof renderizarTableroColaPacientes === "function") renderizarTableroColaPacientes();
+  }, 150);
+});
+
+// Desactivar validación nativa del navegador para prevenir casillas ocultas bloqueantes
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("form").forEach(f => f.setAttribute("novalidate", "true"));
+});
