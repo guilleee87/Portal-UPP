@@ -5133,13 +5133,129 @@
         <button type="button" onclick="cerrarModalBrazalete()" style="color:#ffffff; background:none; border:none; font-size:1.4rem; cursor:pointer;">&times;</button>
       </div>
       <div style="padding:18px; text-align:center;">
-        <div id="brazalete_modal_preview" style="border:2px dashed #dc2626; border-radius:12px; padding:16px; background:#f8fafc; margin-bottom:16px; text-align:left; overflow-x:auto; display:flex; justify-content:center;">
+        <div id="brazalete_modal_preview" style="border:2px dashed #0284c7; border-radius:12px; padding:14px; background:#f8fafc; margin-bottom:14px; text-align:left; overflow-x:auto; display:flex; justify-content:center; align-items:center;">
           <!-- Contenido visual del brazalete inyectado dinámicamente -->
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px;">
           <button type="button" class="btn-full-secondary" onclick="cerrarModalBrazalete()">Cerrar</button>
           <button type="button" class="btn-full-primary" onclick="imprimirBrazaleteDirecto()">🖨️ Mandar a Imprimir Pulsera</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REINICIO DE GUARDIA / SIMULACIÓN Y DEMOSTRACIÓN (⚠️ !) -->
+  <div class="modal-hc-overlay" id="modal_reinicio_simulacion" style="display:none; z-index:99999;">
+    <div class="modal-hc-container" style="max-width:540px; width:95%; border:2px solid #fda4af; box-shadow:0 12px 32px rgba(190,18,60,0.25);">
+      <div style="background:#be123c; color:#ffffff; display:flex; justify-content:space-between; align-items:center; padding:14px 18px;">
+        <h3 style="margin:0; font-size:1rem; display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.2rem;">⚠️ !</span>
+          <span>Reiniciar Guardia desde Cero (Simulación / Demo)</span>
+        </h3>
+        <button type="button" onclick="cerrarModalReinicioSimulacion()" style="color:#ffffff; background:none; border:none; font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+      <div style="padding:20px; font-size:0.88rem; color:#334155; line-height:1.5;">
+        <div style="background:#fff1f2; border:1.5px solid #fecdd3; border-radius:8px; padding:12px; margin-bottom:14px;">
+          <strong style="color:#9f1239; display:flex; align-items:center; gap:6px; font-size:0.92rem; margin-bottom:4px;">
+            <span>⚠️</span> <span>AVISO DE SIMULACIÓN Y DEMOSTRACIÓN:</span>
+          </strong>
+          <span style="color:#881337; font-size:0.82rem;">
+            Este botón existe <strong>ÚNICAMENTE para fines de simulación, docencia y pruebas de flujo asistencial</strong>. Permite reiniciar la guardia en un entorno limpio sin requerir reinicio manual del servidor ni borrado de cookies.
+          </span>
+        </div>
+
+        <p style="margin:0 0 10px 0;">Al confirmar, el sistema ejecutará las siguientes acciones de forma automática:</p>
+        <ul style="margin:0 0 14px 18px; padding:0; font-size:0.84rem; color:#475569;">
+          <li><strong>Archivado de seguridad:</strong> Los pacientes atendidos y pendientes se respaldan en el <em>Historial de Días Anteriores</em> (no se pierden).</li>
+          <li><strong>Liberación de recursos:</strong> Las 15 camas (Shock Trauma, Observación, Quirófanos SOP, UCI) quedan 100% disponibles.</li>
+          <li><strong>Cola en blanco:</strong> Se reinicia la lista de pacientes y el contador de tickets regresa a <code>T-001</code>.</li>
+          <li><strong>Formulario limpio:</strong> Se restablecen todos los campos de triaje y admisión para un nuevo ingreso manual.</li>
+        </ul>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
+          <button type="button" class="btn-full-secondary" onclick="cerrarModalReinicioSimulacion()">Cancelar</button>
+          <button type="button" class="btn-full-primary" onclick="reiniciarGuardiaSimulacionDesdeCero()" style="background:#be123c; border-color:#9f1239; font-weight:800;">
+            ⚠️ Confirmar y Reiniciar Guardia (Demo)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONSULTA DE ATENCIONES DE DÍAS ANTERIORES (NTS N° 139-MINSA) -->
+  <div class="modal-hc-overlay" id="modal_historico_dias_anteriores" style="display:none; z-index:99998;">
+    <div class="modal-hc-container" style="max-width:1150px; width:95%; max-height:90vh; display:flex; flex-direction:column;">
+      <div style="background:#0f172a; color:#ffffff; display:flex; justify-content:space-between; align-items:center; padding:14px 18px;">
+        <div>
+          <h3 style="margin:0; font-size:0.98rem; display:flex; align-items:center; gap:8px;">
+            <span>📅</span>
+            <span>Historial y Consulta de Atenciones de Días Anteriores</span>
+          </h3>
+          <div style="font-size:0.74rem; color:#94a3b8; margin-top:2px;">
+            Registro Inmutable de Guardias Previas · Ley N° 26842 &amp; NTS N° 139-MINSA (Archivo Clínico de Emergencias)
+          </div>
+        </div>
+        <button type="button" onclick="cerrarModalHistoricoDiasAnteriores()" style="color:#ffffff; background:none; border:none; font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+
+      <div style="padding:14px 18px; border-bottom:1px solid #e2e8f0; background:#f8fafc; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <label for="select_fecha_historico" style="font-size:0.82rem; font-weight:700; color:#334155;">Seleccionar Guardia:</label>
+          <select id="select_fecha_historico" onchange="cargarDiaHistoricoSeleccionado(this.value)" class="form-control" style="font-size:0.82rem; padding:5px 10px; border-radius:6px; min-width:260px; font-weight:700; color:#0f172a;">
+            <!-- Fechas inyectadas dinámicamente -->
+          </select>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span id="count_historico_total" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:800; font-size:0.75rem; padding:3px 10px; border-radius:9999px;">
+            0 Pacientes
+          </span>
+          <button type="button" class="btn-full-secondary" onclick="archivarDiaActualEnHistorico(); abrirModalHistoricoDiasAnteriores();" style="font-size:0.75rem; padding:4px 8px;" title="Archivar pacientes actuales al histórico de hoy">
+            💾 Respaldar Hoy
+          </button>
+        </div>
+      </div>
+
+      <div style="padding:12px 18px; overflow-y:auto; flex:1; min-height:280px; max-height:55vh;">
+        <table style="width:100%; border-collapse:collapse; text-align:left;">
+          <thead>
+            <tr style="background:#0f172a; color:#ffffff; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.4px;">
+              <th style="padding:8px; border-top-left-radius:6px;">Ticket / Hora</th>
+              <th style="padding:8px;">Paciente (DNI / Edad / Sexo)</th>
+              <th style="padding:8px; text-align:center;">Prioridad MINSA</th>
+              <th style="padding:8px;">Diagnóstico CIE-10 / Cama</th>
+              <th style="padding:8px;">Destino / Alta</th>
+              <th style="padding:8px;">Médico / Seguro</th>
+              <th style="padding:8px; text-align:right;">Liquidación</th>
+              <th style="padding:8px; text-align:center; border-top-right-radius:6px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody_historico_pacientes">
+            <!-- Filas inyectadas dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+
+      <div style="padding:12px 18px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">
+        <button type="button" class="btn-full-secondary" onclick="cerrarModalHistoricoDiasAnteriores()">Cerrar Historial</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DETALLE DE EXPEDIENTE HISTÓRICO (SOLO LECTURA) -->
+  <div class="modal-hc-overlay" id="modal_detalle_paciente_historico" style="display:none; z-index:99999;">
+    <div class="modal-hc-container" style="max-width:760px; width:95%; max-height:88vh; display:flex; flex-direction:column;">
+      <div style="background:#0f172a; color:#ffffff; display:flex; justify-content:space-between; align-items:center; padding:12px 16px;">
+        <h4 style="margin:0; font-size:0.92rem; display:flex; align-items:center; gap:8px;">
+          <span>📜</span>
+          <span>Expediente Clínico Histórico de Emergencia (Solo Lectura)</span>
+        </h4>
+        <button type="button" onclick="cerrarModalDetalleHistorico()" style="color:#ffffff; background:none; border:none; font-size:1.3rem; cursor:pointer;">&times;</button>
+      </div>
+      <div id="contenedor_detalle_historico" style="padding:16px; overflow-y:auto; flex:1;">
+        <!-- Detalle inyectado dinámicamente -->
+      </div>
+      <div style="padding:10px 16px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">
+        <button type="button" class="btn-full-secondary" onclick="cerrarModalDetalleHistorico()">Cerrar Detalle</button>
       </div>
     </div>
   </div>

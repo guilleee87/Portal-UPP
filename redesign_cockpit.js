@@ -111,8 +111,28 @@
           ⚖️ Desempate
         </button>
       </div>
+      <div class="cockpit-tactical-group" style="margin-left:auto;">
+        <button type="button" class="cockpit-tactical-btn" onclick="abrirModalHistoricoDiasAnteriores()" style="background:#f0fdf4; color:#15803d; border:1.5px solid #86efac; font-weight:700;" title="Consultar pacientes y atenciones de días anteriores (NTS N° 139-MINSA)">
+          <span>📅</span> <span>Días Anteriores</span>
+        </button>
+        <button type="button" class="cockpit-tactical-btn" onclick="abrirModalReinicioSimulacion()" style="background:#fff1f2; color:#be123c; border:1.5px solid #fda4af; font-weight:800;" title="⚠️ Botón exclusivo de simulación y demostración: Reiniciar guardia y liberar camas">
+          <span>⚠️ !</span> <span>Reiniciar Guardia (Demo)</span>
+        </button>
+      </div>
     `;
     workspaceCenter.appendChild(tacticalBar);
+
+    // 1.4.1 Mover y Reubicar el Panel de Pacientes en Curso (Carrusel)
+    // Ubicación: ENTRE LOS BOTONES TÁCTICOS Y ANTES DE EMPEZAR EL MÓDULO 1
+    const activePanel = document.getElementById("activePatientsPanel");
+    if (activePanel) {
+      // Ocultar botones duplicados de la cabecera vieja para dejar solo el carrusel limpio y contador
+      const oldBtns = activePanel.querySelector(".active-patients-btn-group");
+      if (oldBtns) oldBtns.style.display = "none";
+      activePanel.style.display = "block";
+      activePanel.style.margin = "6px 0 10px 0";
+      workspaceCenter.appendChild(activePanel);
+    }
 
     // Tarjeta Resumen Sellado de Triaje (Solo visible en Rol MÉDICO)
     const triageSealedCard = document.createElement("div");
@@ -632,10 +652,19 @@
     const elFirmante = document.getElementById("c_triage_firmante");
     const elFecha = document.getElementById("c_triage_fecha_sello");
 
-    const prio = px.prioridad || state.prioridad || "III";
+    const prio = px.prioridad || state.prioridad || null;
     if (elPrioBadge) {
-      elPrioBadge.className = `ui-badge-pill ui-badge-p${prio.toLowerCase()}`;
-      elPrioBadge.textContent = `P-${prio} · ${prio === "I" ? "Emergencia Vital" : prio === "II" ? "Emergencia" : "Urgencia"}`;
+      if (prio) {
+        elPrioBadge.className = `ui-badge-pill ui-badge-p${prio.toLowerCase()}`;
+        elPrioBadge.textContent = `P-${prio} · ${prio === "I" ? "Emergencia Vital" : prio === "II" ? "Emergencia" : prio === "III" ? "Urgencia" : prio === "IV" ? "Menor Urgencia" : "No Urgente"}`;
+        elPrioBadge.style.background = "";
+        elPrioBadge.style.color = "";
+      } else {
+        elPrioBadge.className = "ui-badge-pill";
+        elPrioBadge.textContent = "⏳ Triaje Pendiente (Sin Prioridad)";
+        elPrioBadge.style.background = "#f1f5f9";
+        elPrioBadge.style.color = "#475569";
+      }
     }
 
     const turno = px.turno || (state.identificador ? state.identificador.replace("CRITICO-", "") : "E-001");
@@ -919,9 +948,14 @@ function refrescarValoresMonitor() {
       }
 
       const monEsi = document.getElementById("mon_esi_level");
-      if (monEsi && state.prioridad) {
-        monEsi.textContent = `Nivel ${state.prioridad}`;
-        monEsi.style.color = state.prioridad === "I" ? "#EF4444" : state.prioridad === "II" ? "#F97316" : "#A7F3D0";
+      if (monEsi) {
+        if (state.prioridad) {
+          monEsi.textContent = `Nivel ${state.prioridad}`;
+          monEsi.style.color = state.prioridad === "I" ? "#EF4444" : state.prioridad === "II" ? "#F97316" : "#A7F3D0";
+        } else {
+          monEsi.textContent = "Sin evaluar";
+          monEsi.style.color = "#94A3B8";
+        }
       }
     }
 
@@ -941,10 +975,19 @@ function refrescarValoresMonitor() {
       const nombre = state.nombreReniec || state.identificador || (state.esNN ? "Paciente NN (Crítico)" : "Sin paciente seleccionado");
       pxNombre.textContent = nombre;
 
-      const prio = state.prioridad || "V";
+      const prio = state.prioridad || null;
       if (pxPrio) {
-        pxPrio.className = `ui-badge-pill ui-badge-p${prio.toLowerCase()}`;
-        pxPrio.textContent = `P-${prio} · ${prio === "I" ? "Emergencia Vital" : prio === "II" ? "Emergencia" : prio === "III" ? "Urgencia" : "No Urgente"}`;
+        if (prio) {
+          pxPrio.className = `ui-badge-pill ui-badge-p${prio.toLowerCase()}`;
+          pxPrio.textContent = `P-${prio} · ${prio === "I" ? "Emergencia Vital" : prio === "II" ? "Emergencia" : prio === "III" ? "Urgencia" : prio === "IV" ? "Menor Urgencia" : "No Urgente"}`;
+          pxPrio.style.background = "";
+          pxPrio.style.color = "";
+        } else {
+          pxPrio.className = "ui-badge-pill";
+          pxPrio.textContent = "⏳ Sin Prioridad (Por evaluar)";
+          pxPrio.style.background = "#f1f5f9";
+          pxPrio.style.color = "#64748b";
+        }
       }
 
       if (pxCama) {
