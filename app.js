@@ -693,65 +693,91 @@ function obtenerIpEstacionAuditor() {
 }
 
 function renderizarBloqueAuditoriaEdicionHC(master, ident, hc) {
-  const rolAct = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === "function") ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
   const mods = Array.isArray(master?.modificaciones_auditoria) ? master.modificaciones_auditoria : [];
+  const rolAct = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === "function") ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
   const modsHtml = mods.length === 0
-    ? '<div style="font-size:0.75rem;color:#64748b;font-style:italic;">Sin modificaciones registradas en esta Historia Clínica.</div>'
+    ? '<div style="font-size:0.75rem;color:#64748b;font-style:italic;">Sin rectificaciones registradas. (NTS N° 139-MINSA num. 4.2.7: toda rectificación conserva el dato original legible, motivo obligatorio, usuario, IP, día y hora).</div>'
     : mods.map(m => `
-        <div style="background:#ffffff;border:1px solid #cbd5e1;border-left:4px solid #4f46e5;border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:0.76rem;">
+        <div style="background:#ffffff;border:1px solid #cbd5e1;border-left:4px solid #4f46e5;border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:0.75rem;">
           <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-weight:800;color:#1e1b4b;">
-            <span>👤 Modificado por: ${m.usuario}</span>
+            <span>👤 ${m.usuario}</span>
             <span style="font-family:monospace;color:#0369a1;">🌐 IP PC: ${m.ip_pc} · 📅 ${m.dia} ⏱️ ${m.hora}</span>
           </div>
-          <div style="color:#334155;margin-top:4px;">${m.detalle}</div>
+          <div style="margin-top:4px;color:#0f172a;">
+            <strong>Campo:</strong> ${m.campo || 'Historia Clínica'} |
+            <span style="color:#991b1b;text-decoration:line-through;">Antes: "${m.valor_anterior ?? '—'}"</span> →
+            <span style="color:#15803d;font-weight:800;">Después: "${m.valor_nuevo ?? '—'}"</span>
+          </div>
+          <div style="color:#475569;margin-top:2px;"><strong>Motivo obligatorio:</strong> ${m.motivo || m.detalle || '—'}</div>
         </div>
       `).join("");
 
-  if (rolAct !== "AUDITOR" && rolAct !== "ADMIN") {
-    return mods.length > 0 ? `<div style="margin-top:10px;padding:10px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;"><strong>🛡️ Registro de Modificaciones (Auditoría):</strong>${modsHtml}</div>` : "";
-  }
-
-  const safeId = String(ident || hc).replace(/'/g, "\\'");
-  const safeHc = String(hc || "").replace(/'/g, "\\'");
   return `
-    <div style="background:#eef2ff;border:1.5px solid #a5b4fc;border-radius:10px;padding:12px 14px;margin-top:12px;">
-      <div style="font-size:0.84rem;font-weight:900;color:#312e81;margin-bottom:8px;">
-        🛡️ Enmienda / Modificación de Historia Clínica (Solo Rol Auditor — Trazabilidad Inmutable)
+    <div id="hc_audit_modificaciones_lista" style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px 14px;margin-top:12px;">
+      <div style="font-size:0.80rem;font-weight:900;color:#312e81;margin-bottom:6px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+        <span>🛡️ Bitácora Inmutable de Rectificaciones (NTS N° 139-MINSA)</span>
+        ${(rolAct === "AUDITOR" || rolAct === "ADMIN") ? '<span style="font-size:0.72rem;color:#4338ca;">Use el ícono ✏️ junto a cualquier campo para rectificar</span>' : ''}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px;margin-bottom:8px;">
-        <div><label style="font-size:0.70rem;font-weight:700;color:#1e1b4b;">Nombre Completo:</label><input type="text" id="hc_audit_edit_nombre" class="input-full" value="${(master?.nombre_completo || '').replace(/"/g, '&quot;')}" style="font-size:0.76rem;"></div>
-        <div><label style="font-size:0.70rem;font-weight:700;color:#1e1b4b;">DNI / Documento:</label><input type="text" id="hc_audit_edit_dni" class="input-full" value="${(master?.dni || master?.identificador || '').replace(/"/g, '&quot;')}" style="font-size:0.76rem;"></div>
-        <div><label style="font-size:0.70rem;font-weight:700;color:#1e1b4b;">Edad / Sexo:</label><input type="text" id="hc_audit_edit_edad" class="input-full" value="${String(master?.edad || '').replace(/"/g, '&quot;')}" style="font-size:0.76rem;"></div>
-        <div><label style="font-size:0.70rem;font-weight:700;color:#1e1b4b;">Grupo Sanguíneo:</label><input type="text" id="hc_audit_edit_gsan" class="input-full" value="${(master?.grupo_sanguineo || '').replace(/"/g, '&quot;')}" style="font-size:0.76rem;"></div>
-        <div><label style="font-size:0.70rem;font-weight:700;color:#1e1b4b;">Seguro / IAFAS:</label><input type="text" id="hc_audit_edit_seguro" class="input-full" value="${(master?.tipo_seguro || '').replace(/"/g, '&quot;')}" style="font-size:0.76rem;"></div>
-        <div><label style="font-size:0.70rem;font-weight:700;color:#1e1b4b;">Alergias:</label><input type="text" id="hc_audit_edit_alergias" class="input-full" value="${(master?.alergias || '').replace(/"/g, '&quot;')}" style="font-size:0.76rem;"></div>
-        <div><label style="font-size:0.70rem;font-weight:700;color:#1e1b4b;">Antecedentes:</label><input type="text" id="hc_audit_edit_antecedentes" class="input-full" value="${(master?.antecedentes || '').replace(/"/g, '&quot;')}" style="font-size:0.76rem;"></div>
-        <div><label style="font-size:0.70rem;font-weight:700;color:#1e1b4b;">Diagnóstico CIE-10:</label><input type="text" id="hc_audit_edit_cie10" class="input-full" value="${(master?.diagnostico_cie10 || '').replace(/"/g, '&quot;')}" style="font-size:0.76rem;"></div>
-        <div><label style="font-size:0.70rem;font-weight:700;color:#1e1b4b;">Enfermera(o):</label><input type="text" id="hc_audit_edit_enfermera" class="input-full" value="${(master?.enfermera_responsable || '').replace(/"/g, '&quot;')}" style="font-size:0.76rem;"></div>
-        <div><label style="font-size:0.70rem;font-weight:700;color:#1e1b4b;">Médico Tratante:</label><input type="text" id="hc_audit_edit_medico" class="input-full" value="${(master?.medico_responsable || '').replace(/"/g, '&quot;')}" style="font-size:0.76rem;"></div>
-        <div><label style="font-size:0.70rem;font-weight:700;color:#1e1b4b;">Resultados Lab/Imág.:</label><input type="text" id="hc_audit_edit_resultados" class="input-full" value="${(master?.resultados_texto || '').replace(/"/g, '&quot;')}" style="font-size:0.76rem;"></div>
-        <div><label style="font-size:0.70rem;font-weight:700;color:#1e1b4b;">Kardex / Medicación:</label><input type="text" id="hc_audit_edit_kardex" class="input-full" value="${(master?.kardex_texto || '').replace(/"/g, '&quot;')}" style="font-size:0.76rem;"></div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-        <input type="text" id="hc_audit_edit_obs" class="input-full" placeholder="Motivo / Nota de modificación de auditoría..." style="flex:1;min-width:200px;font-size:0.78rem;">
-        <button type="button" id="btn_guardar_mod_auditor_hc" class="btn-full-primary" style="background:#4338ca;padding:8px 14px;font-size:0.78rem;font-weight:800;" onclick="guardarModificacionAuditorHC('${safeId}','${safeHc}')">
-          💾 Guardar Modificación
-        </button>
-      </div>
-      <div id="hc_audit_modificaciones_lista">
-        <div style="font-size:0.74rem;font-weight:800;color:#312e81;margin-bottom:4px;">Bitácora de Modificaciones (Usuario, IP de PC, Día y Hora):</div>
-        ${modsHtml}
-      </div>
+      ${modsHtml}
     </div>
   `;
 }
 
-function guardarModificacionAuditorHC(ident, hc) {
+function abrirEditorCampoHCAuditor(ident, hc, prop, label, valorActual) {
   const rolAct = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === "function") ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
   if (rolAct !== "AUDITOR" && rolAct !== "ADMIN") {
-    alert("Solo el rol AUDITOR puede modificar la Historia Clínica desde el archivo.");
+    alert("🔒 Solo el rol AUDITOR puede rectificar campos de la Historia Clínica.");
     return;
   }
+  let m = document.getElementById("modal_enmienda_campo_hc");
+  if (!m) {
+    m = document.createElement("div");
+    m.id = "modal_enmienda_campo_hc";
+    m.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,0.65);z-index:100020;display:flex;align-items:center;justify-content:center;padding:16px;";
+    document.body.appendChild(m);
+  }
+  const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  m.innerHTML = `
+    <div style="background:#ffffff;border-radius:12px;max-width:480px;width:100%;box-shadow:0 20px 45px rgba(0,0,0,0.3);overflow:hidden;border:2px solid #4f46e5;">
+      <div style="background:#312e81;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+        <strong style="font-size:0.92rem;">✏️ Rectificar Campo: ${esc(label)}</strong>
+        <button type="button" onclick="document.getElementById('modal_enmienda_campo_hc').style.display='none'" style="background:none;border:none;color:#fff;font-size:1.3rem;cursor:pointer;">&times;</button>
+      </div>
+      <div style="padding:14px 16px;font-size:0.80rem;">
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:8px 10px;margin-bottom:10px;color:#991b1b;">
+          <strong>Valor anterior (se conservará en trazabilidad):</strong><br>${esc(valorActual || '—')}
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-weight:800;color:#0f172a;display:block;margin-bottom:4px;">Nuevo valor:</label>
+          <input type="text" id="enm_nuevo_valor" class="input-full" value="${esc(valorActual)}">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-weight:800;color:#991b1b;display:block;margin-bottom:4px;">Motivo de la modificación (OBLIGATORIO por Ley):</label>
+          <textarea id="enm_motivo" class="input-full" rows="2" placeholder="Indique el motivo de la rectificación (ej. Error de digitación, actualización de resultado)..."></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button type="button" class="btn-full-secondary" onclick="document.getElementById('modal_enmienda_campo_hc').style.display='none'">Cancelar</button>
+          <button type="button" id="btn_confirmar_enmienda_hc" class="btn-full-primary" style="background:#4338ca;font-weight:800;">💾 Guardar Rectificación</button>
+        </div>
+      </div>
+    </div>
+  `;
+  m.style.display = "flex";
+  document.getElementById("btn_confirmar_enmienda_hc").onclick = () => {
+    const nuevoVal = (document.getElementById("enm_nuevo_valor")?.value || "").trim();
+    const motivo = (document.getElementById("enm_motivo")?.value || "").trim();
+    if (!motivo) {
+      alert("⚠️ Por normativa (NTS N° 139-MINSA), es OBLIGATORIO indicar el motivo del cambio antes de guardar.");
+      document.getElementById("enm_motivo")?.focus();
+      return;
+    }
+    guardarRectificacionCampoHC(ident, hc, prop, label, valorActual, nuevoVal, motivo);
+    m.style.display = "none";
+  };
+}
+window.abrirEditorCampoHCAuditor = abrirEditorCampoHCAuditor;
+
+function guardarRectificacionCampoHC(ident, hc, prop, label, valorAnterior, valorNuevo, motivo) {
   const ses = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerSesionActiva === "function") ? window.RBAC_FLUJO.obtenerSesionActiva() : null;
   const nombreAuditor = ses?.nombre || ses?.usuario || "Dra. Elena Ríos Salazar (Auditora Médica · CMP 41209)";
   const ipPc = obtenerIpEstacionAuditor();
@@ -759,57 +785,33 @@ function guardarModificacionAuditorHC(ident, hc) {
   const diaStr = ahora.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
   const horaStr = ahora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-  const notaObs = (document.getElementById("hc_audit_edit_obs")?.value || "").trim() || "Actualización de datos clínicos por Auditoría";
-
   const master = cargarPacientesMaster();
   const cId = normalizarClavePaciente(ident);
   const cHc = normalizarClavePaciente(hc);
   const p = master[cId] || master[cHc] || obtenerOInicializarPacienteMaster(ident, hc, ident, "Por validar");
 
-  const camposMap = [
-    ["hc_audit_edit_nombre", "nombre_completo", "Nombre"],
-    ["hc_audit_edit_dni", "dni", "DNI"],
-    ["hc_audit_edit_edad", "edad", "Edad"],
-    ["hc_audit_edit_gsan", "grupo_sanguineo", "Grupo Sanguíneo"],
-    ["hc_audit_edit_seguro", "tipo_seguro", "Seguro / IAFAS"],
-    ["hc_audit_edit_alergias", "alergias", "Alergias"],
-    ["hc_audit_edit_antecedentes", "antecedentes", "Antecedentes"],
-    ["hc_audit_edit_cie10", "diagnostico_cie10", "Diagnóstico CIE-10"],
-    ["hc_audit_edit_enfermera", "enfermera_responsable", "Enfermera(o)"],
-    ["hc_audit_edit_medico", "medico_responsable", "Médico Tratante"],
-    ["hc_audit_edit_resultados", "resultados_texto", "Resultados Lab/Imágenes"],
-    ["hc_audit_edit_kardex", "kardex_texto", "Kardex / Medicación"]
-  ];
-  const cambios = [];
-  camposMap.forEach(([elId, prop, label]) => {
-    const val = (document.getElementById(elId)?.value || "").trim();
-    const prev = p[prop] !== undefined && p[prop] !== null ? String(p[prop]) : "";
-    if (val && val !== prev) {
-      cambios.push(`${label}: "${prev || '—'}" → "${val}"`);
-      p[prop] = val;
-    }
-  });
-  const detalle = cambios.length > 0 ? `${cambios.join(" | ")} · Nota: ${notaObs}` : notaObs;
-
+  p[prop] = valorNuevo;
   p.modificaciones_auditoria = Array.isArray(p.modificaciones_auditoria) ? p.modificaciones_auditoria : [];
   p.modificaciones_auditoria.unshift({
+    campo: label,
+    valor_anterior: valorAnterior || "—",
+    valor_nuevo: valorNuevo || "—",
+    motivo,
     usuario: nombreAuditor,
     ip_pc: ipPc,
     dia: diaStr,
-    hora: horaStr,
-    detalle
+    hora: horaStr
   });
-
   if (cId) master[cId] = p;
   if (cHc) master[cHc] = p;
   guardarPacientesMaster(master);
 
   if (typeof registrarLogAuditoria === "function") {
-    registrarLogAuditoria("Archivo HC", "MODIFICACION_HC_AUDITOR", `${nombreAuditor} | IP ${ipPc} | ${diaStr} ${horaStr} | ${detalle}`);
+    registrarLogAuditoria("Archivo HC", "RECTIFICACION_HC_AUDITOR", `${nombreAuditor} | IP ${ipPc} | ${diaStr} ${horaStr} | ${label}: "${valorAnterior}" -> "${valorNuevo}" | Motivo: ${motivo}`);
   }
   visualizarHistoriaClinica(p, { desdeArchivoAuditor: true });
 }
-window.guardarModificacionAuditorHC = guardarModificacionAuditorHC;
+window.guardarRectificacionCampoHC = guardarRectificacionCampoHC;
 window.generarDatosDemograficosCoherentes = generarDatosDemograficosCoherentes;
 
 function registrarEpisodioEnHistoriaClinica(px = {}, etapa = "Triaje") {
@@ -1919,9 +1921,20 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
   const enfermeraReg = master.enfermera_responsable || pxVivo.enfermeraTriaje || pxVivo.firmas?.triaje?.usuario || stVivo.firmas?.triaje?.usuario || "Lic. Ana Torres Morales (CEP 92410 — Triaje/Tópico)";
   const medicoReg = master.medico_responsable || pxVivo.medico || pxVivo.medicoTratante || pxVivo.firmas?.medico?.usuario || stVivo.medicoTratante || "Dr. Carlos Vega Alva (CMP 58321 · RNE 23901)";
   const diagReg = master.diagnostico_cie10 || pxVivo.cie10 || stVivo.cie10 || "En evaluación clínica / CIE-10";
-  const labsReg = Array.isArray(master.resultados_lab) ? master.resultados_lab : (Array.isArray(stVivo.ordenesLaboratorio) && stVivo.ordenesLaboratorio.length ? stVivo.ordenesLaboratorio.map(l => `${l.nombre} (${l.estado || 'Validado'})`) : (master.resultados_texto ? [master.resultados_texto] : ["Hemograma Completo: Leucocitos 8,400/mm³, Hb 13.8 g/dL, Plaquetas 245,000/mm³", "Glucosa Sérica: 96 mg/dL · Creatinina: 0.9 mg/dL"]));
-  const imgsReg = Array.isArray(master.estudios_imagenes) ? master.estudios_imagenes : (Array.isArray(stVivo.ordenesImagenes) && stVivo.ordenesImagenes.length ? stVivo.ordenesImagenes.map(im => `${im.nombre} (${im.estado || 'Informado'})`) : ["Rx Tórax / Estudio por Imágenes: Sin hallazgos agudos consolidativos (cuando aplique)"]);
-  const kardexReg = Array.isArray(master.kardex_resumen) ? master.kardex_resumen : (Array.isArray(stVivo.kardexItems) && stVivo.kardexItems.length ? stVivo.kardexItems.map(k => `${k.nombre} — ${k.dosis || ''} ${k.frecuencia || ''} (${k.administrado ? 'Administrado' : 'Prescrito'})`) : (master.kardex_texto ? [master.kardex_texto] : []));
+  const labsReg = master.resultados_texto ? [master.resultados_texto] : (Array.isArray(master.resultados_lab) ? master.resultados_lab : (Array.isArray(stVivo.ordenesLaboratorio) && stVivo.ordenesLaboratorio.length ? stVivo.ordenesLaboratorio.map(l => `${l.nombre} (${l.estado || 'Validado'})`) : ["Hemograma Completo: Leucocitos 8,400/mm³, Hb 13.8 g/dL, Plaquetas 245,000/mm³", "Glucosa Sérica: 96 mg/dL · Creatinina: 0.9 mg/dL"]));
+  const imgsReg = master.imagenes_texto ? [master.imagenes_texto] : (Array.isArray(master.estudios_imagenes) ? master.estudios_imagenes : (Array.isArray(stVivo.ordenesImagenes) && stVivo.ordenesImagenes.length ? stVivo.ordenesImagenes.map(im => `${im.nombre} (${im.estado || 'Informado'})`) : ["Rx Tórax / Estudio por Imágenes: Sin hallazgos agudos consolidativos (cuando aplique)"]));
+  const kardexReg = master.kardex_texto ? [master.kardex_texto] : (Array.isArray(master.kardex_resumen) ? master.kardex_resumen : (Array.isArray(stVivo.kardexItems) && stVivo.kardexItems.length ? stVivo.kardexItems.map(k => `${k.nombre} — ${k.dosis || ''} ${k.frecuencia || ''} (${k.administrado ? 'Administrado' : 'Prescrito'})`) : []));
+  const _rolVis = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === "function") ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
+  const _esAudVis = (_rolVis === "AUDITOR" || _rolVis === "ADMIN");
+  const lapiz = (prop, label, valActual) => {
+    if (!_esAudVis) return "";
+    const sId = String(ident || hc).replace(/'/g, "\\'");
+    const sHc = String(hc || "").replace(/'/g, "\\'");
+    const sProp = String(prop).replace(/'/g, "\\'");
+    const sLbl = String(label).replace(/'/g, "\\'");
+    const sVal = String(valActual ?? "").replace(/'/g, "\\'").replace(/\n/g, " ");
+    return ` <button type="button" class="btn-hc-lapiz" data-campo="${prop}" onclick="abrirEditorCampoHCAuditor('${sId}','${sHc}','${sProp}','${sLbl}','${sVal}')" title="Rectificar ${label} (con motivo obligatorio y trazabilidad)" style="background:none;border:none;cursor:pointer;font-size:0.82rem;padding:0 3px;vertical-align:middle;">✏️</button>`;
+  };
   const consultasExt = Array.isArray(master.consultas_externas) && master.consultas_externas.length ? master.consultas_externas : [
     { fecha: "12/10/2026", hora: "09:30:00", servicio: "Consulta Externa — Medicina Interna", profesional: "Dr. Javier Quispe Huamán (CMP 49120)", detalle: "Control ambulatorio preventivo, signos vitales estables, sin intercurrencias." }
   ];
@@ -2041,15 +2054,17 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px;font-size:0.78rem;">
       <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:10px 12px;">
         <div style="font-weight:800;color:#0f172a;margin-bottom:4px;">🪪 Filiación &amp; Datos Clínicos Base (NTS 139)</div>
-        <div><strong>Edad / Sexo:</strong> ${edadPx} años · ${sexoPx} | <strong>Grupo:</strong> ${gSan}</div>
-        <div><strong>Antecedentes:</strong> ${antecedentes}</div>
-        <div><strong>Diagnóstico CIE-10:</strong> <span style="color:#0369a1;font-weight:700;">${diagReg}</span></div>
+        <div><strong>Nombre:</strong> ${nom}${lapiz('nombre_completo','Nombre Completo',nom)} · <strong>DNI:</strong> ${ident}${lapiz('dni','DNI / Documento',ident)}</div>
+        <div><strong>Edad:</strong> ${edadPx} años${lapiz('edad','Edad',edadPx)} · <strong>Sexo:</strong> ${sexoPx}${lapiz('sexo','Sexo',sexoPx)} | <strong>Grupo:</strong> ${gSan}${lapiz('grupo_sanguineo','Grupo Sanguíneo',gSan)}</div>
+        <div><strong>Alergias:</strong> ${alergias}${lapiz('alergias','Alergias',alergias)}</div>
+        <div><strong>Antecedentes:</strong> ${antecedentes}${lapiz('antecedentes','Antecedentes',antecedentes)}</div>
+        <div><strong>Diagnóstico CIE-10:</strong> <span style="color:#0369a1;font-weight:700;">${diagReg}</span>${lapiz('diagnostico_cie10','Diagnóstico CIE-10',diagReg)}</div>
       </div>
       <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:10px 12px;">
         <div style="font-weight:800;color:#0f172a;margin-bottom:4px;">👩‍⚕️👨‍⚕️ Equipo Asistencial Interviniente</div>
-        <div><strong>Enfermería (Triaje/Kardex):</strong> ${enfermeraReg}</div>
-        <div><strong>Médico Tratante:</strong> ${medicoReg}</div>
-        <div><strong>Seguro / IAFAS:</strong> ${seguro}</div>
+        <div><strong>Enfermería (Triaje/Kardex):</strong> ${enfermeraReg}${lapiz('enfermera_responsable','Enfermera(o) Responsable',enfermeraReg)}</div>
+        <div><strong>Médico Tratante:</strong> ${medicoReg}${lapiz('medico_responsable','Médico Tratante',medicoReg)}</div>
+        <div><strong>Seguro / IAFAS:</strong> ${seguro}${lapiz('tipo_seguro','Seguro / IAFAS',seguro)}</div>
       </div>
     </div>
 
@@ -2066,11 +2081,11 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:14px;font-size:0.77rem;">
       <div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:8px;padding:10px 12px;">
-        <div style="font-weight:800;color:#7c2d12;margin-bottom:4px;">🧪 Resultados de Análisis de Laboratorio</div>
+        <div style="font-weight:800;color:#7c2d12;margin-bottom:4px;">🧪 Resultados de Análisis de Laboratorio ${lapiz('resultados_texto','Resultados de Laboratorio',labsReg.join('; '))}</div>
         <ul style="margin:4px 0 0 16px;padding:0;">${labsReg.map(l => `<li>${l}</li>`).join("")}</ul>
       </div>
       <div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:8px;padding:10px 12px;">
-        <div style="font-weight:800;color:#4338ca;margin-bottom:4px;">🩻 Estudios por Imágenes &amp; Kardex</div>
+        <div style="font-weight:800;color:#4338ca;margin-bottom:4px;">🩻 Estudios por Imágenes ${lapiz('imagenes_texto','Estudios por Imágenes',imgsReg.join('; '))} &amp; Kardex ${lapiz('kardex_texto','Kardex / Medicación',kardexReg.join('; '))}</div>
         <ul style="margin:4px 0 0 16px;padding:0;">${imgsReg.map(im => `<li>${im}</li>`).join("")}</ul>
         ${kardexReg.length ? `<div style="margin-top:6px;padding-top:4px;border-top:1px dashed #e2e8f0;"><strong>💊 Kardex:</strong> ${kardexReg.join(" | ")}</div>` : ""}
       </div>
