@@ -9677,9 +9677,18 @@ function aplicarFormulario(inputs) {
       }
     }
   });
-  const evaVal = inputs["eva_full"] !== undefined ? parseInt(inputs["eva_full"], 10) : 0;
-  if (!isNaN(evaVal) && typeof actualizarEVA === "function") {
-    actualizarEVA(evaVal);
+  if (inputs["eva_full"] !== undefined && inputs["eva_full"] !== "" && inputs["eva_full"] !== null) {
+    const evaVal = parseInt(inputs["eva_full"], 10);
+    if (!isNaN(evaVal) && typeof actualizarEVA === "function") {
+      actualizarEVA(evaVal);
+    }
+  } else {
+    const elEva = document.getElementById("eva_full");
+    if (elEva) elEva.value = "";
+    const elEvaR = document.getElementById("eva_range");
+    if (elEvaR) elEvaR.value = 0;
+    const lblEl = document.getElementById("eva_full_val") || document.getElementById("eva_label");
+    if (lblEl) lblEl.textContent = "0 - Sin dolor / Por evaluar";
   }
 }
 
@@ -9692,7 +9701,7 @@ function guardarEstadoPacienteActivo() {
   p.formSnapshot = capturarFormularioActual();
   p.prioridad = STATE.prioridad;
   p.identificador = STATE.identificador || p.identificador;
-  if (STATE.nombreReniec && !STATE.nombreReniec.startsWith("Paciente #")) {
+  if (STATE.nombreReniec && !STATE.nombreReniec.startsWith("Paciente #") && !STATE.nombreReniec.startsWith("Paciente de Ingreso")) {
     p.nombre = STATE.nombreReniec;
   } else if (STATE.identificador && !STATE.identificador.startsWith("Ticket T-")) {
     p.nombre = STATE.identificador;
@@ -9764,7 +9773,7 @@ function renderizarTableroColaPacientes() {
       countBadge.style.background = "#eef2ff";
       countBadge.style.color = "#4338ca";
     } else {
-      countBadge.textContent = `${pacientesActivosEnCurso.length} ${pacientesActivosEnCurso.length === 1 ? 'Paciente en atención activa' : 'Pacientes en atención activa'}`;
+      countBadge.textContent = `${pacientesActivosEnCurso.length} ${pacientesActivosEnCurso.length === 1 ? 'Paciente en cola / atención' : 'Pacientes en cola / atención'}`;
       countBadge.style.background = "";
       countBadge.style.color = "";
     }
@@ -9798,18 +9807,18 @@ function renderizarTableroColaPacientes() {
   };
 
   pacientesActivosEnCurso.forEach(p => {
-    const prioCfg = COLORES_PRIORIDAD[p.prioridad] || COLORES_PRIORIDAD[null];
+    const prioCfg = COLORES_PRIORIDAD[p.prioridad] || { bg: "#f1f5f9", border: "#cbd5e1", text: "#475569", label: "⏳ SIN PRIORIDAD" };
     const esActivo = (p.id === pacienteActivoId);
     const tiempoEspera = formatearTiempoEspera(p.timestampLlegada);
 
     const card = document.createElement("div");
     card.className = `patient-queue-card ${esActivo ? 'active-card' : ''}`;
-    card.style.borderLeft = `5px solid ${prioCfg.border}`;
+    card.style.borderLeft = esActivo ? `5px solid #0284c7` : `5px solid ${prioCfg.border}`;
+    card.style.cursor = "pointer";
     card.onclick = () => {
+      cambiarPacienteActivo(p.id, true);
       if (typeof window.seleccionarExpedienteYVisualizarPorRol === "function") {
         window.seleccionarExpedienteYVisualizarPorRol(p.id);
-      } else {
-        cambiarPacienteActivo(p.id);
       }
     };
 
@@ -9829,15 +9838,25 @@ function renderizarTableroColaPacientes() {
     const estadoFlujoActual = p.estadoFlujo || "PENDIENTE_TRIAJE";
     const badgeFlujoCfg = badgesFlujo[estadoFlujoActual] || { bg: "#f1f5f9", text: "#475569", label: estadoFlujoActual };
 
+    const badgePrioHtml = p.prioridad
+      ? `<span class="card-prio-badge" style="background:${prioCfg.bg}; color:${prioCfg.text}; border:1px solid ${prioCfg.border}; font-weight:800;">${prioCfg.label}</span>`
+      : `<span class="card-prio-badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:800;">⏳ Sin Prioridad</span>`;
+
+    const indicadorActivo = esActivo
+      ? `<span style="background:#0284c7; color:#ffffff; font-size:0.65rem; font-weight:800; padding:2px 6px; border-radius:4px;">▶ EN ATENCIÓN</span>`
+      : `<span style="color:#64748b; font-size:0.65rem; font-weight:600;">👆 Clic para evaluar</span>`;
+
     card.innerHTML = `
-      <div class="card-top-row">
-        <span class="card-prio-badge" style="background:${prioCfg.bg}; color:${prioCfg.text}; border:1px solid ${prioCfg.border};">
-          ${prioCfg.label}
-        </span>
+      <div class="card-top-row" style="display:flex; justify-content:space-between; align-items:center;">
+        ${badgePrioHtml}
         <span class="card-timer" id="timer_px_${p.id}" title="Tiempo desde su ingreso">⏱️ ${tiempoEspera}</span>
       </div>
-      <div class="card-name" title="${p.nombre}">
+      <div class="card-name" title="${p.nombre}" style="font-weight:800; font-size:0.86rem; color:#0f172a; margin-top:2px;">
         ${p.esNN ? '🚨 ' : ''}${p.nombre}
+      </div>
+      <div style="font-size:0.72rem; color:#64748b; display:flex; justify-content:space-between; align-items:center; margin:2px 0;">
+        <span>${p.dni ? ('DNI: ' + p.dni) : 'Sin DNI (Filiación pendiente)'}</span>
+        ${indicadorActivo}
       </div>
       <div style="margin:2px 0;">
         <span style="font-size:0.68rem; font-weight:800; background:${badgeFlujoCfg.bg}; color:${badgeFlujoCfg.text}; padding:2px 6px; border-radius:4px; border:1px solid rgba(0,0,0,0.06); display:inline-block;">
@@ -9860,7 +9879,9 @@ function renderizarTableroColaPacientes() {
 function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
   if (nuevoId === pacienteActivoId && !forzarRehidratacion) return;
 
-  guardarEstadoPacienteActivo();
+  if (pacienteActivoId && pacienteActivoId !== nuevoId) {
+    guardarEstadoPacienteActivo();
+  }
 
   let nuevoPx = PACIENTES_COLA.find(x => x.id === nuevoId);
   if (!nuevoPx) {
@@ -9904,7 +9925,7 @@ function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
   } else {
     limpiarFormularioCompletoState();
     STATE.identificador = nuevoPx.identificador || "";
-    STATE.nombreReniec = (nuevoPx.dni && !String(nuevoPx.dni).startsWith("NN") && nuevoPx.nombre && !nuevoPx.nombre.startsWith("Paciente #")) ? nuevoPx.nombre : null;
+    STATE.nombreReniec = (nuevoPx.dni && !String(nuevoPx.dni).startsWith("NN") && nuevoPx.nombre && !nuevoPx.nombre.startsWith("Paciente #") && !nuevoPx.nombre.startsWith("Paciente de Ingreso")) ? nuevoPx.nombre : null;
     STATE.numDni = nuevoPx.dni || null;
     STATE.prioridad = nuevoPx.prioridad || null;
     STATE.medicoTratante = nuevoPx.medico || "Por asignar";
@@ -9912,6 +9933,8 @@ function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
     STATE.coberturaValidada = Boolean(nuevoPx.coberturaValidada);
     STATE.firmas = nuevoPx.firmas || {};
     STATE.alertaPrioridad1 = Boolean(nuevoPx.alertaPrioridad1 || nuevoPx.prioridad === 'I');
+    STATE.camaAsignada = nuevoPx.camaNombre || null;
+    STATE.camaAsignadaId = nuevoPx.camaId || null;
     const selMedResponsable = document.getElementById("medico_responsable_select");
     if (selMedResponsable && STATE.medicoTratante) selMedResponsable.value = STATE.medicoTratante;
   }
@@ -9931,6 +9954,8 @@ function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
     }
     const elDni = document.getElementById("dni_reniec_input");
     if (elDni) elDni.value = "";
+    const elDni4 = document.getElementById("dni_mod4");
+    if (elDni4) elDni4.value = "";
     const elMotivo = document.getElementById("motivo_full");
     if (elMotivo) elMotivo.value = "";
   }
@@ -9980,25 +10005,24 @@ function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
   renderizarTableroColaPacientes();
   mostrarToastCola(`🔄 Paciente activo: <strong>${nuevoPx.nombre}</strong>`);
 }
-
 function limpiarFormularioCompletoState() {
   STATE.estadoFlujo = "PENDIENTE_TRIAJE";
   STATE.firmas = {};
   STATE.coberturaValidada = false;
   STATE.spo2 = null; STATE.fc = null; STATE.pasSistolica = null; STATE.paDiastolica = null;
-  STATE.fr = null; STATE.temperatura = null; STATE.glucosa = null; STATE.glasgow = null; STATE.eva = 0;
+  STATE.fr = null; STATE.temperatura = null; STATE.glucosa = null; STATE.glasgow = null; STATE.eva = null;
   STATE.motivoConsulta = ""; STATE.prioridad = null; STATE.colorPrioridad = null;
   STATE.codigoInfarto = false; STATE.codigoIctus = false; STATE.codigoSepsis = false;
   STATE.ingresoDirectoCritico = false; STATE.motivoIngresoCritico = null;
   STATE.identificador = ""; STATE.numDni = null; STATE.nombreReniec = null;
-  STATE.historiaClinica = "—"; STATE.camaAsignada = null; STATE.camaAsignadaId = null;
+  STATE.historiaClinica = "—"; STATE.camaAsignada = null; STATE.camaAsignadaId = "SIN-CAMA";
   STATE.alergias = "";
   STATE.items_factura = [];
   STATE.kardexAdministrados = [];
   STATE.kardexItems = [];
   STATE.ordenesLaboratorio = [];
   STATE.ordenesImagenes = [];
-  STATE.tipoSeguro = "SIS";
+  STATE.tipoSeguro = "Pendiente de Acreditación";
   STATE.esAccidenteTransito = false;
   STATE.tipoOrigenEvento = "comun";
   STATE.soatVehiculoFuga = false;
@@ -10026,25 +10050,33 @@ function limpiarFormularioCompletoState() {
   const checkIds = [
     "check_cod_infarto", "check_cod_ictus", "check_cod_sepsis",
     "chk_gestante_full", "chk_pediatrico_full", "chk_consentimiento_datos",
-    "chk_evento_fuga", "chk_exclusion_eps", "chk_consentimiento_firmado"
+    "chk_evento_fuga", "chk_exclusion_eps", "chk_consentimiento_firmado",
+    "ant_cardio", "ant_resp", "ant_diab", "ant_neuro",
+    "check_gestante", "check_pediatrico"
   ];
   checkIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.checked = false;
   });
 
+  const elEva = document.getElementById("eva_full");
+  if (elEva) elEva.value = "";
+  const elEvaR = document.getElementById("eva_range");
+  if (elEvaR) elEvaR.value = 0;
+  const lblEl = document.getElementById("eva_full_val") || document.getElementById("eva_label");
+  if (lblEl) lblEl.textContent = "0 - Sin dolor / Por evaluar";
+
   const elSexo = document.getElementById("sexo_full");
-  if (elSexo) elSexo.value = "M";
+  if (elSexo) elSexo.value = "";
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
   const elClave = document.getElementById("clave_obstetrica_sel");
-  if (elClave) elClave.value = "";
+  if (elClave) elClave.value = "ninguna";
   STATE.grupoSanguineo = "Desconocido";
 
   if (typeof limpiarIdentificacionPaciente === "function") {
     limpiarIdentificacionPaciente();
   }
-  if (typeof actualizarEVA === "function") actualizarEVA(0);
   if (typeof actualizarIndicadorVisualAlergias === "function") actualizarIndicadorVisualAlergias("");
   limpiarPrioridadUI();
 
@@ -10058,21 +10090,25 @@ function limpiarFormularioCompletoState() {
   if (hcDisp) hcDisp.textContent = "—";
   const hcBadge = document.getElementById("hc_badge_estado");
   if (hcBadge) {
-    hcBadge.textContent = "Por confirmar";
+    hcBadge.textContent = "En Espera / Triaje Pendiente";
     hcBadge.className = "badge-estado badge-conf";
   }
+  const hcAccion = document.getElementById("hc_accion_display");
+  if (hcAccion) hcAccion.textContent = "Esperando ingreso y evaluación clínica en Triaje...";
 }
-
 function limpiarPrioridadUI() {
   const pDisp = document.getElementById("prioridad_display");
-  if (pDisp) pDisp.style.display = "none";
+  if (pDisp) {
+    pDisp.style.display = "none";
+    pDisp.classList.remove("visible", "prio-I", "prio-II", "prio-III", "prio-IV", "prio-V");
+  }
   const pCard = document.getElementById("prio_result_card");
   if (pCard) pCard.style.display = "none";
   const miniPrio = document.getElementById("mini_prioridad_badge");
   if (miniPrio) {
     miniPrio.textContent = "🚦 Triaje: Por evaluar";
-    miniPrio.style.background = "";
-    miniPrio.style.color = "";
+    miniPrio.style.background = "#f1f5f9";
+    miniPrio.style.color = "#64748b";
   }
   const chipLive = document.getElementById("chipPrioLive");
   if (chipLive) {
@@ -10080,6 +10116,7 @@ function limpiarPrioridadUI() {
     chipLive.className = "top-prio-chip";
     chipLive.style.background = "#f1f5f9";
     chipLive.style.color = "#64748b";
+    chipLive.style.border = "1px solid #cbd5e1";
   }
   const pxPrio = document.getElementById("cockpit_pill_prioridad");
   if (pxPrio) {
@@ -10088,13 +10125,49 @@ function limpiarPrioridadUI() {
     pxPrio.style.background = "#f1f5f9";
     pxPrio.style.color = "#64748b";
   }
+  const elPrioBadge = document.getElementById("c_triage_prio_badge");
+  if (elPrioBadge) {
+    elPrioBadge.className = "ui-badge-pill";
+    elPrioBadge.textContent = "⏳ Triaje Pendiente (Sin Prioridad)";
+    elPrioBadge.style.background = "#f1f5f9";
+    elPrioBadge.style.color = "#64748b";
+  }
   const monEsi = document.getElementById("mon_esi_level");
   if (monEsi) {
     monEsi.textContent = "Sin evaluar";
     monEsi.style.color = "#94a3b8";
   }
+  const monNews2 = document.getElementById("mon_news2_score");
+  if (monNews2) {
+    monNews2.textContent = "—";
+    monNews2.style.color = "#94a3b8";
+  }
+  const news2Disp = document.getElementById("news2_score_display");
+  if (news2Disp) news2Disp.textContent = "—";
+  const auditNews = document.getElementById("audit_news2_val");
+  if (auditNews) auditNews.textContent = "—";
+  const auditEsi = document.getElementById("audit_esi_val");
+  if (auditEsi) auditEsi.textContent = "—";
+  const elRitmo = document.getElementById("lbl_monitor_ritmo");
+  if (elRitmo) {
+    elRitmo.textContent = "EN ESPERA";
+    elRitmo.style.color = "#64748b";
+  }
+  const elSpo2 = document.getElementById("mon_spo2");
+  if (elSpo2) elSpo2.textContent = "--";
+  const elFc = document.getElementById("mon_fc");
+  if (elFc) elFc.textContent = "--";
+  const elPa = document.getElementById("mon_pa");
+  if (elPa) elPa.textContent = "--/--";
+  const elFr = document.getElementById("mon_fr");
+  if (elFr) elFr.textContent = "--";
+  const elTemp = document.getElementById("mon_temp");
+  if (elTemp) elTemp.textContent = "--";
+  const elG = document.getElementById("mon_glasgow");
+  if (elG) elG.textContent = "--";
+  const pxCama = document.getElementById("cockpit_pill_cama");
+  if (pxCama) pxCama.textContent = "🛏️ Sin cama";
 }
-
 function crearNuevoPacienteEnBlanco() {
   guardarEstadoPacienteActivo();
   const nuevoPx = crearRegistroPaciente();
@@ -10490,7 +10563,7 @@ function registrarPacienteEnEspera() {
   guardarEstadoPacienteActivo();
   const num = contadorSecuencialPx++;
   const ticket = `T-${String(num).padStart(3, '0')}`;
-  const nombrePx = `Paciente #${num}`;
+  const nombrePx = `Paciente de Ingreso (${ticket})`;
   const idPx = `PX-ESP-${num}-${Date.now().toString(36).slice(-4)}`;
 
   const nuevoPx = crearRegistroPaciente({
@@ -10500,10 +10573,13 @@ function registrarPacienteEnEspera() {
     nombre: nombrePx,
     dni: "",
     edad: null,
+    sexo: "",
     prioridad: null,
     estadoAtencion: "En Espera",
     estadoFlujo: "PENDIENTE_TRIAJE",
     modalidad: "A pie",
+    camaId: "SIN-CAMA",
+    camaNombre: "Sin cama — Sala de Espera / Triaje",
     esNN: false,
     coberturaValidada: false,
     firmas: {},
@@ -10518,8 +10594,6 @@ function registrarPacienteEnEspera() {
   }
   PACIENTES_COLA.push(nuevoPx);
   window.PACIENTES_COLA = PACIENTES_COLA;
-  pacienteActivoId = nuevoPx.id;
-  window.pacienteActivoId = nuevoPx.id;
 
   try {
     localStorage.setItem("UPP_PACIENTES_COLA_SHARED", JSON.stringify(PACIENTES_COLA));
@@ -10552,7 +10626,6 @@ function registrarPacienteEnEspera() {
   mostrarToastCola(`👤 <strong>Llegada Registrada:</strong> ${nombrePx} (${nuevoPx.identificador}) ingresado a sala de espera.`);
 }
 window.registrarPacienteEnEspera = registrarPacienteEnEspera;
-
 function inicializarTableroColaPacientes() {
   // Inicia 100% en blanco: NO coloca automáticamente ningún paciente en espera
   renderizarTableroColaPacientes();
@@ -10809,7 +10882,7 @@ function sincronizarDatosPacienteEnTodosLosModulos(datos = {}) {
   const m1Hc = document.getElementById("m1_disp_hc");
 
   if (m1Card) {
-    if (dni && nombre && !esNN && !String(nombre).startsWith("PACIENTE #") && !String(nombre).startsWith("TICKET")) {
+    if (dni && nombre && !esNN && !String(nombre).startsWith("PACIENTE #") && !String(nombre).startsWith("PACIENTE DE INGRESO") && !String(nombre).startsWith("TICKET")) {
       if (m1Nombre) m1Nombre.textContent = nombre;
       if (m1Dni) m1Dni.textContent = dni;
       if (m1Sexo) m1Sexo.textContent = sexoDesc;
@@ -10822,7 +10895,13 @@ function sincronizarDatosPacienteEnTodosLosModulos(datos = {}) {
 
   // 2. Sincronizar Módulo 2 (Admisión & RENIEC)
   const elIdent2 = document.getElementById("ident_full");
-  if (elIdent2 && nombre) elIdent2.value = `${nombre} (DNI ${dni})`;
+  if (elIdent2) {
+    if (nombre && !String(nombre).startsWith("PACIENTE #") && !String(nombre).startsWith("PACIENTE DE INGRESO") && !String(nombre).startsWith("TICKET")) {
+      elIdent2.value = `${nombre} (DNI ${dni})`;
+    } else if (!dni) {
+      elIdent2.value = "";
+    }
+  }
 
   const elSexo2 = document.getElementById("sexo_full");
   if (elSexo2) elSexo2.value = sexo;
@@ -12218,7 +12297,7 @@ function sincronizarFacturacionYExportar(silencioso = false) {
     const nombre = STATE.nombreReniec || STATE.identificador || "Paciente en Atención";
     const dni = STATE.numDni || (STATE.identificador ? STATE.identificador.replace(/\D/g, '') : '') || '';
     const hc = STATE.historiaClinica || `HC-2026-${dni.slice(-4)}`;
-    const prio = (STATE.prioridad || "I").toString().replace("P-", "");
+    const prio = STATE.prioridad ? STATE.prioridad.toString().replace("P-", "") : "";
     const seguro = STATE.tipoSeguro || (STATE.tipoOrigenEvento === "soat" ? "SOAT Activo (La Positiva Seguros)" : "SIS Gratuito (MINSA)");
     const esAccidente = Boolean(STATE.esAccidenteTransito || STATE.tipoOrigenEvento === "soat" || seguro.toLowerCase().includes("soat"));
     const esFuga = Boolean(STATE.soatVehiculoFuga || STATE.eventoFugaTransversal);

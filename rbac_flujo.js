@@ -1765,6 +1765,9 @@
     }
     actualizarBarraAccionPosta();
     renderizarTrackBoardLista();
+    if (typeof window.renderizarTableroColaPacientes === "function") {
+      window.renderizarTableroColaPacientes();
+    }
     if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === "function") {
       window.COCKPIT.actualizarContextoCockpit();
     }
@@ -1813,34 +1816,31 @@
       const shadowCard = esAtendido ? "box-shadow: 0 2px 8px rgba(22, 101, 52, 0.08);" : "";
 
       html += `
-        <div onclick="seleccionarExpedienteYVisualizarPorRol('${p.id}')" style="display:flex; justify-content:space-between; align-items:center; background:${bgCard}; border:${borderCard}; border-radius:8px; padding:7px 10px; cursor:pointer; transition:all 0.15s ease; ${shadowCard} gap:8px;">
+        <div onclick="seleccionarExpedienteYVisualizarPorRol('${p.id}')" style="display:flex; justify-content:space-between; align-items:center; background:${bgCard}; border:${borderCard}; border-radius:8px; padding:7px 12px; cursor:pointer; transition:all 0.15s ease; ${shadowCard} gap:10px;">
           
-          <!-- Información Principal del Paciente -->
-          <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
-            <span style="background:${colorPrio}; color:#ffffff; font-size:0.7rem; font-weight:900; padding:2px 6px; border-radius:4px; font-variant-numeric:tabular-nums; flex-shrink:0;">
+          <!-- Información Principal del Paciente (Sin recortes ni truncamiento forzado) -->
+          <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
+            <span style="background:${colorPrio}; color:#ffffff; font-size:0.72rem; font-weight:900; padding:2px 7px; border-radius:4px; font-variant-numeric:tabular-nums; flex-shrink:0;">
               ${p.prioridad ? "P-" + p.prioridad : "⏳ S/P"}
             </span>
-            <div style="min-width:0; overflow:hidden;">
-              <div style="font-size:0.8rem; font-weight:800; color:#0f172a; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            <div style="min-width:0;">
+              <div style="font-size:0.83rem; font-weight:800; color:#0f172a; line-height:1.2;">
                 ${turno} · ${p.nombre || "Paciente"}
                 ${esSiguienteMed ? `<span style="font-size:0.68rem; background:#fef3c7; color:#92400e; padding:1px 5px; border-radius:4px; margin-left:4px;">👉 Siguiente</span>` : ""}
-                ${esActivo ? `<span style="font-size:0.66rem; background:#0284c7; color:#ffffff; padding:1px 5px; border-radius:4px; margin-left:4px; font-weight:800;">✓ ACTIVO</span>` : ""}
+                ${esActivo ? `<span style="font-size:0.66rem; background:#0284c7; color:#ffffff; padding:1px 6px; border-radius:4px; margin-left:4px; font-weight:800;">✓ ACTIVO</span>` : ""}
               </div>
-              <div style="font-size:0.7rem; color:#64748b; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              <div style="font-size:0.72rem; color:#64748b; margin-top:2px;">
                 ${p.camaNombre ? `🛏️ ${p.camaNombre}` : "🛏️ Sin cama"} · ${p.estadoAtencion || "En atención"} · DNI: <strong>${p.dni || p.numDni || "NN"}</strong>
               </div>
             </div>
           </div>
 
-          <!-- Botonera de Consulta de Datos / Trazabilidad y Selección -->
-          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-            <button type="button" onclick="event.stopPropagation(); abrirHistorialFlujoPaciente('${p.id}');" class="btn-full-secondary" style="font-size:0.7rem; font-weight:800; padding:3px 8px; border-radius:5px; cursor:pointer; background:#f8fafc; border:1px solid #cbd5e1; color:#0369a1; display:inline-flex; align-items:center; gap:4px;" title="Consultar todos los datos ingresados hasta el momento y trazabilidad con día y hora">
+          <!-- Acciones de Consulta y Estado (Diseño limpio original) -->
+          <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+            <button type="button" onclick="event.stopPropagation(); abrirHistorialFlujoPaciente('${p.id}');" class="btn-full-secondary" style="font-size:0.70rem; font-weight:700; padding:3px 8px; border-radius:5px; cursor:pointer; background:#f8fafc; border:1px solid #cbd5e1; color:#0369a1; display:inline-flex; align-items:center; gap:4px;" title="Consultar todos los datos ingresados hasta el momento y trazabilidad con día y hora">
               <span>👁️</span> <span>Consultar</span>
             </button>
-            <button type="button" onclick="event.stopPropagation(); seleccionarExpedienteYVisualizarPorRol('${p.id}');" class="btn-full-primary" style="font-size:0.7rem; font-weight:800; padding:3px 8px; border-radius:5px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; background:${esActivo ? '#16a34a' : '#0f172a'};" title="Seleccionar y cargar en pantalla para el rol actual (${rol})">
-              <span>${esActivo ? '✓' : '🎯'}</span> <span>${esActivo ? 'Cargado' : 'Seleccionar'}</span>
-            </button>
-            <span style="font-size:0.68rem; font-weight:700; padding:2px 6px; border-radius:4px; ${esAtendido ? 'color:#15803d; background:#dcfce7; border:1px solid #86efac;' : 'color:#475569; background:#f1f5f9;'}">
+            <span style="font-size:0.70rem; font-weight:700; padding:3px 8px; border-radius:4px; ${esAtendido ? 'color:#15803d; background:#dcfce7; border:1px solid #86efac;' : 'color:#475569; background:#f1f5f9;'}">
               ${esAtendido ? '✓ Atendido' : (p.estadoFlujo || "PENDIENTE_TRIAJE").replace(/_/g, " ")}
             </span>
           </div>

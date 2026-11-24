@@ -344,14 +344,6 @@ input[type="number"],
   color: #475569;
 }
 
-/* Posta compacta en sidebar izquierdo */
-#cockpit_posta_wrapper {
-  background: #FFFFFF;
-  border: 1px solid var(--cockpit-card-border);
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-}
 
 /* Columna Central: Espacio de Trabajo Enfocado (flex: 1) */
 #cockpit_workspace_center {

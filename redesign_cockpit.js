@@ -68,10 +68,6 @@
           </div>
         </div>
       </div>
-
-      <div id="cockpit_posta_wrapper">
-        <!-- Contenedor donde se aloja la bandeja de posta clínica -->
-      </div>
     `;
 
     // 1.4 Columna Central (Espacio de Trabajo Enfocado)
@@ -144,7 +140,7 @@
         <div class="cockpit-summary-title">
           <span>🩺</span> Resumen Sellado de Triaje · Estándar Nacional IPRESS (NTS N° 139-MINSA) <span id="c_triage_regimen_badge" style="font-size:0.75rem; padding:2px 8px; border-radius:6px; font-weight:800; margin-left:8px;">[MINSA · FUA]</span>
         </div>
-        <span class="ui-badge-pill ui-badge-p5" id="c_triage_prio_badge">P-V · No Urgente</span>
+        <span class="ui-badge-pill" id="c_triage_prio_badge" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;">⏳ Triaje Pendiente (Sin Prioridad)</span>
       </div>
       <div class="cockpit-summary-grid">
         <div class="cockpit-summary-item">
@@ -338,13 +334,6 @@
     if (sec7) phase3.appendChild(sec7);
     if (sec8) phase4.appendChild(sec8);
 
-    // Mover la bandeja de posta al sidebar izquierdo
-    const bandejaPosta = document.getElementById("bandeja_posta_container");
-    const postaWrapper = document.getElementById("cockpit_posta_wrapper");
-    if (bandejaPosta && postaWrapper) {
-      postaWrapper.appendChild(bandejaPosta);
-    }
-
     // Ocultar main contenedor viejo
     mainContainer.style.display = "none";
 
@@ -394,7 +383,7 @@
         <div class="cockpit-patient-pill">
           <span>👤</span>
           <div class="cockpit-px-name" id="cockpit_pill_px_nombre">Sin paciente seleccionado</div>
-          <span class="ui-badge-pill ui-badge-p5" id="cockpit_pill_prioridad">P-V · No Urgente</span>
+          <span class="ui-badge-pill" id="cockpit_pill_prioridad" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;">⏳ Sin Prioridad (Por evaluar)</span>
           <div class="cockpit-px-bed" id="cockpit_pill_cama">🛏️ Sin cama</div>
         </div>
       </div>
