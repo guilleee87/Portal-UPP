@@ -79,44 +79,80 @@
     tacticalBar.id = "cockpit_tactical_bar";
     tacticalBar.className = "cockpit-tactical-bar";
     tacticalBar.innerHTML = `
-      <div class="cockpit-tactical-group">
+      <div class="cockpit-tactical-header">
+        <div class="cockpit-tactical-title-box">
+          <span class="cockpit-tactical-icon">⚡</span>
+          <div>
+            <div class="cockpit-tactical-title">BOTONERA DE ADMISIÓN RÁPIDA &amp; ATENCIÓN DE EMERGENCIAS</div>
+            <div class="cockpit-tactical-sub">NTS N° 042-MINSA · Ley N° 27604 (Garantía de Atención Médica de Emergencia)</div>
+          </div>
+        </div>
+        <div class="cockpit-tactical-utility">
+          <button type="button" class="tactical-util-btn btn-trazabilidad-auditor" id="btn_tactical_trazabilidad" onclick="abrirModalTrazabilidadAuditor()" title="Auditoría Forense y Trazabilidad Clínica Integral (Hoy y Días Anteriores)">
+            <span>📜</span> Trazabilidad
+          </button>
+          <button type="button" class="tactical-util-btn" onclick="abrirModalHistoricoDiasAnteriores()" title="Consultar atenciones de días anteriores (NTS N° 139-MINSA)">
+            <span>📅</span> Histórico
+          </button>
+          <button type="button" class="tactical-util-btn btn-util-reset" onclick="abrirModalReinicioSimulacion()" title="⚠️ Botón exclusivo de simulación y demostración: Reiniciar guardia y liberar camas">
+            <span>🔄</span> Reiniciar (Demo)
+          </button>
+        </div>
+      </div>
+      <div class="cockpit-tactical-grid">
         <button type="button" class="cockpit-tactical-btn btn-p1-danger" onclick="activarPanicoShockTrauma()" title="Admisión Inmediata de Emergencia a Shock Trauma (Ley N° 27604)">
           🚨 Trauma Shock P-I
         </button>
-        <button type="button" class="cockpit-tactical-btn" onclick="activarIngresoDirectoQuirofano()" title="Admisión Directa a Quirófano SOP">
+        <button type="button" class="cockpit-tactical-btn btn-sop-action" onclick="activarIngresoDirectoQuirofano()" title="Admisión Directa a Quirófano SOP (Ley N° 27604)">
           🏥 Quirófano SOP
         </button>
-        <button type="button" class="cockpit-tactical-btn" onclick="ingresarNNConsciente()" style="border-left:3px solid #0284c7;" title="1. Paciente NN Consciente / Indocumentado (Pasa a Evaluación de Triaje)">
+        <button type="button" class="cockpit-tactical-btn btn-nn-shock" onclick="abrirModalPreEvaluacionNN('INCONSCIENTE')" title="Atención Inmediata P-I Shock Trauma Ley 27604">
+          🚨 NN Inconsciente
+        </button>
+        <button type="button" class="cockpit-tactical-btn btn-pulsera" onclick="generarEImprimirPulseraInmediata()" title="Generar e Imprimir Inmediatamente la Pulsera QR de Emergencia">
+          🏷️ Pulsera QR
+        </button>
+        <button type="button" class="cockpit-tactical-btn btn-main-cta" onclick="registrarPacienteEnEspera()" title="Registrar llegada de paciente en blanco a sala de espera">
+          ➕ En Espera
+        </button>
+        <button type="button" class="cockpit-tactical-btn btn-nn-eval" onclick="abrirModalPreEvaluacionNN('CONSCIENTE')" title="Paciente NN Consciente / Indocumentado (Pasa a Evaluación de Triaje)">
           👤 NN Consciente
         </button>
-        <button type="button" class="cockpit-tactical-btn btn-p1-danger" onclick="ingresarNNInconsciente()" style="border-left:3px solid #dc2626;" title="2. Paciente NN Inconsciente / Riesgo Vital Inminente (Atención Inmediata P-I Shock Trauma Ley 27604)">
-          🚨 NN Inconsciente (P-I)
-        </button>
-        <button type="button" class="cockpit-tactical-btn" onclick="generarEImprimirPulseraInmediata()" style="background:#0f172a; color:#38bdf8; border:1.5px solid #0284c7; font-weight:800;" title="Generar e Imprimir Inmediatamente la Pulsera QR de Emergencia">
-          🏷️ Imprimir Pulsera QR
-        </button>
-      </div>
-      <div class="cockpit-tactical-group">
         <button type="button" class="cockpit-tactical-btn" onclick="abrirModalPreTriageSTART()" title="Pre-Triage START de Cola (15s)">
           ⚡ Pre-Triage (15s)
         </button>
-        <button type="button" class="cockpit-tactical-btn" onclick="registrarPacienteEnEspera()" title="Registrar llegada a sala de espera">
-          ➕ En Espera
-        </button>
-        <button type="button" class="cockpit-tactical-btn" onclick="abrirModalLlegadasSimultaneasDesempate()" title="Protocolo de Desempate ante Llegadas Simultáneas (NTS N° 042-MINSA)">
+        <button type="button" class="cockpit-tactical-btn btn-desempate" onclick="abrirModalLlegadasSimultaneasDesempate()" title="Protocolo de Desempate ante Llegadas Simultáneas (NTS N° 042-MINSA)">
           ⚖️ Desempate
-        </button>
-      </div>
-      <div class="cockpit-tactical-group" style="margin-left:auto;">
-        <button type="button" class="cockpit-tactical-btn" onclick="abrirModalHistoricoDiasAnteriores()" style="background:#f0fdf4; color:#15803d; border:1.5px solid #86efac; font-weight:700;" title="Consultar pacientes y atenciones de días anteriores (NTS N° 139-MINSA)">
-          <span>📅</span> <span>Días Anteriores</span>
-        </button>
-        <button type="button" class="cockpit-tactical-btn" onclick="abrirModalReinicioSimulacion()" style="background:#fff1f2; color:#be123c; border:1.5px solid #fda4af; font-weight:800;" title="⚠️ Botón exclusivo de simulación y demostración: Reiniciar guardia y liberar camas">
-          <span>⚠️ !</span> <span>Reiniciar Guardia (Demo)</span>
         </button>
       </div>
     `;
     workspaceCenter.appendChild(tacticalBar);
+
+    // Fila Reactiva de Pacientes en Atención Activa & Estado del Flujo (Directamente bajo la botonera táctica)
+    const activeQueueRow = document.createElement("div");
+    activeQueueRow.id = "cockpit_active_queue_row";
+    activeQueueRow.className = "cockpit-active-queue-card";
+    activeQueueRow.innerHTML = `
+      <div class="cockpit-queue-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="widget-beacon-dot" style="display:inline-block; width:9px; height:9px; background:#16a34a; border-radius:50%; box-shadow:0 0 0 3px rgba(34,197,94,0.3);"></span>
+          <strong style="color:#0f172a; font-size:0.80rem; letter-spacing:0.02em;">PACIENTES EN ATENCIÓN ACTIVA &amp; ESTADO DEL FLUJO (TIEMPO REAL)</strong>
+          <span class="badge-active-count" id="cockpit_lbl_total_px_activos" style="font-size:0.70rem; padding:2px 8px; border-radius:9999px;">0 en atención</span>
+        </div>
+        <div style="font-size:0.70rem; color:#64748b;">
+          Sincronizado en tiempo real con Tablero Central · Clic para evaluar o cambiar paciente
+        </div>
+      </div>
+      <div class="cockpit-queue-track" id="cockpit_queue_track_list">
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:10px; color:#64748b; font-size:0.78rem; width:100%;">
+          <span style="font-size:1.2rem;">⏳</span>
+          <div>
+            <strong>Sin pacientes en atención activa:</strong> Registre un nuevo paciente con <strong>[➕ En Espera]</strong> o mediante los botones de admisión rápida.
+          </div>
+        </div>
+      </div>
+    `;
+    workspaceCenter.appendChild(activeQueueRow);
 
     // 1.4.1 Mover y Reubicar el Panel de Pacientes en Curso al Sidebar Izquierdo
     // Ubicación: EN EL SIDEBAR IZQUIERDO CON ANCHO ERGONÓMICO Y SCROLL INDEPENDIENTE
@@ -162,6 +198,10 @@
         <div class="cockpit-summary-item">
           <div class="cockpit-summary-label">Signos Vitales</div>
           <div class="cockpit-summary-val" id="c_triage_vitals_resumen" style="font-size:0.78rem;">SpO2: --% | FC: -- | PA: --/--</div>
+        </div>
+        <div class="cockpit-summary-item" style="grid-column: span 2;">
+          <div class="cockpit-summary-label">🏷️ Diagnóstico Principal CIE-10 (Sustento Asistencial)</div>
+          <div class="cockpit-summary-val" id="c_triage_cie10" style="color:#0284c7; font-weight:800;">Por asignar</div>
         </div>
         <div class="cockpit-summary-item">
           <div class="cockpit-summary-label">Alergias Conocidas</div>
@@ -402,6 +442,11 @@
           🛡️ Rol: AUDITOR
         </span>
 
+        <!-- Botón Trazabilidad Integral en Modo Auditor -->
+        <button type="button" class="cockpit-btn-trazabilidad" id="btn_cockpit_trazabilidad" onclick="abrirModalTrazabilidadAuditor()" title="Auditoría Forense y Trazabilidad Clínica Integral (NTS N° 139-MINSA)" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; font-size:12px; font-weight:800; border-radius:6px; border:1.5px solid #4338ca; background:#4f46e5; color:#ffffff; cursor:pointer; box-shadow:0 1px 3px rgba(79,70,229,0.35);">
+          <span>📜</span> Trazabilidad
+        </button>
+
         <!-- Botón Expandir/Contraer Todo en Modo Auditor -->
         <button type="button" class="cockpit-btn-expand-all" id="btn_expand_collapse_all" onclick="window.COCKPIT.toggleExpandirTodoModulos()" title="Expandir o contraer todos los módulos para auditoría panorámica" style="display:inline-flex; align-items:center; gap:4px; padding:5px 10px; font-size:12px; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; cursor:pointer;">
           ⤢ Expandir Todo
@@ -434,6 +479,7 @@
     const step3 = document.getElementById("cockpit_step_3");
     const step4 = document.getElementById("cockpit_step_4");
     const tacticalBar = document.getElementById("cockpit_tactical_bar");
+    const activeQueueRow = document.getElementById("cockpit_active_queue_row");
     const triageCard = document.getElementById("cockpit_triage_sealed_card");
     const cajaCard = document.getElementById("cockpit_caja_admin_card");
 
@@ -595,6 +641,9 @@
     }
 
     actualizarBotonAccionPrincipal();
+    if (typeof window.renderizarFilaPacientesCockpit === "function") {
+      window.renderizarFilaPacientesCockpit();
+    }
   }
 
   // ----------------------------------------------------------------------------
@@ -691,6 +740,10 @@
     const elDni = document.getElementById("c_triage_px_dni");
     const elEdadSexo = document.getElementById("c_triage_px_edad_sexo");
     const elNews2 = document.getElementById("c_triage_news2_score");
+    const elCie = document.getElementById("c_triage_cie10");
+    if (elCie) {
+      elCie.textContent = px.cie10 || state.cie10 || "Por asignar";
+    }
     const elVitals = document.getElementById("c_triage_vitals_resumen");
     const elAlergias = document.getElementById("c_triage_alergias");
     const elFirmante = document.getElementById("c_triage_firmante");
@@ -772,7 +825,8 @@
   function actualizarTarjetaResumenCaja() {
     const state = window.STATE || {};
     const cola = window.PACIENTES_COLA || [];
-    const px = cola.find(x => x.id === window.pacienteActivoId) || {};
+    const idActivo = window.pacienteActivoId || (typeof pacienteActivoId !== "undefined" ? pacienteActivoId : null);
+    const px = cola.find(x => x.id === idActivo) || {};
 
     const elNombre = document.getElementById("c_caja_px_nombre");
     const elDni = document.getElementById("c_caja_px_dni");
@@ -786,11 +840,22 @@
     if (elNombre) elNombre.textContent = `${turno} · ${px.nombre || state.nombreReniec || "Paciente"}`;
     if (elDni) elDni.textContent = px.dni || state.numDni || "NN";
 
-    const seguro = state.tipoSeguro || "SIS Gratuito";
-    if (elRegimen) elRegimen.textContent = seguro;
-    if (elBadgeSeguro) elBadgeSeguro.textContent = `Seguro: ${seguro.split(" ")[0]}`;
+    const esNN = Boolean(
+      px.esNN || state.esNN ||
+      (px.dni && (px.dni === "NN" || px.dni === "S/D" || String(px.dni).startsWith("NN-"))) ||
+      (state.numDni && (state.numDni === "NN" || state.numDni === "S/D" || String(state.numDni).startsWith("NN-"))) ||
+      (px.nombre && String(px.nombre).includes("NN")) ||
+      (state.nombreReniec && String(state.nombreReniec).includes("NN"))
+    );
 
-    if (elCama) elCama.textContent = state.camaAsignada || "Sin cama";
+    const seguro = esNN
+      ? "No Identificado · Sin Seguro (Cobro 100%)"
+      : (state.tipoSeguro || px.tipoSeguro || "SIS Gratuito");
+
+    if (elRegimen) elRegimen.textContent = seguro;
+    if (elBadgeSeguro) elBadgeSeguro.textContent = esNN ? "Seguro: No Acreditado (NN)" : `Seguro: ${seguro.split(" ")[0]}`;
+
+    if (elCama) elCama.textContent = state.camaAsignada || px.camaNombre || "Sin cama";
 
     const firmaMed = px.firmas?.medico || state.firmas?.medico;
     if (elAlta) {
@@ -798,7 +863,20 @@
       elAlta.style.color = firmaMed ? "#059669" : "#d97706";
     }
 
-    const totalFactura = document.getElementById("factura_total_monto")?.textContent || "S/ 0.00";
+    let liq = null;
+    if (typeof window.calcularLiquidacionSeguro === "function") {
+      try { liq = window.calcularLiquidacionSeguro(); } catch(e) {}
+    } else if (typeof calcularLiquidacionSeguro === "function") {
+      try { liq = calcularLiquidacionSeguro(); } catch(e) {}
+    }
+    const montoCalculado = liq && typeof liq.totalPaciente === "number" && liq.totalPaciente > 0
+      ? `S/ ${liq.totalPaciente.toFixed(2)}`
+      : null;
+    const totalNumEl = document.getElementById("factura_total_num") || document.getElementById("liq_monto_paciente");
+    const numVal = totalNumEl ? parseFloat(totalNumEl.textContent.replace(/[^0-9.]/g, "")) : 0;
+    const totalFactura = montoCalculado || (numVal > 0
+      ? `S/ ${numVal.toFixed(2)}`
+      : (document.getElementById("factura_total_monto")?.textContent || (esNN ? "S/ 480.00" : "S/ 0.00")));
     if (elTotal) elTotal.textContent = totalFactura;
   }
 
@@ -1328,6 +1406,8 @@ function refrescarValoresMonitor() {
     cambiarVistaSimulada,
     aplicarVistaYPermisosRol,
     actualizarContextoCockpit,
+    actualizarTarjetaResumenCaja,
+    actualizarTarjetaResumenTriaje,
     refrescarValoresMonitor,
     toggleDarkMode
   };
