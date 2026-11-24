@@ -443,7 +443,7 @@
         </span>
 
         <!-- Botón Historia Clínica -->
-        <button type="button" id="btn_cockpit_historia_clinica" onclick="if(typeof abrirHistoriaClinicaPacienteActual==='function')abrirHistoriaClinicaPacienteActual()" title="Ver Historia Clínica completa del paciente" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; font-size:12px; font-weight:800; border-radius:6px; border:1.5px solid #0284c7; background:#0284c7; color:#ffffff; cursor:pointer; box-shadow:0 1px 3px rgba(2,132,199,0.3);">
+        <button type="button" id="btn_cockpit_historia_clinica" onclick="if(typeof abrirRepositorioHistoriasClinicas==='function')abrirRepositorioHistoriasClinicas()" title="Ver Historia Clínica completa del paciente" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; font-size:12px; font-weight:800; border-radius:6px; border:1.5px solid #0284c7; background:#0284c7; color:#ffffff; cursor:pointer; box-shadow:0 1px 3px rgba(2,132,199,0.3);">
           <span>📖</span> Historia Clínica
         </button>
 

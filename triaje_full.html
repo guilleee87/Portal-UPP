@@ -2674,7 +2674,7 @@
           <span class="widget-beacon-dot" style="display:inline-block; width:10px; height:10px; background:#16a34a; border-radius:50%; box-shadow:0 0 0 3px rgba(34,197,94,0.3);"></span>
           <strong style="color:#0f172a; font-size:0.92rem;">TABLERO DE ATENCIÓN Y COLA DE EMERGENCIAS</strong>
           <span class="badge-active-count" id="lbl_total_px_activos">1 Paciente en atención</span>
-          <button type="button" id="btn_tablero_hc" onclick="if(typeof abrirHistoriaClinicaPacienteActual==='function')abrirHistoriaClinicaPacienteActual()" style="font-size:0.68rem; height:24px; padding:2px 8px; border-radius:6px; cursor:pointer; background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc; font-weight:800;" title="Ver Historia Clínica del paciente">📖 Historia Clínica</button>
+          <button type="button" id="btn_tablero_hc" onclick="if(typeof abrirRepositorioHistoriasClinicas==='function')abrirRepositorioHistoriasClinicas()" style="font-size:0.68rem; height:24px; padding:2px 8px; border-radius:6px; cursor:pointer; background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc; font-weight:800;" title="Ver Historia Clínica del paciente">📖 Historia Clínica</button>
           <button type="button" onclick="if(typeof abrirModalHistoricoDiasAnteriores==='function')abrirModalHistoricoDiasAnteriores()" style="font-size:0.68rem; height:24px; padding:2px 7px; border-radius:6px; cursor:pointer; background:#f0fdf4; color:#15803d; border:1px solid #86efac; font-weight:700;" title="Consultar atenciones de días anteriores">📅 Histórico</button>
           <button type="button" onclick="if(typeof recargarColaCompartidaDesdeStorage==='function')recargarColaCompartidaDesdeStorage()" style="font-size:0.68rem; height:24px; padding:2px 7px; border-radius:6px; cursor:pointer; background:#ffffff; color:#334155; border:1px solid #cbd5e1; font-weight:700;" title="Sincronizar cola entre pestañas">🔄 Sync</button>
         </div>
@@ -3758,9 +3758,17 @@
               <span>🪪</span>
               <span>Datos del Paciente en Atención — Módulo 4 (Shock Trauma / Kardex):</span>
             </div>
-            <span id="m4_badge_sincronizado" style="font-size:0.72rem; padding:2px 8px; border-radius:9999px; background:#eff6ff; color:#1d4ed8; font-weight:700; border:1px solid #bfdbfe;">
-              Sincronizado con Módulo 1 y 2
-            </span>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span id="m4_badge_sincronizado" style="font-size:0.72rem; padding:2px 8px; border-radius:9999px; background:#eff6ff; color:#1d4ed8; font-weight:700; border:1px solid #bfdbfe;">
+                Sincronizado con Módulo 1 y 2
+              </span>
+              <button type="button" id="btn_mod4_consultar_hc_unica" onclick="if(typeof abrirHistoriaClinicaPacienteActual==='function')abrirHistoriaClinicaPacienteActual()" style="font-size:0.74rem; padding:4px 10px; border-radius:6px; background:#0284c7; color:#ffffff; border:1px solid #0369a1; font-weight:800; cursor:pointer;" title="NTS N° 139-MINSA: Consultar exclusivamente la Historia Clínica del paciente en atención">
+                📖 Consultar HC del Paciente en Atención
+              </button>
+            </div>
+          </div>
+          <div style="font-size:0.72rem; color:#475569; margin-bottom:8px; background:#f8fafc; padding:6px 10px; border-radius:6px; border-left:3px solid #0284c7;">
+            ⚖️ <strong>NTS N° 139-MINSA/2018/DGAIN (R.M. N° 214-2018/MINSA):</strong> El médico tratante debe consultar los antecedentes, alergias y episodios previos de la Historia Clínica del paciente durante la anamnesis y antes de prescribir.
           </div>
 
           <input type="hidden" id="dni_mod4" value="">
@@ -3778,8 +3786,8 @@
                 <div style="font-size:0.75rem; color:#64748b;">Marco Legal: Ley General de Salud N° 26842 (Art. 4° y 15°), Ley N° 29414 y D.S. N° 027-2015-SA</div>
               </div>
             </div>
-            <span class="norma-tag" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:800; padding:3px 10px; border-radius:6px; font-size:0.75rem;">
-              ⚖️ Requisito Legal Obligatorio
+            <span id="badge_norma_consentimiento" class="norma-tag" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; font-weight:800; padding:3px 10px; border-radius:6px; font-size:0.75rem;">
+              ⚖️ Según Procedimiento (Art. 17° D.S. 027-2015-SA)
             </span>
           </div>
 
@@ -3796,8 +3804,9 @@
 
             <div class="form-field" style="margin-bottom:0;">
               <label for="sel_procedimiento_consentimiento" style="font-weight:700;">Procedimiento / Intervención Sujeta a Consentimiento:</label>
-              <select id="sel_procedimiento_consentimiento" class="input-full" style="font-weight:700;">
-                <option value="Atención Médica y Reanimación en Shock Trauma / Tópico" selected>🩺 Atención Médica y Reanimación en Emergencia</option>
+              <select id="sel_procedimiento_consentimiento" class="input-full" style="font-weight:700;" onchange="if(typeof actualizarCondicionConsentimiento==='function')actualizarCondicionConsentimiento(document.getElementById('sel_condicion_consentimiento')?.value)">
+                <option value="NO_APLICA_CONSULTA_NO_INVASIVA" selected>🩺 Consulta / Tratamiento No Invasivo (No requiere formato escrito)</option>
+                <option value="Atención Médica y Reanimación en Shock Trauma / Tópico">🚨 Reanimación / Procedimiento Crítico en Shock Trauma</option>
                 <option value="Intervención Quirúrgica de Emergencia (SOP) y Laparotomía / Toracotomía">🔪 Intervención Quirúrgica de Emergencia (SOP)</option>
                 <option value="Intubación Orotraqueal y Soporte Ventilatorio Mecánico">🫁 Intubación Orotraqueal y Ventilación Mecánica Asistida</option>
                 <option value="Cateterismo Venoso Central (CVC) y Accesos Vasculares Mayores">💉 Cateterismo Venoso Central (CVC)</option>
@@ -6271,6 +6280,31 @@
           <div style="font-weight:800; color:#0f172a; font-size:0.86rem;">Vehículo Particular</div>
           <div style="font-size:0.72rem; color:#64748b;">Traído por familiares o terceros</div>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL REPOSITORIO DE HISTORIAS CLÍNICAS DEL CENTRO DE SALUD -->
+  <div class="modal-hc-overlay" id="modal_repositorio_hc" style="display:none;" onclick="if(event.target===this)cerrarRepositorioHistoriasClinicas()">
+    <div class="modal-hc-container" style="max-width:940px; width:95%;">
+      <div class="modal-hc-header" style="background:linear-gradient(135deg,#0369a1 0%,#0284c7 100%); color:#fff;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">📖</span>
+          <div>
+            <h3 style="margin:0; font-size:1.05rem; font-weight:800;">Archivo Central de Historias Clínicas — IPRESS UPP</h3>
+            <div style="font-size:0.75rem; color:#e0f2fe; margin-top:2px;">NTS N° 139-MINSA/2018/DGAIN · Búsqueda por DNI o Nombre Completo</div>
+          </div>
+        </div>
+        <button type="button" onclick="cerrarRepositorioHistoriasClinicas()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-hc-body" style="padding:16px 20px;">
+        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+          <input type="text" id="input_buscar_hc_centro" class="input-full" placeholder="Ingrese DNI (8 dígitos) o Nombre del paciente..." style="flex:1; min-width:220px;" onkeydown="if(event.key==='Enter')buscarHistoriasClinicasCentro()">
+          <button type="button" id="btn_buscar_hc_centro" class="btn-full-primary" style="background:#0284c7; padding:8px 18px; font-weight:800;" onclick="buscarHistoriasClinicasCentro()">🔍 Buscar</button>
+          <button type="button" class="btn-full-secondary" style="padding:8px 12px;" onclick="document.getElementById('input_buscar_hc_centro').value='';buscarHistoriasClinicasCentro()">Ver Todas</button>
+        </div>
+        <div id="contador_repositorio_hc" style="font-size:0.76rem; color:#64748b; font-weight:700; margin-bottom:8px;">Cargando historias clínicas...</div>
+        <div id="lista_repositorio_hc" style="display:flex; flex-direction:column; gap:8px; max-height:420px; overflow-y:auto;"></div>
       </div>
     </div>
   </div>

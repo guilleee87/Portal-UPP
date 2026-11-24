@@ -578,6 +578,105 @@ function abrirHistoriaClinicaPacienteActual() {
   });
 }
 window.abrirHistoriaClinicaPacienteActual = abrirHistoriaClinicaPacienteActual;
+
+function obtenerTodasHistoriasClinicasCentro() {
+  const mapa = {};
+  const addReg = (r) => {
+    if (!r) return;
+    const dni = String(r.dni || r.numDni || r.identificador || "").trim();
+    const hc = String(r.historia_clinica || r.historiaClinica || "").trim();
+    const nom = String(r.nombre_completo || r.nombre || r.nombreReniec || "").trim();
+    if (!dni && !hc && !nom) return;
+    const key = (dni && dni !== "Pendiente" && dni !== "S/D") ? dni.toUpperCase() : (hc || nom).toUpperCase();
+    if (!mapa[key]) {
+      mapa[key] = {
+        identificador: dni || hc || nom,
+        dni: dni || "Sin DNI",
+        historia_clinica: hc || "—",
+        nombre_completo: nom || `Paciente (${dni || hc})`,
+        tipo_seguro: r.tipo_seguro || r.tipoSeguro || r.seguro || "Por validar",
+        alergias: r.alergias || "Niega alergias conocidas",
+        episodios: Array.isArray(r.episodios) ? r.episodios : []
+      };
+    } else if (Array.isArray(r.episodios) && r.episodios.length > mapa[key].episodios.length) {
+      mapa[key].episodios = r.episodios;
+    }
+  };
+
+  try {
+    const master = cargarPacientesMaster();
+    Object.values(master).forEach(addReg);
+  } catch(e){}
+  if (Array.isArray(PACIENTES_COLA)) PACIENTES_COLA.forEach(addReg);
+  try {
+    const histRaw = localStorage.getItem("UPP_HISTORIAL_DIAS_ANTERIORES");
+    const hist = histRaw ? JSON.parse(histRaw) : (typeof CASOS_HISTORICOS_DEMO !== "undefined" ? CASOS_HISTORICOS_DEMO : {});
+    Object.values(hist).forEach(arr => { if (Array.isArray(arr)) arr.forEach(addReg); });
+  } catch(e){}
+  if (typeof CASOS_HISTORICOS_DEMO !== "undefined") {
+    Object.values(CASOS_HISTORICOS_DEMO).forEach(arr => { if (Array.isArray(arr)) arr.forEach(addReg); });
+  }
+  return Object.values(mapa);
+}
+
+function buscarHistoriasClinicasCentro() {
+  const inp = document.getElementById("input_buscar_hc_centro");
+  const q = (inp ? inp.value : "").trim().toLowerCase();
+  const todas = obtenerTodasHistoriasClinicasCentro();
+  const filtradas = q
+    ? todas.filter(p => `${p.dni} ${p.nombre_completo} ${p.historia_clinica}`.toLowerCase().includes(q))
+    : todas;
+
+  const cnt = document.getElementById("contador_repositorio_hc");
+  if (cnt) cnt.textContent = `Mostrando ${filtradas.length} de ${todas.length} historias clínicas registradas en el establecimiento`;
+
+  const cont = document.getElementById("lista_repositorio_hc");
+  if (!cont) return;
+  if (filtradas.length === 0) {
+    cont.innerHTML = `<div style="padding:24px; text-align:center; color:#64748b; border:1.5px dashed #cbd5e1; border-radius:8px;">No se encontraron historias clínicas para "<strong>${q}</strong>".</div>`;
+    return;
+  }
+  cont.innerHTML = "";
+  filtradas.forEach(p => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 14px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer;";
+    row.innerHTML = `
+      <div style="min-width:0;">
+        <div style="font-weight:800; color:#0f172a; font-size:0.86rem;">👤 ${p.nombre_completo}</div>
+        <div style="font-size:0.74rem; color:#475569; margin-top:2px;">
+          <strong>HC:</strong> <span style="color:#0284c7; font-family:monospace;">${p.historia_clinica}</span> ·
+          <strong>DNI:</strong> ${p.dni} ·
+          <strong>Seguro:</strong> ${p.tipo_seguro} ·
+          <strong>Episodios:</strong> ${p.episodios.length}
+        </div>
+      </div>
+      <button type="button" class="btn-full-primary" style="background:#0284c7; padding:6px 12px; font-size:0.74rem; font-weight:800; white-space:nowrap;">👁️ Abrir HC</button>
+    `;
+    row.onclick = () => {
+      cerrarRepositorioHistoriasClinicas();
+      visualizarHistoriaClinica(p);
+    };
+    cont.appendChild(row);
+  });
+}
+
+function abrirRepositorioHistoriasClinicas() {
+  const m = document.getElementById("modal_repositorio_hc");
+  if (!m) return;
+  const inp = document.getElementById("input_buscar_hc_centro");
+  if (inp) inp.value = "";
+  buscarHistoriasClinicasCentro();
+  m.classList.add("open");
+  m.style.display = "flex";
+}
+function cerrarRepositorioHistoriasClinicas() {
+  const m = document.getElementById("modal_repositorio_hc");
+  if (m) { m.classList.remove("open"); m.style.display = "none"; }
+}
+window.obtenerTodasHistoriasClinicasCentro = obtenerTodasHistoriasClinicasCentro;
+window.buscarHistoriasClinicasCentro = buscarHistoriasClinicasCentro;
+window.abrirRepositorioHistoriasClinicas = abrirRepositorioHistoriasClinicas;
+window.cerrarRepositorioHistoriasClinicas = cerrarRepositorioHistoriasClinicas;
 window.generarDatosDemograficosCoherentes = generarDatosDemograficosCoherentes;
 
 function registrarEpisodioEnHistoriaClinica(px = {}, etapa = "Triaje") {
@@ -17417,11 +17516,15 @@ window.asignarMedicoDisponible = asignarMedicoDisponible;
 
 // --- GESTIÓN DE CONSENTIMIENTO INFORMADO MÉDICO POR LEY ---
 function actualizarCondicionConsentimiento(cond) {
+  cond = cond || document.getElementById("sel_condicion_consentimiento")?.value || "paciente_lucido";
   STATE.condicionConsentimiento = cond;
   const banner = document.getElementById("consentimiento_alerta_banner");
+  const badge = document.getElementById("badge_norma_consentimiento");
+  const proc = document.getElementById("sel_procedimiento_consentimiento")?.value || "NO_APLICA_CONSULTA_NO_INVASIVA";
   if (!banner) return;
 
   if (cond === "exonerado_emergencia") {
+    if (badge) { badge.textContent = "⚡ Exonerado por Emergencia Vital (Art. 17° D.S. 027-2015-SA)"; badge.style.background = "#fff1f2"; badge.style.color = "#9f1239"; }
     banner.style.background = "#fff1f2";
     banner.style.borderColor = "#fecdd3";
     banner.style.color = "#9f1239";
@@ -17436,11 +17539,18 @@ function actualizarCondicionConsentimiento(cond) {
     banner.style.borderColor = "#ef4444";
     banner.style.color = "#b91c1c";
     banner.innerHTML = `<strong>❌ DISENTIMIENTO INFORMADO / RECHAZO DE TRATAMIENTO (Art. 15° Ley N° 26842):</strong> El paciente o deudo legal rehúsa el procedimiento propuesto tras ser informado de los riesgos letales o secuelas. Obligatorio firmar acta de exoneración de responsabilidad médica.`;
+  } else if (proc === "NO_APLICA_CONSULTA_NO_INVASIVA") {
+    if (badge) { badge.textContent = "✓ No Requiere Formato Escrito (Atención No Invasiva)"; badge.style.background = "#f0fdf4"; badge.style.color = "#15803d"; }
+    banner.style.background = "#f0fdf4";
+    banner.style.borderColor = "#86efac";
+    banner.style.color = "#166534";
+    banner.innerHTML = `<strong>✓ NO OBLIGATORIO PARA ATENCIÓN NO INVASIVA (NTS N° 139-MINSA &amp; D.S. N° 027-2015-SA):</strong> En urgencias o atenciones ambulatorias sin intervención quirúrgica ni procedimiento invasivo (evaluación clínica, vía oral, curación simple), <strong>no se exige llenar consentimiento informado escrito</strong>; basta el consentimiento verbal en la atención.`;
   } else {
+    if (badge) { badge.textContent = "⚖️ Obligatorio por Procedimiento Invasivo / Quirúrgico"; badge.style.background = "#e0f2fe"; badge.style.color = "#0369a1"; }
     banner.style.background = "#eff6ff";
     banner.style.borderColor = "#bfdbfe";
     banner.style.color = "#1e40af";
-    banner.innerHTML = `<strong>ℹ️ RÉGIMEN ORDINARIO:</strong> Paciente lúcido y consciente (≥18 años) en pleno uso de sus facultades mentales. Suscribe el consentimiento de forma libre e informada tras comprender objetivos, riesgos y alternativas.`;
+    banner.innerHTML = `<strong>⚖️ OBLIGATORIO POR PROCEDIMIENTO INVASIVO / QUIRÚRGICO (Ley N° 29414 &amp; NTS N° 139-MINSA):</strong> Paciente lúcido y consciente (≥18 años). Al realizarse una intervención invasiva o quirúrgica no exonerada, debe comprender riesgos y alternativas y suscribir el formato antes del procedimiento.`;
   }
 
   registrarLogAuditoria("Módulo 4", "CAMBIO_REGIMEN_CONSENTIMIENTO", `Régimen: ${cond}`);
