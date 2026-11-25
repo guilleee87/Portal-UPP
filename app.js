@@ -1447,10 +1447,6 @@ async function cargarTablaCatalogoHC(filtro = "") {
         <td><strong>${tck}</strong></td>
         <td style="white-space:nowrap; text-align:center;">
           <div style="display:flex; gap:6px; justify-content:center;">
-            <button type="button" class="btn-full-primary" style="padding:5px 10px;font-size:0.75rem;background:#16a34a;border:none;border-radius:6px;cursor:pointer;"
-              title="Cargar paciente para nueva atención" onclick="seleccionarPacienteDeBusqueda('${pJson}')">
-              ✓ Cargar
-            </button>
             <button type="button" class="btn-full-secondary" style="padding:5px 10px;font-size:0.75rem;background:#f8fafc;border:1.5px solid #0284c7;color:#0284c7;border-radius:6px;cursor:pointer;"
               title="Visualizar expediente e historial clínico completo" onclick="visualizarHistoriaClinica('${pJson}')">
               👁️ Ver
@@ -1967,6 +1963,25 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
   if (pxVivo.firmas?.medico || diagReg !== "—") {
     bitacoraPasos.push({ cuando: pxVivo.firmas?.medico?.fecha ? new Date(pxVivo.firmas.medico.fecha).toLocaleString("es-PE") : "En atención", paso: "7. Evaluación Médica / Diagnóstico", donde: "Módulo 4 — Atención Médica", como: `CIE-10: ${diagReg}`, quien: medicoReg });
   }
+  if (bitacoraPasos.length === 0 && episodios.length > 0) {
+    episodios.forEach((ep, iEp) => {
+      const sv = ep.signos_vitales || {};
+      const paEp = sv.pa || (sv.pas && sv.pad ? `${sv.pas}/${sv.pad}` : "—");
+      const fhEp = `${ep.fecha || "—"} ${ep.hora || ""}`.trim();
+      bitacoraPasos.push({ cuando: fhEp, paso: `Episodio #${episodios.length - iEp} — Triaje y Evaluación (${ep.prioridad || "Emergencia"})`, donde: ep.lugar_atencion || "Emergencia UPP", como: `Motivo: ${ep.motivo_consulta || "Atención"} · SpO2: ${sv.spo2 || "—"}%, FC: ${sv.fc || "—"}, PA: ${paEp} · CIE-10: ${ep.cie10_codigo ? ep.cie10_codigo + " " + (ep.cie10_descripcion || "") : diagReg}`, quien: ep.firmante || medicoReg });
+      if (Array.isArray(ep.medicamentos_despachados)) {
+        ep.medicamentos_despachados.forEach(m => {
+          bitacoraPasos.push({ cuando: fhEp, paso: `Administración / Farmacia: ${m.descripcion || m}`, donde: ep.cama_asignada || "Tópico / Emergencia", como: m.dosis || m.cantidad || "Despachado y administrado", quien: ep.firmante || enfermeraReg });
+        });
+      }
+      if (Array.isArray(ep.examenes_realizados)) {
+        ep.examenes_realizados.forEach(ex => {
+          bitacoraPasos.push({ cuando: fhEp, paso: `Laboratorio / Imágenes: ${ex.descripcion || ex}`, donde: "Apoyo al Diagnóstico", como: ex.resultado || "Ordenado / Procesado", quien: medicoReg });
+        });
+      }
+      bitacoraPasos.push({ cuando: fhEp, paso: `Egreso / Destino (${ep.estado_salida || ep.destino_clinico || "Alta"})`, donde: ep.cama_asignada || ep.destino_clinico || "Emergencia", como: `Liquidación: S/. ${(ep.liquidacion?.totalPaciente ?? ep.total_facturado ?? 0).toFixed ? Number(ep.liquidacion?.totalPaciente ?? ep.total_facturado ?? 0).toFixed(2) : "0.00"}`, quien: medicoReg });
+    });
+  }
   const modsHC = Array.isArray(master.modificaciones_auditoria) ? master.modificaciones_auditoria : [];
   const selloMedicoHC = (typeof generarSelloFirmaDigitalHTML === "function")
     ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: (medicoReg && medicoReg !== "—") ? medicoReg : "Dr. Carlos Vega Alva", colegiatura: "CMP 58321 · RNE 23901" })
@@ -2169,8 +2184,7 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
   const btnCargar = document.getElementById("btn_modal_cargar_paciente");
   if (btnCargar) {
     const rolActModal = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerRolActivo === "function") ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
-    const bloquearIngresoDesdeHC = Boolean(opciones.desdeArchivoAuditor || rolActModal === "AUDITOR");
-    if (bloquearIngresoDesdeHC) { btnCargar.style.setProperty("display", "none", "important"); } else { btnCargar.style.removeProperty("display"); }
+    btnCargar.style.setProperty("display", "none", "important");
     btnCargar.onclick = () => {
       cerrarModalVisualizarHC();
       seleccionarPacienteDeBusqueda(pacienteEncoded);
@@ -12361,9 +12375,9 @@ function sincronizarSelectsGsRh(val) {
   if (lbl) lbl.textContent = v;
 
   let gs = "Desconocido", rh = "Desconocido";
-  if (v === "No se acuerda") {
-    gs = "No se acuerda";
-    rh = "No se acuerda";
+  if (v === "No me acuerdo") {
+    gs = "No me acuerdo";
+    rh = "No me acuerdo";
   } else if (v.includes("GS:") && v.includes("/ RH:")) {
     const partes = v.split("/");
     gs = (partes[0] || "").replace("GS:", "").trim() || "Desconocido";
@@ -12382,11 +12396,11 @@ function actualizarGsRh(origen) {
   const gs = document.getElementById(gsId)?.value || "Desconocido";
   const rh = document.getElementById(rhId)?.value || "Desconocido";
   let combinado = "Desconocido";
-  if (gs !== "Desconocido" && gs !== "No se acuerda" && rh !== "Desconocido" && rh !== "No se acuerda") {
+  if (gs !== "Desconocido" && gs !== "No me acuerdo" && rh !== "Desconocido" && rh !== "No me acuerdo") {
     combinado = `${gs}${rh}`;
-  } else if (gs === "No se acuerda" && rh === "No se acuerda") {
-    combinado = "No se acuerda";
-  } else if (gs === "No se acuerda" || rh === "No se acuerda") {
+  } else if (gs === "No me acuerdo" && rh === "No me acuerdo") {
+    combinado = "No me acuerdo";
+  } else if (gs === "No me acuerdo" || rh === "No me acuerdo") {
     combinado = `GS: ${gs} / RH: ${rh}`;
   }
   sincronizarSelectsGsRh(combinado);
@@ -14339,19 +14353,19 @@ function obtenerGsRhParaBrazalete() {
   if (!raw || raw === "Desconocido") {
     const gsSel = document.getElementById("gs_select_mod1")?.value || document.getElementById("gs_select_mod4")?.value || "Desconocido";
     const rhSel = document.getElementById("rh_select_mod1")?.value || document.getElementById("rh_select_mod4")?.value || "Desconocido";
-    if (gsSel !== "Desconocido" && gsSel !== "No se acuerda" && rhSel !== "Desconocido" && rhSel !== "No se acuerda") {
+    if (gsSel !== "Desconocido" && gsSel !== "No me acuerdo" && rhSel !== "Desconocido" && rhSel !== "No me acuerdo") {
       raw = `${gsSel}${rhSel}`;
-    } else if (gsSel === "No se acuerda" && rhSel === "No se acuerda") {
-      raw = "No se acuerda";
-    } else if (gsSel === "No se acuerda" || rhSel === "No se acuerda") {
+    } else if (gsSel === "No me acuerdo" && rhSel === "No me acuerdo") {
+      raw = "No me acuerdo";
+    } else if (gsSel === "No me acuerdo" || rhSel === "No me acuerdo") {
       raw = `GS: ${gsSel} / RH: ${rhSel}`;
     } else {
       raw = "Desconocido";
     }
   }
   let gs = "Por tipificar", rh = "Por tipificar";
-  if (raw === "No se acuerda") {
-    gs = "No se acuerda"; rh = "No se acuerda";
+  if (raw === "No me acuerdo") {
+    gs = "No me acuerdo"; rh = "No me acuerdo";
   } else if (raw.includes("GS:") && raw.includes("/ RH:")) {
     const p = raw.split("/");
     gs = (p[0] || "").replace("GS:", "").trim() || "Por tipificar";
