@@ -5921,13 +5921,6 @@ function calcularLiquidacionSeguro() {
 
   if (esNoIdentificado && esAltaOEgreso) {
     let totalCobroNN = totalBruto;
-    if (totalCobroNN === 0) {
-      const prioNN = STATE.prioridad || "I";
-      totalCobroNN = prioNN === "I" ? 480.00 : (prioNN === "II" ? 320.00 : (prioNN === "III" ? 180.00 : 95.00));
-      if (typeof registrarFacturaItem === "function" && STATE.items_factura.length === 0) {
-        registrarFacturaItem(`Atención Médica de Emergencia (P-${prioNN}) · Paciente No Identificado`, totalCobroNN, "Emergencia");
-      }
-    }
 
     lugarAtencion = entorno === "privado"
       ? "Clínica Privada Especializada (Servicio de Emergencia)"
@@ -5985,17 +5978,46 @@ function calcularLiquidacionSeguro() {
       motivoLiquidacion = "PACIENTE PARTICULAR EN RED PÚBLICA. No registra afiliación en SIS ni en EsSalud en el Padrón Nacional SUSALUD (registra seguro privado o es particular). En el establecimiento público asume el 100% de la totalidad de lo facturado.";
     }
 
-    // REGLA 3: Cobertura Estatal Plena (SIS o EsSalud ACTIVO)
+    // REGLA 3: Cobertura Estatal según Módulo Activo (MINSA/SIS vs EsSalud) e Intercambio Prestacional (D.L. 1302/1466)
     else {
-      etiquetaRegimen = `${pub.entidad} Gratuito Integral (${pub.regimen} · Ley N° 27604)`;
-      condicionSusalud = `${pub.entidad} - ${pub.regimen} (${pub.codigo || 'ACTIVO'})`;
-      coberturaSector = "100% Cobertura Integral Pública (Pago S/ 0.00)";
-      copagoFijo = 0.00;
-      pctCoaseguro = 0;
-      coberturaSeguro = totalBruto;
-      totalPaciente = 0.00; // PAGO CERO TOTAL
-      alertaSector = "✅ Cobertura Integral Estatal al 100% (Pago Cero en cualquier prioridad I a V).";
-      motivoLiquidacion = `COBERTURA TOTAL ESTATAL (PAGO CERO). Paciente acreditado en ${pub.entidad} bajo el régimen '${pub.regimen}' (${pub.codigo || 'FUA'}). Conforme a la Ley N° 27604 y Ley N° 29344, todos los conceptos asistenciales están cubiertos al 100% por el Estado peruano. Total a pagar por paciente: S/. 0.00.`;
+      const ipressActiva = (STATE.tipoIpressPublica === "ESSALUD") ? "ESSALUD" : "MINSA";
+      const entPx = String(pub.entidad || "").toUpperCase();
+      const esAseguradoMismoSector = (ipressActiva === "MINSA" && entPx.includes("SIS")) || (ipressActiva === "ESSALUD" && entPx.includes("ESSALUD"));
+      const docRef = ipressActiva === "ESSALUD"
+        ? (STATE.nroEssi || pub.codigo || "ESSI")
+        : (STATE.nroFua || pub.codigo || "FUA");
+
+      if (esAseguradoMismoSector) {
+        etiquetaRegimen = `${ipressActiva === "ESSALUD" ? "EsSalud (ESSI)" : "MINSA / SIS (FUA)"} · Cobertura Integral (${pub.regimen})`;
+        condicionSusalud = `${pub.entidad} - ${pub.regimen} (${docRef})`;
+        coberturaSector = `100% Cobertura Integral ${ipressActiva === "ESSALUD" ? "EsSalud (Ley N° 26790)" : "SIS (R.J. N° 107-2015/SIS)"} — Pago S/ 0.00`;
+        copagoFijo = 0.00;
+        pctCoaseguro = 0;
+        coberturaSeguro = totalBruto;
+        totalPaciente = 0.00;
+        alertaSector = `✅ Asegurado acreditado en su propia red (${pub.entidad} · ${docRef}): Cobertura 100% (Pago Cero I–V).`;
+        motivoLiquidacion = `COBERTURA TOTAL ${ipressActiva === "ESSALUD" ? "ESSALUD (HOJA DE ATENCIÓN ESSI)" : "SIS (FUA)"}. Paciente acreditado en ${pub.entidad} (${pub.regimen}, Doc: ${docRef}). Conforme a Ley N° 27604 y ${ipressActiva === "ESSALUD" ? "Ley N° 26790" : "Ley N° 29344 / R.J. N° 107-2015/SIS"}, el 100% de prestaciones es cubierto. Total a pagar: S/. 0.00.`;
+      } else if (esEmergencia) {
+        etiquetaRegimen = `${ipressActiva} · Emergencia Vital Intercambio Prestacional (${pub.entidad} · Ley N° 27604)`;
+        condicionSusalud = `${pub.entidad} en IPRESS ${ipressActiva} (D.L. N° 1302 / D.L. N° 1466)`;
+        coberturaSector = "100% Atención Inmediata Ley N° 27604 (Recupero Interinstitucional)";
+        copagoFijo = 0.00;
+        pctCoaseguro = 0;
+        coberturaSeguro = totalBruto;
+        totalPaciente = 0.00;
+        alertaSector = `⚖️ Emergencia Vital (P-${STATE.prioridad}): Paciente ${pub.entidad} atendido en ${ipressActiva} sin costo al paciente (Ley N° 27604 + Intercambio Prestacional D.L. 1302/1466).`;
+        motivoLiquidacion = `EMERGENCIA VITAL CON INTERCAMBIO PRESTACIONAL (LEY N° 27604 y D.L. N° 1302 / D.L. N° 1466). Paciente asegurado en ${pub.entidad} atendido en IPRESS ${ipressActiva} por riesgo vital (P-${STATE.prioridad}). La atención es inmediata e incondicional (Pago paciente S/. 0.00) y se factura interinstitucionalmente a ${pub.entidad}.`;
+      } else {
+        etiquetaRegimen = `${ipressActiva} · No Asegurado en esta Red (${pub.entidad} P-${STATE.prioridad || "III"})`;
+        condicionSusalud = `${pub.entidad} fuera de red ${ipressActiva} (No Emergencia)`;
+        coberturaSector = `0% en ${ipressActiva} (Urgencia menor sin convenio — Tarifa Particular)`;
+        copagoFijo = 0.00;
+        pctCoaseguro = 100;
+        coberturaSeguro = 0.00;
+        totalPaciente = totalBruto;
+        alertaSector = `⚠️ Paciente ${pub.entidad} en atención no vital (P-${STATE.prioridad || "III"}) dentro de ${ipressActiva}: Sin convenio aplicable, asume tarifa particular 100%.`;
+        motivoLiquidacion = `ATENCIÓN FUERA DE RED EN URGENCIA NO VITAL. El paciente pertenece a ${pub.entidad} pero acude por urgencia menor (P-${STATE.prioridad || "III"}) a una IPRESS ${ipressActiva} sin convenio de intercambio para consulta ambulatoria. Asume el 100% de la liquidación.`;
+      }
     }
   }
 
@@ -13623,10 +13645,12 @@ function actualizarVisibilidadBotonesEntorno() {
 window.actualizarVisibilidadBotonesEntorno = actualizarVisibilidadBotonesEntorno;
 
 function cambiarEntornoOperativo(modo) {
-  const modoAnterior = STATE.entornoOperativo || "publico";
-  const subIpressReq = (modo === "essalud") ? "ESSALUD" : (modo === "sis" ? "MINSA" : (STATE.tipoIpressPublica || "MINSA"));
-  const nuevoModo = (modo === "privado") ? "privado" : "publico";
-  const debeBorrarAvance = (nuevoModo === "privado" && (modoAnterior === "publico" || STATE.numDni || STATE.identificador || (document.getElementById("dni_mod1")?.value) || (document.getElementById("ident_full")?.value)));
+  const moduloAnterior = (STATE.entornoOperativo === "privado") ? "privado" : (STATE.tipoIpressPublica === "ESSALUD" ? "essalud" : "sis");
+  const moduloNuevo = (modo === "privado") ? "privado" : (modo === "essalud" ? "essalud" : "sis");
+  const subIpressReq = (moduloNuevo === "essalud") ? "ESSALUD" : "MINSA";
+  const nuevoModo = (moduloNuevo === "privado") ? "privado" : "publico";
+  const hayAvance = Boolean(STATE.numDni || STATE.identificador || (document.getElementById("dni_mod1")?.value) || (document.getElementById("ident_full")?.value));
+  const debeBorrarAvance = (moduloNuevo !== moduloAnterior && hayAvance);
 
   STATE.entornoOperativo = nuevoModo;
   STATE.esClinicaPrivada = (nuevoModo === "privado");
@@ -13641,10 +13665,14 @@ function cambiarEntornoOperativo(modo) {
     if (typeof limpiarFormularioCompletoState === "function") {
       limpiarFormularioCompletoState();
     }
-    STATE.entornoOperativo = "privado";
-    STATE.esClinicaPrivada = true;
-    STATE.tipoSeguro = "Particular";
-    STATE.planPrivado = "base_80_20";
+    STATE.entornoOperativo = nuevoModo;
+    STATE.esClinicaPrivada = (nuevoModo === "privado");
+    if (nuevoModo === "publico") {
+      STATE.tipoIpressPublica = subIpressReq;
+    } else {
+      STATE.tipoSeguro = "Particular";
+      STATE.planPrivado = "base_80_20";
+    }
 
     const cie10 = document.getElementById("cie10_select");
     if (cie10) cie10.selectedIndex = 0;
@@ -13780,14 +13808,18 @@ function cambiarEntornoOperativo(modo) {
     }
   }
 
-  // Alternar sub-selectores según entorno
-  const boxIpress = document.getElementById("subselector_ipress_publica");
+  // Alternar los 3 sub-paneles independientes: SIS (FUA) | EsSalud (ESSI) | Privado (EPS)
+  const boxSis = document.getElementById("subselector_ipress_publica");
+  const boxEssalud = document.getElementById("subselector_essalud");
   const boxPlanPriv = document.getElementById("subselector_plan_privado");
   if (nuevoModo === "publico") {
-    if (boxIpress) boxIpress.style.display = "flex";
+    const esEss = (STATE.tipoIpressPublica === "ESSALUD");
+    if (boxSis) boxSis.style.display = esEss ? "none" : "flex";
+    if (boxEssalud) boxEssalud.style.display = esEss ? "flex" : "none";
     if (boxPlanPriv) boxPlanPriv.style.display = "none";
   } else {
-    if (boxIpress) boxIpress.style.display = "none";
+    if (boxSis) boxSis.style.display = "none";
+    if (boxEssalud) boxEssalud.style.display = "none";
     if (boxPlanPriv) boxPlanPriv.style.display = "flex";
   }
 
@@ -15686,7 +15718,7 @@ function obtenerListaTodosPacientesAuditoria() {
       horaLlegada: p.horaLlegada || exp.horaLlegada || (p.timestampLlegada ? new Date(p.timestampLlegada).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "--:--:--"),
       horaTriaje: firmas.triaje ? new Date(firmas.triaje.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : (p.horaTriaje || exp.horaTriaje || "⏳ Pendiente"),
       horaAtencion: firmas.medico ? new Date(firmas.medico.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : (p.horaAtencion || exp.horaAtencion || "⏳ Pendiente"),
-      horaAlta: p.horaAlta || exp.horaAlta || (esAlta ? new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "En curso"),
+      horaAlta: p.horaAlta || exp.horaAlta || (esAlta ? new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "— (En curso)"),
       ticket: p.turno || p.ticket || exp.ticket || (p.identificador ? String(p.identificador).replace(/^Ticket\s*/i, "") : "T-001"),
       nombre: (esVivo ? STATE.nombreReniec : null) || p.nombre || exp.nombreReniec || p.identificador || "PACIENTE SIN NOMBRE",
       numDni: (esVivo ? STATE.numDni : null) || p.numDni || p.dni || exp.numDni || (p.esNN ? "NN-INDOCUMENTADO" : "Pendiente"),
@@ -15712,21 +15744,14 @@ function obtenerListaTodosPacientesAuditoria() {
       medicoConstatador: p.medicoConstatador || exp.medicoConstatador || "Dr. Carlos Vega Alva (CMP 58321 · RNE 23901)",
       destino: esFallecido ? "Constatación de Óbito · Morgue Central / Necropsia de Ley" : (exp.destinoAlta || p.destino || (esAlta ? "Alta Médica a Domicilio" : "En Atención de Emergencia")),
       montoTotal: (() => {
-        const esNNPx = Boolean(
-          p.esNN || exp.esNN ||
-          (p.numDni && (p.numDni === "NN" || p.numDni === "S/D" || String(p.numDni).startsWith("NN-"))) ||
-          (p.nombre && String(p.nombre).includes("NN"))
-        );
         let m = exp.montoTotal || p.montoTotal;
-        if (esNNPx && (!m || m === "S/ 0.00" || m.includes("0.00") || m === "S/ 0")) {
-          const num = (typeof STATE !== "undefined" && STATE.id === idPx && STATE.total_factura && STATE.total_factura > 0)
-            ? STATE.total_factura
-            : (exp.total_factura || ((p.prioridad === "I" || exp.prioridad === "I") ? 480.00 : (p.prioridad === "II" ? 320.00 : 180.00)));
-          return `S/ ${num.toFixed(2)} (Facturación Total - Sin Seguro)`;
-        }
-        return m || (typeof STATE !== "undefined" && STATE.total_factura ? `S/ ${STATE.total_factura.toFixed(2)}` : "S/ 0.00");
+        if (m) return m;
+        const num = esVivo
+          ? (Number(STATE.total_factura) || 0)
+          : (Number(src.total_factura ?? exp.total_factura ?? p.total_factura ?? 0) || 0);
+        return `S/ ${num.toFixed(2)}`;
       })(),
-      alergias: exp.alergias || exp.alergiasConocidas || p.alergias || "Niega alergias conocidas",
+      alergias: exp.alergias || exp.alergiasConocidas || p.alergias || (esVivo ? STATE.alergias : "") || "— (Por indagar)",
       vitales: {
         spo2: (esVivo ? STATE.spo2 : stSnap.spo2) ?? p.spo2 ?? exp.spo2 ?? null,
         fc: (esVivo ? STATE.fc : stSnap.fc) ?? p.fc ?? exp.fc ?? null,
@@ -15739,12 +15764,10 @@ function obtenerListaTodosPacientesAuditoria() {
         glucosa: (esVivo ? STATE.glucosa : stSnap.glucosa) ?? p.glucosa ?? exp.glucosa ?? null,
         news2: p.news2Score ?? exp.news2Score ?? null
       },
-      indicaciones: exp.indicacionesMedicas || p.indicaciones || "Atención clínica protocolizada según NTS N° 042-MINSA.",
-      kardexAdministrados: p.kardexAdministrados || exp.kardexAdministrados || (typeof STATE !== "undefined" && STATE.kardexAdministrados ? STATE.kardexAdministrados : []),
+      indicaciones: exp.indicacionesMedicas || p.indicaciones || (esVivo ? STATE.indicacionesMedicas : "") || "—",
+      kardexAdministrados: p.kardexAdministrados || exp.kardexAdministrados || (esVivo && Array.isArray(STATE.kardexAdministrados) ? STATE.kardexAdministrados : []),
       procedimientos: p.procedimientos || exp.procedimientos || [],
-      movimientosCama: p.movimientosCama || exp.movimientosCama || [
-        { cama: p.camaNombre || exp.camaAsignada || "Tópico de Emergencia", horaIngreso: `${fechaHoy} ${p.horaLlegada || '08:00:00'}`, horaEgreso: esAlta ? `${fechaHoy} ${p.horaAlta || '11:00:00'}` : "En permanencia", duracion: esAlta ? "3h 00m" : "En curso", motivo: "Atención de Emergencia" }
-      ]
+      movimientosCama: (p.movimientosCama && p.movimientosCama.length) ? p.movimientosCama : ((exp.movimientosCama && exp.movimientosCama.length) ? exp.movimientosCama : ((p.camaNombre && !p.camaNombre.includes("Sin cama")) ? [{ cama: p.camaNombre, horaIngreso: `${fechaHoy} ${p.horaLlegada || '—'}`, horaEgreso: esAlta ? `${fechaHoy} ${p.horaAlta || '—'}` : "En permanencia", duracion: "En curso", motivo: p.motivo || "Atención de Emergencia" }] : []))
     });
   });
 
@@ -16117,20 +16140,28 @@ function renderizarFichaTrazabilidad(px) {
     `;
   }
 
-  // Generar sellos digitales
-  const selloMedico = (typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: px.medicoTratante, fechaHora: `${fechaBase} ${px.horaAtencion || '08:25:00'}` })
+  // Generar sellos digitales SOLO si el paciente ya pasó por ese módulo (cero firmas inventadas)
+  const esReal = Boolean(px.esTiempoReal);
+  const f = px.firmas || {};
+  const pasoTriaje = !esReal || Boolean(f.triaje || (px.prioridad && px.enfermeraTriaje && !String(px.enfermeraTriaje).includes("Por evaluar")));
+  const pasoAdmision = !esReal || Boolean(f.admision || px.coberturaValidada);
+  const pasoMedico = !esReal || Boolean(f.medico || (px.medicoTratante && !String(px.medicoTratante).includes("Por asignar")));
+  const pasoCaja = !esReal || Boolean(f.caja || px.estadoFlujo === "CERRADO_FACTURADO" || px.estadoFlujo === "ATENDIDO_ALTA");
+  const pasoAuditor = !esReal || Boolean(f.auditor || (Array.isArray(px.modificaciones_auditoria) && px.modificaciones_auditoria.length > 0));
+
+  const selloMedico = (pasoMedico && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: px.medicoTratante, fechaHora: `${fechaBase} ${px.horaAtencion || ''}` })
     : "";
-  const selloTriaje = (typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("TRIAJE", { nombre: px.enfermeraTriaje, fechaHora: `${fechaBase} ${px.horaTriaje || '08:17:00'}` })
+  const selloTriaje = (pasoTriaje && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("TRIAJE", { nombre: px.enfermeraTriaje, fechaHora: `${fechaBase} ${px.horaTriaje || ''}` })
     : "";
-  const selloAdmision = (typeof generarSelloFirmaDigitalHTML === "function")
+  const selloAdmision = (pasoAdmision && typeof generarSelloFirmaDigitalHTML === "function")
     ? generarSelloFirmaDigitalHTML("ADMISION", { fechaHora: `${fechaBase} ${horaLlegada}` })
     : "";
-  const selloCaja = (typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("CAJA", { fechaHora: `${fechaBase} ${px.horaAlta || '11:45:00'}` })
+  const selloCaja = (pasoCaja && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("CAJA", { fechaHora: `${fechaBase} ${px.horaAlta || ''}` })
     : "";
-  const selloAuditor = (typeof generarSelloFirmaDigitalHTML === "function")
+  const selloAuditor = (pasoAuditor && typeof generarSelloFirmaDigitalHTML === "function")
     ? generarSelloFirmaDigitalHTML("AUDITOR", { fechaHora: `${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}` })
     : "";
 
@@ -16270,7 +16301,7 @@ function renderizarFichaTrazabilidad(px) {
         <p style="margin:0; color:#334155;">${px.medicoTratante}</p>
 
         <strong style="color:#0f172a; display:block; margin-top:8px; margin-bottom:4px;">📋 Plan / Indicaciones al Alta:</strong>
-        <p style="margin:0; color:#475569; font-size:0.75rem; line-height:1.4;">${px.indicaciones || 'Indicaciones médicas cumplidas en guardia.'}</p>
+        <p style="margin:0; color:#475569; font-size:0.75rem; line-height:1.4;">${px.indicaciones || '—'}</p>
       </div>
 
       <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
@@ -16281,7 +16312,7 @@ function renderizarFichaTrazabilidad(px) {
         <p style="margin:0; font-weight:800; color:${esFallecido ? '#b91c1c' : '#16a34a'};">${px.destino}</p>
 
         <strong style="color:#0f172a; display:block; margin-top:8px; margin-bottom:4px;">⏱️ Fecha y Hora de Egreso:</strong>
-        <p style="margin:0; font-family:monospace; font-weight:800; color:#0f172a;">${fechaBase} ${px.horaAlta || '11:45:00'}</p>
+        <p style="margin:0; font-family:monospace; font-weight:800; color:#0f172a;">${(px.horaAlta && !String(px.horaAlta).includes("En curso") && px.horaAlta !== "—") ? `${fechaBase} ${px.horaAlta}` : "— (En curso)"}</p>
       </div>
     </div>
 
@@ -16296,6 +16327,7 @@ function renderizarFichaTrazabilidad(px) {
         ${selloAdmision}
         ${selloCaja}
         ${selloAuditor}
+        ${(!selloMedico && !selloTriaje && !selloAdmision && !selloCaja && !selloAuditor) ? `<div style="font-size:0.78rem; color:#64748b;">— Sin sellos ni firmas digitales aún (se emitirán conforme el paciente avance por cada módulo).</div>` : ""}
       </div>
     </div>
   `;
@@ -17065,17 +17097,46 @@ window.calcularLiquidacionSeguro = function() {
       coberturaSeguro = 0.00;
       totalPaciente = totalBruto;
       alertaSector = "⚠️ Paciente no registra afiliación pública activa (SIS/EsSalud): Tarifa particular 100%.";
-      motivoLiquidacion = "PACIENTE PARTICULAR EN RED PÚBLICA. No registra seguro estatal activo en el Padrón SUSALUD. Asume el 100% de la liquidación.";
+      motivoLiquidacion = esEmergencia ? "EMERGENCIA VITAL SIN SEGURO ACREDITADO (LEY N° 27604). Se brinda atención y estabilización inmediatas sin detener el flujo ni exigir pago previo. Al no registrar seguro público activo, se liquida el 100% al paciente post-estabilización (no S/. 0.00)." : "PACIENTE PARTICULAR EN RED PÚBLICA. No registra seguro estatal activo en el Padrón SUSALUD. Asume el 100% de la liquidación.";
     } else {
-      etiquetaRegimen = `${pub.entidad} Gratuito Integral (${pub.regimen} · Ley N° 27604)`;
-      condicionSusalud = `${pub.entidad} - ${pub.regimen} (${pub.codigo || 'ACTIVO'})`;
-      coberturaSector = "100% Cobertura Integral Pública (Pago S/ 0.00)";
-      copagoFijo = 0.00;
-      pctCoaseguro = 0;
-      coberturaSeguro = totalBruto;
-      totalPaciente = 0.00;
-      alertaSector = "✅ Cobertura Integral Estatal al 100% (Pago Cero en cualquier prioridad I a V).";
-      motivoLiquidacion = `COBERTURA TOTAL ESTATAL. Paciente acreditado en ${pub.entidad} bajo régimen '${pub.regimen}'. Conforme a Ley 27604 y Ley 29344, 100% cubierto por el Estado. Paciente paga S/. 0.00.`;
+      const ipressActiva = (STATE.tipoIpressPublica === "ESSALUD") ? "ESSALUD" : "MINSA";
+      const entPx = String(pub.entidad || "").toUpperCase();
+      const esAseguradoMismoSector = (ipressActiva === "MINSA" && entPx.includes("SIS")) || (ipressActiva === "ESSALUD" && entPx.includes("ESSALUD"));
+      const docRef = ipressActiva === "ESSALUD"
+        ? (STATE.nroEssi || pub.codigo || "ESSI")
+        : (STATE.nroFua || pub.codigo || "FUA");
+
+      if (esAseguradoMismoSector) {
+        etiquetaRegimen = `${ipressActiva === "ESSALUD" ? "EsSalud (ESSI)" : "MINSA / SIS (FUA)"} · Cobertura Integral (${pub.regimen})`;
+        condicionSusalud = `${pub.entidad} - ${pub.regimen} (${docRef})`;
+        coberturaSector = `100% Cobertura Integral ${ipressActiva === "ESSALUD" ? "EsSalud (Ley N° 26790)" : "SIS (R.J. N° 107-2015/SIS)"} — Pago S/ 0.00`;
+        copagoFijo = 0.00;
+        pctCoaseguro = 0;
+        coberturaSeguro = totalBruto;
+        totalPaciente = 0.00;
+        alertaSector = `✅ Asegurado acreditado en su propia red (${pub.entidad} · ${docRef}): Cobertura 100% (Pago Cero I–V).`;
+        motivoLiquidacion = `COBERTURA TOTAL ${ipressActiva === "ESSALUD" ? "ESSALUD (HOJA DE ATENCIÓN ESSI)" : "SIS (FUA)"}. Paciente acreditado en ${pub.entidad} (${pub.regimen}, Doc: ${docRef}). Conforme a Ley N° 27604 y ${ipressActiva === "ESSALUD" ? "Ley N° 26790" : "Ley N° 29344 / R.J. N° 107-2015/SIS"}, el 100% de prestaciones es cubierto. Total a pagar: S/. 0.00.`;
+      } else if (esEmergencia) {
+        etiquetaRegimen = `${ipressActiva} · Emergencia Vital Intercambio Prestacional (${pub.entidad} · Ley N° 27604)`;
+        condicionSusalud = `${pub.entidad} en IPRESS ${ipressActiva} (D.L. N° 1302 / D.L. N° 1466)`;
+        coberturaSector = "100% Atención Inmediata Ley N° 27604 (Recupero Interinstitucional)";
+        copagoFijo = 0.00;
+        pctCoaseguro = 0;
+        coberturaSeguro = totalBruto;
+        totalPaciente = 0.00;
+        alertaSector = `⚖️ Emergencia Vital (P-${STATE.prioridad}): Paciente ${pub.entidad} atendido en ${ipressActiva} sin costo al paciente (Ley N° 27604 + Intercambio Prestacional D.L. 1302/1466).`;
+        motivoLiquidacion = `EMERGENCIA VITAL CON INTERCAMBIO PRESTACIONAL (LEY N° 27604 y D.L. N° 1302 / D.L. N° 1466). Paciente asegurado en ${pub.entidad} atendido en IPRESS ${ipressActiva} por riesgo vital (P-${STATE.prioridad}). La atención es inmediata e incondicional (Pago paciente S/. 0.00) y se factura interinstitucionalmente a ${pub.entidad}.`;
+      } else {
+        etiquetaRegimen = `${ipressActiva} · No Asegurado en esta Red (${pub.entidad} P-${STATE.prioridad || "III"})`;
+        condicionSusalud = `${pub.entidad} fuera de red ${ipressActiva} (No Emergencia)`;
+        coberturaSector = `0% en ${ipressActiva} (Urgencia menor sin convenio — Tarifa Particular)`;
+        copagoFijo = 0.00;
+        pctCoaseguro = 100;
+        coberturaSeguro = 0.00;
+        totalPaciente = totalBruto;
+        alertaSector = `⚠️ Paciente ${pub.entidad} en atención no vital (P-${STATE.prioridad || "III"}) dentro de ${ipressActiva}: Sin convenio aplicable, asume tarifa particular 100%.`;
+        motivoLiquidacion = `ATENCIÓN FUERA DE RED EN URGENCIA NO VITAL. El paciente pertenece a ${pub.entidad} pero acude por urgencia menor (P-${STATE.prioridad || "III"}) a una IPRESS ${ipressActiva} sin convenio de intercambio para consulta ambulatoria. Asume el 100% de la liquidación.`;
+      }
     }
 
     return {
@@ -17099,7 +17160,7 @@ window.calcularLiquidacionSeguro = function() {
     coberturaSeguro = 0.00;
     totalPaciente = totalBruto;
     alertaSector = `Paciente registra [${padron?.publico?.entidad || 'Sin Seguro'}] -> No aplica cobertura en Clínica Privada (Cobro 100% Particular).`;
-    motivoLiquidacion = "ATENCIÓN PARTICULAR EN CLÍNICA PRIVADA. Paciente no cuenta con seguro privado EPS activo. La totalidad es asumida al 100% por el paciente.";
+    motivoLiquidacion = esEmergencia ? "EMERGENCIA VITAL SIN PÓLIZA EPS (LEY N° 27604). Se brinda atención y estabilización inmediatas sin detener el flujo ni condicionar el acto médico. Al no contar con seguro privado activo, se liquida el 100% al paciente post-estabilización (no S/. 0.00)." : "ATENCIÓN PARTICULAR EN CLÍNICA PRIVADA. Paciente no cuenta con seguro privado EPS activo. La totalidad es asumida al 100% por el paciente.";
   } else if (STATE.exclusionEps) {
     // APLICACIÓN ESTRICTA DE EXCLUSIÓN EPS
     etiquetaRegimen = "Clínica Privada EPS · Siniestro Rechazado por Exclusión Contractual";
@@ -18738,7 +18799,9 @@ function actualizarIndicadoresFuaEssi() {
     }
   }
   const elTop = document.getElementById("badge_doc_normativo_activo");
-  if (elTop) elTop.textContent = txtDoc;
+  if (elTop && !esEssalud) elTop.textContent = txtDoc;
+  const elEss = document.getElementById("badge_doc_normativo_essalud");
+  if (elEss && esEssalud) elEss.textContent = txtDoc;
   const elM4 = document.getElementById("m4_doc_normativo_pill");
   if (elM4) elM4.textContent = txtDoc;
 }

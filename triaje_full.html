@@ -2631,16 +2631,25 @@
         </button>
       </div>
 
-      <!-- SUB-SELECTORES DINÁMICOS DE RÉGIMEN (MINSA / ESSALUD / PLAN PRIVADO) -->
+      <!-- SUB-SELECTORES INDEPENDIENTES DE RÉGIMEN: SIS (FUA) | ESSALUD (ESSI) | PRIVADO (EPS) -->
       <div id="contenedor_subselectores_regimen" style="margin-bottom:12px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
         <div id="subselector_ipress_publica" style="display:flex; align-items:center; gap:8px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:6px 12px; flex-wrap:wrap;">
-          <span style="font-size:0.75rem; font-weight:800; color:#0369a1;">🏛️ IPRESS Pública:</span>
-          <select id="select_ipress_publica" class="input-full" style="max-width:340px; font-size:0.76rem; font-weight:700; padding:4px 8px;" onchange="cambiarIpressPublica(this.value)">
-            <option value="MINSA" selected>MINSA (Sistema SIS — Documento: FUA)</option>
-            <option value="ESSALUD">ESSALUD (Sistema ESSI — Documento: Hoja de Atención de Emergencia)</option>
+          <span style="font-size:0.75rem; font-weight:800; color:#0369a1;">🏛️ IPRESS MINSA / SIS:</span>
+          <select id="select_ipress_publica" class="input-full" style="max-width:340px; font-size:0.76rem; font-weight:700; padding:4px 8px;" onchange="cambiarIpressPublica('MINSA')">
+            <option value="MINSA" selected>SIS Gratuito / Semicontributivo — Formato Único de Atención (FUA · R.J. N° 107-2015/SIS)</option>
           </select>
           <span id="badge_doc_normativo_activo" style="font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:6px; background:#dbeafe; color:#1e40af; border:1px solid #93c5fd;">
             📄 FUA: Pendiente de Apertura
+          </span>
+        </div>
+
+        <div id="subselector_essalud" style="display:none; align-items:center; gap:8px; background:#ecfeff; border:1px solid #a5f3fc; border-radius:8px; padding:6px 12px; flex-wrap:wrap;">
+          <span style="font-size:0.75rem; font-weight:800; color:#0e7490;">🏥 Red Asistencial EsSalud:</span>
+          <select id="select_regimen_essalud" class="input-full" style="max-width:360px; font-size:0.76rem; font-weight:700; padding:4px 8px;" onchange="cambiarIpressPublica('ESSALUD')">
+            <option value="ESSALUD" selected>EsSalud Regular / Agrario / Potestativo — Hoja de Atención ESSI (Ley N° 26790)</option>
+          </select>
+          <span id="badge_doc_normativo_essalud" style="font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:6px; background:#cffafe; color:#155e75; border:1px solid #67e8f9;">
+            📄 ESSI: Pendiente de Acreditación
           </span>
         </div>
 

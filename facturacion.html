@@ -582,15 +582,15 @@
         episodio = master[dniParam].ultimo_episodio;
       }
 
-      // Valores iniciales
-      let nombreActual = "LUIS GUILLERMO VASQUEZ VALDIVIESO";
-      let dniActual = "44418504";
-      let hcActual = "HC-2026-8504";
-      let seguroActual = "SIS";
-      let prioridadActual = "I";
+      // Valores iniciales reales (sin datos inventados)
+      let nombreActual = "—";
+      let dniActual = "—";
+      let hcActual = "—";
+      let seguroActual = "Sin acreditar";
+      let prioridadActual = "—";
       let esAccidente = false;
       let esFuga = false;
-      let medicoTratante = "Dr. Médico Asistente de Turno (CMP 0001)";
+      let medicoTratante = "Por asignar";
       let facturaItems = [];
 
       // A) Sincronización desde EXPEDIENTE_FACTURACION_ACTUAL (Prioridad máxima)
@@ -630,8 +630,8 @@
         try { facturaItems = JSON.parse(localStorage.getItem("UPP_ITEMS_FACTURA") || "[]"); } catch(e){}
       }
 
-      // D) Si los cargos están vacíos, autogenerar la cuenta clínica asistencial EXACTA para el nivel de prioridad
-      if (!facturaItems || facturaItems.length === 0) {
+      // D) No autogenerar ni inventar cargos si aún no existen prestaciones registradas
+      if (false && (!facturaItems || facturaItems.length === 0)) {
         const p = prioridadActual.toUpperCase();
         if (p === "I" || p === "1") {
           facturaItems = [
