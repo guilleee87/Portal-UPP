@@ -9413,23 +9413,27 @@ function tickCronometrosCamas() {
   for (const id in RECURSOS_HOSPITALARIOS) {
     const rec = RECURSOS_HOSPITALARIOS[id];
 
-    if (rec.estado === "ocupada" && rec.finMs) {
+    if (rec.estado === "ocupada") {
       camasOcupadas++;
-      const restanteMs = rec.finMs - ahora;
+      if (rec.finMs) {
+        const restanteMs = rec.finMs - ahora;
+        if (restanteMs <= 0) {
+          // ¡TIEMPO COMPLETADO!
+          liberarRecursoPorExpiracion(id);
+        } else {
+          const totalSeg = Math.floor(restanteMs / 1000);
+          const h = Math.floor(totalSeg / 3600);
+          const m = Math.floor((totalSeg % 3600) / 60);
+          const s = totalSeg % 60;
+          rec.tiempoFormateado = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 
-      if (restanteMs <= 0) {
-        // ¡TIEMPO COMPLETADO!
-        liberarRecursoPorExpiracion(id);
+          const transcurrido = ahora - rec.inicioMs;
+          const totalDur = rec.finMs - rec.inicioMs;
+          rec.progresoPct = totalDur > 0 ? Math.min(100, Math.max(0, (transcurrido / totalDur) * 100)) : 0;
+        }
       } else {
-        const totalSeg = Math.floor(restanteMs / 1000);
-        const h = Math.floor(totalSeg / 3600);
-        const m = Math.floor((totalSeg % 3600) / 60);
-        const s = totalSeg % 60;
-        rec.tiempoFormateado = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-
-        const transcurrido = ahora - rec.inicioMs;
-        const totalDur = rec.finMs - rec.inicioMs;
-        rec.progresoPct = totalDur > 0 ? Math.min(100, Math.max(0, (transcurrido / totalDur) * 100)) : 0;
+        rec.tiempoFormateado = "En curso";
+        rec.progresoPct = 0;
       }
     } else {
       camasDisponibles++;
@@ -9814,6 +9818,7 @@ function liberarCamaTotalPaciente(idExpediente = null, motivo = "Conclusión de 
   let camaLiberada = false;
 
   // 1. Liberar en RECURSOS_HOSPITALARIOS cualquier recurso ocupado por este paciente
+  const pxTarget = Array.isArray(PACIENTES_COLA) ? PACIENTES_COLA.find(x => x.id === idBuscar) : null;
   if (typeof RECURSOS_HOSPITALARIOS !== "undefined") {
     for (const idCama in RECURSOS_HOSPITALARIOS) {
       const rec = RECURSOS_HOSPITALARIOS[idCama];
@@ -9823,7 +9828,7 @@ function liberarCamaTotalPaciente(idExpediente = null, motivo = "Conclusión de 
         (STATE.identificador && rec.paciente.nombre === STATE.identificador) ||
         (STATE.numDni && rec.paciente.dni === STATE.numDni)
       );
-      const esCamaActiva = Boolean(STATE.camaAsignadaId && STATE.camaAsignadaId === idCama);
+      const esCamaActiva = Boolean((STATE.camaAsignadaId && STATE.camaAsignadaId === idCama) || (pxTarget && pxTarget.camaId === idCama) || (rec.pacienteId && rec.pacienteId === idBuscar));
 
       if (rec.estado === "ocupada" && (esEstePaciente || esCamaActiva)) {
         rec.estado = "disponible";
@@ -9892,6 +9897,8 @@ function liberarCamaTotalPaciente(idExpediente = null, motivo = "Conclusión de 
 
   // 6. ACTUALIZAR TODOS LOS INDICADORES Y CONTADORES DE CAMAS DEL SISTEMA
   try {
+    if (typeof sincronizarStockCamasConRecursos === "function") sincronizarStockCamasConRecursos();
+    if (typeof renderizarStockCamas === "function") renderizarStockCamas();
     if (typeof tickCronometrosCamas === "function") tickCronometrosCamas();
     if (typeof renderizarTableroCamasYQuirofanos === "function") renderizarTableroCamasYQuirofanos();
     if (typeof renderizarStockCamas === "function") renderizarStockCamas();
@@ -11554,6 +11561,7 @@ function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
     STATE.firmas = nuevoPx.firmas || nuevoPx.stateSnapshot.firmas || {};
     STATE.estadoFlujo = nuevoPx.estadoFlujo || nuevoPx.stateSnapshot.estadoFlujo || "PENDIENTE_TRIAJE";
     STATE.coberturaValidada = Boolean(nuevoPx.coberturaValidada || nuevoPx.stateSnapshot.coberturaValidada);
+    STATE.altaClinicaConcluida = Boolean(nuevoPx.altaClinicaConcluida || nuevoPx.stateSnapshot.altaClinicaConcluida);
     STATE.prioridad = nuevoPx.prioridad || nuevoPx.stateSnapshot.prioridad || null;
     STATE.alertaPrioridad1 = Boolean(nuevoPx.alertaPrioridad1 || STATE.prioridad === 'I');
   } else {
@@ -11565,6 +11573,7 @@ function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
     STATE.medicoTratante = nuevoPx.medico || "Por asignar";
     STATE.estadoFlujo = nuevoPx.estadoFlujo || "PENDIENTE_TRIAJE";
     STATE.coberturaValidada = Boolean(nuevoPx.coberturaValidada);
+    STATE.altaClinicaConcluida = Boolean(nuevoPx.altaClinicaConcluida);
     STATE.firmas = nuevoPx.firmas || {};
     STATE.alertaPrioridad1 = Boolean(nuevoPx.alertaPrioridad1 || nuevoPx.prioridad === 'I');
     STATE.camaAsignada = nuevoPx.camaNombre || null;
@@ -11688,6 +11697,7 @@ function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
 }
 function limpiarFormularioCompletoState() {
   STATE.estadoFlujo = "PENDIENTE_TRIAJE";
+  STATE.altaClinicaConcluida = false;
   STATE.firmas = {};
   STATE.coberturaValidada = false;
   STATE.spo2 = null; STATE.fc = null; STATE.pasSistolica = null; STATE.paDiastolica = null;
@@ -18724,6 +18734,8 @@ function liberarRecursoHospitalarioOperativo(idRecursoOCama, idExpediente) {
       window.STATE.camaAsignada = null;
       window.STATE.camaAsignadaId = null;
     }
+    if (typeof sincronizarStockCamasConRecursos === "function") sincronizarStockCamasConRecursos();
+    if (typeof renderizarStockCamas === "function") renderizarStockCamas();
     if (typeof tickCronometrosCamas === "function") tickCronometrosCamas();
     if (typeof renderizarTableroCamasYQuirofanos === "function") renderizarTableroCamasYQuirofanos();
     if (typeof renderizarMonitorObservacionModulo5 === "function") renderizarMonitorObservacionModulo5();

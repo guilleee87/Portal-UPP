@@ -1208,7 +1208,9 @@
     }
 
     // Liberación garantizada de cama al otorgar el Alta Médica (Bloque 5)
-    if (typeof window.liberarRecursoHospitalarioOperativo === "function") {
+    if (typeof window.liberarCamaTotalPaciente === "function") {
+      window.liberarCamaTotalPaciente(px.id, "Alta Médica");
+    } else if (typeof window.liberarRecursoHospitalarioOperativo === "function") {
       window.liberarRecursoHospitalarioOperativo(px.camaId, px.id);
     } else if (px.camaId && typeof window.RECURSOS_HOSPITALARIOS !== "undefined" && window.RECURSOS_HOSPITALARIOS[px.camaId]) {
       window.RECURSOS_HOSPITALARIOS[px.camaId].estado = "disponible";
@@ -1274,7 +1276,9 @@
     }
 
     // Liberar recurso de cama si aplica
-    if (px.camaId && typeof window.liberarRecursoHospitalarioOperativo === "function") {
+    if (typeof window.liberarCamaTotalPaciente === "function") {
+      window.liberarCamaTotalPaciente(px.id, "Liquidación y Cierre");
+    } else if (px.camaId && typeof window.liberarRecursoHospitalarioOperativo === "function") {
       window.liberarRecursoHospitalarioOperativo(px.camaId);
     } else if (px.camaId && typeof window.RECURSOS_HOSPITALARIOS !== "undefined" && window.RECURSOS_HOSPITALARIOS[px.camaId]) {
       window.RECURSOS_HOSPITALARIOS[px.camaId].estado = "disponible";

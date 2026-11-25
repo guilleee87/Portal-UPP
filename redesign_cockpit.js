@@ -1191,10 +1191,10 @@ function refrescarValoresMonitor() {
     const step3El = document.getElementById("cockpit_step_3");
     const step4El = document.getElementById("cockpit_step_4");
 
-    const triajeSellado = Boolean(fActual.triaje) || Boolean(pxActual?.prioridad || state?.prioridad) || faseActiva > 1 || efActual === "EN_ATENCION_MEDICA" || efActual === "PENDIENTE_CAJA" || efActual === "CERRADO_FACTURADO";
-    const admisionValidada = cobValActual || Boolean(fActual.admision) || faseActiva > 2 || efActual === "EN_ATENCION_MEDICA" || efActual === "PENDIENTE_CAJA" || efActual === "CERRADO_FACTURADO";
-    const altaFirmada = Boolean(fActual.medico) || faseActiva > 3 || efActual === "PENDIENTE_CAJA" || efActual === "CERRADO_FACTURADO";
-    const estaCerrado = efActual === "CERRADO_FACTURADO" || Boolean(state?.altaClinicaConcluida) || Boolean(pxActual?.altaClinicaConcluida);
+    const triajeSellado = Boolean(fActual.triaje) || Boolean(pxActual ? pxActual.prioridad : state?.prioridad) || efActual === "EN_ATENCION_MEDICA" || efActual === "PENDIENTE_CAJA" || efActual === "CERRADO_FACTURADO";
+    const admisionValidada = cobValActual || Boolean(fActual.admision) || efActual === "EN_ATENCION_MEDICA" || efActual === "PENDIENTE_CAJA" || efActual === "CERRADO_FACTURADO";
+    const altaFirmada = Boolean(fActual.medico) || efActual === "PENDIENTE_CAJA" || efActual === "CERRADO_FACTURADO";
+    const estaCerrado = efActual === "CERRADO_FACTURADO" || Boolean(pxActual ? pxActual.altaClinicaConcluida : state?.altaClinicaConcluida);
 
     // Paso 1: Triaje & Filiación
     if (triajeSellado) {
@@ -1209,7 +1209,7 @@ function refrescarValoresMonitor() {
     if (admisionValidada) {
       if (s2) { s2.textContent = "✓ Atendido"; s2.className = "cockpit-step-status completed"; }
       if (step2El) step2El.classList.add("completed");
-    } else if (faseActiva === 2 || efActual !== "PENDIENTE_TRIAJE") {
+    } else if (efActual === "ADMISION" || triajeSellado) {
       if (s2) { s2.textContent = "En curso"; s2.className = "cockpit-step-status in-progress"; }
       if (step2El) step2El.classList.remove("completed");
     } else {
@@ -1221,7 +1221,7 @@ function refrescarValoresMonitor() {
     if (altaFirmada) {
       if (s3) { s3.textContent = "✓ Atendido"; s3.className = "cockpit-step-status completed"; }
       if (step3El) step3El.classList.add("completed");
-    } else if (faseActiva === 3 || efActual === "EN_ATENCION_MEDICA") {
+    } else if (efActual === "EN_ATENCION_MEDICA") {
       if (s3) { s3.textContent = "En curso"; s3.className = "cockpit-step-status in-progress"; }
       if (step3El) step3El.classList.remove("completed");
     } else {
@@ -1233,7 +1233,7 @@ function refrescarValoresMonitor() {
     if (estaCerrado) {
       if (s4) { s4.textContent = "✓ Atendido"; s4.className = "cockpit-step-status completed"; }
       if (step4El) step4El.classList.add("completed");
-    } else if (faseActiva === 4 || efActual === "PENDIENTE_CAJA") {
+    } else if (efActual === "PENDIENTE_CAJA") {
       if (s4) { s4.textContent = "En curso"; s4.className = "cockpit-step-status in-progress"; }
       if (step4El) step4El.classList.remove("completed");
     } else {
