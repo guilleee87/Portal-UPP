@@ -109,6 +109,9 @@
         <button type="button" class="cockpit-tactical-btn btn-sop-action" onclick="activarIngresoDirectoQuirofano()" title="Admisión Directa a Quirófano SOP (Ley N° 27604)">
           🏥 Quirófano SOP
         </button>
+        <button type="button" id="btn_accidente_transito_rapido" class="cockpit-tactical-btn btn-soat-action" onclick="abrirModalAccidenteTransitoRapido()" title="Accidente de tránsito: seleccionar SOAT/CAT y ruta clínica" aria-label="Accidente de tránsito, abrir opciones de SOAT y gravedad">
+          🚗 Accidente de tránsito
+        </button>
         <button type="button" class="cockpit-tactical-btn btn-nn-shock" onclick="abrirModalPreEvaluacionNN('INCONSCIENTE')" title="Atención Inmediata P-I Shock Trauma Ley 27604">
           🚨 NN Inconsciente
         </button>
@@ -160,10 +163,10 @@
     // 1.4.1 Mover y Reubicar el Panel de Pacientes en Curso al Sidebar Izquierdo con scroll propio
     const activePanel = document.getElementById("activePatientsPanel");
     if (activePanel) {
-      // Mantener disponibles los accesos rápidos de admisión dentro del panel
-      // del cockpit: aquí es donde se traslada la botonera desde la cabecera.
+      // El tablero queda dedicado a la cola; los accesos rápidos están arriba,
+      // en la botonera táctica del cockpit.
       const oldBtns = activePanel.querySelector(".active-patients-btn-group");
-      if (oldBtns) oldBtns.style.display = "grid";
+      if (oldBtns) oldBtns.style.display = "none";
       activePanel.style.display = "block";
       activePanel.style.margin = "0";
       sidebarLeft.appendChild(activePanel);

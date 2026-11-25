@@ -2730,14 +2730,11 @@
           <button type="button" class="btn-caos-action btn-quirofano-action" onclick="activarIngresoDirectoQuirofano()" title="Admisión Inmediata de Emergencia a Quirófano SOP (Ley N° 27604)" style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%); color: #ffffff; font-weight: 800; border: 1px solid #9a3412; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);">
             🏥 Admitir Emergencia Quirófano SOP (P-I)
           </button>
-          <button type="button" id="btn_accidente_transito_rapido" class="btn-caos-action btn-soat-action" onclick="admitirEmergenciaSoat()" title="Accidente de tránsito: seleccionar SOAT/CAT y ruta clínica" aria-label="Accidente de tránsito, abrir opciones de SOAT y gravedad" style="background: linear-gradient(135deg, #0369a1 0%, #075985 100%); color: #ffffff; font-weight: 900; border: 2px solid #0c4a6e; white-space: normal; line-height: 1.25; min-height: 46px; box-shadow: 0 2px 7px rgba(3, 105, 161, 0.3);">
+          <button type="button" class="btn-caos-action btn-soat-action" onclick="abrirModalAccidenteTransitoRapido()" title="Accidente de tránsito: seleccionar SOAT/CAT y ruta clínica" aria-label="Accidente de tránsito, abrir opciones de SOAT y gravedad" style="background: linear-gradient(135deg, #0369a1 0%, #075985 100%); color: #ffffff; font-weight: 900; border: 2px solid #0c4a6e; white-space: normal; line-height: 1.25; min-height: 46px; box-shadow: 0 2px 7px rgba(3, 105, 161, 0.3);">
             🚗 Accidente de tránsito
           </button>
           <button type="button" id="btn_ingreso_nn_unico" class="btn-caos-action btn-nn-action" onclick="abrirModalPreEvaluacionNN()" title="Pre-evaluación de Paciente Indocumentado / NN (Ley N° 27604)">
             🚨 Paciente NN (Indocumentado)
-          </button>
-          <button type="button" class="btn-caos-action btn-soat-action" onclick="admitirEmergenciaSoat()" title="Protocolo de Emergencia Accidente de Tránsito / Trauma Vial (Ley N° 27181 & D.S. N° 024-2002-MTC)" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; font-weight: 800; border: 1px solid #075985; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);">
-            🚗 Accidente de Tránsito / Trauma Vial (SOAT)
           </button>
           <button type="button" class="btn-caos-action btn-start-action" onclick="abrirModalPreTriageSTART()" title="Pre-Triage de Cola en 15 segundos (Método START/Manchester)">
             ⚡ Pre-Triage de Cola (15s)

@@ -543,6 +543,23 @@ input[type="number"],
   color: #FFFFFF;
 }
 
+.cockpit-tactical-btn.btn-soat-action {
+  background: #E0F2FE;
+  border-color: #38BDF8;
+  color: #075985;
+  font-weight: 800;
+  white-space: normal;
+  line-height: 1.15;
+  height: auto;
+  min-height: 38px;
+}
+
+.cockpit-tactical-btn.btn-soat-action:hover {
+  background: #BAE6FD;
+  border-color: #0284C7;
+  color: #0C4A6E;
+}
+
 .cockpit-tactical-btn.btn-main-cta {
   background: #0284C7;
   border-color: #0369A1;
