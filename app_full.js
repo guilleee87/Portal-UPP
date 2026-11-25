@@ -7124,6 +7124,9 @@ async function grabarAtencionCompleta() {
   if (typeof renderizarTableroColaPacientes === "function") renderizarTableroColaPacientes();
   if (typeof renderizarTrackBoardLista === "function") renderizarTrackBoardLista();
   if (typeof renderizarBandejaPosta === "function") renderizarBandejaPosta();
+  if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === "function") {
+    window.COCKPIT.actualizarContextoCockpit();
+  }
 
   if (STATE.nroFua) STATE.estadoFua = "CERRADO_LIQUIDADO";
   if (STATE.nroEssi) STATE.estadoEssi = "CERRADO_LIQUIDADO";
@@ -7345,11 +7348,11 @@ let moduloActivoActual = 1;
 function irAModulo(num) {
   moduloActivoActual = num;
 
-  // Sincronizar automáticamente con fases de Cabina Cockpit
+  // Sincronizar automáticamente con fases de Cabina Cockpit (M3 y M5 viven en Fase 2; M4, M6 y M7 en Fase 3)
   if (window.COCKPIT && typeof window.COCKPIT.irAFase === "function") {
     if (num === 1 || num === 2) window.COCKPIT.irAFase(1);
-    else if (num === 3) window.COCKPIT.irAFase(2);
-    else if (num >= 4 && num <= 7) window.COCKPIT.irAFase(3);
+    else if (num === 3 || num === 5) window.COCKPIT.irAFase(2);
+    else if (num === 4 || num === 6 || num === 7) window.COCKPIT.irAFase(3);
     else if (num === 8) window.COCKPIT.irAFase(4);
   }
 
@@ -7391,6 +7394,11 @@ function irAModulo(num) {
   const targetBody = document.getElementById(`body_mod${num}`);
   const targetArrow = document.getElementById(`arrow_mod${num}`);
 
+  if (targetSec) {
+    targetSec.style.display = "block";
+    const parentPhase = targetSec.closest("[id^='cockpit_phase_']");
+    if (parentPhase) parentPhase.style.display = "block";
+  }
   if (targetBody) {
     targetBody.style.setProperty("display", "block", "important");
     targetBody.classList.add("open");
@@ -10462,14 +10470,20 @@ function imprimirFacturaOficial() {
          (STATE.padronSalud?.publico?.tiene_seguro ? `${STATE.padronSalud.publico.entidad} (${STATE.padronSalud.publico.regimen || "Público"})` :
           (liq.etiquetaRegimen || "Particular / Sin seguro")))));
 
+  const ratioCobDoc = liq.totalBruto > 0 ? (liq.coberturaSeguro / liq.totalBruto) : 0;
   let itemsHtml = "";
   STATE.items_factura.forEach((item, idx) => {
+    const costoItem = parseFloat(item.costo) || 0;
+    const cubreItem = +(costoItem * ratioCobDoc).toFixed(2);
+    const nuevoTotalItem = +(costoItem - cubreItem).toFixed(2);
     itemsHtml += `
       <tr>
         <td style="border:1px solid #cbd5e1;padding:6px 10px;">${idx + 1}</td>
         <td style="border:1px solid #cbd5e1;padding:6px 10px;font-weight:600;">${item.nombre}</td>
         <td style="border:1px solid #cbd5e1;padding:6px 10px;">${item.categoria || 'Clínica'}</td>
-        <td style="border:1px solid #cbd5e1;padding:6px 10px;text-align:right;">S/. ${(parseFloat(item.costo)||0).toFixed(2)}</td>
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;text-align:right;">S/. ${costoItem.toFixed(2)}</td>
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;text-align:right;color:#15803d;font-weight:700;">- S/. ${cubreItem.toFixed(2)}</td>
+        <td style="border:1px solid #cbd5e1;padding:6px 10px;text-align:right;font-weight:800;color:#0f172a;">S/. ${nuevoTotalItem.toFixed(2)}</td>
       </tr>
     `;
   });
@@ -10491,13 +10505,23 @@ function imprimirFacturaOficial() {
           <tr>
             <th style="width:40px;">#</th>
             <th>Concepto / Procedimiento / Medicamento</th>
-            <th style="width:140px;">Servicio</th>
-            <th style="width:100px;text-align:right;">Monto</th>
+            <th style="width:120px;">Servicio</th>
+            <th style="width:95px;text-align:right;">Costo</th>
+            <th style="width:110px;text-align:right;">Cubre Seguro</th>
+            <th style="width:110px;text-align:right;">Nuevo Total</th>
           </tr>
         </thead>
         <tbody>
-          ${itemsHtml || '<tr><td colspan="4" style="text-align:center;padding:12px;">Sin items facturados</td></tr>'}
+          ${itemsHtml || '<tr><td colspan="6" style="text-align:center;padding:12px;">Sin items facturados</td></tr>'}
         </tbody>
+        <tfoot>
+          <tr style="background:#f1f5f9;font-weight:800;">
+            <td colspan="3" style="border:1px solid #cbd5e1;padding:8px 10px;text-align:right;">TOTALES:</td>
+            <td style="border:1px solid #cbd5e1;padding:8px 10px;text-align:right;">S/. ${liq.totalBruto.toFixed(2)}</td>
+            <td style="border:1px solid #cbd5e1;padding:8px 10px;text-align:right;color:#15803d;">- S/. ${liq.coberturaSeguro.toFixed(2)}</td>
+            <td style="border:1px solid #cbd5e1;padding:8px 10px;text-align:right;color:#0f172a;">S/. ${liq.totalPaciente.toFixed(2)}</td>
+          </tr>
+        </tfoot>
       </table>
       <div style="margin-top:14px;background:#f8fafc;border:1px solid #cbd5e1;padding:12px;border-radius:6px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Total Bruto Facturado:</span><strong>S/. ${liq.totalBruto.toFixed(2)}</strong></div>
@@ -11909,6 +11933,9 @@ function cerrarAtencionPaciente(id, event) {
   renderizarTableroColaPacientes();
   if (typeof renderizarTrackBoardLista === "function") renderizarTrackBoardLista();
   if (typeof renderizarBandejaPosta === "function") renderizarBandejaPosta();
+  if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === "function") {
+    window.COCKPIT.actualizarContextoCockpit();
+  }
   mostrarToastCola(`✅ Alta clínica registrada: <strong>${px.nombre}</strong> (conservado en Bandeja de Posta para trazabilidad).`);
 }
 
@@ -16939,6 +16966,8 @@ window.grabarAtencionCompleta = async function() {
   if (typeof renderizarTrackBoardLista === "function") renderizarTrackBoardLista();
   if (typeof renderizarBandejaPosta === "function") renderizarBandejaPosta();
   if (typeof actualizarWidgetFlotanteCamas === 'function') actualizarWidgetFlotanteCamas();
+  if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === 'function') window.COCKPIT.actualizarContextoCockpit();
+  if (window.COCKPIT && typeof window.COCKPIT.refrescarValoresMonitor === 'function') window.COCKPIT.refrescarValoresMonitor();
 
   // Bloqueo de Historia Clínica Cerrada e Inmutable (NTS N° 139-MINSA)
   const lockBanner = document.getElementById('banner_hc_inmutable_lock');
@@ -18854,8 +18883,78 @@ function actualizarIndicadoresFuaEssi() {
   if (elM4) elM4.textContent = txtDoc;
   const elM8 = document.getElementById("m8_doc_normativo_pill");
   if (elM8) elM8.textContent = txtDoc;
+  ["btn_imprimir_doc_m3", "btn_imprimir_doc_m4", "btn_imprimir_doc_m8"].forEach(id => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    if (esPriv) {
+      b.style.display = "none";
+    } else {
+      b.style.display = "inline-block";
+      b.textContent = esEssalud ? "🖨️ Imprimir Hoja ESSI" : "🖨️ Imprimir FUA";
+    }
+  });
 }
 window.actualizarIndicadoresFuaEssi = actualizarIndicadoresFuaEssi;
+
+function imprimirDocumentoNormativoFuaEssi() {
+  if (STATE.entornoOperativo === "privado") {
+    if (typeof imprimirFacturaOficial === "function") imprimirFacturaOficial();
+    return;
+  }
+  const esEssalud = (STATE.tipoIpressPublica === "ESSALUD");
+  const nroDoc = esEssalud
+    ? (STATE.nroEssi || `ESSI-2026-${Math.floor(100000 + Math.random() * 900000)}`)
+    : (STATE.nroFua || `FUA-2026-${Math.floor(100000 + Math.random() * 900000)}`);
+  const estadoDoc = esEssalud ? (STATE.estadoEssi || "ACREDITADO_ADMISION") : (STATE.estadoFua || "APERTURA_ADMISION");
+  const tituloDoc = esEssalud
+    ? "HOJA DE ATENCIÓN DE EMERGENCIA — SISTEMA ESSI (EsSalud)"
+    : "FORMATO ÚNICO DE ATENCIÓN — FUA (SIS / MINSA)";
+  const normaDoc = esEssalud
+    ? "Ley N° 26790 · D.S. N° 009-97-SA · Directiva N° 011-GG-ESSALUD"
+    : "R.J. N° 107-2015/SIS · Ley N° 29344 (AUS) · Ley N° 27604";
+
+  const liq = (typeof calcularLiquidacionSeguro === "function") ? calcularLiquidacionSeguro() : { totalBruto: 0, coberturaSeguro: 0, totalPaciente: 0 };
+  const nombre = STATE.esNN ? "No se sabe su nombre (Paciente No Identificado - NN)" : (STATE.nombreReniec || STATE.identificador || "—");
+  const cie10 = STATE.cie10 || (STATE.cie10Codigo ? `${STATE.cie10Codigo} — ${STATE.cie10Descripcion || ""}` : "Por determinar");
+  const meds = Array.isArray(STATE.kardexItems) && STATE.kardexItems.length ? STATE.kardexItems.map(k => `${k.nombre} (${k.dosis || "—"} ${k.via || ""})`).join(", ") : "—";
+  const labs = Array.isArray(STATE.ordenesLaboratorio) && STATE.ordenesLaboratorio.length ? STATE.ordenesLaboratorio.map(l => l.nombre).join(", ") : "—";
+  const imgs = Array.isArray(STATE.ordenesImagenes) && STATE.ordenesImagenes.length ? STATE.ordenesImagenes.map(i => i.nombre).join(", ") : "—";
+
+  const w = window.open("", "_blank");
+  if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
+  w.document.write(`
+    <html><head><title>${tituloDoc} - ${nroDoc}</title>
+    <style>body{font-family:Arial,sans-serif;padding:24px;font-size:12px;color:#0f172a;} .box{border:1px solid #cbd5e1;border-radius:6px;padding:10px;margin-bottom:10px;background:#f8fafc;} h2{margin:0 0 4px;font-size:16px;} h4{margin:0 0 10px;font-size:11px;color:#475569;}</style>
+    </head><body>
+      <h2>${tituloDoc}</h2>
+      <h4>${normaDoc} · N° Documento: <strong>${nroDoc}</strong> · Estado: <strong>${estadoDoc}</strong></h4>
+      <div class="box">
+        <strong>Paciente:</strong> ${nombre} | <strong>DNI/ID:</strong> ${STATE.numDni || "—"} | <strong>HC:</strong> ${STATE.historiaClinica || "—"}<br>
+        <strong>GS/RH:</strong> ${STATE.grupoSanguineo || "Por determinar"} | <strong>Seguro:</strong> ${STATE.tipoSeguro || "—"} | <strong>Prioridad:</strong> ${STATE.prioridad ? "P-" + STATE.prioridad : "—"}
+      </div>
+      <div class="box">
+        <strong>Signos Vitales:</strong> SpO2 ${STATE.spo2 ?? "—"}% | FC ${STATE.fc ?? "—"} lpm | PA ${STATE.pasSistolica ?? "—"}/${STATE.paDiastolica ?? "—"} | FR ${STATE.fr ?? "—"} rpm | T° ${STATE.temperatura ?? "—"} °C<br>
+        <strong>Motivo:</strong> ${STATE.motivoConsulta || "—"}<br>
+        <strong>Diagnóstico CIE-10 (Sustento Médico):</strong> ${cie10}
+      </div>
+      <div class="box">
+        <strong>Medicamentos (Kardex):</strong> ${meds}<br>
+        <strong>Laboratorio:</strong> ${labs}<br>
+        <strong>Imágenes:</strong> ${imgs}
+      </div>
+      <div class="box">
+        <strong>Valorización Total:</strong> S/. ${(liq.totalBruto || 0).toFixed(2)} | <strong>Cubierto:</strong> S/. ${(liq.coberturaSeguro || 0).toFixed(2)} | <strong>Total Paciente:</strong> S/. ${(liq.totalPaciente || 0).toFixed(2)}
+      </div>
+      <div style="margin-top:36px;display:flex;justify-content:space-between;text-align:center;">
+        <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Médico Tratante / Sustento CIE-10</div>
+        <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Admisión / Asegurado (${esEssalud ? "ESSI" : "FUA"})</div>
+      </div>
+    </body></html>
+  `);
+  w.document.close();
+  w.print();
+}
+window.imprimirDocumentoNormativoFuaEssi = imprimirDocumentoNormativoFuaEssi;
 
 function cambiarIpressPublica(valor) {
   STATE.tipoIpressPublica = valor || "MINSA";

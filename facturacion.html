@@ -452,18 +452,20 @@
               <th style="width:40px;">#</th>
               <th>Descripción del Servicio / Fármaco / Procedimiento</th>
               <th style="width:140px;">Categoría</th>
-              <th style="width:110px; text-align:right;">Costo Unit.</th>
-              <th style="width:130px; text-align:center;">Protección Ley</th>
-              <th style="width:120px; text-align:right;">Subtotal</th>
+              <th style="width:100px; text-align:right;">Costo</th>
+              <th style="width:120px; text-align:center;">Protección Ley</th>
+              <th style="width:115px; text-align:right;">Cubre Seguro</th>
+              <th style="width:115px; text-align:right;">Nuevo Total</th>
             </tr>
           </thead>
           <tbody id="invoice_tbody">
             <tr>
-              <td colspan="6" style="text-align:center; padding:24px; color:#94a3b8;">
+              <td colspan="7" style="text-align:center; padding:24px; color:#94a3b8;">
                 Cargando prestaciones hospitalarias del paciente...
               </td>
             </tr>
           </tbody>
+          <tfoot id="invoice_tfoot"></tfoot>
         </table>
       </div>
 
@@ -793,12 +795,16 @@
       document.getElementById("disp_establecimiento").textContent = establecimiento;
       document.getElementById("badge_seguro_header").innerHTML = badgeHtml;
 
-      // Renderizar tabla de prestaciones
+      // Renderizar tabla de prestaciones con Costo, Cuánto Cubre y Nuevo Total
       const tbody = document.getElementById("invoice_tbody");
+      const tfoot = document.getElementById("invoice_tfoot");
       tbody.innerHTML = "";
+      const ratioCobFac = totalBruto > 0 ? (coberturaMonto / totalBruto) : 0;
       facturaItems.forEach((it, idx) => {
         const tr = document.createElement("tr");
         const c = parseFloat(it.costo) || 0;
+        const cubreIt = +(c * ratioCobFac).toFixed(2);
+        const nuevoTotalIt = +(c - cubreIt).toFixed(2);
         const catClass = `cat-${(it.categoria || "general").toLowerCase().replace(/[^a-z]/g, "")}`;
         tr.innerHTML = `
           <td>${idx + 1}</td>
@@ -813,10 +819,22 @@
               ${esEmergencia ? "Ley N° 27604" : "Regulado"}
             </span>
           </td>
-          <td style="text-align:right; font-weight:800;">S/. ${c.toFixed(2)}</td>
+          <td style="text-align:right; color:#15803d; font-weight:700;">- S/. ${cubreIt.toFixed(2)}</td>
+          <td style="text-align:right; font-weight:800; color:#0f172a;">S/. ${nuevoTotalIt.toFixed(2)}</td>
         `;
         tbody.appendChild(tr);
       });
+      if (tfoot) {
+        tfoot.innerHTML = facturaItems.length > 0 ? `
+          <tr style="background:#f1f5f9; font-weight:800;">
+            <td colspan="3" style="text-align:right; padding:10px;">TOTALES:</td>
+            <td style="text-align:right; padding:10px;">S/. ${totalBruto.toFixed(2)}</td>
+            <td style="text-align:center; padding:10px;">—</td>
+            <td style="text-align:right; padding:10px; color:#15803d;">- S/. ${coberturaMonto.toFixed(2)}</td>
+            <td style="text-align:right; padding:10px; color:#0f172a;">S/. ${totalPaciente.toFixed(2)}</td>
+          </tr>
+        ` : "";
+      }
 
       document.getElementById("disp_items_count").textContent = `${facturaItems.length} prestaciones registradas`;
       document.getElementById("liq_subtotal_bruto").textContent = `S/. ${totalBruto.toFixed(2)}`;

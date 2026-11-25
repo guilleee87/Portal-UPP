@@ -1129,8 +1129,13 @@
     if (typeof window.registrarEpisodioEnHistoriaClinica === "function") window.registrarEpisodioEnHistoriaClinica(px, "Triaje y Filiación");
     if (typeof window.guardarEnHistoriaClinicaMaster === "function") window.guardarEnHistoriaClinicaMaster(px);
     if (typeof window.sincronizarDatosPacienteEnTodosLosModulos === "function") window.sincronizarDatosPacienteEnTodosLosModulos(px);
+    if (typeof window.renderizarTableroColaPacientes === "function") window.renderizarTableroColaPacientes();
+    if (typeof window.renderizarTrackBoardLista === "function") window.renderizarTrackBoardLista();
     renderizarBandejaPosta();
     aplicarPermisosYEnmascaramiento(obtenerRolActivo(), obtenerModoOperacion());
+    if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === "function") {
+      window.COCKPIT.actualizarContextoCockpit();
+    }
   };
 
   window.validarCoberturaYNotificar = function() {
@@ -1227,8 +1232,13 @@
     if (typeof window.registrarEpisodioEnHistoriaClinica === "function") window.registrarEpisodioEnHistoriaClinica(px, "Atención Médica y Alta");
     if (typeof window.guardarEnHistoriaClinicaMaster === "function") window.guardarEnHistoriaClinicaMaster(px);
     if (typeof window.sincronizarDatosPacienteEnTodosLosModulos === "function") window.sincronizarDatosPacienteEnTodosLosModulos(px);
+    if (typeof window.renderizarTableroColaPacientes === "function") window.renderizarTableroColaPacientes();
+    if (typeof window.renderizarTrackBoardLista === "function") window.renderizarTrackBoardLista();
     renderizarBandejaPosta();
     aplicarPermisosYEnmascaramiento(obtenerRolActivo(), obtenerModoOperacion());
+    if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === "function") {
+      window.COCKPIT.actualizarContextoCockpit();
+    }
   };
 
   window.emitirLiquidacionYCierre = function() {
@@ -1238,11 +1248,16 @@
 
     const ident = obtenerIdentidadFirmante("CAJA");
     px.estadoFlujo = "CERRADO_FACTURADO";
+    px.estadoAtencion = "Alta";
+    px.altaClinicaConcluida = true;
+    px.horaAlta = new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
     px.estadoFua = "VALORIZADO_CERRADO";
     px.estadoEssi = "VALORIZADO_CERRADO";
     if (window.STATE) {
       window.STATE.estadoFua = "VALORIZADO_CERRADO";
       window.STATE.estadoEssi = "VALORIZADO_CERRADO";
+      window.STATE.estadoAtencion = "Alta";
+      window.STATE.altaClinicaConcluida = true;
     }
     px.firmas = px.firmas || {};
     px.firmas.caja = {
@@ -1286,8 +1301,13 @@
     if (typeof window.registrarEpisodioEnHistoriaClinica === "function") window.registrarEpisodioEnHistoriaClinica(px, "Liquidación y Cierre Ley 29414");
     if (typeof window.guardarEnHistoriaClinicaMaster === "function") window.guardarEnHistoriaClinicaMaster(px);
     if (typeof window.sincronizarDatosPacienteEnTodosLosModulos === "function") window.sincronizarDatosPacienteEnTodosLosModulos(px);
+    if (typeof window.renderizarTableroColaPacientes === "function") window.renderizarTableroColaPacientes();
+    if (typeof window.renderizarTrackBoardLista === "function") window.renderizarTrackBoardLista();
     renderizarBandejaPosta();
     aplicarPermisosYEnmascaramiento(obtenerRolActivo(), obtenerModoOperacion());
+    if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === "function") {
+      window.COCKPIT.actualizarContextoCockpit();
+    }
 
     // Al culminar todo el flujo, la página se refresca y empieza nuevamente
     if (typeof window.mostrarToastCola === "function") {
