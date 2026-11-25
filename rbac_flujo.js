@@ -670,6 +670,9 @@
             <button type="button" onclick="abrirModalReinicioSimulacion()" class="btn-full-secondary" style="font-size:0.68rem; height:26px; padding:2px 8px; border-radius:6px; cursor:pointer; background:#fff1f2; color:#be123c; border:1px solid #fda4af; font-weight:800; white-space:nowrap; display:inline-flex; align-items:center; gap:3px;" title="⚠️ Botón exclusivo de simulación y demostración: Reiniciar guardia">
               <span>⚠️</span> <span>Demo</span>
             </button>
+            <button type="button" onclick="abrirModalPruebasSimuladas()" class="btn-full-secondary" style="font-size:0.68rem; height:26px; padding:2px 8px; border-radius:6px; cursor:pointer; background:#eff6ff; color:#1d4ed8; border:1px solid #93c5fd; font-weight:800; white-space:nowrap; display:inline-flex; align-items:center; gap:3px;" title="🧪 Ejecutar pruebas simuladas">
+              <span>🧪</span> <span>Pruebas simuladas</span>
+            </button>
             <button type="button" onclick="recargarColaCompartidaDesdeStorage()" class="btn-full-secondary" style="font-size:0.68rem; height:26px; padding:2px 8px; border-radius:6px; cursor:pointer; background:#ffffff; color:#334155; border:1px solid #cbd5e1; font-weight:700; white-space:nowrap; display:inline-flex; align-items:center; gap:3px;" title="Sincronizar bandeja con otras pestañas">
               <span>🔄</span> <span>Sync</span>
             </button>

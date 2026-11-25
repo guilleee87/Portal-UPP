@@ -97,6 +97,9 @@
           <button type="button" class="tactical-util-btn btn-util-reset" onclick="abrirModalReinicioSimulacion()" title="⚠️ Botón exclusivo de simulación y demostración: Reiniciar guardia y liberar camas">
             <span>🔄</span> Reiniciar (Demo)
           </button>
+          <button type="button" class="tactical-util-btn" id="btn_pruebas_simuladas" onclick="abrirModalPruebasSimuladas()" title="🧪 Abrir ventana flotante con 3 pruebas simuladas preconfiguradas" style="background:#eff6ff; color:#1d4ed8; border-color:#93c5fd; font-weight:800;">
+            <span>🧪</span> Pruebas simuladas
+          </button>
         </div>
       </div>
       <div class="cockpit-tactical-grid">

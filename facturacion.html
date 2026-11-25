@@ -797,11 +797,22 @@
         establecimiento = "Clínica Internacional (Sede Lima Centro / San Borja)";
         badgeHtml = `<span style="background:#4f46e5; color:#fff; padding:4px 10px; border-radius:9999px;">🏢 CLÍNICA PRIVADA (SEGURO EPS)</span>`;
 
-        if (esEmergencia) {
+        if (esEmergencia && !(expActual && expActual.forzarLiquidacionPlanEps)) {
           // Emergencia (P-I / P-II) -> 100% Ley 27604
           coberturaMonto = totalBruto;
           totalPaciente = 0;
           explicacion = `Atención de Emergencia Médica / Quirúrgica (Prioridad ${prioridadActual}). Protegida por el Principio de No Condicionamiento de la Ley N° 27604 y D.S. N° 016-2002-SA. Cobertura al 100% hasta la estabilización clínica hemodinámica completa. Copago paciente: S/. 0.00.`;
+        } else if (expActual && expActual.forzarLiquidacionPlanEps && expActual.liquidacionAuditada) {
+          copagoEps = Number(expActual.liquidacionAuditada.copagoFijo ?? 80);
+          coaseguroFarmacia = Number(expActual.liquidacionAuditada.totalPaciente ?? 0) - copagoEps;
+          totalPaciente = Number(expActual.liquidacionAuditada.totalPaciente ?? 0);
+          coberturaMonto = Number(expActual.liquidacionAuditada.coberturaSeguro ?? Math.max(0, totalBruto - totalPaciente));
+
+          document.getElementById("liq_row_copago_eps").style.display = "flex";
+          document.getElementById("liq_row_coaseguro_meds").style.display = "flex";
+          document.getElementById("liq_coaseguro_meds_val").textContent = `+ S/. ${Math.max(0, coaseguroFarmacia).toFixed(2)}`;
+
+          explicacion = expActual.liquidacionAuditada.motivoLiquidacion || `Liquidación en Clínica Privada según Plan Base EPS (80% Cobertura Aseguradora / 20% Coaseguro + Copago fijo S/. ${copagoEps.toFixed(2)}).`;
         } else {
           // No es Emergencia (P-III, IV, V) -> Urgencia: Copago S/. 80 + 10% farmacia
           copagoEps = 80;
@@ -842,7 +853,7 @@
         tr.innerHTML = `
           <td>${idx + 1}</td>
           <td>
-            <strong>${it.servicio}</strong>
+            <strong>${it.servicio || it.nombre || "Prestación Clínica"}</strong>
             <div style="font-size:0.75rem; color:#64748b;">Prestación asistencial · ${it.timestamp || "Registrado"}</div>
           </td>
           <td><span class="cat-badge ${catClass}">${it.categoria || "General"}</span></td>

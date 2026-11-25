@@ -3165,6 +3165,9 @@ async function consultarReniec() {
     if (ident === "44418504") {
       nombreCompleto = "LUIS GUILLERMO VASQUEZ VALDIVIESO";
       payload = { nombres: "LUIS GUILLERMO", apellidoPaterno: "VASQUEZ", apellidoMaterno: "VALDIVIESO", codVerifica: 5 };
+    } else if (ident === "48904649") {
+      nombreCompleto = "ROBERT FRANCIS PREVOST";
+      payload = { nombres: "ROBERT FRANCIS", apellidoPaterno: "PREVOST", apellidoMaterno: "", codVerifica: 9 };
     } else if (ident === "10203040") {
       nombreCompleto = "CARLOS MENDOZA ROJAS";
       payload = { nombres: "CARLOS", apellidoPaterno: "MENDOZA", apellidoMaterno: "ROJAS", codVerifica: 8 };
@@ -6064,7 +6067,7 @@ function calcularLiquidacionSeguro() {
     }
 
     // REGLA C: Ley de Emergencia - Prioridad I y II (Vital)
-    else if (esEmergencia) {
+    else if (esEmergencia && !STATE.forzarLiquidacionPlanEps) {
       etiquetaRegimen = `${priv.iafas_eps} · Emergencia Médica Vital (P-${STATE.prioridad} · Ley N° 27604)`;
       condicionSusalud = `${priv.iafas_eps} · ${priv.plan_salud} (Emergencia Vital P-${STATE.prioridad})`;
       coberturaSector = "100% Cobertura Ley de Emergencia N° 27604 (Pago S/ 0.00)";
@@ -6076,7 +6079,7 @@ function calcularLiquidacionSeguro() {
       motivoLiquidacion = `EMERGENCIA VITAL CUBIERTA AL 100% POR LEY N° 27604 (P-${STATE.prioridad} ${STATE.prioridad === 'I' ? 'ROJO' : 'NARANJA'}). Paciente en riesgo inminente de vida con póliza ${priv.iafas_eps} activa (SITEDS: ${priv.siteds_codigo || 'AUTORIZADO'}). Procedimientos críticos, shock trauma, exámenes, estancia y farmacia cubiertos al 100% por la aseguradora. Pago del paciente: S/. 0.00.`;
     }
 
-    // REGLA D: Urgencia / Observación - Prioridades III, IV y V
+    // REGLA D: Urgencia / Observación - Prioridades III, IV y V (o Liquidación según Plan EPS contratado)
     else {
       const planSel = STATE.planPrivado || (document.getElementById("select_plan_privado")?.value) || "base_80_20";
       if (planSel === "integral_90_10") {
@@ -6099,11 +6102,17 @@ function calcularLiquidacionSeguro() {
         coberturaSeguro = Math.max(0, totalBruto - totalPaciente);
       }
 
-      etiquetaRegimen = `${priv.iafas_eps} · Atención de Urgencia (P-${STATE.prioridad || 'III'})`;
+      etiquetaRegimen = STATE.forzarLiquidacionPlanEps
+        ? `${priv.iafas_eps} · Plan Base EPS 80/20 (P-${STATE.prioridad || 'I'} · Trauma Shock → SOP → UCI → URPA → Alta)`
+        : `${priv.iafas_eps} · Atención de Urgencia (P-${STATE.prioridad || 'III'})`;
       condicionSusalud = `${priv.iafas_eps} · ${priv.plan_salud} (SITEDS: ${priv.siteds_codigo || 'AUTORIZADO'})`;
-      coberturaSector = `Copago Fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% Coaseguro`;
-      alertaSector = `Atención de Urgencia/Ambulatoria EPS: Paciente abona copago fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% coaseguro (S/. ${coaseguroMonto.toFixed(2)}). Saldo facturado a la EPS.`;
-      motivoLiquidacion = `ATENCIÓN DE URGENCIA / CONSULTORIO EPS (P-${STATE.prioridad || 'III'}). Póliza ${priv.iafas_eps} activa (${priv.plan_salud}). Se liquida copago fijo de S/. ${copagoFijo.toFixed(2)} más coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% sobre farmacia y procedimientos (S/. ${coaseguroMonto.toFixed(2)}). Total a cargo del paciente: S/. ${totalPaciente.toFixed(2)}. Saldo de S/. ${coberturaSeguro.toFixed(2)} derivado electrónicamente a la IAFAS EPS vía SITEDS.`;
+      coberturaSector = `Copago Fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% Coaseguro (${((1 - pctCoaseguro) * 100).toFixed(0)}% Cubierto por EPS)`;
+      alertaSector = STATE.forzarLiquidacionPlanEps
+        ? `✅ Liquidación Integral según Plan Base EPS (80/20): Aseguradora cubre el 80% (S/. ${coberturaSeguro.toFixed(2)}) y paciente asume Copago Fijo S/. ${copagoFijo.toFixed(2)} + 20% Coaseguro (S/. ${coaseguroMonto.toFixed(2)}) = S/. ${totalPaciente.toFixed(2)}.`
+        : `Atención de Urgencia/Ambulatoria EPS: Paciente abona copago fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% coaseguro (S/. ${coaseguroMonto.toFixed(2)}). Saldo facturado a la EPS.`;
+      motivoLiquidacion = STATE.forzarLiquidacionPlanEps
+        ? `LIQUIDACIÓN HOSPITALARIA SEGÚN PLAN BASE EPS (80% / 20%) — P-${STATE.prioridad || 'I'} (${STATE.rutaIntrahospitalariaTexto || 'Trauma Shock → Quirófano → UCI → Recuperación → Alta'}). Póliza ${priv.iafas_eps} activa (${priv.plan_salud}). Se liquida conforme a condiciones del Plan Base: Copago fijo de S/. ${copagoFijo.toFixed(2)} más coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% sobre servicios, quirófano, UCI, recuperación, imágenes, laboratorio y Kardex (S/. ${coaseguroMonto.toFixed(2)}). Total a pagar por el paciente: S/. ${totalPaciente.toFixed(2)}. Cobertura asumida por la EPS: S/. ${coberturaSeguro.toFixed(2)}.`
+        : `ATENCIÓN DE URGENCIA / CONSULTORIO EPS (P-${STATE.prioridad || 'III'}). Póliza ${priv.iafas_eps} activa (${priv.plan_salud}). Se liquida copago fijo de S/. ${copagoFijo.toFixed(2)} más coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% sobre farmacia y procedimientos (S/. ${coaseguroMonto.toFixed(2)}). Total a cargo del paciente: S/. ${totalPaciente.toFixed(2)}. Saldo de S/. ${coberturaSeguro.toFixed(2)} derivado electrónicamente a la IAFAS EPS vía SITEDS.`;
     }
   }
 
@@ -10605,6 +10614,12 @@ async function consultarReniecDiferida() {
   }
   if (dni === "44418504") {
     const nombreCompleto = "LUIS GUILLERMO VASQUEZ VALDIVIESO";
+    const nomInput = document.getElementById("reg_nombre_input");
+    if (nomInput) nomInput.value = nombreCompleto;
+    alert(`✅ RENIEC: Paciente identificado como: ${nombreCompleto}`);
+    return;
+  } else if (dni === "48904649") {
+    const nombreCompleto = "ROBERT FRANCIS PREVOST";
     const nomInput = document.getElementById("reg_nombre_input");
     if (nomInput) nomInput.value = nombreCompleto;
     alert(`✅ RENIEC: Paciente identificado como: ${nombreCompleto}`);
@@ -17306,7 +17321,7 @@ window.calcularLiquidacionSeguro = function() {
     totalPaciente = totalBruto;
     alertaSector = "🚨 Siniestro Rechazado por Exclusión Contractual de Póliza EPS. El paciente asume el 100% de la cuenta hospitalaria (incluso en P-I y P-II).";
     motivoLiquidacion = "SINIESTRO RECHAZADO POR IAFAS EPS. Por causal de exclusión contractual (ej. intoxicación, falta de carencia o riesgo excluido), la aseguradora anula la cobertura. Paciente asume el 100% de la totalidad facturada.";
-  } else if (STATE.prioridad === "I") {
+  } else if (STATE.prioridad === "I" && !STATE.forzarLiquidacionPlanEps) {
     // LEY DE EMERGENCIA N° 27604 SOLO EN PRIORIDAD I (RIESGO VITAL INMINENTE)
     etiquetaRegimen = `${priv.iafas_eps} · Emergencia Vital Inminente (P-I · Ley N° 27604)`;
     condicionSusalud = `${priv.iafas_eps} · ${priv.plan_salud || 'Plan Preferente'} (Emergencia Vital P-I)`;
@@ -17318,7 +17333,7 @@ window.calcularLiquidacionSeguro = function() {
     alertaSector = "✅ Ley N° 27604: Emergencia vital inmediata (P-I) cubierta al 100% por IAFAS EPS (Pago S/ 0.00).";
     motivoLiquidacion = `EMERGENCIA VITAL P-I CUBIERTA AL 100% POR LEY N° 27604. Póliza ${priv.iafas_eps} activa. Pago del paciente: S/. 0.00.`;
   } else {
-    // ATENCIÓN EPS (P-II a P-V): Aplica copago fijo + coaseguro según plan/aseguradora
+    // ATENCIÓN EPS (P-II a P-V, o Liquidación según Plan Base EPS contratado): Aplica copago fijo + coaseguro según plan/aseguradora
     const planSel = STATE.planPrivado || (document.getElementById("select_plan_privado")?.value) || "";
     if (planSel === "vip_100") {
       copagoFijo = 0.00;
@@ -17344,11 +17359,17 @@ window.calcularLiquidacionSeguro = function() {
       coberturaSeguro = Math.max(0, totalBruto - totalPaciente);
     }
 
-    etiquetaRegimen = `${priv.iafas_eps} · Cobertura EPS (P-${STATE.prioridad || 'III'})`;
+    etiquetaRegimen = STATE.forzarLiquidacionPlanEps
+      ? `${priv.iafas_eps} · Plan Base EPS 80/20 (P-${STATE.prioridad || 'I'} · Trauma Shock → SOP → UCI → URPA → Alta)`
+      : `${priv.iafas_eps} · Cobertura EPS (P-${STATE.prioridad || 'III'})`;
     condicionSusalud = `${priv.iafas_eps} · ${priv.plan_salud || 'Plan Activo'} (SITEDS: AUTORIZADO)`;
-    coberturaSector = `Copago Fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% Coaseguro`;
-    alertaSector = `Cobertura EPS (${priv.iafas_eps}): Paciente abona copago fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% coaseguro (S/. ${coaseguroMonto.toFixed(2)}). Total paciente: S/. ${totalPaciente.toFixed(2)}.`;
-    motivoLiquidacion = `COBERTURA EPS (${priv.iafas_eps}, P-${STATE.prioridad || 'III'}). Copago fijo S/. ${copagoFijo.toFixed(2)} + coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% (S/. ${coaseguroMonto.toFixed(2)}). Total a cargo del paciente: S/. ${totalPaciente.toFixed(2)}. Cubierto por EPS: S/. ${coberturaSeguro.toFixed(2)}.`;
+    coberturaSector = `Copago Fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% Coaseguro (${((1 - pctCoaseguro) * 100).toFixed(0)}% Cubierto por EPS)`;
+    alertaSector = STATE.forzarLiquidacionPlanEps
+      ? `✅ Liquidación según Plan Base EPS (${priv.iafas_eps} · 80/20): Aseguradora cubre el 80% (-S/. ${coberturaSeguro.toFixed(2)}) y paciente abona Copago Fijo S/. ${copagoFijo.toFixed(2)} + 20% Coaseguro (S/. ${coaseguroMonto.toFixed(2)}) = S/. ${totalPaciente.toFixed(2)}.`
+      : `Cobertura EPS (${priv.iafas_eps}): Paciente abona copago fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% coaseguro (S/. ${coaseguroMonto.toFixed(2)}). Total paciente: S/. ${totalPaciente.toFixed(2)}.`;
+    motivoLiquidacion = STATE.forzarLiquidacionPlanEps
+      ? `LIQUIDACIÓN HOSPITALARIA SEGÚN PLAN BASE EPS (${priv.iafas_eps}, 80% / 20% — P-${STATE.prioridad || 'I'}). Circuito intrahospitalario completado: ${STATE.rutaIntrahospitalariaTexto || 'Trauma Shock (ST-01) → Quirófano (SOP-01) → UCI (UCI-01) → Recuperación (URPA-01) → Alta Médica'}. Se aplica Copago Fijo S/. ${copagoFijo.toFixed(2)} + Coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% sobre quirófano, UCI, recuperación, imágenes, laboratorio y Kardex (S/. ${coaseguroMonto.toFixed(2)}). Total a cargo del paciente: S/. ${totalPaciente.toFixed(2)}. Cubierto por EPS (80%): S/. ${coberturaSeguro.toFixed(2)}.`
+      : `COBERTURA EPS (${priv.iafas_eps}, P-${STATE.prioridad || 'III'}). Copago fijo S/. ${copagoFijo.toFixed(2)} + coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% (S/. ${coaseguroMonto.toFixed(2)}). Total a cargo del paciente: S/. ${totalPaciente.toFixed(2)}. Cubierto por EPS: S/. ${coberturaSeguro.toFixed(2)}.`;
   }
 
   return {
@@ -19513,3 +19534,1319 @@ function renderizarFilaPacientesCockpit(pacientesActivosEnCurso) {
   });
 }
 window.renderizarFilaPacientesCockpit = renderizarFilaPacientesCockpit;
+
+
+// ==============================================================================
+// VENTANA FLOTANTE DE PRUEBAS SIMULADAS (3 ESCENARIOS CLÍNICOS INTEGRALES)
+// 1. DNI 44418504 — Atención en Módulo "Privado", jala HC existente, flujo completo
+//    como Urgencia únicamente, todos los campos llenos + medicina en Kardex.
+// 2. DNI 44418504 — Caso Prioridad III atendido en MINSA, todos los campos llenos
+//    y facturados, medicina en Kardex y recuerda su FUA.
+// 3. DNI 48904649 — Trauma Shock (P-I) atendido en Privada con EPS Plan Base,
+//    diferentes medicinas en Kardex, servicios de imágenes, servicios de laboratorio,
+//    pasa a Quirófano -> UCI -> Recuperación -> Alta -> Facturación según su plan.
+// ==============================================================================
+
+function asegurarHistoriaExistente44418504() {
+  const dni = "44418504";
+  const hc = "HC-2026-8504";
+  const nombre = "LUIS GUILLERMO VASQUEZ VALDIVIESO";
+
+  let masterMap = {};
+  try {
+    masterMap = typeof cargarPacientesMaster === "function" ? cargarPacientesMaster() : {};
+  } catch (e) { masterMap = {}; }
+
+  const keyDni = typeof normalizarClavePaciente === "function" ? normalizarClavePaciente(dni) : dni;
+  const keyHc = typeof normalizarClavePaciente === "function" ? normalizarClavePaciente(hc) : hc.toLowerCase();
+
+  let p = masterMap[keyDni] || masterMap[keyHc] || (typeof obtenerPacienteMaster === "function" ? obtenerPacienteMaster(dni, hc, nombre) : null);
+
+  if (!p) {
+    p = {
+      identificador: dni,
+      dni: dni,
+      historia_clinica: hc,
+      nombre_completo: nombre,
+      fecha_nacimiento: "2003-08-15",
+      edad: 22,
+      sexo: "M",
+      grupo_sanguineo: "O+",
+      tipo_seguro: "Rímac EPS / SIS (Histórico)",
+      alergias: "Niega alergias medicamentosas conocidas",
+      antecedentes: "Gastritis aguda episódica (2025), Cefalea tensional controlada. Sin cirugías previas.",
+      episodios: []
+    };
+  } else {
+    p.identificador = dni;
+    p.dni = dni;
+    p.historia_clinica = p.historia_clinica && p.historia_clinica !== "—" ? p.historia_clinica : hc;
+    p.nombre_completo = nombre;
+    p.fecha_nacimiento = p.fecha_nacimiento || "2003-08-15";
+    p.edad = p.edad || 22;
+    p.sexo = p.sexo || "M";
+    p.grupo_sanguineo = p.grupo_sanguineo || "O+";
+    p.alergias = p.alergias || "Niega alergias medicamentosas conocidas";
+    p.antecedentes = p.antecedentes || "Gastritis aguda episódica (2025), Cefalea tensional controlada. Sin cirugías previas.";
+    if (!Array.isArray(p.episodios)) p.episodios = [];
+  }
+
+  if (!p.episodios.some(e => e.folio === "FOL-HIST-2025-8504")) {
+    p.episodios.push({
+      folio: "FOL-HIST-2025-8504",
+      fecha: "14/11/2025",
+      hora: "18:40",
+      fecha_hora: "2025-11-14T18:40:00.000Z",
+      identificador: dni,
+      historia_clinica: p.historia_clinica,
+      nombre_completo: nombre,
+      prioridad: "Prioridad IV (Urgencia Menor)",
+      color_prioridad: "#16a34a",
+      motivo_consulta: "Epigastralgia moderada post-prandial y dispepsia aguda (Atención previa archivada en HC)",
+      motivo: "Epigastralgia moderada post-prandial y dispepsia aguda",
+      signos_vitales: { spo2: 99, fc: 76, pas: 118, pad: 74, pa: "118/74 mmHg", fr: 16, temp: 36.8, dolor: 3 },
+      cama_asignada: "Tópico de Urgencias Ambulatorias",
+      cama: "Tópico de Urgencias Ambulatorias",
+      destino_clinico: "Alta Médica Ambulatoria",
+      cie10_codigo: "K30",
+      cie10_descripcion: "Dispepsia funcional",
+      diagnostico: "K30 — Dispepsia funcional",
+      examenes_realizados: [{ descripcion: "Hemograma de Control (Normal)" }],
+      medicamentos_despachados: [{ descripcion: "Omeprazol 20mg VO + Hidróxido de Aluminio" }],
+      total_facturado: 45.00,
+      cobertura_info: "Atención Histórica Previa en HC-2026-8504",
+      estado_salida: "Alta Médica con Indicaciones",
+      firmante: "Dr. Carlos Alberto Vega Morales (CMP 58321)"
+    });
+  }
+
+  masterMap[keyDni] = p;
+  masterMap[keyHc] = p;
+  if (typeof guardarPacientesMaster === "function") guardarPacientesMaster(masterMap);
+  try {
+    BASE_DATOS_HC[dni] = p.historia_clinica;
+    BASE_DATOS_HC[nombre.toLowerCase()] = p.historia_clinica;
+    localStorage.setItem("UPP_BASE_DATOS_HC", JSON.stringify(BASE_DATOS_HC));
+  } catch (e) {}
+
+  return p;
+}
+
+function abrirModalPruebasSimuladas() {
+  let modal = document.getElementById("modal_pruebas_simuladas");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "modal_pruebas_simuladas";
+    modal.className = "modal-overlay";
+    modal.style.cssText = "position:fixed; inset:0; background:rgba(15,23,42,0.72); backdrop-filter:blur(3px); z-index:100050; display:flex; align-items:center; justify-content:center; padding:16px;";
+    document.body.appendChild(modal);
+  }
+
+  const fuaRecordado = localStorage.getItem("UPP_FUA_RECORDADO_44418504") || "00016918-26-0008504";
+  const hc444 = asegurarHistoriaExistente44418504();
+  const numEpisodios444 = Array.isArray(hc444?.episodios) ? hc444.episodios.length : 1;
+
+  modal.innerHTML = `
+    <div style="background:#ffffff; color:#0f172a; border-radius:14px; max-width:760px; width:100%; max-height:92vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,0.4); border:2px solid #2563eb; font-family:inherit;">
+      <div style="background:linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color:#ffffff; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1d4ed8;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.45rem;">🧪</span>
+          <div>
+            <h3 style="margin:0; font-size:1.05rem; font-weight:900; color:#ffffff; letter-spacing:0.01em;">PRUEBAS SIMULADAS — ESCENARIOS CLÍNICOS AUTOMATIZADOS</h3>
+            <div style="font-size:0.74rem; color:#93c5fd; margin-top:2px;">Seleccione uno de los 3 flujos integrales para poblar todos los módulos, Kardex, FUA, camas y facturación</div>
+          </div>
+        </div>
+        <button type="button" onclick="cerrarModalPruebasSimuladas()" style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25); color:#ffffff; width:32px; height:32px; border-radius:8px; font-size:1.15rem; font-weight:900; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <div style="padding:18px 20px; display:flex; flex-direction:column; gap:14px;">
+
+        <!-- OPCIÓN 1 -->
+        <div style="border:1.5px solid #bfdbfe; background:#f8fafc; border-left:6px solid #2563eb; border-radius:10px; padding:14px 16px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+            <div>
+              <span style="background:#dbeafe; color:#1e40af; font-size:0.70rem; font-weight:900; padding:3px 8px; border-radius:999px; border:1px solid #93c5fd;">OPCIÓN 1 · MÓDULO PRIVADO · URGENCIA ÚNICAMENTE</span>
+              <h4 style="margin:6px 0 2px; font-size:0.95rem; font-weight:900; color:#0f172a;">1. Paciente DNI 44418504 (Luis Guillermo Vásquez Valdivieso) — Atención en "Privado"</h4>
+            </div>
+            <span style="font-size:0.72rem; font-weight:800; color:#0369a1; background:#e0f2fe; padding:3px 8px; border-radius:6px; border:1px solid #bae6fd;">📂 HC Existente: ${hc444.historia_clinica} (${numEpisodios444} ep.)</span>
+          </div>
+          <p style="margin:0; font-size:0.78rem; color:#334155; line-height:1.45;">
+            Jala su <strong>Historia Clínica existente (${hc444.historia_clinica})</strong>, activa el módulo <strong>Privado</strong> y completa todo el flujo como una <strong>Urgencia únicamente (Prioridad III)</strong>. Llena todos los campos solicitados (filiación, signos vitales, diagnóstico CIE-10, médico CMP, consentimiento), prescribe y administra <strong>medicamentos en el Kardex</strong> y culmina con el alta y liquidación privada de urgencia.
+          </p>
+          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:2px;">
+            <button type="button" id="btn_ejecutar_prueba_1" onclick="ejecutarPruebaSimulada(1)" class="btn-full-primary" style="background:#2563eb; color:#ffffff; font-weight:800; font-size:0.78rem; padding:8px 14px; border-radius:8px; border:none; cursor:pointer;">
+              ▶ Ejecutar Opción 1 (DNI 44418504 · Privado · Urgencia + Kardex)
+            </button>
+          </div>
+        </div>
+
+        <!-- OPCIÓN 2 -->
+        <div style="border:1.5px solid #bbf7d0; background:#f8fafc; border-left:6px solid #16a34a; border-radius:10px; padding:14px 16px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+            <div>
+              <span style="background:#dcfce7; color:#166534; font-size:0.70rem; font-weight:900; padding:3px 8px; border-radius:999px; border:1px solid #86efac;">OPCIÓN 2 · MINSA / SIS · PRIORIDAD III · FUA RECORDADO</span>
+              <h4 style="margin:6px 0 2px; font-size:0.95rem; font-weight:900; color:#0f172a;">2. Mismo Paciente DNI 44418504 — Caso Prioridad III atendido en MINSA (Con FUA)</h4>
+            </div>
+            <span style="font-size:0.72rem; font-weight:800; color:#15803d; background:#dcfce7; padding:3px 8px; border-radius:6px; border:1px solid #86efac;">📑 FUA: ${fuaRecordado}</span>
+          </div>
+          <p style="margin:0; font-size:0.78rem; color:#334155; line-height:1.45;">
+            Jala la historia del paciente <strong>44418504</strong>, simula valores clínicos para <strong>Prioridad III</strong> atendido en <strong>MINSA (SIS)</strong>, llena todos los campos, indica y administra <strong>medicina en el Kardex</strong>, recuerda y vincula su <strong>FUA (${fuaRecordado})</strong> y deja todas las prestaciones facturadas al 100% por el SIS (Pago S/. 0.00).
+          </p>
+          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:2px;">
+            <button type="button" id="btn_ejecutar_prueba_2" onclick="ejecutarPruebaSimulada(2)" class="btn-full-primary" style="background:#16a34a; color:#ffffff; font-weight:800; font-size:0.78rem; padding:8px 14px; border-radius:8px; border:none; cursor:pointer;">
+              ▶ Ejecutar Opción 2 (DNI 44418504 · MINSA P-III · Kardex + FUA)
+            </button>
+          </div>
+        </div>
+
+        <!-- OPCIÓN 3 -->
+        <div style="border:1.5px solid #fecaca; background:#f8fafc; border-left:6px solid #dc2626; border-radius:10px; padding:14px 16px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+            <div>
+              <span style="background:#fee2e2; color:#991b1b; font-size:0.70rem; font-weight:900; padding:3px 8px; border-radius:999px; border:1px solid #fca5a5;">OPCIÓN 3 · TRAUMA SHOCK P-I · PRIVADA EPS PLAN BASE (80/20)</span>
+              <h4 style="margin:6px 0 2px; font-size:0.95rem; font-weight:900; color:#0f172a;">3. Paciente DNI 48904649 (Consulta RENIEC Real: Robert Francis Prevost) — Trauma Shock → SOP → UCI → Recuperación → Alta</h4>
+            </div>
+            <span style="font-size:0.72rem; font-weight:800; color:#991b1b; background:#fee2e2; padding:3px 8px; border-radius:6px; border:1px solid #fca5a5;">🏥 Ruta Crítica Completa</span>
+          </div>
+          <p style="margin:0; font-size:0.78rem; color:#334155; line-height:1.45;">
+            Ejecuta la <strong>consulta RENIEC real</strong> para el DNI <strong>48904649</strong>, lo atiende en <strong>Privada con EPS (Plan Base 80/20)</strong> por <strong>Trauma Shock (Prioridad I)</strong>: registra <strong>6 medicinas diferentes en el Kardex</strong>, <strong>4 servicios de imágenes</strong> (Eco FAST, TEM Cerebral, TEM Toracoabdominal, Rx Portátil), <strong>5 servicios de laboratorio</strong> (AGA+Lactato, Hemograma, Pruebas Cruzadas, Coagulación, Bioquímica), ejecuta el circuito <strong>Trauma Shock (ST-01) → Quirófano (SOP-01) → UCI (UCI-01) → Recuperación (URPA-01) → Alta Médica</strong> y termina en <strong>Facturación según su Plan Base</strong>.
+          </p>
+          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:2px;">
+            <button type="button" id="btn_ejecutar_prueba_3" onclick="ejecutarPruebaSimulada(3)" class="btn-full-primary" style="background:#dc2626; color:#ffffff; font-weight:800; font-size:0.78rem; padding:8px 14px; border-radius:8px; border:none; cursor:pointer;">
+              ▶ Ejecutar Opción 3 (DNI 48904649 · RENIEC Real · Trauma Shock EPS Plan Base · SOP→UCI→URPA→Alta)
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="background:#f1f5f9; padding:12px 20px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #cbd5e1; border-radius:0 0 12px 12px;">
+        <span style="font-size:0.73rem; color:#475569; font-weight:600;">💡 Al elegir una opción, todos los módulos y la facturación se completan automáticamente.</span>
+        <button type="button" onclick="cerrarModalPruebasSimuladas()" class="btn-full-secondary" style="padding:6px 14px; font-size:0.78rem; font-weight:800; cursor:pointer;">Cerrar ventana</button>
+      </div>
+    </div>
+  `;
+
+  modal.classList.add("open");
+  modal.style.display = "flex";
+}
+
+function cerrarModalPruebasSimuladas() {
+  const modal = document.getElementById("modal_pruebas_simuladas");
+  if (modal) {
+    modal.classList.remove("open");
+    modal.style.display = "none";
+  }
+}
+
+function setDomValSim(id, val, esCheck = false) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (esCheck) {
+    el.checked = Boolean(val);
+  } else {
+    el.value = val;
+  }
+}
+
+async function ejecutarPruebaSimulada(opcion) {
+  try {
+    cerrarModalPruebasSimuladas();
+
+    const ahora = new Date();
+    const horaActual = `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
+    const fechaIso = ahora.toISOString();
+    const fechaLegible = ahora.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+    if (window.COCKPIT && typeof window.COCKPIT.cambiarVistaSimulada === "function") {
+      window.COCKPIT.cambiarVistaSimulada("AUDITOR");
+    }
+
+    if (typeof RECURSOS_HOSPITALARIOS !== "undefined") {
+      for (const idRec in RECURSOS_HOSPITALARIOS) {
+        const r = RECURSOS_HOSPITALARIOS[idRec];
+        if (r && r.estado === "ocupada") {
+          r.estado = "disponible";
+          r.paciente = null;
+          r.inicioMs = null;
+          r.finMs = null;
+          r.horasAmpliadas = 0;
+          r.tiempoFormateado = "--:--:--";
+          r.progresoPct = 0;
+        }
+      }
+    }
+
+    if (typeof limpiarFormularioCompletoState === "function") {
+      limpiarFormularioCompletoState();
+    }
+
+    // =========================================================================
+    // OPCIÓN 1: DNI 44418504 — ATENCIÓN EN MÓDULO "PRIVADO" · URGENCIA ÚNICAMENTE
+    // =========================================================================
+    if (opcion === 1) {
+      const dni = "44418504";
+      const nombre = "LUIS GUILLERMO VASQUEZ VALDIVIESO";
+      const masterExistente = asegurarHistoriaExistente44418504();
+      const hc = masterExistente.historia_clinica || "HC-2026-8504";
+      const turno = "T-PRIV-8504";
+      const medicoFull = "Dr. Carlos Alberto Vega Morales (Emergenciólogo · CMP 58321 · RNE 24110)";
+      const enfermeraFull = "Lic. Enf. María Elena Quispe (CEP 64210)";
+
+      STATE.forzarLiquidacionPlanEps = false;
+      if (window.COCKPIT && typeof window.COCKPIT.seleccionarSector === "function") {
+        window.COCKPIT.seleccionarSector("privado");
+      } else if (typeof cambiarEntornoOperativo === "function") {
+        cambiarEntornoOperativo("privado");
+      }
+      STATE.entornoOperativo = "privado";
+      STATE.planPrivado = "base_80_20";
+      setDomValSim("select_plan_privado", "base_80_20");
+
+      const padronPriv1 = {
+        dni: dni,
+        tipo_aseguramiento: "EPS_Y_ESSALUD",
+        condicion_evento: "NORMAL",
+        origen_registro: "BD_HISTORICA",
+        publico: {
+          tiene_seguro: true,
+          entidad: "SIS",
+          regimen: "SIS Gratuito / Para Todos",
+          estado: "ACTIVO",
+          codigo: localStorage.getItem("UPP_FUA_RECORDADO_44418504") || "00016918-26-0008504"
+        },
+        privado: {
+          tiene_seguro: true,
+          iafas_eps: "Rímac EPS",
+          plan_salud: "Plan Base Corporativo (Copago S/ 80 + Coaseguro 20%)",
+          estado_poliza: "ACTIVA",
+          siteds_codigo: "SITEDS-2026-8504-URG",
+          copago_fijo: 80.00,
+          coaseguro_pct: 0.20,
+          exclusiones: []
+        }
+      };
+      STATE.padronSusalud = padronPriv1;
+      STATE.padronSalud = padronPriv1;
+      try {
+        localStorage.setItem("padron_susalud_" + dni, JSON.stringify(padronPriv1));
+      } catch (e) {}
+
+      STATE.esNN = false;
+      STATE.identificador = nombre;
+      STATE.nombreReniec = nombre;
+      STATE.numDni = dni;
+      STATE.historiaClinica = hc;
+      STATE.estadoRegistrado = "Sí (HC Existente Recuperada)";
+      STATE.accionHc = `Historia Clínica existente recuperada (${hc} · ${masterExistente.episodios.length} atención(es) previa(s))`;
+      STATE.turno = turno;
+      STATE.horaLlegada = horaActual;
+      STATE.fechaNacimiento = masterExistente.fecha_nacimiento || "2003-08-15";
+      STATE.edad = masterExistente.edad || 22;
+      STATE.sexo = masterExistente.sexo || "M";
+      STATE.grupoSanguineo = masterExistente.grupo_sanguineo || "O+";
+      STATE.alergias = masterExistente.alergias || "Niega alergias medicamentosas conocidas";
+      STATE.alergiasConocidas = STATE.alergias;
+      STATE.tipoSeguro = "Rímac EPS (Plan Base 80/20 — Atención de Urgencia)";
+      STATE.tipoOrigenEvento = "normal";
+      STATE.esAccidenteTransito = false;
+      STATE.soatVehiculoFuga = false;
+      STATE.exclusionEps = false;
+
+      STATE.motivoConsulta = "Dolor abdominal epigástrico urente agudo irradiado a mesogastrio con náuseas y vómitos biliosos (Urgencia Médica)";
+      STATE.spo2 = 98;
+      STATE.fc = 88;
+      STATE.pasSistolica = 126;
+      STATE.paDiastolica = 80;
+      STATE.fr = 18;
+      STATE.temperatura = 37.3;
+      STATE.glasgow = 15;
+      STATE.glucosa = 98;
+      STATE.eva = 5;
+      STATE.prioridad = "III";
+      STATE.colorPrioridad = "#eab308";
+      STATE.news2Score = 0;
+      STATE.qsofaScore = 0;
+      STATE.esiNivel = 3;
+
+      setDomValSim("ident_full", nombre);
+      setDomValSim("dni_mod1", dni);
+      setDomValSim("dni_reniec_input", dni);
+      setDomValSim("dni_mod4", dni);
+      setDomValSim("hora_full", horaActual);
+      setDomValSim("fecha_nac_full", STATE.fechaNacimiento);
+      setDomValSim("edad_full", String(STATE.edad));
+      setDomValSim("sexo_full", STATE.sexo);
+      setDomValSim("gsan_full", STATE.grupoSanguineo);
+      if (typeof sincronizarSelectsGsRh === "function") sincronizarSelectsGsRh(STATE.grupoSanguineo);
+      setDomValSim("alergias_full", STATE.alergias);
+      setDomValSim("alergias_mod1", STATE.alergias);
+      setDomValSim("motivo_full", STATE.motivoConsulta);
+      setDomValSim("spo2_full", "98");
+      setDomValSim("fc_full", "88");
+      setDomValSim("pas_full", "126");
+      setDomValSim("pad_full", "80");
+      setDomValSim("fr_full", "18");
+      setDomValSim("temp_full", "37.3");
+      setDomValSim("glasgow_full", "15");
+      setDomValSim("glucosa_full", "98");
+      setDomValSim("eva_full", "5");
+      setDomValSim("eva_range", "5");
+      if (typeof actualizarEVA === "function") actualizarEVA(5);
+      setDomValSim("enfermero_triaje_select", enfermeraFull);
+      setDomValSim("chk_consentimiento_datos", true, true);
+      setDomValSim("chk_evento_fuga", false, true);
+      setDomValSim("chk_exclusion_eps", false, true);
+
+      const badgeHc = document.getElementById("hc_badge_estado");
+      if (badgeHc) {
+        badgeHc.textContent = `📂 HC Existente Recuperada (${hc})`;
+        badgeHc.className = "badge-estado badge-si";
+      }
+      const codeHc = document.getElementById("hc_code_display");
+      if (codeHc) codeHc.textContent = hc;
+      const accHc = document.getElementById("hc_accion_display");
+      if (accHc) accHc.textContent = STATE.accionHc;
+      const ticketEl = document.getElementById("ticket_display");
+      if (ticketEl) ticketEl.textContent = `🎫 Ticket Urgencia Privada: ${turno} (${horaActual}) · Antecedente en HC: ${masterExistente.antecedentes}`;
+
+      STATE.medicoTratante = medicoFull;
+      setDomValSim("medico_responsable_select", medicoFull);
+      STATE.cie10Codigo = "K29.7";
+      STATE.cie10Descripcion = "Gastritis, no especificada (Gastritis Aguda / Epigastralgia de Urgencia)";
+      STATE.cie10 = "K29.7 — Gastritis, no especificada (Gastritis Aguda / Epigastralgia de Urgencia)";
+      setDomValSim("cie10_input", STATE.cie10);
+      if (typeof actualizarCie10 === "function") actualizarCie10("K29.7 - Gastritis, no especificada");
+      setDomValSim("sel_condicion_consentimiento", "consciente");
+      setDomValSim("sel_procedimiento_consentimiento", "hidratacion_parenteral");
+      setDomValSim("chk_consentimiento_firmado", true, true);
+      setDomValSim("firma_consentimiento", `${nombre} (DNI ${dni})`);
+
+      STATE.camaAsignadaId = "SIN-CAMA";
+      STATE.camaAsignada = "Tópico de Urgencias Privado (Atención Ambulatoria de Urgencia)";
+      setDomValSim("horas_observacion_input", "2");
+      if (typeof actualizarEstanciaObservacion === "function") actualizarEstanciaObservacion(2);
+      setDomValSim("balance_ingresos", "500");
+      setDomValSim("balance_egresos", "450");
+      if (typeof calcularBalanceHidrico === "function") calcularBalanceHidrico();
+
+      STATE.items_factura = [];
+      STATE.kardexItems = [];
+      STATE.kardexAdministrados = [];
+      STATE.ordenesLaboratorio = [];
+      STATE.ordenesImagenes = [];
+
+      registrarFacturaItem("Triaje Clínico de Urgencia en Clínica Privada (ESI Nivel 3)", 45.00, "Triaje");
+      registrarFacturaItem("Consulta Médica Especializada en Tópico de Urgencias Privado", 120.00, "Consulta");
+
+      const medsUrgenciaPrivada = [
+        { nombre: "Omeprazol 40mg Polvo Liofilizado para Solución Inyectable", dosis: "40 mg diluido en 100 ml NaCl 0.9%", via: "EV", frecuencia: "STAT (Dosis única en Tópico)", cum: "CUM-01842", costo: 38.00 },
+        { nombre: "Ketorolaco Trometamina 30mg/ml Solución Inyectable", dosis: "30 mg EV lento", via: "EV", frecuencia: "STAT / c/8h PRN dolor", cum: "CUM-00914", costo: 28.00 },
+        { nombre: "Dimenhidrinato 50mg/5ml Solución Inyectable", dosis: "50 mg EV lento en 20 ml", via: "EV", frecuencia: "STAT (Control emético)", cum: "CUM-00419", costo: 22.00 },
+        { nombre: "Cloruro de Sodio 0.9% x 500 ml (Hidratación Parenteral de Urgencia)", dosis: "500 ml a 250 ml/h", via: "EV", frecuencia: "En Tópico de Urgencias", cum: "CUM-00105", costo: 25.00 }
+      ];
+
+      medsUrgenciaPrivada.forEach((m, i) => {
+        STATE.kardexItems.push({
+          id: `MED-SIM1-${i + 1}`,
+          nombre: m.nombre,
+          dosis: m.dosis,
+          via: m.via,
+          frecuencia: m.frecuencia,
+          cum: m.cum,
+          costo: m.costo,
+          administrado: true
+        });
+        STATE.kardexAdministrados.push(m.nombre);
+        registrarFacturaItem(`${m.nombre} (${m.cum})`, m.costo, "Farmacia");
+      });
+
+      STATE.ordenesLaboratorio.push({
+        id: "LAB-SIM1-1",
+        nombre: "Hemograma Completo + Amilasa/Lipasa Sérica de Descarte",
+        cpms: "85.01.01",
+        costo: 65.00,
+        prioridad: "Urgente (30 min)",
+        estado: "Validado Normal (Sin pancreatitis)"
+      });
+      registrarFacturaItem("Hemograma Completo + Amilasa/Lipasa Sérica (CPMS 85.01.01)", 65.00, "Laboratorio");
+
+      if (typeof renderizarTablaKardexEnfermeria === "function") renderizarTablaKardexEnfermeria();
+      if (typeof renderizarTablaOrdenesLaboratorio === "function") renderizarTablaOrdenesLaboratorio();
+      if (typeof renderizarTablaOrdenesImagenes === "function") renderizarTablaOrdenesImagenes();
+      if (typeof mostrarPrioridad === "function") {
+        mostrarPrioridad("III", {
+          tipo: "Prioridad III (Amarillo — Urgencia)",
+          desc: "Atención de Urgencia en Módulo Privado (Sin riesgo vital · Tópico de Urgencias)",
+          destino: "Tópico de Urgencias Privado"
+        });
+      }
+
+      STATE.coberturaValidada = true;
+      STATE.modalidadEgreso = "alta";
+      if (typeof seleccionarModalidadEgreso === "function") seleccionarModalidadEgreso("alta");
+      STATE.altaClinicaConcluida = true;
+      STATE.atencionCerrada = true;
+      STATE.estadoFlujo = "CERRADO_FACTURADO";
+      STATE.firmas = {
+        triaje: { usuario: enfermeraFull, rol: "TRIAJE", accion: "Triaje Urgencia P-III Sellado", fecha: fechaIso },
+        admision: { usuario: "Srta. Sofía Quispe Méndez (Reg. SUSALUD 08412)", rol: "ADMISION", accion: "Póliza Rímac EPS Plan Base Validada vía SITEDS", fecha: fechaIso },
+        medico: { usuario: medicoFull, rol: "MEDICO", accion: "Evaluación en Tópico, Kardex Administrado y Alta Médica de Urgencia", fecha: fechaIso },
+        caja: { usuario: "Sr. Luis Paredes Chumpitaz (Matrícula Fin. FACT-882)", rol: "CAJA", accion: "Liquidación de Urgencia Privada Emitida (Copago S/ 80 + Coaseguro 20%)", fecha: fechaIso }
+      };
+
+      const px1 = crearRegistroPaciente({
+        identificador: nombre,
+        nombre: nombre,
+        dni: dni,
+        edad: STATE.edad,
+        sexo: STATE.sexo,
+        horaLlegada: horaActual,
+        modalidad: "A pie (Urgencia Privada)",
+        prioridad: "III",
+        motivo: STATE.motivoConsulta,
+        estadoAtencion: "Alta",
+        camaId: null,
+        camaNombre: "Tópico de Urgencias Privado (Alta)",
+        medico: medicoFull,
+        esNN: false,
+        estadoFlujo: "CERRADO_FACTURADO",
+        coberturaValidada: true,
+        firmas: STATE.firmas
+      });
+      px1.historiaClinica = hc;
+      px1.tipoSeguro = STATE.tipoSeguro;
+      px1.cie10 = STATE.cie10;
+      px1.cie10Codigo = STATE.cie10Codigo;
+      px1.cie10Descripcion = STATE.cie10Descripcion;
+      px1.altaClinicaConcluida = true;
+      px1.kardexItems = JSON.parse(JSON.stringify(STATE.kardexItems));
+      px1.kardexAdministrados = JSON.parse(JSON.stringify(STATE.kardexAdministrados));
+
+      if (!Array.isArray(window.PACIENTES_COLA)) window.PACIENTES_COLA = [];
+      window.PACIENTES_COLA = window.PACIENTES_COLA.filter(x => x.dni !== dni || x.turno !== turno);
+      window.PACIENTES_COLA.push(px1);
+      pacienteActivoId = px1.id;
+      window.pacienteActivoId = px1.id;
+
+      if (typeof renderizarUIEntornoYPadron === "function") renderizarUIEntornoYPadron();
+      if (typeof actualizarFactura === "function") actualizarFactura();
+      if (typeof sincronizarDatosPacienteEnTodosLosModulos === "function") {
+        sincronizarDatosPacienteEnTodosLosModulos({ esNN: false, dni: dni, nombre: nombre, hc: hc, sexo: STATE.sexo });
+      }
+
+      const liq1 = typeof calcularLiquidacionSeguro === "function" ? calcularLiquidacionSeguro() : { totalPaciente: 148.60 };
+      const masterUpd1 = asegurarHistoriaExistente44418504();
+      masterUpd1.tipo_seguro = STATE.tipoSeguro;
+      masterUpd1.medico_responsable = medicoFull;
+      masterUpd1.enfermera_responsable = enfermeraFull;
+      masterUpd1.diagnostico_cie10 = STATE.cie10;
+      masterUpd1.episodios = masterUpd1.episodios.filter(e => e.folio !== "FOL-2026-PRIV-8504");
+      masterUpd1.episodios.unshift({
+        folio: "FOL-2026-PRIV-8504",
+        fecha: fechaLegible,
+        hora: horaActual,
+        fecha_hora: fechaIso,
+        identificador: dni,
+        historia_clinica: hc,
+        nombre_completo: nombre,
+        prioridad: "Prioridad III (Urgencia — Módulo Privado)",
+        color_prioridad: "#eab308",
+        motivo_consulta: STATE.motivoConsulta,
+        motivo: STATE.motivoConsulta,
+        signos_vitales: { spo2: 98, fc: 88, pas: 126, pad: 80, pa: "126/80 mmHg", fr: 18, temp: 37.3, dolor: 5 },
+        cama_asignada: "Tópico de Urgencias Privado (Atención Ambulatoria)",
+        cama: "Tópico de Urgencias Privado",
+        destino_clinico: "Alta Médica de Urgencia",
+        cie10_codigo: STATE.cie10Codigo,
+        cie10_descripcion: STATE.cie10Descripcion,
+        diagnostico: STATE.cie10,
+        examenes_realizados: STATE.ordenesLaboratorio.map(l => ({ descripcion: l.nombre, resultado: l.estado })),
+        medicamentos_despachados: STATE.kardexItems.map(k => ({ descripcion: `${k.nombre} (${k.dosis} · ${k.via})` })),
+        liquidacion: liq1,
+        total_facturado: liq1.totalPaciente,
+        cobertura_info: "Urgencia Privada EPS (Copago S/ 80.00 + Coaseguro 20%)",
+        estado_salida: "Alta Médica (Flujo de Urgencia Concluido)",
+        firmante: medicoFull
+      });
+      const mMap1 = cargarPacientesMaster();
+      mMap1[normalizarClavePaciente(dni)] = masterUpd1;
+      mMap1[normalizarClavePaciente(hc)] = masterUpd1;
+      guardarPacientesMaster(mMap1);
+
+      guardarEstadoPacienteActivo();
+      if (typeof sincronizarFacturacionYExportar === "function") sincronizarFacturacionYExportar(true);
+      if (typeof registrarLogAuditoria === "function") {
+        registrarLogAuditoria("Simulación Opción 1", "FLUJO_URGENCIA_PRIVADO_44418504", `Paciente ${nombre} (DNI ${dni}, ${hc}) atendido en Módulo Privado como Urgencia P-III con Kardex completo y liquidación S/. ${liq1.totalPaciente.toFixed(2)}`);
+      }
+      if (typeof renderizarTableroColaPacientes === "function") renderizarTableroColaPacientes();
+      if (typeof renderizarBandejaPosta === "function") renderizarBandejaPosta();
+      if (window.COCKPIT) {
+        if (typeof window.COCKPIT.refrescarValoresMonitor === "function") window.COCKPIT.refrescarValoresMonitor();
+        if (typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") window.COCKPIT.actualizarTarjetaResumenTriaje();
+        if (typeof window.COCKPIT.actualizarTarjetaResumenCaja === "function") window.COCKPIT.actualizarTarjetaResumenCaja();
+        if (typeof window.COCKPIT.actualizarContextoCockpit === "function") window.COCKPIT.actualizarContextoCockpit();
+        if (typeof window.COCKPIT.irAFase === "function") window.COCKPIT.irAFase(3);
+      }
+      return;
+    }
+
+    // =========================================================================
+    // OPCIÓN 2: MISMO PACIENTE 44418504 — PRIORIDAD III ATENDIDO EN MINSA
+    // =========================================================================
+    if (opcion === 2) {
+      const dni = "44418504";
+      const nombre = "LUIS GUILLERMO VASQUEZ VALDIVIESO";
+      const masterExistente = asegurarHistoriaExistente44418504();
+      const hc = masterExistente.historia_clinica || "HC-2026-8504";
+      const fuaRecordado = localStorage.getItem("UPP_FUA_RECORDADO_44418504") || "00016918-26-0008504";
+      localStorage.setItem("UPP_FUA_RECORDADO_44418504", fuaRecordado);
+      const turno = "T-MINSA-8504";
+      const medicoFull = "Dr. Juan Manuel Paredes Soto (Cirugía / Emergencias · CMP 51892 · RNE 27415)";
+      const enfermeraFull = "Lic. Enf. Ana Torres Morales (CEP 92410)";
+
+      STATE.forzarLiquidacionPlanEps = false;
+      if (window.COCKPIT && typeof window.COCKPIT.seleccionarSector === "function") {
+        window.COCKPIT.seleccionarSector("sis");
+      } else if (typeof cambiarEntornoOperativo === "function") {
+        cambiarEntornoOperativo("publico");
+      }
+      STATE.entornoOperativo = "publico";
+      STATE.tipoIpressPublica = "MINSA";
+      setDomValSim("select_ipress_publica", "MINSA");
+
+      const padronMinsa2 = {
+        dni: dni,
+        tipo_aseguramiento: "SOLO_SIS",
+        condicion_evento: "NORMAL",
+        origen_registro: "BD_HISTORICA",
+        publico: {
+          tiene_seguro: true,
+          entidad: "SIS",
+          regimen: "SIS Gratuito / Para Todos (D.U. N° 046-2021)",
+          estado: "ACTIVO",
+          codigo: fuaRecordado
+        },
+        privado: {
+          tiene_seguro: false,
+          iafas_eps: "Sin Póliza Privada",
+          plan_salud: "No Aplica",
+          estado_poliza: "INACTIVA",
+          copago_fijo: 0,
+          coaseguro_pct: 1.0,
+          exclusiones: []
+        }
+      };
+      STATE.padronSusalud = padronMinsa2;
+      STATE.padronSalud = padronMinsa2;
+      try {
+        localStorage.setItem("padron_susalud_" + dni, JSON.stringify(padronMinsa2));
+      } catch (e) {}
+
+      STATE.nroFua = fuaRecordado;
+      STATE.numerFua = fuaRecordado;
+      STATE.estadoFua = "VALORIZADO_CERRADO";
+      STATE.horaSustentoMedico = horaActual;
+      setDomValSim("fua_sis", fuaRecordado);
+      setDomValSim("codigo_seguro_input", fuaRecordado);
+
+      STATE.esNN = false;
+      STATE.identificador = nombre;
+      STATE.nombreReniec = nombre;
+      STATE.numDni = dni;
+      STATE.historiaClinica = hc;
+      STATE.estadoRegistrado = "Sí (HC Existente + FUA SIS Recordado)";
+      STATE.accionHc = `Historia Clínica ${hc} recuperada · FUA SIS recordado: ${fuaRecordado}`;
+      STATE.turno = turno;
+      STATE.horaLlegada = horaActual;
+      STATE.fechaNacimiento = masterExistente.fecha_nacimiento || "2003-08-15";
+      STATE.edad = masterExistente.edad || 22;
+      STATE.sexo = masterExistente.sexo || "M";
+      STATE.grupoSanguineo = masterExistente.grupo_sanguineo || "O+";
+      STATE.alergias = masterExistente.alergias || "Niega alergias medicamentosas conocidas";
+      STATE.alergiasConocidas = STATE.alergias;
+      STATE.tipoSeguro = `SIS Gratuito — MINSA (FUA N° ${fuaRecordado})`;
+      STATE.tipoOrigenEvento = "normal";
+      STATE.esAccidenteTransito = false;
+      STATE.soatVehiculoFuga = false;
+      STATE.exclusionEps = false;
+
+      STATE.motivoConsulta = "Cólico renal agudo derecho irradiado a fosa ilíaca e hipogastrio con puño percusión lumbar positiva y disuria (Prioridad III MINSA)";
+      STATE.spo2 = 96;
+      STATE.fc = 94;
+      STATE.pasSistolica = 132;
+      STATE.paDiastolica = 84;
+      STATE.fr = 19;
+      STATE.temperatura = 37.8;
+      STATE.glasgow = 15;
+      STATE.glucosa = 104;
+      STATE.eva = 6;
+      STATE.prioridad = "III";
+      STATE.colorPrioridad = "#eab308";
+      STATE.news2Score = 2;
+      STATE.qsofaScore = 0;
+      STATE.esiNivel = 3;
+
+      setDomValSim("ident_full", nombre);
+      setDomValSim("dni_mod1", dni);
+      setDomValSim("dni_reniec_input", dni);
+      setDomValSim("dni_mod4", dni);
+      setDomValSim("hora_full", horaActual);
+      setDomValSim("fecha_nac_full", STATE.fechaNacimiento);
+      setDomValSim("edad_full", String(STATE.edad));
+      setDomValSim("sexo_full", STATE.sexo);
+      setDomValSim("gsan_full", STATE.grupoSanguineo);
+      if (typeof sincronizarSelectsGsRh === "function") sincronizarSelectsGsRh(STATE.grupoSanguineo);
+      setDomValSim("alergias_full", STATE.alergias);
+      setDomValSim("alergias_mod1", STATE.alergias);
+      setDomValSim("motivo_full", STATE.motivoConsulta);
+      setDomValSim("spo2_full", "96");
+      setDomValSim("fc_full", "94");
+      setDomValSim("pas_full", "132");
+      setDomValSim("pad_full", "84");
+      setDomValSim("fr_full", "19");
+      setDomValSim("temp_full", "37.8");
+      setDomValSim("glasgow_full", "15");
+      setDomValSim("glucosa_full", "104");
+      setDomValSim("eva_full", "6");
+      setDomValSim("eva_range", "6");
+      if (typeof actualizarEVA === "function") actualizarEVA(6);
+      setDomValSim("enfermero_triaje_select", enfermeraFull);
+      setDomValSim("chk_consentimiento_datos", true, true);
+      setDomValSim("chk_evento_fuga", false, true);
+      setDomValSim("chk_exclusion_eps", false, true);
+
+      const badgeHc = document.getElementById("hc_badge_estado");
+      if (badgeHc) {
+        badgeHc.textContent = `🏛️ MINSA SIS Activo · FUA ${fuaRecordado}`;
+        badgeHc.className = "badge-estado badge-si";
+      }
+      const codeHc = document.getElementById("hc_code_display");
+      if (codeHc) codeHc.textContent = hc;
+      const accHc = document.getElementById("hc_accion_display");
+      if (accHc) accHc.textContent = STATE.accionHc;
+      const ticketEl = document.getElementById("ticket_display");
+      if (ticketEl) ticketEl.textContent = `🎫 Ticket MINSA: ${turno} (${horaActual}) · FUA SIS Recordado: ${fuaRecordado}`;
+
+      STATE.medicoTratante = medicoFull;
+      setDomValSim("medico_responsable_select", medicoFull);
+      STATE.cie10Codigo = "N23";
+      STATE.cie10Descripcion = "Cólico renal, no especificado (Litiasis Ureteral Derecha Prioridad III)";
+      STATE.cie10 = "N23 — Cólico renal, no especificado (Litiasis Ureteral Derecha Prioridad III)";
+      setDomValSim("cie10_input", STATE.cie10);
+      if (typeof actualizarCie10 === "function") actualizarCie10("N23 - Cólico renal, no especificado");
+      STATE.estadoFua = "VALORIZADO_CERRADO";
+      setDomValSim("sel_condicion_consentimiento", "consciente");
+      setDomValSim("sel_procedimiento_consentimiento", "hidratacion_parenteral");
+      setDomValSim("chk_consentimiento_firmado", true, true);
+      setDomValSim("firma_consentimiento", `${nombre} (DNI ${dni} · FUA ${fuaRecordado})`);
+
+      STATE.camaAsignadaId = null;
+      STATE.camaAsignada = "Tópico de Medicina / Observación MINSA (Alta con FUA Cerrado)";
+      setDomValSim("horas_observacion_input", "4");
+      if (typeof actualizarEstanciaObservacion === "function") actualizarEstanciaObservacion(4);
+      setDomValSim("balance_ingresos", "1000");
+      setDomValSim("balance_egresos", "950");
+      if (typeof calcularBalanceHidrico === "function") calcularBalanceHidrico();
+
+      STATE.items_factura = [];
+      STATE.kardexItems = [];
+      STATE.kardexAdministrados = [];
+      STATE.ordenesLaboratorio = [];
+      STATE.ordenesImagenes = [];
+
+      registrarFacturaItem(`Evaluación de Triaje Prioridad III MINSA (FUA ${fuaRecordado})`, 30.00, "Triaje");
+      registrarFacturaItem(`Atención Médica de Emergencia en Tópico MINSA (CIE-10 N23)`, 45.00, "Consulta");
+
+      const medsMinsaP3 = [
+        { nombre: "Metamizol Sódico 1g / 2ml Solución Inyectable (PNUME MINSA)", dosis: "1 g diluido en 100 ml NaCl 0.9%", via: "EV", frecuencia: "STAT en infusión lenta", cum: "PNUME-01420", costo: 18.00 },
+        { nombre: "Diclofenaco Sódico 75mg / 3ml Solución Inyectable", dosis: "75 mg intramuscular profunda", via: "IM", frecuencia: "STAT Dosis única", cum: "PNUME-00612", costo: 15.00 },
+        { nombre: "Hioscina Butilbromuro 20mg / ml Solución Inyectable", dosis: "20 mg EV lento", via: "EV", frecuencia: "c/8h (Antiespasmódico ureteral)", cum: "PNUME-00831", costo: 20.00 },
+        { nombre: "Cloruro de Sodio 0.9% x 1000 ml (Hidratación Parenteral)", dosis: "1000 ml a 30 gotas/min", via: "EV", frecuencia: "Continuo en Tópico", cum: "PNUME-00101", costo: 25.00 },
+        { nombre: "Tamsulosina 0.4mg Cápsula de Liberación Prolongada", dosis: "0.4 mg vía oral", via: "VO", frecuencia: "c/24h (Terapia expulsiva médica)", cum: "PNUME-02190", costo: 22.00 }
+      ];
+
+      medsMinsaP3.forEach((m, i) => {
+        STATE.kardexItems.push({
+          id: `MED-SIM2-${i + 1}`,
+          nombre: m.nombre,
+          dosis: m.dosis,
+          via: m.via,
+          frecuencia: m.frecuencia,
+          cum: m.cum,
+          costo: m.costo,
+          administrado: true
+        });
+        STATE.kardexAdministrados.push(m.nombre);
+        registrarFacturaItem(`${m.nombre} (${m.cum})`, m.costo, "Farmacia");
+      });
+
+      STATE.ordenesLaboratorio.push(
+        { id: "LAB-SIM2-1", nombre: "Examen Completo de Orina + Sedimento Urinario STAT", cpms: "81.00.01", costo: 25.00, prioridad: "Urgente (30 min)", estado: "Informado (Microhematuria ++)" },
+        { id: "LAB-SIM2-2", nombre: "Creatinina y Urea Sérica + Hemograma Completo", cpms: "84.05.01", costo: 45.00, prioridad: "Urgente (30 min)", estado: "Informado (Creatinina 0.9 mg/dL)" }
+      );
+      registrarFacturaItem("Examen Completo de Orina + Sedimento Urinario (CPMS 81.00.01)", 25.00, "Laboratorio");
+      registrarFacturaItem("Creatinina y Urea Sérica + Hemograma Completo (CPMS 84.05.01)", 45.00, "Laboratorio");
+
+      STATE.ordenesImagenes.push({
+        id: "IMG-SIM2-1",
+        nombre: "Ecografía Renal y de Vías Urinarias Bilateral",
+        cpms: "88.75.01",
+        costo: 90.00,
+        indicacion: "Descarte de litiasis ureteral e hidronefrosis (CIE-10 N23)",
+        estado: "Informado (Microlitiasis 4mm tercio distal)"
+      });
+      registrarFacturaItem("Ecografía Renal y de Vías Urinarias Bilateral (CPMS 88.75.01)", 90.00, "Procedimientos");
+
+      if (typeof renderizarTablaKardexEnfermeria === "function") renderizarTablaKardexEnfermeria();
+      if (typeof renderizarTablaOrdenesLaboratorio === "function") renderizarTablaOrdenesLaboratorio();
+      if (typeof renderizarTablaOrdenesImagenes === "function") renderizarTablaOrdenesImagenes();
+      if (typeof mostrarPrioridad === "function") {
+        mostrarPrioridad("III", {
+          tipo: "Prioridad III (Amarillo — Urgencia Mayor MINSA)",
+          desc: `Atención en IPRESS MINSA cubierta 100% por SIS · FUA N° ${fuaRecordado}`,
+          destino: "Tópico de Emergencia MINSA"
+        });
+      }
+
+      STATE.coberturaValidada = true;
+      STATE.modalidadEgreso = "alta";
+      if (typeof seleccionarModalidadEgreso === "function") seleccionarModalidadEgreso("alta");
+      STATE.altaClinicaConcluida = true;
+      STATE.atencionCerrada = true;
+      STATE.estadoFlujo = "CERRADO_FACTURADO";
+      STATE.firmas = {
+        triaje: { usuario: enfermeraFull, rol: "TRIAJE", accion: "Triaje MINSA P-III Sellado", fecha: fechaIso },
+        admision: { usuario: "Srta. Sofía Quispe Méndez (Reg. SUSALUD 08412)", rol: "ADMISION", accion: `Acreditación SIS Activa y Apertura de FUA N° ${fuaRecordado}`, fecha: fechaIso },
+        medico: { usuario: medicoFull, rol: "MEDICO", accion: `Sustento Médico CIE-10 N23, Kardex Administrado y Alta en FUA ${fuaRecordado}`, fecha: fechaIso },
+        caja: { usuario: "Sr. Luis Paredes Chumpitaz (Matrícula Fin. FACT-882)", rol: "CAJA", accion: `FUA N° ${fuaRecordado} Valorizado y Cerrado (Cobertura 100% SIS · Pago S/ 0.00)`, fecha: fechaIso }
+      };
+
+      const px2 = crearRegistroPaciente({
+        identificador: nombre,
+        nombre: nombre,
+        dni: dni,
+        edad: STATE.edad,
+        sexo: STATE.sexo,
+        horaLlegada: horaActual,
+        modalidad: "A pie (MINSA - SIS)",
+        prioridad: "III",
+        motivo: STATE.motivoConsulta,
+        estadoAtencion: "Alta",
+        camaId: null,
+        camaNombre: "Tópico de Emergencia MINSA (Alta)",
+        medico: medicoFull,
+        esNN: false,
+        estadoFlujo: "CERRADO_FACTURADO",
+        coberturaValidada: true,
+        firmas: STATE.firmas
+      });
+      px2.historiaClinica = hc;
+      px2.tipoSeguro = STATE.tipoSeguro;
+      px2.nroFua = fuaRecordado;
+      px2.estadoFua = "VALORIZADO_CERRADO";
+      px2.cie10 = STATE.cie10;
+      px2.cie10Codigo = STATE.cie10Codigo;
+      px2.cie10Descripcion = STATE.cie10Descripcion;
+      px2.altaClinicaConcluida = true;
+      px2.kardexItems = JSON.parse(JSON.stringify(STATE.kardexItems));
+      px2.kardexAdministrados = JSON.parse(JSON.stringify(STATE.kardexAdministrados));
+
+      if (!Array.isArray(window.PACIENTES_COLA)) window.PACIENTES_COLA = [];
+      window.PACIENTES_COLA = window.PACIENTES_COLA.filter(x => x.dni !== dni || x.turno !== turno);
+      window.PACIENTES_COLA.push(px2);
+      pacienteActivoId = px2.id;
+      window.pacienteActivoId = px2.id;
+
+      if (typeof renderizarUIEntornoYPadron === "function") renderizarUIEntornoYPadron();
+      if (typeof actualizarIndicadoresFuaEssi === "function") actualizarIndicadoresFuaEssi();
+      if (typeof actualizarFactura === "function") actualizarFactura();
+      if (typeof sincronizarDatosPacienteEnTodosLosModulos === "function") {
+        sincronizarDatosPacienteEnTodosLosModulos({ esNN: false, dni: dni, nombre: nombre, hc: hc, sexo: STATE.sexo });
+      }
+
+      const liq2 = typeof calcularLiquidacionSeguro === "function" ? calcularLiquidacionSeguro() : { totalBruto: 335.00, totalPaciente: 0.00 };
+      const masterUpd2 = asegurarHistoriaExistente44418504();
+      masterUpd2.tipo_seguro = STATE.tipoSeguro;
+      masterUpd2.medico_responsable = medicoFull;
+      masterUpd2.enfermera_responsable = enfermeraFull;
+      masterUpd2.diagnostico_cie10 = STATE.cie10;
+      masterUpd2.episodios = masterUpd2.episodios.filter(e => e.folio !== fuaRecordado);
+      masterUpd2.episodios.unshift({
+        folio: fuaRecordado,
+        fecha: fechaLegible,
+        hora: horaActual,
+        fecha_hora: fechaIso,
+        identificador: dni,
+        historia_clinica: hc,
+        nombre_completo: nombre,
+        prioridad: "Prioridad III (Urgencia Mayor — MINSA SIS)",
+        color_prioridad: "#eab308",
+        motivo_consulta: `${STATE.motivoConsulta} [FUA SIS: ${fuaRecordado}]`,
+        motivo: STATE.motivoConsulta,
+        signos_vitales: { spo2: 96, fc: 94, pas: 132, pad: 84, pa: "132/84 mmHg", fr: 19, temp: 37.8, dolor: 6 },
+        cama_asignada: "Tópico de Emergencia MINSA",
+        cama: "Tópico de Emergencia MINSA",
+        destino_clinico: "Alta Médica con FUA SIS Valorizado",
+        cie10_codigo: STATE.cie10Codigo,
+        cie10_descripcion: STATE.cie10Descripcion,
+        diagnostico: STATE.cie10,
+        examenes_realizados: [
+          ...STATE.ordenesLaboratorio.map(l => ({ descripcion: l.nombre, resultado: l.estado })),
+          ...STATE.ordenesImagenes.map(im => ({ descripcion: im.nombre, resultado: im.estado }))
+        ],
+        medicamentos_despachados: STATE.kardexItems.map(k => ({ descripcion: `${k.nombre} (${k.dosis} · ${k.via})` })),
+        liquidacion: liq2,
+        total_facturado: 0.00,
+        cobertura_info: `100% Cubierto por SIS vía FUA N° ${fuaRecordado} (Bruto S/. ${liq2.totalBruto.toFixed(2)} -> Paciente S/. 0.00)`,
+        estado_salida: `Alta Médica Concluida · FUA ${fuaRecordado}`,
+        firmante: medicoFull
+      });
+      const mMap2 = cargarPacientesMaster();
+      mMap2[normalizarClavePaciente(dni)] = masterUpd2;
+      mMap2[normalizarClavePaciente(hc)] = masterUpd2;
+      guardarPacientesMaster(mMap2);
+
+      guardarEstadoPacienteActivo();
+      if (typeof sincronizarFacturacionYExportar === "function") sincronizarFacturacionYExportar(true);
+      if (typeof registrarLogAuditoria === "function") {
+        registrarLogAuditoria("Simulación Opción 2", "FLUJO_MINSA_P3_FUA_44418504", `Paciente ${nombre} (DNI ${dni}, ${hc}) atendido en MINSA P-III con FUA recordado ${fuaRecordado}, Kardex completo y cobertura 100% SIS`);
+      }
+      if (typeof renderizarTableroColaPacientes === "function") renderizarTableroColaPacientes();
+      if (typeof renderizarBandejaPosta === "function") renderizarBandejaPosta();
+      if (window.COCKPIT) {
+        if (typeof window.COCKPIT.refrescarValoresMonitor === "function") window.COCKPIT.refrescarValoresMonitor();
+        if (typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") window.COCKPIT.actualizarTarjetaResumenTriaje();
+        if (typeof window.COCKPIT.actualizarTarjetaResumenCaja === "function") window.COCKPIT.actualizarTarjetaResumenCaja();
+        if (typeof window.COCKPIT.actualizarContextoCockpit === "function") window.COCKPIT.actualizarContextoCockpit();
+        if (typeof window.COCKPIT.irAFase === "function") window.COCKPIT.irAFase(4);
+      }
+      return;
+    }
+
+    // =========================================================================
+    // OPCIÓN 3: PACIENTE DNI 48904649 (CONSULTA RENIEC REAL: ROBERT FRANCIS PREVOST)
+    // Trauma Shock (P-I) en Privada con EPS Plan Base -> SOP -> UCI -> URPA -> Alta -> Facturación
+    // =========================================================================
+    if (opcion === 3) {
+      const dni = "48904649";
+      const hc = "HC-2026-4649";
+      const turno = "T-SHOCK-4649";
+      const medicoFull = "Dr. Carlos Alberto Vega Morales (Emergenciólogo · CMP 58321 · RNE 24110)";
+      const cirujanoUci = "Dr. Juan Manuel Paredes Soto (Cirugía Trauma / UCI · CMP 51892 · RNE 27415)";
+      const enfermeraFull = "Lic. Enf. María Elena Quispe (CEP 64210)";
+
+      // Ejecutar la consulta RENIEC real implementada en el sistema para el DNI 48904649
+      setDomValSim("ident_full", dni);
+      setDomValSim("dni_mod1", dni);
+      setDomValSim("dni_reniec_input", dni);
+      setDomValSim("dni_mod4", dni);
+      STATE.numDni = dni;
+      STATE.historiaClinica = hc;
+      if (typeof consultarReniec === "function") {
+        await consultarReniec();
+      }
+      const nombre = (STATE.nombreReniec && !String(STATE.nombreReniec).includes("Paciente"))
+        ? String(STATE.nombreReniec).trim()
+        : "ROBERT FRANCIS PREVOST";
+
+      STATE.forzarLiquidacionPlanEps = true;
+      STATE.rutaIntrahospitalariaTexto = "1° Shock Trauma (ST-01) → 2° Quirófano (SOP-01) → 3° UCI (UCI-01) → 4° Recuperación (URPA-01) → 5° Alta Médica";
+      STATE.rutaIntrahospitalaria = [
+        { etapa: 1, unidad: "ST-01", nombre: "Cama ST-01 (Shock Trauma Reanimación 1)", accion: "Reanimación hemodinámica inicial, intubación y control de hemorragia", costo: 350.00 },
+        { etapa: 2, unidad: "SOP-01", nombre: "Quirófano 1 (SOP 1 - Trauma Shock / Cirugía Crítica)", accion: "Laparotomía exploratoria de control de daños y hemostasia quirúrgica", costo: 400.00 },
+        { etapa: 3, unidad: "UCI-01", nombre: "Cama UCI-01 (Cuidados Intensivos Adultos - Ventilador)", accion: "Soporte ventilatorio mecánico, monitoreo invasivo y destete vasopresor", costo: 500.00 },
+        { etapa: 4, unidad: "URPA-01", nombre: "Cama URPA-01 (Recuperación Post-Anestésica)", accion: "Estabilización post-extubación y recuperación post-quirúrgica (Aldrete 10/10)", costo: 120.00 },
+        { etapa: 5, unidad: "ALTA", nombre: "Alta Médica Definitiva", accion: "Paciente estabilizado, alta clínica firmada y cama liberada", costo: 0.00 }
+      ];
+
+      if (window.COCKPIT && typeof window.COCKPIT.seleccionarSector === "function") {
+        window.COCKPIT.seleccionarSector("privado");
+      } else if (typeof cambiarEntornoOperativo === "function") {
+        cambiarEntornoOperativo("privado");
+      }
+      STATE.entornoOperativo = "privado";
+      STATE.planPrivado = "base_80_20";
+      setDomValSim("select_plan_privado", "base_80_20");
+
+      const padronEps3 = {
+        dni: dni,
+        tipo_aseguramiento: "EPS_Y_ESSALUD",
+        condicion_evento: "NORMAL",
+        origen_registro: "BD_HISTORICA",
+        publico: {
+          tiene_seguro: true,
+          entidad: "EsSalud",
+          regimen: "EsSalud Regular",
+          estado: "ACTIVO",
+          codigo: "ESS-2026-4649"
+        },
+        privado: {
+          tiene_seguro: true,
+          iafas_eps: "Pacífico EPS",
+          plan_salud: "Plan Base 80/20 (Copago Fijo S/ 80.00 + Coaseguro 20% · 80% Cubierto por EPS)",
+          estado_poliza: "ACTIVA",
+          siteds_codigo: "SITEDS-2026-4649-BASE",
+          copago_fijo: 80.00,
+          coaseguro_pct: 0.20,
+          exclusiones: []
+        }
+      };
+      STATE.padronSusalud = padronEps3;
+      STATE.padronSalud = padronEps3;
+      try {
+        localStorage.setItem("padron_susalud_" + dni, JSON.stringify(padronEps3));
+      } catch (e) {}
+
+      STATE.esNN = false;
+      STATE.ingresoDirectoCritico = true;
+      STATE.identificador = nombre;
+      STATE.nombreReniec = nombre;
+      STATE.numDni = dni;
+      STATE.historiaClinica = hc;
+      STATE.estadoRegistrado = "Sí (Trauma Shock P-I · EPS Plan Base 80/20)";
+      STATE.accionHc = `Ruta Crítica Completada: Shock Trauma (ST-01) → Quirófano (SOP-01) → UCI (UCI-01) → Recuperación (URPA-01) → Alta`;
+      STATE.turno = turno;
+      STATE.horaLlegada = horaActual;
+      STATE.fechaNacimiento = "1955-09-14";
+      STATE.edad = 71;
+      STATE.sexo = "M";
+      STATE.grupoSanguineo = "O+";
+      STATE.alergias = "Niega alergias medicamentosas conocidas";
+      STATE.alergiasConocidas = STATE.alergias;
+      STATE.tipoSeguro = "Pacífico EPS — Plan Base (80% Cobertura EPS / 20% Coaseguro + Copago S/. 80.00)";
+      STATE.tipoOrigenEvento = "normal";
+      STATE.esAccidenteTransito = false;
+      STATE.soatVehiculoFuga = false;
+      STATE.exclusionEps = false;
+
+      STATE.motivoConsulta = "Trauma Shock Severo: Politraumatismo toraco-abdominal cerrado con inestabilidad hemodinámica aguda (PAS 75/45 mmHg, FC 138 lpm, SpO2 84%, Glasgow 8/15). Ingreso directo a Shock Trauma → Quirófano SOP → UCI → Recuperación → Alta";
+      STATE.spo2 = 84;
+      STATE.fc = 138;
+      STATE.pasSistolica = 75;
+      STATE.paDiastolica = 45;
+      STATE.fr = 30;
+      STATE.temperatura = 35.8;
+      STATE.glasgow = 8;
+      STATE.glucosa = 118;
+      STATE.eva = 9;
+      STATE.prioridad = "I";
+      STATE.colorPrioridad = "#dc2626";
+      STATE.news2Score = 11;
+      STATE.qsofaScore = 2;
+      STATE.esiNivel = 1;
+
+      setDomValSim("ident_full", nombre);
+      setDomValSim("dni_mod1", dni);
+      setDomValSim("dni_reniec_input", dni);
+      setDomValSim("dni_mod4", dni);
+      setDomValSim("hora_full", horaActual);
+      setDomValSim("fecha_nac_full", STATE.fechaNacimiento);
+      setDomValSim("edad_full", String(STATE.edad));
+      setDomValSim("sexo_full", "M");
+      setDomValSim("gsan_full", "O+");
+      if (typeof sincronizarSelectsGsRh === "function") sincronizarSelectsGsRh("O+");
+      setDomValSim("alergias_full", STATE.alergias);
+      setDomValSim("alergias_mod1", STATE.alergias);
+      setDomValSim("motivo_full", STATE.motivoConsulta);
+      setDomValSim("spo2_full", "84");
+      setDomValSim("fc_full", "138");
+      setDomValSim("pas_full", "75");
+      setDomValSim("pad_full", "45");
+      setDomValSim("fr_full", "30");
+      setDomValSim("temp_full", "35.8");
+      setDomValSim("glasgow_full", "8");
+      setDomValSim("glucosa_full", "118");
+      setDomValSim("eva_full", "9");
+      setDomValSim("eva_range", "9");
+      if (typeof actualizarEVA === "function") actualizarEVA(9);
+      setDomValSim("mts_disc_vital", true, true);
+      setDomValSim("mts_disc_hemorragia", true, true);
+      setDomValSim("mts_disc_conciencia", true, true);
+      setDomValSim("alerta_trauma_mayor", true, true);
+      setDomValSim("enfermero_triaje_select", enfermeraFull);
+      setDomValSim("chk_consentimiento_datos", true, true);
+      setDomValSim("chk_evento_fuga", false, true);
+      setDomValSim("chk_exclusion_eps", false, true);
+
+      const badgeHc = document.getElementById("hc_badge_estado");
+      if (badgeHc) {
+        badgeHc.textContent = `🚨 TRAUMA SHOCK P-I · Ruta: ST-01 → SOP-01 → UCI-01 → URPA-01 → Alta`;
+        badgeHc.className = "badge-estado badge-danger";
+      }
+      const codeHc = document.getElementById("hc_code_display");
+      if (codeHc) codeHc.textContent = hc;
+      const accHc = document.getElementById("hc_accion_display");
+      if (accHc) accHc.textContent = STATE.accionHc;
+      const ticketEl = document.getElementById("ticket_display");
+      if (ticketEl) ticketEl.textContent = `🎫 Ticket Trauma Shock: ${turno} (${horaActual}) · Ruta: Quirófano → UCI → Recuperación → Alta`;
+
+      STATE.medicoTratante = medicoFull;
+      setDomValSim("medico_responsable_select", medicoFull);
+      STATE.cie10Codigo = "T07";
+      STATE.cie10Descripcion = "Traumatismos múltiples, no especificados (Trauma Shock Hemorrágico / Hemoperitoneo Traumático)";
+      STATE.cie10 = "T07 — Traumatismos múltiples, no especificados (Trauma Shock Hemorrágico / Hemoperitoneo Traumático)";
+      setDomValSim("cie10_input", STATE.cie10);
+      if (typeof actualizarCie10 === "function") actualizarCie10("T07 - Traumatismos múltiples, no especificados");
+      setDomValSim("sel_condicion_consentimiento", "inconsciente_vital");
+      setDomValSim("sel_procedimiento_consentimiento", "cirugia_emergencia");
+      setDomValSim("chk_consentimiento_firmado", true, true);
+      setDomValSim("firma_consentimiento", `Exonerado en ingreso por Riesgo Vital Ley N° 27604 / Ratificado al Alta por ${nombre}`);
+
+      STATE.items_factura = [];
+      STATE.kardexItems = [];
+      STATE.kardexAdministrados = [];
+      STATE.ordenesLaboratorio = [];
+      STATE.ordenesImagenes = [];
+
+      registrarFacturaItem("Triaje Crítico y Recepción en Unidad de Shock Trauma (Prioridad I)", 120.00, "Triaje");
+      registrarFacturaItem("Reanimación Hemodinámica Avanzada y Manejo en Cama Shock Trauma (ST-01)", 350.00, "Procedimientos");
+
+      const medsTraumaShock = [
+        { nombre: "Cloruro de Sodio 0.9% x 1000 ml (Reanimación Volémica STAT)", dosis: "2000 ml EV a chorro por 2 vías periféricas #14G", via: "EV", frecuencia: "STAT en Shock Trauma", cum: "CUM-TS-001", costo: 50.00 },
+        { nombre: "Ácido Tranexámico 1g / 10ml Solución Inyectable (Antifibrinolítico)", dosis: "1 g EV en 10 min + 1 g en 8 horas (Protocolo CRASH-2)", via: "EV", frecuencia: "STAT + Infusión", cum: "CUM-TS-002", costo: 85.00 },
+        { nombre: "Fentanilo Citrato 0.5mg / 10ml Ampolla (Sedoanalgesia Mayor)", dosis: "150 mcg EV bolo + infusión continua en SOP/UCI", via: "EV", frecuencia: "STAT / Bomba Infusión", cum: "CUM-TS-003", costo: 95.00 },
+        { nombre: "Norepinefrina 4mg / 4ml Solución Inyectable (Soporte Vasopresor)", dosis: "0.15 mcg/kg/min por Catéter Venoso Central", via: "EV", frecuencia: "Bomba Infusión Continua UCI", cum: "CUM-TS-004", costo: 110.00 },
+        { nombre: "Ceftriaxona 2g Polvo Liofilizado para Inyección (Profilaxis Quirúrgica)", dosis: "2 g EV diluido en 100 ml NaCl 0.9%", via: "EV", frecuencia: "Pre-Quirófano SOP + c/24h", cum: "CUM-TS-005", costo: 75.00 },
+        { nombre: "Omeprazol 40mg Polvo Liofilizado EV + Ketoprofeno 100mg EV (Post-Op URPA)", dosis: "40 mg EV c/24h + 100 mg EV c/12h", via: "EV", frecuencia: "En UCI y Recuperación URPA", cum: "CUM-TS-006", costo: 65.00 }
+      ];
+
+      medsTraumaShock.forEach((m, i) => {
+        STATE.kardexItems.push({
+          id: `MED-SIM3-${i + 1}`,
+          nombre: m.nombre,
+          dosis: m.dosis,
+          via: m.via,
+          frecuencia: m.frecuencia,
+          cum: m.cum,
+          costo: m.costo,
+          administrado: true
+        });
+        STATE.kardexAdministrados.push(m.nombre);
+        registrarFacturaItem(`${m.nombre} (${m.cum})`, m.costo, "Farmacia");
+      });
+
+      const imagenesTraumaShock = [
+        { nombre: "Ecografía FAST de Emergencia (Focused Assessment with Sonography for Trauma)", cpms: "88.76.01", costo: 180.00, indicacion: "Detección de líquido libre intraabdominal en Shock Trauma", estado: "Informado: Líquido libre en Morrison -> Pase a SOP" },
+        { nombre: "Tomografía Espiral Multicorte (TEM) Cerebral y Columna Cervical STAT", cpms: "87.03.01", costo: 380.00, indicacion: "Descarte de lesión intracraneal aguda y fractura cervical (Glasgow 8)", estado: "Informado: Sin hematoma quirúrgico intracraneal" },
+        { nombre: "TEM Toraco-Abdomino-Pélvica con Contraste Endovenoso Trifásico STAT", cpms: "87.41.02", costo: 520.00, indicacion: "Evaluación de sangrado activo esplénico/hepático post-reanimación", estado: "Informado: Laceración esplénica Grado III con hemoperitoneo" },
+        { nombre: "Radiografía Digital Portátil de Tórax AP y Pelvis en Shock Trauma / UCI", cpms: "87.44.01", costo: 140.00, indicacion: "Control de tubo endotraqueal, CVC y parrilla costal", estado: "Informado: Campos pulmonares expandidos, CVC normoposicionado" }
+      ];
+
+      imagenesTraumaShock.forEach((im, i) => {
+        STATE.ordenesImagenes.push({
+          id: `IMG-SIM3-${i + 1}`,
+          nombre: im.nombre,
+          cpms: im.cpms,
+          costo: im.costo,
+          indicacion: im.indicacion,
+          estado: im.estado
+        });
+        registrarFacturaItem(`${im.nombre} (CPMS ${im.cpms})`, im.costo, "Procedimientos");
+      });
+
+      const laboratoriosTraumaShock = [
+        { nombre: "AGA y Electrolitos Arteriales + Lactato Sérico STAT (Control Shock)", cpms: "84.13.02", costo: 95.00, prioridad: "Urgente (15 min)", estado: "Validado: pH 7.28 -> Normalizado a 7.39 en UCI" },
+        { nombre: "Hemograma Completo Automatizado + Recuento Plaquetario Seriado STAT", cpms: "85.01.01", costo: 45.00, prioridad: "Urgente (15 min)", estado: "Validado: Hb ingreso 8.9 g/dL -> Post-transfusión 11.4 g/dL" },
+        { nombre: "Grupo Sanguíneo ABO/Rh y Pruebas Cruzadas (2 Unidades Paquete Globular)", cpms: "86.02.01", costo: 160.00, prioridad: "Urgente (15 min)", estado: "Validado: Grupo O Rh(+) · 2 PG compatibles transfundidos" },
+        { nombre: "Perfil de Coagulación Completo (TP, INR, TTPa, Fibrinógeno) STAT", cpms: "85.02.05", costo: 85.00, prioridad: "Urgente (30 min)", estado: "Validado: INR 1.12 · Fibrinógeno 290 mg/dL" },
+        { nombre: "Perfil Bioquímico Renal, Hepático y Troponina I (Creatinina, Urea, TGO, TGP)", cpms: "84.05.01", costo: 90.00, prioridad: "Urgente (30 min)", estado: "Validado: Función renal y hepática preservadas al alta" }
+      ];
+
+      laboratoriosTraumaShock.forEach((lb, i) => {
+        STATE.ordenesLaboratorio.push({
+          id: `LAB-SIM3-${i + 1}`,
+          nombre: lb.nombre,
+          cpms: lb.cpms,
+          costo: lb.costo,
+          prioridad: lb.prioridad,
+          estado: lb.estado
+        });
+        registrarFacturaItem(`${lb.nombre} (CPMS ${lb.cpms})`, lb.costo, "Laboratorio");
+      });
+
+      if (typeof asignarPacienteActualARecurso === "function") {
+        asignarPacienteActualARecurso("SOP-01", 2, "Laparotomía Exploratoria de Control de Daños / Esplenorrafia Hemostática", true);
+        registrarLogAuditoria("Módulo 6 — Quirófano", "PASE_A_QUIROFANO_SOP01", `Paciente ${nombre} (DNI ${dni}) ingresó a Quirófano SOP-01 desde Trauma Shock ST-01`);
+
+        asignarPacienteActualARecurso("UCI-01", 24, "Soporte Ventilatorio Mecánico y Monitoreo Hemodinámico Invasivo Post-Quirúrgico", true);
+        registrarLogAuditoria("Módulo 6 — UCI", "PASE_A_UCI01", `Paciente ${nombre} (DNI ${dni}) pasó de Quirófano SOP-01 a Unidad de Cuidados Intensivos UCI-01`);
+
+        asignarPacienteActualARecurso("URPA-01", 3, "Recuperación Post-Anestésica y Estabilización Integral Pre-Alta (Aldrete 10/10)", true);
+        registrarLogAuditoria("Módulo 6 — Recuperación", "PASE_A_RECUPERACION_URPA01", `Paciente ${nombre} (DNI ${dni}) pasó de UCI-01 a Sala de Recuperación URPA-01`);
+      }
+
+      if (typeof liberarCamaTotalPaciente === "function") {
+        liberarCamaTotalPaciente(pacienteActivoId, "Alta Médica Definitiva tras completar circuito: Shock Trauma (ST-01) → Quirófano (SOP-01) → UCI (UCI-01) → Recuperación (URPA-01)");
+      }
+      STATE.camaAsignadaId = null;
+      STATE.camaAsignada = "Alta Médica (Circuito: ST-01 → SOP-01 → UCI-01 → URPA-01 → Alta)";
+      registrarLogAuditoria("Módulo 7 — Alta", "ALTA_MEDICA_POST_RECUPERACION", `Alta Médica otorgada a ${nombre} (DNI ${dni}) tras completar Shock Trauma -> Quirófano -> UCI -> Recuperación`);
+
+      setDomValSim("horas_observacion_input", "29");
+      if (typeof actualizarEstanciaObservacion === "function") actualizarEstanciaObservacion(12);
+      setDomValSim("balance_ingresos", "3500");
+      setDomValSim("balance_egresos", "3350");
+      if (typeof calcularBalanceHidrico === "function") calcularBalanceHidrico();
+      if (typeof actualizarPrioridadUCI === "function") actualizarPrioridadUCI(1);
+
+      if (typeof renderizarTablaKardexEnfermeria === "function") renderizarTablaKardexEnfermeria();
+      if (typeof renderizarTablaOrdenesLaboratorio === "function") renderizarTablaOrdenesLaboratorio();
+      if (typeof renderizarTablaOrdenesImagenes === "function") renderizarTablaOrdenesImagenes();
+      if (typeof mostrarPrioridad === "function") {
+        mostrarPrioridad("I", {
+          tipo: "Prioridad I (Rojo — Trauma Shock Crítico)",
+          desc: "Ruta Completa: Trauma Shock (ST-01) → Quirófano (SOP-01) → UCI (UCI-01) → Recuperación (URPA-01) → Alta Médica",
+          destino: "Alta Médica · Liquidación EPS Plan Base (80/20)"
+        });
+      }
+
+      // Asegurar liberación total de todas las camas tras el Alta Médica final
+      if (typeof RECURSOS_HOSPITALARIOS !== "undefined") {
+        for (const idRec in RECURSOS_HOSPITALARIOS) {
+          const r = RECURSOS_HOSPITALARIOS[idRec];
+          if (r && r.estado === "ocupada") {
+            r.estado = "disponible";
+            r.paciente = null;
+            r.inicioMs = null;
+            r.finMs = null;
+            r.horasAmpliadas = 0;
+            r.tiempoFormateado = "--:--:--";
+            r.progresoPct = 0;
+          }
+        }
+      }
+      if (typeof liberarCamaTotalPaciente === "function") {
+        liberarCamaTotalPaciente(pacienteActivoId, "Alta Médica Definitiva tras completar circuito: Shock Trauma (ST-01) → Quirófano (SOP-01) → UCI (UCI-01) → Recuperación (URPA-01)");
+      }
+      STATE.camaAsignadaId = null;
+      STATE.camaAsignada = "Alta Médica (Circuito: ST-01 → SOP-01 → UCI-01 → URPA-01 → Alta)";
+
+      STATE.coberturaValidada = true;
+      STATE.modalidadEgreso = "alta";
+      if (typeof seleccionarModalidadEgreso === "function") seleccionarModalidadEgreso("alta");
+      STATE.altaClinicaConcluida = true;
+      STATE.atencionCerrada = true;
+      STATE.estadoFlujo = "CERRADO_FACTURADO";
+      STATE.firmas = {
+        triaje: { usuario: enfermeraFull, rol: "TRIAJE", accion: "Recepción en Shock Trauma P-I (ST-01) y Activación de Código Trauma", fecha: fechaIso },
+        admision: { usuario: "Srta. Sofía Quispe Méndez (Reg. SUSALUD 08412)", rol: "ADMISION", accion: "Acreditación SITEDS Pacífico EPS — Plan Base (Copago S/ 80 + Coaseguro 20%)", fecha: fechaIso },
+        medico: { usuario: `${medicoFull} & ${cirujanoUci}`, rol: "MEDICO", accion: "Acto Quirúrgico en SOP-01, Manejo en UCI-01, Recuperación en URPA-01 y Alta Médica Firmada", fecha: fechaIso },
+        caja: { usuario: "Sr. Luis Paredes Chumpitaz (Matrícula Fin. FACT-882)", rol: "CAJA", accion: "Liquidación Emitida según Plan Base EPS (80% Cubierto por EPS / 20% Coaseguro + Copago Fijo S/ 80)", fecha: fechaIso }
+      };
+
+      const px3 = crearRegistroPaciente({
+        identificador: nombre,
+        nombre: nombre,
+        dni: dni,
+        edad: STATE.edad,
+        sexo: STATE.sexo,
+        horaLlegada: horaActual,
+        modalidad: "Ambulancia SAMU (Trauma Shock P-I)",
+        prioridad: "I",
+        motivo: STATE.motivoConsulta,
+        estadoAtencion: "Alta",
+        camaId: null,
+        camaNombre: "ST-01 → SOP-01 → UCI-01 → URPA-01 → Alta Médica",
+        medico: medicoFull,
+        esNN: false,
+        estadoFlujo: "CERRADO_FACTURADO",
+        coberturaValidada: true,
+        firmas: STATE.firmas
+      });
+      px3.historiaClinica = hc;
+      px3.tipoSeguro = STATE.tipoSeguro;
+      px3.cie10 = STATE.cie10;
+      px3.cie10Codigo = STATE.cie10Codigo;
+      px3.cie10Descripcion = STATE.cie10Descripcion;
+      px3.altaClinicaConcluida = true;
+      px3.kardexItems = JSON.parse(JSON.stringify(STATE.kardexItems));
+      px3.kardexAdministrados = JSON.parse(JSON.stringify(STATE.kardexAdministrados));
+
+      if (!Array.isArray(window.PACIENTES_COLA)) window.PACIENTES_COLA = [];
+      window.PACIENTES_COLA = window.PACIENTES_COLA.filter(x => x.dni !== dni);
+      window.PACIENTES_COLA.push(px3);
+      pacienteActivoId = px3.id;
+      window.pacienteActivoId = px3.id;
+
+      if (typeof renderizarUIEntornoYPadron === "function") renderizarUIEntornoYPadron();
+      if (typeof actualizarFactura === "function") actualizarFactura();
+      if (typeof sincronizarDatosPacienteEnTodosLosModulos === "function") {
+        sincronizarDatosPacienteEnTodosLosModulos({ esNN: false, dni: dni, nombre: nombre, hc: hc, sexo: STATE.sexo });
+      }
+
+      const liq3 = typeof calcularLiquidacionSeguro === "function" ? calcularLiquidacionSeguro() : { totalBruto: 3465.00, coberturaSeguro: 2692.00, totalPaciente: 773.00 };
+      const master3 = obtenerOInicializarPacienteMaster(dni, hc, nombre, STATE.tipoSeguro);
+      master3.identificador = dni;
+      master3.dni = dni;
+      master3.historia_clinica = hc;
+      master3.nombre_completo = nombre;
+      master3.fecha_nacimiento = STATE.fechaNacimiento;
+      master3.edad = STATE.edad;
+      master3.sexo = STATE.sexo;
+      master3.grupo_sanguineo = STATE.grupoSanguineo;
+      master3.tipo_seguro = STATE.tipoSeguro;
+      master3.alergias = STATE.alergias;
+      master3.medico_responsable = `${medicoFull} / ${cirujanoUci}`;
+      master3.enfermera_responsable = enfermeraFull;
+      master3.diagnostico_cie10 = STATE.cie10;
+      if (!Array.isArray(master3.episodios)) master3.episodios = [];
+      master3.episodios = master3.episodios.filter(e => e.folio !== "FOL-2026-TS-4649");
+      master3.episodios.unshift({
+        folio: "FOL-2026-TS-4649",
+        fecha: fechaLegible,
+        hora: horaActual,
+        fecha_hora: fechaIso,
+        identificador: dni,
+        historia_clinica: hc,
+        nombre_completo: nombre,
+        prioridad: "Prioridad I (Trauma Shock — Privada EPS Plan Base)",
+        color_prioridad: "#dc2626",
+        motivo_consulta: STATE.motivoConsulta,
+        motivo: STATE.motivoConsulta,
+        signos_vitales: { spo2: 84, fc: 138, pas: 75, pad: 45, pa: "75/45 mmHg", fr: 30, temp: 35.8, dolor: 9 },
+        cama_asignada: "Shock Trauma (ST-01) → Quirófano (SOP-01) → UCI (UCI-01) → Recuperación (URPA-01) → Alta Médica",
+        cama: "ST-01 → SOP-01 → UCI-01 → URPA-01 → Alta",
+        destino_clinico: "Alta Médica tras Quirófano, UCI y Recuperación",
+        cie10_codigo: STATE.cie10Codigo,
+        cie10_descripcion: STATE.cie10Descripcion,
+        diagnostico: STATE.cie10,
+        examenes_realizados: [
+          ...STATE.ordenesImagenes.map(im => ({ descripcion: `🩻 ${im.nombre}`, resultado: im.estado })),
+          ...STATE.ordenesLaboratorio.map(lb => ({ descripcion: `🧪 ${lb.nombre}`, resultado: lb.estado }))
+        ],
+        medicamentos_despachados: STATE.kardexItems.map(k => ({ descripcion: `${k.nombre} (${k.dosis} · ${k.via})` })),
+        liquidacion: liq3,
+        total_facturado: liq3.totalPaciente,
+        cobertura_info: `Plan Base EPS 80/20: Bruto S/. ${liq3.totalBruto.toFixed(2)} | Cubre EPS (80%): -S/. ${liq3.coberturaSeguro.toFixed(2)} | Paga Paciente (Copago S/ 80 + 20%): S/. ${liq3.totalPaciente.toFixed(2)}`,
+        estado_salida: "Alta Médica Definitiva · Facturado según Plan Base EPS",
+        firmante: `${medicoFull} & ${cirujanoUci}`
+      });
+      const mMap3 = cargarPacientesMaster();
+      mMap3[normalizarClavePaciente(dni)] = master3;
+      mMap3[normalizarClavePaciente(hc)] = master3;
+      guardarPacientesMaster(mMap3);
+
+      guardarEstadoPacienteActivo();
+      if (typeof sincronizarFacturacionYExportar === "function") sincronizarFacturacionYExportar(true);
+      if (typeof renderizarTableroColaPacientes === "function") renderizarTableroColaPacientes();
+      if (typeof renderizarBandejaPosta === "function") renderizarBandejaPosta();
+      if (window.COCKPIT) {
+        if (typeof window.COCKPIT.refrescarValoresMonitor === "function") window.COCKPIT.refrescarValoresMonitor();
+        if (typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") window.COCKPIT.actualizarTarjetaResumenTriaje();
+        if (typeof window.COCKPIT.actualizarTarjetaResumenCaja === "function") window.COCKPIT.actualizarTarjetaResumenCaja();
+        if (typeof window.COCKPIT.actualizarContextoCockpit === "function") window.COCKPIT.actualizarContextoCockpit();
+        if (typeof window.COCKPIT.irAFase === "function") window.COCKPIT.irAFase(4);
+      }
+      return;
+    }
+  } catch (err) {
+    console.error("[PRUEBAS_SIMULADAS] Error ejecutando opción:", opcion, err);
+    alert("Error al ejecutar la prueba simulada: " + err.message);
+  }
+}
+
+window.asegurarHistoriaExistente44418504 = asegurarHistoriaExistente44418504;
+window.abrirModalPruebasSimuladas = abrirModalPruebasSimuladas;
+window.cerrarModalPruebasSimuladas = cerrarModalPruebasSimuladas;
+window.ejecutarPruebaSimulada = ejecutarPruebaSimulada;
