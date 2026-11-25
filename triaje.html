@@ -2721,6 +2721,7 @@
           <div>
             <div>Módulo 1: Triaje Fisiológico, Origen del Evento &amp; Categorización I–V</div>
             <div class="module-section-subtitle">Puerta de entrada universal · NTS N° 042-MINSA/DGSP-V.01 · Ley N° 27604</div>
+            <div class="legal-micro-note" style="font-size:0.70rem;color:#475569;margin-top:2px;line-height:1.3;">📜 <strong>Ley N° 27604 (Art. 3°) y NTS N° 042-MINSA:</strong> Atención y triaje inmediatos e incondicionales; prohibido exigir pagos o documentos antes de estabilizar al paciente.</div>
           </div>
         </div>
         <span class="toggle-arrow" id="arrow_mod1">▼</span>
@@ -2814,6 +2815,36 @@
             <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #bbf7d0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; font-size:0.74rem; color:#166534;">
               <span>🔒 <strong>Trazabilidad:</strong> Datos sincronizados y bloqueados en Módulo 2 (Admisión).</span>
               <span style="background:#dcfce7; padding:2px 8px; border-radius:4px; font-weight:800; color:#15803d;">Padrón Nacional RENIEC Válido</span>
+            </div>
+          </div>
+
+          <!-- GRUPO SANGUÍNEO Y FACTOR RH EN MÓDULO 1 (OPCIONAL / NO LIMITANTE) -->
+          <div style="margin-top:12px; padding:10px 14px; background:#fff1f2; border:1px solid #fecdd3; border-radius:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+              <strong style="font-size:0.82rem; color:#9f1239;">🩸 Tipo de Sangre (GS) y Factor RH (Referencial en Triaje):</strong>
+              <span style="font-size:0.72rem; color:#881337; font-weight:700;">No limitante para continuar · Modificable por el médico en Módulo 4</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+              <div>
+                <label for="gs_select_m1" style="font-size:0.74rem; font-weight:700; color:#881337;">Grupo Sanguíneo (GS):</label>
+                <select id="gs_select_m1" class="input-full" onchange="actualizarGsRh('m1')">
+                  <option value="Desconocido" selected>Por tipificar / Desconocido</option>
+                  <option value="O">Grupo O</option>
+                  <option value="A">Grupo A</option>
+                  <option value="B">Grupo B</option>
+                  <option value="AB">Grupo AB</option>
+                  <option value="No se acuerda">No se acuerda</option>
+                </select>
+              </div>
+              <div>
+                <label for="rh_select_m1" style="font-size:0.74rem; font-weight:700; color:#881337;">Factor RH:</label>
+                <select id="rh_select_m1" class="input-full" onchange="actualizarGsRh('m1')">
+                  <option value="Desconocido" selected>Por tipificar / Desconocido</option>
+                  <option value="+">Positivo (+)</option>
+                  <option value="-">Negativo (-)</option>
+                  <option value="No se acuerda">No se acuerda</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -3359,6 +3390,7 @@
           <div>
             <div>Módulo 2: Admisión, Identificación RENIEC, Supabase &amp; Protocolo NN</div>
             <div class="module-section-subtitle">Paralelo para Prioridad I/II · Secuencial para III/IV/V · Ley N° 27604 · NTS N° 139-MINSA</div>
+            <div class="legal-micro-note" style="font-size:0.70rem;color:#475569;margin-top:2px;line-height:1.3;">📜 <strong>NTS N° 139-MINSA y Ley N° 29733:</strong> Apertura obligatoria de Historia Clínica (o HC temporal NN si es indocumentado) protegiendo la confidencialidad de los datos personales.</div>
           </div>
         </div>
         <span class="toggle-arrow" id="arrow_mod2">▼</span>
@@ -3530,6 +3562,7 @@
           <div>
             <div>Módulo 3: Acreditación PIDE-SUSALUD, Pestaña SOAT &amp; Cobertura</div>
             <div class="module-section-subtitle">D.S. N° 024-2002-MTC (SOAT) · Ley N° 29344 (AUS) · Ley N° 27604</div>
+            <div class="legal-micro-note" style="font-size:0.70rem;color:#475569;margin-top:2px;line-height:1.3;">📜 <strong>Ley N° 29344 (SUSALUD) y D.S. N° 024-2002-MTC (SOAT):</strong> Acreditación financiera según IAFAS/SOAT (hasta 5 UIT); si hay vehículo en fuga, se atiende primero y se liquida para recupero FONSAT.</div>
           </div>
         </div>
         <span class="toggle-arrow" id="arrow_mod3">▼</span>
@@ -3743,6 +3776,7 @@
           <div>
             <div>Módulo 4: Shock Trauma, Tópicos de Emergencia &amp; Kardex</div>
             <div class="module-section-subtitle">NTS N° 042-MINSA · NTS N° 139-MINSA · Kardex de Enfermería, Laboratorio Clínico e Imágenes</div>
+            <div class="legal-micro-note" style="font-size:0.70rem;color:#475569;margin-top:2px;line-height:1.3;">📜 <strong>Ley N° 26842 (Art. 4° y 15°) y Ley N° 29414:</strong> Diagnóstico CIE-10 obligatorio para sustento asistencial y consentimiento informado previo para procedimientos invasivos (salvo emergencia vital).</div>
           </div>
         </div>
         <span class="toggle-arrow" id="arrow_mod4">▼</span>
@@ -4425,11 +4459,16 @@
           <div>
             <div>Módulo 5: Sala de Observación &amp; Reevaluación Médica</div>
             <div class="module-section-subtitle">Estancia reglamentaria de 12 a 24 horas · Balance hídrico · NTS N° 042-MINSA/DGSP-V.01</div>
+            <div class="legal-micro-note" style="font-size:0.70rem;color:#475569;margin-top:2px;line-height:1.3;">📜 <strong>NTS N° 042-MINSA:</strong> Monitoreo clínico continuo en Sala de Observación (12–24 h) para definir estabilización con alta o pase a cama crítica/SOP.</div>
           </div>
         </div>
         <span class="toggle-arrow" id="arrow_mod5">▼</span>
       </div>
       <div class="module-section-body" id="body_mod5" style="display: none;">
+        <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:8px 12px; margin-bottom:10px; font-size:0.8rem; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+          <span><strong>🏷️ Diagnóstico CIE-10 en Observación:</strong> <span id="m5_cie10_display" style="color:#0369a1; font-weight:800;">Por determinar</span></span>
+          <span style="font-size:0.71rem; color:#475569;">NTS N° 042-MINSA · Reevaluación vinculada al diagnóstico</span>
+        </div>
 
         <div class="norma-pill-banner">
           <span class="norma-tag">NTS N° 042-MINSA</span>
@@ -4599,11 +4638,16 @@
           <div>
             <div>Módulo 6: Stock, Asignación de Camas Críticas, SOP &amp; Hospitalización</div>
             <div class="module-section-subtitle">Stock en tiempo real · Priorización UCI NTS N° 031-MINSA · Algoritmo de Prelación ABCDE</div>
+            <div class="legal-micro-note" style="font-size:0.70rem;color:#475569;margin-top:2px;line-height:1.3;">📜 <strong>NTS N° 031-MINSA y Ley N° 27604:</strong> Asignación de UCI, Shock Trauma o SOP por estricto criterio clínico (ABCDE / Prioridad I–II) y disponibilidad hospitalaria.</div>
           </div>
         </div>
         <span class="toggle-arrow" id="arrow_mod6">▼</span>
       </div>
       <div class="module-section-body" id="body_mod6" style="display: none;">
+        <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:8px 12px; margin-bottom:10px; font-size:0.8rem; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+          <span><strong>🏷️ Diagnóstico CIE-10 Justificativo (UCI / SOP):</strong> <span id="m6_cie10_display" style="color:#0369a1; font-weight:800;">Por determinar</span></span>
+          <span style="font-size:0.71rem; color:#475569;">NTS N° 031-MINSA · Criterio clínico de cama crítica</span>
+        </div>
 
         <div class="norma-pill-banner">
           <span class="norma-tag">NTS N° 031-MINSA</span>
@@ -4825,6 +4869,7 @@
           <div>
             <div>Módulo 7: Egreso Clínico, REFCON, Alta Voluntaria o Defunción Legal</div>
             <div class="module-section-subtitle">Cierre asistencial · Ley N° 26842 (Art. 4°) · Candado Médico-Legal Art. 195° CPP (SINADEF vs Fiscalía)</div>
+            <div class="legal-micro-note" style="font-size:0.70rem;color:#475569;margin-top:2px;line-height:1.3;">📜 <strong>Ley N° 26842 y NTS N° 139-MINSA:</strong> El egreso exige epicrisis y CIE-10 definitivo; el alta voluntaria requiere exoneración firmada; la defunción exige certificación legal (SINADEF o Fiscalía).</div>
           </div>
         </div>
         <span class="toggle-arrow" id="arrow_mod7">▼</span>
@@ -5166,6 +5211,7 @@
           <div>
             <div>Módulo 8: Cierre Clínico, Trazabilidad &amp; Derivación a Facturación Post-Estabilización</div>
             <div class="module-section-subtitle">Ley N° 27604 y D.S. N° 016-2002-SA (Liquidación Post-Estabilización) · Auditoría TEDEF-SUSALUD</div>
+            <div class="legal-micro-note" style="font-size:0.70rem;color:#475569;margin-top:2px;line-height:1.3;">📜 <strong>Ley N° 29414 (Transparencia) y SUSALUD:</strong> Liquidación económica post-estabilización detallada con respaldo CIE-10 y códigos CPMS/CUM sin condicionar el acto médico.</div>
           </div>
         </div>
         <span class="toggle-arrow" id="arrow_mod8">▼</span>

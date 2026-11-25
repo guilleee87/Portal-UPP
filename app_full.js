@@ -7087,6 +7087,7 @@ function mostrarModalRegistroExitoso(ep) {
         <div><strong>Fecha y Hora:</strong> ${ep.fecha_hora}</div>
         <div><strong>Ticket de Turno:</strong> ${ep.ticket}</div>
         <div><strong>Prioridad de Triaje:</strong> <span style="font-weight:800;color:#0284c7;">${ep.prioridad}</span></div>
+        <div><strong>Diagnóstico CIE-10:</strong> <span style="color:#0369a1;font-weight:700;">${ep.cie10_codigo ? `${ep.cie10_codigo} — ${ep.cie10_descripcion || ""}` : (ep.diagnostico || "Por determinar")}</span></div>
         <div><strong>Destino Clínico:</strong> ${ep.destino_clinico}</div>
         <div><strong>Establecimiento:</strong> ${ep.lugar_atencion}</div>
         <div><strong>Alergias en HC:</strong> <span style="color:#b91c1c;font-weight:800;">${ep.alergias}</span></div>
@@ -8368,6 +8369,10 @@ function seleccionarCIE10(codigo, desc) {
   if (elM4Cie) elM4Cie.textContent = textoCompleto;
   const elCockpitCie = document.getElementById("c_triage_cie10");
   if (elCockpitCie) elCockpitCie.textContent = textoCompleto;
+  const elM5Cie = document.getElementById("m5_cie10_display");
+  if (elM5Cie) elM5Cie.textContent = textoCompleto;
+  const elM6Cie = document.getElementById("m6_cie10_display");
+  if (elM6Cie) elM6Cie.textContent = textoCompleto;
   const elM7Cie = document.getElementById("m7_cie10_display");
   if (elM7Cie) elM7Cie.textContent = textoCompleto;
   const elM8DispCie = document.getElementById("m8_disp_cie10");
@@ -10336,7 +10341,8 @@ function imprimirFacturaOficial() {
       <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:10px;border-radius:6px;">
         <strong>Paciente:</strong> ${nombre} | <strong>Identificador:</strong> ${STATE.identificador || (esNNDoc ? "NN / Indocumentado" : "—")} | <strong>HC:</strong> ${STATE.historiaClinica || "—"}<br>
         <strong>Seguro del Paciente:</strong> ${seguroDoc} | <strong>Régimen Prestacional:</strong> ${liq.etiquetaRegimen}<br>
-        <strong>Fecha de Liquidación:</strong> ${fecha} | <strong>Lugar de Prestación:</strong> ${liq.lugarAtencion}
+        <strong>Diagnóstico Principal (CIE-10):</strong> ${STATE.cie10 || (STATE.cie10Codigo ? `${STATE.cie10Codigo} — ${STATE.cie10Descripcion || ""}` : "Por determinar")} | <strong>Fecha de Liquidación:</strong> ${fecha}<br>
+        <strong>Lugar de Prestación:</strong> ${liq.lugarAtencion}
       </div>
       <table>
         <thead>
@@ -12366,13 +12372,15 @@ function sincronizarSelectsGsRh(val) {
     rh = v.slice(-1);
     gs = v.slice(0, -1);
   }
-  ["gs_select_mod1", "gs_select_mod4"].forEach(id => { const el = document.getElementById(id); if (el) el.value = gs; });
-  ["rh_select_mod1", "rh_select_mod4"].forEach(id => { const el = document.getElementById(id); if (el) el.value = rh; });
+  ["gs_select_m1", "gs_select_mod1", "gs_select_mod4"].forEach(id => { const el = document.getElementById(id); if (el) el.value = gs; });
+  ["rh_select_m1", "rh_select_mod1", "rh_select_mod4"].forEach(id => { const el = document.getElementById(id); if (el) el.value = rh; });
 }
 
 function actualizarGsRh(origen) {
-  const gs = document.getElementById(origen === "mod4" ? "gs_select_mod4" : "gs_select_mod1")?.value || "Desconocido";
-  const rh = document.getElementById(origen === "mod4" ? "rh_select_mod4" : "rh_select_mod1")?.value || "Desconocido";
+  const gsId = origen === "mod4" ? "gs_select_mod4" : (origen === "m1" ? "gs_select_m1" : "gs_select_mod1");
+  const rhId = origen === "mod4" ? "rh_select_mod4" : (origen === "m1" ? "rh_select_m1" : "rh_select_mod1");
+  const gs = document.getElementById(gsId)?.value || "Desconocido";
+  const rh = document.getElementById(rhId)?.value || "Desconocido";
   let combinado = "Desconocido";
   if (gs !== "Desconocido" && gs !== "No se acuerda" && rh !== "Desconocido" && rh !== "No se acuerda") {
     combinado = `${gs}${rh}`;

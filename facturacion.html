@@ -424,6 +424,10 @@
           <div class="demo-value" id="disp_establecimiento">—</div>
         </div>
         <div class="demo-item">
+          <div class="demo-label">Diagnóstico Principal (CIE-10)</div>
+          <div class="demo-value" id="disp_cie10">—</div>
+        </div>
+        <div class="demo-item">
           <div class="demo-label">Fecha &amp; Hora de Cierre</div>
           <div class="demo-value" id="disp_fecha">—</div>
         </div>
@@ -688,6 +692,9 @@
       document.getElementById("disp_folio").textContent = episodio?.folio || `FOL-2026-${dniActual.slice(-4) || "8821"}`;
       document.getElementById("disp_prioridad").textContent = `Prioridad ${prioridadActual}`;
       document.getElementById("disp_regimen").textContent = seguroActual.toUpperCase();
+      const cie10Actual = (expActual && (expActual.cie10 || (expActual.cie10Codigo ? `${expActual.cie10Codigo} — ${expActual.cie10Descripcion || ""}` : ""))) || (episodio && episodio.cie10) || "Por determinar";
+      const elDispCie = document.getElementById("disp_cie10");
+      if (elDispCie) elDispCie.textContent = cie10Actual;
       document.getElementById("disp_fecha").textContent = new Date().toLocaleString();
 
       const elFirmantePac = document.getElementById("firmante_paciente");
