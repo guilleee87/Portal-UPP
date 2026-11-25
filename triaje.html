@@ -1435,6 +1435,16 @@
       background: #0284c7;
       color: #ffffff;
     }
+    .btn-soat-action {
+      background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+      color: #ffffff;
+      border: 2px solid #0c4a6e;
+      font-weight: 900;
+      white-space: normal;
+      line-height: 1.25;
+      min-height: 46px;
+      box-shadow: 0 2px 7px rgba(3, 105, 161, 0.3);
+    }
     .btn-newpx-action {
       background: #f1f5f9;
       color: #0f172a;
@@ -2733,7 +2743,7 @@
           <button type="button" id="btn_ingreso_nn_unico" class="btn-caos-action btn-nn-action" onclick="abrirModalPreEvaluacionNN()" title="Pre-evaluación de Paciente Indocumentado / NN (Ley N° 27604)">
             🚨 Paciente NN (Indocumentado)
           </button>
-          <button type="button" class="btn-caos-action btn-soat-action" onclick="abrirModalAccidenteTransitoRapido()" title="Registrar accidente, seleccionar SOAT y gravedad; todo accidente pasa por clasificación clínica" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; font-weight: 800; border: 1px solid #075985; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);">
+          <button type="button" id="btn_accidente_transito_rapido" class="btn-caos-action btn-soat-action" onclick="abrirModalAccidenteTransitoRapido()" title="Accidente de tránsito: seleccionar SOAT/CAT y ruta clínica" aria-label="Accidente de tránsito, abrir opciones de SOAT y gravedad">
             🚗 Accidente de tránsito
           </button>
           <button type="button" class="btn-caos-action btn-start-action" onclick="abrirModalPreTriageSTART()" title="Pre-Triage de Cola en 15 segundos (Método START/Manchester)">
