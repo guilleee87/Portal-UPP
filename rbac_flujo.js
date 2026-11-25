@@ -1873,7 +1873,7 @@
       const esSiguienteMed = (rol === "MEDICO" && p === primerCandidatoMedico);
 
       const colorPrio = p.prioridad === "I" ? "#dc2626" : p.prioridad === "II" ? "#ea580c" : p.prioridad === "III" ? "#ca8a04" : p.prioridad === "IV" ? "#16a34a" : p.prioridad === "V" ? "#2563eb" : "#64748b";
-      const esAtendido = p.estadoFlujo === "CERRADO_FACTURADO";
+      const esAtendido = p.estadoFlujo === "CERRADO_FACTURADO" || Boolean(p.altaClinicaConcluida) || (p.estadoAtencion || "").includes("Alta") || p.estadoAtencion === "Finalizado";
       const bgCard = esAtendido ? (esActivo ? "#ecfdf5" : "#f0fdf4") : (esActivo ? "#eff6ff" : "#ffffff");
       const borderCard = esAtendido ? (esActivo ? "2px solid #16a34a" : "1.5px solid #86efac") : (esActivo ? "2px solid #3b82f6" : esSiguienteMed ? "2px solid #f59e0b" : "1px solid #e2e8f0");
       const shadowCard = esAtendido ? "box-shadow: 0 2px 6px rgba(22, 101, 52, 0.06);" : "";
@@ -1899,10 +1899,10 @@
         "ADMISION": "📋 Admisión",
         "EN_ATENCION_MEDICA": "👨‍⚕️ Médico",
         "PENDIENTE_CAJA": "💳 Caja",
-        "CERRADO_FACTURADO": "🏁 Cerrado"
+        "CERRADO_FACTURADO": "🏁 Finalizado"
       };
       const efKey = p.estadoFlujo || "PENDIENTE_TRIAJE";
-      const flujoCorto = esAtendido ? "✓ Atendido" : (badgeFlujoLabels[efKey] || efKey.replace(/_/g, " "));
+      const flujoCorto = esAtendido ? "✓ Finalizado" : (badgeFlujoLabels[efKey] || efKey.replace(/_/g, " "));
 
       html += `
         <div onclick="seleccionarExpedienteYVisualizarPorRol('${p.id}')" style="display:flex; justify-content:space-between; align-items:center; background:${bgCard}; border:${borderCard}; border-radius:8px; padding:6px 10px; cursor:pointer; transition:all 0.15s ease; ${shadowCard} gap:8px; box-sizing:border-box; width:100%; min-height:46px;">
@@ -2141,6 +2141,7 @@
           <div><strong>Diagnóstico Definitivo / Presuntivo (CIE-10):</strong> <strong style="color:#0284c7;">${cie10}</strong></div>
           <div><strong>Destino de Egreso:</strong> ${px.destino || ss.destinoAlta || "Alta Médica a Domicilio con Indicaciones"}</div>
           <div style="color:#15803d; font-weight:700; margin-top:2px;">✓ Criterios de estabilización clínica y epicrisis conformes según NTS N° 042-MINSA.</div>
+          ${(f.medico && typeof window.generarSelloFirmaDigitalHTML === "function") ? `<div style="margin-top:8px;">${window.generarSelloFirmaDigitalHTML("MEDICO", { nombre: f.medico.usuario, colegiatura: f.medico.colegiatura, fechaHora: tMedico ? tMedico.texto : "" })}</div>` : ""}
         </div>
       </div>
     ` : `
@@ -2177,6 +2178,50 @@
       <div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:10px 14px; margin-bottom:10px; color:#64748b; font-size:0.76rem; display:flex; justify-content:space-between; align-items:center;">
         <div><span>🔒</span> <strong>Paso 4: Caja &amp; Cierre:</strong> Registro reservado a Personal de Caja / Auditoría.</div>
         <div style="font-family:'JetBrains Mono', monospace; font-size:0.72rem;">📅 ${tCaja ? tCaja.dia : "--/--/----"} · 🕒 ${tCaja ? tCaja.hora : "Pendiente"}</div>
+      </div>
+    `;
+
+    let logsAuditoriaPx = [];
+    try {
+      const rawLogs = localStorage.getItem("AUDIT_LOGS_HISTORIAL");
+      const allLogs = rawLogs ? JSON.parse(rawLogs) : (window.AUDIT_LOGS || []);
+      const dniUp = String(dni || "").toUpperCase();
+      const hcUp = String(historiaClinica || "").toUpperCase();
+      const nomUp = String(nombreCompleto || "").toUpperCase();
+      logsAuditoriaPx = allLogs.filter(l => {
+        const det = String(l.detalle || "").toUpperCase();
+        const ldni = String(l.dni || "").toUpperCase();
+        return (dniUp && dniUp !== "S/D" && (ldni === dniUp || det.includes(dniUp)))
+          || (hcUp && det.includes(hcUp))
+          || (nomUp && nomUp.length > 4 && det.includes(nomUp))
+          || ["SELLAR_TRIAJE", "VALIDAR_COBERTURA", "ALTA_MEDICA", "CIERRE_LIQUIDACION", "FIRMA_ELECTRONICA_MEDICA", "EVALUACION_MEDICA_PROTOCOLIZADA", "JUNTA_MEDICA_NTS139", "KARDEX_AGREGAR", "CIERRE_HC_INMUTABLE"].includes(l.evento);
+      }).slice(0, 25);
+    } catch(e) {}
+
+    const medsHist = (px.kardexItems || ss.kardexItems || state.kardexItems || []).map(k => k.nombre).join(", ");
+    const labsHist = (px.ordenesLaboratorio || ss.ordenesLaboratorio || state.ordenesLaboratorio || []).map(l => l.nombre).join(", ");
+    const imgsHist = (px.ordenesImagenes || ss.ordenesImagenes || state.ordenesImagenes || []).map(i => i.nombre).join(", ");
+
+    const bitacoraAuditorHtml = `
+      <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:12px 14px; margin-top:10px;">
+        <div style="font-size:0.80rem; font-weight:800; color:#0f172a; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+          <span>📜</span> <span>Auditoría Integral — Todo lo Realizado en el Episodio:</span>
+        </div>
+        <div style="font-size:0.75rem; color:#334155; margin-bottom:8px; display:grid; gap:3px;">
+          <div><strong>Medicamentos / Kardex:</strong> ${medsHist || "—"}</div>
+          <div><strong>Laboratorio:</strong> ${labsHist || "—"}</div>
+          <div><strong>Imágenes:</strong> ${imgsHist || "—"}</div>
+        </div>
+        ${logsAuditoriaPx.length > 0 ? `
+          <div style="max-height:170px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:6px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.70rem;">
+              <thead><tr style="background:#0f172a; color:#fff;"><th style="padding:4px 6px;">Hora</th><th style="padding:4px 6px;">Módulo</th><th style="padding:4px 6px;">Evento</th><th style="padding:4px 6px;">Detalle</th></tr></thead>
+              <tbody>
+                ${logsAuditoriaPx.map((l, i) => `<tr style="background:${i % 2 === 0 ? '#f8fafc' : '#fff'}; border-bottom:1px solid #e2e8f0;"><td style="padding:4px 6px; font-family:monospace; white-space:nowrap;">${l.timestamp || ""}</td><td style="padding:4px 6px; font-weight:700;">${l.modulo || ""}</td><td style="padding:4px 6px; font-weight:800; color:#0369a1;">${l.evento || ""}</td><td style="padding:4px 6px;">${l.detalle || ""}</td></tr>`).join("")}
+              </tbody>
+            </table>
+          </div>
+        ` : `<div style="font-size:0.72rem; color:#64748b;">Sin eventos adicionales en bitácora.</div>`}
       </div>
     `;
 
@@ -2232,6 +2277,7 @@
           ${paso2Html}
           ${paso3Html}
           ${paso4Html}
+          ${bitacoraAuditorHtml}
 
         </div>
 

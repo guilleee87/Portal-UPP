@@ -8759,6 +8759,20 @@ function ejecutarEvaluacionMedicaProtocolizada() {
   if (boxActa) {
     boxActa.style.display = "block";
     const firmaHtml = generarSelloFirmaDigitalHTML("MEDICO");
+    const medEvalNombre = STATE.medicoTratante || "Dr. Carlos Vega (Emergenciología)";
+    STATE.medicoTratante = medEvalNombre;
+    STATE.firmas = STATE.firmas || {};
+    STATE.firmas.medico = { usuario: medEvalNombre, colegiatura: "CMP 54821", fecha: new Date().toISOString(), tipo: "FIRMA_ELECTRONICA_MEDICA" };
+    if (typeof pacienteActivoId !== "undefined" && pacienteActivoId && Array.isArray(PACIENTES_COLA)) {
+      const pxEval = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
+      if (pxEval) {
+        pxEval.medicoTratante = medEvalNombre;
+        pxEval.firmas = pxEval.firmas || {};
+        pxEval.firmas.medico = STATE.firmas.medico;
+      }
+    }
+    if (typeof guardarColaCompartidaEnStorage === "function") guardarColaCompartidaEnStorage();
+    if (typeof registrarLogAuditoria === "function") registrarLogAuditoria("Módulo 4", "FIRMA_ELECTRONICA_MEDICA", `Firma electrónica médica estampada por ${medEvalNombre} (CMP 54821) · CIE-10: ${cie10}`);
     const destinoNombre = (destinoSugerido === "quirofano_uci") ? "Quirófano SOP / UCI (Cama Crítica)" : (destinoSugerido === "observacion") ? "Sala de Observación de Emergencia (Cama Hospitalaria)" : "Alta Médica Directa con Receta Domiciliaria";
 
     window._ultimoDocumentoClinicoImprimible = {
@@ -8886,6 +8900,18 @@ function ejecutarJuntaMedicaNTS139() {
   if (boxActa) {
     boxActa.style.display = "block";
     const firma1 = generarSelloFirmaDigitalHTML("JUNTA_1");
+    STATE.firmas = STATE.firmas || {};
+    STATE.firmas.medico = { usuario: "Junta Médica Colegiada (3/3)", colegiatura: "CMP 54821 / RNE", fecha: new Date().toISOString(), tipo: "FIRMA_ELECTRONICA_JUNTA_MEDICA" };
+    if (typeof pacienteActivoId !== "undefined" && pacienteActivoId && Array.isArray(PACIENTES_COLA)) {
+      const pxJ = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
+      if (pxJ) {
+        pxJ.medicoTratante = STATE.firmas.medico.usuario;
+        pxJ.firmas = pxJ.firmas || {};
+        pxJ.firmas.medico = STATE.firmas.medico;
+      }
+    }
+    if (typeof guardarColaCompartidaEnStorage === "function") guardarColaCompartidaEnStorage();
+    if (typeof registrarLogAuditoria === "function") registrarLogAuditoria("Módulo 4", "FIRMA_ELECTRONICA_MEDICA", `Firma electrónica de Junta Médica (3/3) estampada · CIE-10: ${cie10Junta}`);
     const firma2 = generarSelloFirmaDigitalHTML("JUNTA_2");
     const firma3 = generarSelloFirmaDigitalHTML("JUNTA_3");
 
@@ -11339,7 +11365,7 @@ function renderizarTableroColaPacientes() {
   const pacientesActivosEnCurso = PACIENTES_COLA.filter(p => {
     const ef = p.estadoFlujo || "PENDIENTE_TRIAJE";
     const ea = p.estadoAtencion || "";
-    if (ef === "CERRADO_FACTURADO" || ea === "Alta" || ea === "Cerrado" || ea.includes("Alta") || p.altaClinicaConcluida) {
+    if (ef === "CERRADO_FACTURADO" || ea === "Alta" || ea === "Cerrado" || ea === "Finalizado" || ea.includes("Alta") || ea.includes("Finalizado") || p.altaClinicaConcluida) {
       return false;
     }
     return true;
@@ -16204,7 +16230,8 @@ function renderizarFichaTrazabilidad(px) {
   const f = px.firmas || {};
   const pasoTriaje = !esReal || Boolean(f.triaje);
   const pasoAdmision = !esReal || Boolean(f.admision || px.coberturaValidada);
-  const pasoMedico = !esReal || Boolean(f.medico || (px.medicoTratante && !String(px.medicoTratante).includes("Por asignar")));
+  const firmaMedActiva = f.medico || ((typeof STATE !== "undefined" && STATE.id === px.id) ? STATE.firmas?.medico : null);
+  const pasoMedico = !esReal || Boolean(firmaMedActiva || (px.medicoTratante && !String(px.medicoTratante).includes("Por asignar")));
   const pasoCaja = !esReal || Boolean(f.caja || px.estadoFlujo === "CERRADO_FACTURADO" || px.estadoFlujo === "ATENDIDO_ALTA");
   const pasoAuditor = !esReal || Boolean(f.auditor || (Array.isArray(px.modificaciones_auditoria) && px.modificaciones_auditoria.length > 0));
 
@@ -16387,6 +16414,23 @@ function renderizarFichaTrazabilidad(px) {
         ${selloCaja}
         ${selloAuditor}
         ${(!selloMedico && !selloTriaje && !selloAdmision && !selloCaja && !selloAuditor) ? `<div style="font-size:0.78rem; color:#64748b;">— Sin sellos ni firmas digitales aún (se emitirán conforme el paciente avance por cada módulo).</div>` : ""}
+      </div>
+    </div>
+    <!-- 8. Bitácora Cronológica de Todo lo Realizado (Auditoría) -->
+    <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:12px 16px; margin-bottom:10px;">
+      <div style="font-weight:800; font-size:0.80rem; color:#1e293b; margin-bottom:8px;">📋 Bitácora Completa de Acciones Realizadas (Auditoría):</div>
+      ${(() => {
+        let logs = [];
+        try { logs = JSON.parse(localStorage.getItem("AUDIT_LOGS_HISTORIAL") || "[]"); } catch(e) { logs = AUDIT_LOGS || []; }
+        const dniP = String(px.dni || "").toUpperCase();
+        const nomP = String(px.nombre || "").toUpperCase();
+        const filtrados = logs.filter(l => {
+          const det = String(l.detalle || "").toUpperCase();
+          return (dniP && dniP !== "S/D" && (String(l.dni || "").toUpperCase() === dniP || det.includes(dniP))) || (nomP && nomP.length > 4 && det.includes(nomP)) || ["FIRMA_ELECTRONICA_MEDICA","ALTA_MEDICA","SELLAR_TRIAJE","VALIDAR_COBERTURA","CIERRE_LIQUIDACION","CIERRE_HC_INMUTABLE","EVALUACION_MEDICA_PROTOCOLIZADA","JUNTA_MEDICA_NTS139"].includes(l.evento);
+        }).slice(0, 30);
+        if (!filtrados.length) return `<div style="font-size:0.76rem;color:#64748b;">Sin eventos registrados en bitácora aún.</div>`;
+        return `<table style="width:100%;border-collapse:collapse;font-size:0.72rem;"><thead><tr style="background:#0f172a;color:#fff;"><th style="padding:5px 7px;">Fecha/Hora</th><th style="padding:5px 7px;">Módulo</th><th style="padding:5px 7px;">Evento</th><th style="padding:5px 7px;">Detalle</th></tr></thead><tbody>` + filtrados.map((l, i) => `<tr style="background:${i%2===0?"#f8fafc":"#fff"};border-bottom:1px solid #e2e8f0;"><td style="padding:4px 7px;font-family:monospace;">${l.timestamp||""}</td><td style="padding:4px 7px;font-weight:700;">${l.modulo||""}</td><td style="padding:4px 7px;font-weight:800;color:#0369a1;">${l.evento||""}</td><td style="padding:4px 7px;">${l.detalle||""}</td></tr>`).join("") + `</tbody></table>`;
+      })()}
       </div>
     </div>
   `;
@@ -18881,9 +18925,11 @@ function actualizarIndicadoresFuaEssi() {
   if (elM3) elM3.textContent = txtDoc;
   const elM4 = document.getElementById("m4_doc_normativo_pill");
   if (elM4) elM4.textContent = txtDoc;
-  const elM8 = document.getElementById("m8_doc_normativo_pill");
-  if (elM8) elM8.textContent = txtDoc;
-  ["btn_imprimir_doc_m3", "btn_imprimir_doc_m4", "btn_imprimir_doc_m8"].forEach(id => {
+  ["m5_doc_normativo_pill", "m6_doc_normativo_pill", "m7_doc_normativo_pill", "m8_doc_normativo_pill"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txtDoc;
+  });
+  ["btn_imprimir_doc_m3", "btn_imprimir_doc_m4", "btn_imprimir_doc_m5", "btn_imprimir_doc_m6", "btn_imprimir_doc_m7", "btn_imprimir_doc_m8"].forEach(id => {
     const b = document.getElementById(id);
     if (!b) return;
     if (esPriv) {
@@ -18922,32 +18968,40 @@ function imprimirDocumentoNormativoFuaEssi() {
 
   const w = window.open("", "_blank");
   if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
+  const renaes = esEssalud ? "00000425 — Hospital Nacional EsSalud / Red Prestacional" : "00000410 — Hospital Regional Docente UPP (MINSA)";
+  const codPrestacion = (STATE.horasObservacion && STATE.horasObservacion > 0) ? "063 — Atención por Emergencia con Observación" : "062 — Atención por Emergencia";
+  const destinoFinal = STATE.modalidadEgreso || STATE.destino || (STATE.altaClinicaConcluida ? "ALTA MÉDICA" : "EN ATENCIÓN / OBSERVACIÓN");
+  const firmaMedDoc = (typeof generarSelloFirmaDigitalHTML === "function") ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: STATE.medicoTratante || STATE.firmas?.medico?.usuario || "Médico de Guardia" }) : "";
   w.document.write(`
     <html><head><title>${tituloDoc} - ${nroDoc}</title>
-    <style>body{font-family:Arial,sans-serif;padding:24px;font-size:12px;color:#0f172a;} .box{border:1px solid #cbd5e1;border-radius:6px;padding:10px;margin-bottom:10px;background:#f8fafc;} h2{margin:0 0 4px;font-size:16px;} h4{margin:0 0 10px;font-size:11px;color:#475569;}</style>
+    <style>body{font-family:Arial,sans-serif;padding:20px;font-size:11px;color:#0f172a;} .hdr{border:2px solid #0f172a;padding:8px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;background:#f1f5f9;} .sec{border:1px solid #475569;margin-bottom:8px;} .sec-t{background:#1e293b;color:#fff;font-weight:bold;padding:4px 8px;font-size:10px;text-transform:uppercase;} .sec-b{padding:7px 9px;line-height:1.45;} table{width:100%;border-collapse:collapse;font-size:10px;margin-top:4px;} th,td{border:1px solid #94a3b8;padding:4px 6px;text-align:left;} th{background:#e2e8f0;}</style>
     </head><body>
-      <h2>${tituloDoc}</h2>
-      <h4>${normaDoc} · N° Documento: <strong>${nroDoc}</strong> · Estado: <strong>${estadoDoc}</strong></h4>
-      <div class="box">
-        <strong>Paciente:</strong> ${nombre} | <strong>DNI/ID:</strong> ${STATE.numDni || "—"} | <strong>HC:</strong> ${STATE.historiaClinica || "—"}<br>
-        <strong>GS/RH:</strong> ${STATE.grupoSanguineo || "Por determinar"} | <strong>Seguro:</strong> ${STATE.tipoSeguro || "—"} | <strong>Prioridad:</strong> ${STATE.prioridad ? "P-" + STATE.prioridad : "—"}
+      <div class="hdr">
+        <div><strong style="font-size:14px;">${tituloDoc}</strong><br><span style="font-size:10px;color:#334155;">${normaDoc} · IPRESS RENAES: ${renaes}</span></div>
+        <div style="text-align:right;"><strong style="font-size:13px;font-family:monospace;">N° ${nroDoc}</strong><br><span>Estado: <strong>${estadoDoc}</strong></span></div>
       </div>
-      <div class="box">
-        <strong>Signos Vitales:</strong> SpO2 ${STATE.spo2 ?? "—"}% | FC ${STATE.fc ?? "—"} lpm | PA ${STATE.pasSistolica ?? "—"}/${STATE.paDiastolica ?? "—"} | FR ${STATE.fr ?? "—"} rpm | T° ${STATE.temperatura ?? "—"} °C<br>
-        <strong>Motivo:</strong> ${STATE.motivoConsulta || "—"}<br>
-        <strong>Diagnóstico CIE-10 (Sustento Médico):</strong> ${cie10}
-      </div>
-      <div class="box">
-        <strong>Medicamentos (Kardex):</strong> ${meds}<br>
-        <strong>Laboratorio:</strong> ${labs}<br>
-        <strong>Imágenes:</strong> ${imgs}
-      </div>
-      <div class="box">
-        <strong>Valorización Total:</strong> S/. ${(liq.totalBruto || 0).toFixed(2)} | <strong>Cubierto:</strong> S/. ${(liq.coberturaSeguro || 0).toFixed(2)} | <strong>Total Paciente:</strong> S/. ${(liq.totalPaciente || 0).toFixed(2)}
-      </div>
-      <div style="margin-top:36px;display:flex;justify-content:space-between;text-align:center;">
-        <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Médico Tratante / Sustento CIE-10</div>
-        <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Admisión / Asegurado (${esEssalud ? "ESSI" : "FUA"})</div>
+      <div class="sec"><div class="sec-t">${esEssalud ? "1. Datos Generales del Asegurado (ESSI)" : "1. Lugar/Tipo de Atención y Datos del Asegurado (FUA - SIS)"}</div><div class="sec-b">
+        <strong>Lugar / Tipo:</strong> [X] Intramural · [X] Emergencia · <strong>HC:</strong> ${STATE.historiaClinica || "—"} · <strong>Prioridad Triaje:</strong> ${STATE.prioridad ? "P-" + STATE.prioridad : "—"}<br>
+        <strong>Apellidos y Nombres:</strong> ${nombre} | <strong>TDI/DNI:</strong> ${STATE.numDni || "—"} | <strong>Edad/Sexo:</strong> ${STATE.edad || "—"} / ${STATE.sexo || "—"} | <strong>GS/RH:</strong> ${STATE.grupoSanguineo || "Por determinar"}<br>
+        <strong>Seguro / Código Afiliado:</strong> ${STATE.tipoSeguro || "—"} (${nroDoc}) | <strong>Cód. Prestación:</strong> ${esEssalud ? "FAEH-EMERG" : codPrestacion}
+      </div></div>
+      <div class="sec"><div class="sec-t">2. Funciones Vitales, Evaluación Clínica y Diagnósticos (CIE-10)</div><div class="sec-b">
+        <strong>Funciones Vitales:</strong> PA ${STATE.pasSistolica ?? "—"}/${STATE.paDiastolica ?? "—"} mmHg | FC ${STATE.fc ?? "—"} lpm | FR ${STATE.fr ?? "—"} rpm | T° ${STATE.temperatura ?? "—"} °C | SpO2 ${STATE.spo2 ?? "—"}% | Glasgow ${STATE.glasgow ?? "—"}/15<br>
+        <strong>Motivo de Emergencia:</strong> ${STATE.motivoConsulta || "—"}<br>
+        <strong>Diagnóstico Principal (CIE-10):</strong> <strong>${cie10}</strong> (Tipo: Definitivo / Presuntivo)
+      </div></div>
+      <div class="sec"><div class="sec-t">${esEssalud ? "3. Manejo Médico, Terapéutica y Exámenes Auxiliares (ESSI)" : "3. Reverso FUA — Terapéutica (SISMED), Procedimientos y Apoyo al Diagnóstico"}</div><div class="sec-b">
+        <table><thead><tr><th>Rubro</th><th>Detalle Registrado</th></tr></thead><tbody>
+          <tr><td><strong>Medicamentos / Insumos</strong></td><td>${meds}</td></tr>
+          <tr><td><strong>Laboratorio Clínico</strong></td><td>${labs}</td></tr>
+          <tr><td><strong>Imágenes / Procedimientos</strong></td><td>${imgs}</td></tr>
+          <tr><td><strong>Destino del Paciente</strong></td><td><strong>${String(destinoFinal).toUpperCase()}</strong></td></tr>
+          <tr><td><strong>Valorización</strong></td><td>Bruto: S/. ${(liq.totalBruto || 0).toFixed(2)} | Cubierto Seguro: <strong>S/. ${(liq.coberturaSeguro || 0).toFixed(2)}</strong> | Copago Paciente: <strong>S/. ${(liq.totalPaciente || 0).toFixed(2)}</strong></td></tr>
+        </tbody></table>
+      </div></div>
+      <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;">
+        <div style="flex:1;">${firmaMedDoc || "<div style='border-top:1px solid #000;width:220px;padding-top:4px;text-align:center;'>Firma y Sello del Médico Tratante (CMP)</div>"}</div>
+        <div style="border-top:1px solid #000;width:220px;padding-top:4px;text-align:center;">Firma / Huella Digital del Asegurado o Apoderado<br><small>DNI: ${STATE.numDni || "________"}</small></div>
       </div>
     </body></html>
   `);
@@ -19188,7 +19242,7 @@ function renderizarFilaPacientesCockpit(pacientesActivosEnCurso) {
       ? PACIENTES_COLA.filter(p => {
           const ef = p.estadoFlujo || "PENDIENTE_TRIAJE";
           const ea = p.estadoAtencion || "";
-          if (ef === "CERRADO_FACTURADO" || ea === "Alta" || ea === "Cerrado" || ea.includes("Alta") || p.altaClinicaConcluida) {
+          if (ef === "CERRADO_FACTURADO" || ea === "Alta" || ea === "Cerrado" || ea === "Finalizado" || ea.includes("Alta") || ea.includes("Finalizado") || p.altaClinicaConcluida) {
             return false;
           }
           return true;
