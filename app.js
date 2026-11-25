@@ -1983,10 +1983,12 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
     });
   }
   const modsHC = Array.isArray(master.modificaciones_auditoria) ? master.modificaciones_auditoria : [];
-  const selloMedicoHC = (typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: (medicoReg && medicoReg !== "—") ? medicoReg : "Dr. Carlos Vega Alva", colegiatura: "CMP 58321 · RNE 23901" })
+  const huboMedicoHC = Boolean((medicoReg && medicoReg !== "—") || pxVivo.firmas?.medico || stVivo.firmas?.medico || episodios.some(e => e.firmante));
+  const nombreMedHC = (medicoReg && medicoReg !== "—") ? medicoReg : (episodios.find(e => e.firmante)?.firmante || "");
+  const selloMedicoHC = (huboMedicoHC && nombreMedHC && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: nombreMedHC, colegiatura: "CMP 58321 · RNE 23901" })
     : "";
-  const selloEnfHC = (enfermeraReg !== "—" && typeof generarSelloFirmaDigitalHTML === "function")
+  const selloEnfHC = (enfermeraReg && enfermeraReg !== "—" && typeof generarSelloFirmaDigitalHTML === "function")
     ? generarSelloFirmaDigitalHTML("TRIAJE", { nombre: enfermeraReg, colegiatura: "CEP 92410" })
     : "";
   const selloAuditorHC = (modsHC.length > 0 && typeof generarSelloFirmaDigitalHTML === "function")
@@ -2174,9 +2176,10 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
         🔏 Firmas Electrónicas Digitales del Personal Interviniente (Ley N° 27269)
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">
-        <div>${selloMedicoHC}</div>
+        ${selloMedicoHC ? `<div>${selloMedicoHC}</div>` : ""}
         ${selloEnfHC ? `<div>${selloEnfHC}</div>` : ""}
         ${selloAuditorHC ? `<div id="hc_modal_firma_auditor_col">${selloAuditorHC}</div>` : ""}
+        ${(!selloMedicoHC && !selloEnfHC && !selloAuditorHC) ? `<div style="font-size:0.78rem;color:#64748b;">— Sin firmas electrónicas aún (se generarán conforme el personal de salud realice y registre cada atención).</div>` : ""}
       </div>
     </div>
   `;
@@ -2259,7 +2262,7 @@ function construirHTMLImpresionHC(pacienteEncoded) {
   }
 
   const selloMedico = (typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: (medicoReg && medicoReg !== "—") ? medicoReg : "Dr. Carlos Vega Alva (Médico Tratante)" })
+    ? ((medicoReg && medicoReg !== "—") ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: medicoReg }) : `<div class="firma-line" style="color:#64748b;">Pendiente de evaluación / firma médica</div>`)
     : `<div class="firma-line">${medicoReg}</div>`;
   const selloAuditor = (mods.length > 0 && typeof generarSelloFirmaDigitalHTML === "function")
     ? generarSelloFirmaDigitalHTML("AUDITOR", { nombre: mods[0].usuario, fechaHora: `${mods[0].dia} ${mods[0].hora}` })
