@@ -18981,12 +18981,16 @@ function imprimirDocumentoNormativoFuaEssi(forzarSector) {
   const labsArr = Array.isArray(STATE.ordenesLaboratorio) ? STATE.ordenesLaboratorio : [];
   const imgsArr = Array.isArray(STATE.ordenesImagenes) ? STATE.ordenesImagenes : [];
   const destRaw = String(STATE.modalidadEgreso || STATE.destino || (STATE.altaClinicaConcluida ? "alta" : "observacion")).toLowerCase();
-  const medNombre = STATE.medicoTratante || STATE.firmas?.medico?.usuario || "Dr. Carlos Alberto Vega Morales (CMP 58321)";
-  const cmpMatch = String(medNombre).match(/CMP\s*(\d+)/i);
-  const cmpNum = cmpMatch ? cmpMatch[1] : (STATE.firmas?.medico?.colegiatura || "58321");
+  const medRaw = STATE.firmas?.medico?.usuario || STATE.medicoTratante || "";
+  const medicoAsignado = Boolean(medRaw && !String(medRaw).toLowerCase().includes("por asignar") && String(medRaw).trim() !== "—" && String(medRaw).trim() !== "");
+  const medNombre = medicoAsignado ? medRaw : "";
+  const cmpMatch = medicoAsignado ? String(medNombre).match(/CMP\s*(\d+)/i) : null;
+  const cmpNum = medicoAsignado ? (cmpMatch ? cmpMatch[1] : (STATE.firmas?.medico?.colegiatura || "58321")) : "";
   const fechaHoy = new Date().toLocaleDateString("es-PE");
   const horaHoy = new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
-  const firmaMedDoc = (typeof generarSelloFirmaDigitalHTML === "function") ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: medNombre }) : "";
+  const firmaMedDoc = (medicoAsignado && STATE.firmas?.medico && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: medNombre })
+    : `<div style="height:46px;border-bottom:1px solid #000;width:210px;margin-top:10px;"></div><span style="font-size:8.5px;">Firma y Sello del Responsable de la Atención</span>`;
 
   const w = window.open("", "_blank");
   if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
@@ -19071,7 +19075,7 @@ function imprimirDocumentoNormativoFuaEssi(forzarSector) {
         </div>
         <div class="fua-box"><div class="fua-sec">6. Responsable de la Atención y Conformidad del Asegurado</div>
           <table class="fua-grid"><tr>
-            <td style="width:55%;vertical-align:top;"><strong>Responsable de la Atención:</strong> ${medNombre}<br><strong>N° Colegiatura:</strong> CMP ${cmpNum}<br>${firmaMedDoc}</td>
+            <td style="width:55%;vertical-align:top;"><strong>Responsable de la Atención:</strong> ${medNombre}<br><strong>N° Colegiatura:</strong> ${cmpNum ? "CMP " + cmpNum : ""}<br>${firmaMedDoc}</td>
             <td style="width:45%;vertical-align:bottom;text-align:center;"><div style="display:flex;justify-content:space-around;align-items:flex-end;"><div><div style="height:46px;border-bottom:1px solid #000;width:150px;"></div><span>Firma Asegurado / Apoderado<br>DNI: ${STATE.numDni || "________"}</span></div><div style="border:1px solid #000;width:48px;height:58px;font-size:7px;display:flex;align-items:center;justify-content:center;">HUELLA<br>DIGITAL</div></div></td>
           </tr></table>
         </div>

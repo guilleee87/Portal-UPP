@@ -585,7 +585,7 @@
             <strong>Seguro:</strong> ${exp.tipoSeguro || "—"} | <strong>Diagnóstico CIE-10:</strong> ${exp.cie10 || "—"}
           </div>
           <div style="margin-top:36px;display:flex;justify-content:space-between;text-align:center;">
-            <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Médico Tratante (${exp.medicoTratante || "CMP 58321"})</div>
+            <div style="border-top:1px solid #000;width:220px;padding-top:4px;">${(exp.medicoTratante && !String(exp.medicoTratante).toLowerCase().includes("por asignar")) ? `Médico Tratante (${exp.medicoTratante})` : "Médico Tratante (Firma y Sello)"}</div>
             <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Asegurado / Apoderado</div>
           </div>
         </body></html>
