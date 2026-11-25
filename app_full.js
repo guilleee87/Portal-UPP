@@ -7106,6 +7106,9 @@ async function grabarAtencionCompleta() {
   // Liberar cama asignada al concluir la atención médica completa y actualizar todos los indicadores
   liberarCamaTotalPaciente(pacienteActivoId, "Atención Médica Grabada y Concluida");
 
+  if (STATE.nroFua) STATE.estadoFua = "CERRADO_LIQUIDADO";
+  if (STATE.nroEssi) STATE.estadoEssi = "CERRADO_LIQUIDADO";
+  if (typeof actualizarIndicadoresFuaEssi === "function") actualizarIndicadoresFuaEssi();
   // 5. Desplegar comprobante visual de atención guardada
   mostrarModalRegistroExitoso(episodioCompleto);
 }
@@ -15731,7 +15734,7 @@ function obtenerListaTodosPacientesAuditoria() {
       motivo: (esVivo ? STATE.motivoConsulta : null) || p.motivo || exp.motivoConsulta || "Por evaluar en triaje",
       diagnosticoCie10: (esVivo ? STATE.cie10 : null) || exp.diagnosticoCie10 || p.diagnosticoCie10 || p.cie10 || "Por determinar (Atención Médica)",
       medicoTratante: (firmas.medico?.usuario) || ((esVivo && STATE.medicoTratante && STATE.medicoTratante !== "Por asignar") ? STATE.medicoTratante : null) || p.medico || p.medicoTratante || "⏳ Por asignar",
-      enfermeraTriaje: (firmas.triaje?.usuario) || p.enfermeraTriaje || exp.enfermeraTriaje || (p.prioridad ? "Lic. Enfermería de Triaje" : "⏳ Por evaluar"),
+      enfermeraTriaje: (firmas.triaje?.usuario) || p.enfermeraTriaje || exp.enfermeraTriaje || ((p.ingresoDirectoCritico || p.panicoShockTrauma) ? "— (Atención Rápida — Sin paso por Triaje)" : "⏳ Por evaluar"),
       seguro: segReal,
       tipoCobertura: formatoRegimen || (cobValidada ? (exp.tipoCobertura || "Validado en Admisión / SUSALUD") : "Sin validar aún"),
       estadoFlujo: esFallecido ? "FALLECIDO" : ef,
@@ -15967,8 +15970,10 @@ function renderizarFichaTrazabilidad(px) {
     listaProcs = px.procedimientos;
   } else if (px.esTiempoReal) {
     listaProcs.push({ hora: `${fechaBase} ${horaLlegada}`, nombre: "Ingreso a Emergencia y registro en cola de atención", profesional: "Sistema de Recepción / Triaje" });
-    if (px.prioridad || px.firmas?.triaje) {
+    if (px.firmas?.triaje) {
       listaProcs.push({ hora: `${fechaBase} ${px.horaTriaje}`, nombre: `Evaluación de Triaje — ${prioCfg.label}`, profesional: px.enfermeraTriaje });
+    } else if (px.prioridad) {
+      listaProcs.push({ hora: `${fechaBase} ${horaLlegada}`, nombre: `Atención Rápida Directa (${prioCfg.label} — Sin paso por Triaje)`, profesional: "Recepción / Emergencia" });
     }
     if (px.coberturaValidada || px.firmas?.admision) {
       listaProcs.push({ hora: `${fechaBase} ${px.firmas?.admision ? new Date(px.firmas.admision.fecha).toLocaleTimeString('es-PE') : horaLlegada}`, nombre: `Validación de Seguro: ${px.seguro} (${px.tipoCobertura})`, profesional: px.firmas?.admision?.usuario || "Admisión SUSALUD" });
@@ -16143,7 +16148,7 @@ function renderizarFichaTrazabilidad(px) {
   // Generar sellos digitales SOLO si el paciente ya pasó por ese módulo (cero firmas inventadas)
   const esReal = Boolean(px.esTiempoReal);
   const f = px.firmas || {};
-  const pasoTriaje = !esReal || Boolean(f.triaje || (px.prioridad && px.enfermeraTriaje && !String(px.enfermeraTriaje).includes("Por evaluar")));
+  const pasoTriaje = !esReal || Boolean(f.triaje);
   const pasoAdmision = !esReal || Boolean(f.admision || px.coberturaValidada);
   const pasoMedico = !esReal || Boolean(f.medico || (px.medicoTratante && !String(px.medicoTratante).includes("Por asignar")));
   const pasoCaja = !esReal || Boolean(f.caja || px.estadoFlujo === "CERRADO_FACTURADO" || px.estadoFlujo === "ATENDIDO_ALTA");
@@ -18802,8 +18807,12 @@ function actualizarIndicadoresFuaEssi() {
   if (elTop && !esEssalud) elTop.textContent = txtDoc;
   const elEss = document.getElementById("badge_doc_normativo_essalud");
   if (elEss && esEssalud) elEss.textContent = txtDoc;
+  const elM3 = document.getElementById("m3_doc_normativo_pill");
+  if (elM3) elM3.textContent = txtDoc;
   const elM4 = document.getElementById("m4_doc_normativo_pill");
   if (elM4) elM4.textContent = txtDoc;
+  const elM8 = document.getElementById("m8_doc_normativo_pill");
+  if (elM8) elM8.textContent = txtDoc;
 }
 window.actualizarIndicadoresFuaEssi = actualizarIndicadoresFuaEssi;
 
