@@ -2685,11 +2685,8 @@
           <button type="button" class="btn-caos-action btn-quirofano-action" onclick="activarIngresoDirectoQuirofano()" title="Admisión Inmediata de Emergencia a Quirófano SOP (Ley N° 27604)" style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%); color: #ffffff; font-weight: 800; border: 1px solid #9a3412; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);">
             🏥 Admitir Emergencia Quirófano SOP (P-I)
           </button>
-          <button type="button" class="btn-caos-action" onclick="abrirModalPreEvaluacionNN('CONSCIENTE')" title="Pre-evaluación de Paciente NN Consciente" style="background:#f0f9ff; color:#0369a1; border:1.5px solid #bae6fd; font-weight:800;">
-            👤 NN Consciente
-          </button>
-          <button type="button" class="btn-caos-action btn-nn-action" onclick="abrirModalPreEvaluacionNN('INCONSCIENTE')" title="Pre-evaluación de Paciente NN Inconsciente">
-            🚨 NN Inconsciente
+          <button type="button" id="btn_ingreso_nn_unico" class="btn-caos-action btn-nn-action" onclick="abrirModalPreEvaluacionNN()" title="Pre-evaluación de Paciente Indocumentado / NN (Ley N° 27604)">
+            🚨 Paciente NN (Indocumentado)
           </button>
           <button type="button" class="btn-caos-action btn-soat-action" onclick="admitirEmergenciaSoat()" title="Protocolo de Emergencia Accidente de Tránsito / Trauma Vial (Ley N° 27181 & D.S. N° 024-2002-MTC)" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; font-weight: 800; border: 1px solid #075985; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);">
             🚗 Accidente de Tránsito / Trauma Vial (SOAT)
@@ -3452,18 +3449,24 @@
             </select>
           </div>
           <div class="form-field">
-            <label for="gsan_full">Grupo Sanguíneo y Factor Rh:</label>
-            <select id="gsan_full" class="input-full" onchange="actualizarGrupoSanguineo(this.value)">
-              <option value="Desconocido" selected>Desconocido / Por tipificar</option>
-              <option value="O+">O+</option>
-              <option value="O-">O-</option>
-              <option value="A+">A+</option>
-              <option value="A-">A-</option>
-              <option value="B+">B+</option>
-              <option value="B-">B-</option>
-              <option value="AB+">AB+</option>
-              <option value="AB-">AB-</option>
-            </select>
+            <label>🩸 GS y Factor RH (Filiación HC · NTS N° 139-MINSA):</label>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+              <select id="gs_select_mod1" class="input-full" onchange="actualizarGsRh('mod1')" aria-label="Grupo Sanguíneo (GS)">
+                <option value="Desconocido" selected>GS: Por tipificar</option>
+                <option value="O">GS: O</option>
+                <option value="A">GS: A</option>
+                <option value="B">GS: B</option>
+                <option value="AB">GS: AB</option>
+                <option value="No se acuerda">GS: No se acuerda</option>
+              </select>
+              <select id="rh_select_mod1" class="input-full" onchange="actualizarGsRh('mod1')" aria-label="Factor RH">
+                <option value="Desconocido" selected>RH: Por tipificar</option>
+                <option value="+">RH: Positivo (+)</option>
+                <option value="-">RH: Negativo (-)</option>
+                <option value="No se acuerda">RH: No se acuerda</option>
+              </select>
+            </div>
+            <input type="hidden" id="gsan_full" value="Desconocido">
           </div>
         </div>
 
@@ -3972,6 +3975,39 @@
               <button type="button" class="btn-full-primary" style="white-space:nowrap; padding:0 14px; font-weight:700; background:#0284c7; display:flex; align-items:center; gap:6px;" onclick="asignarMedicoDisponible()" title="Verificar rol de guardia y asignar médico disponible según especialidad">
                 🩺 Asignar Disponible
               </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TIPIFICACIÓN SANGUÍNEA (GS Y FACTOR RH) EN MÓDULO 4 (BANCO DE SANGRE / SOP) -->
+        <div style="background:#fff1f2; border:1.5px solid #fecdd3; border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+            <strong style="font-size:0.84rem; color:#9f1239;">🩸 Ingresar Grupo Sanguíneo (GS) y Factor RH del Paciente:</strong>
+            <span style="font-size:0.72rem; color:#881337; font-weight:700;">Sincronizado con Triaje e Historia Clínica (Banco de Sangre / SOP)</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; align-items:end;">
+            <div>
+              <label for="gs_select_mod4" style="font-size:0.74rem; font-weight:700; color:#881337;">Grupo Sanguíneo (GS):</label>
+              <select id="gs_select_mod4" class="input-full" onchange="actualizarGsRh('mod4')">
+                <option value="Desconocido" selected>Por tipificar / Desconocido</option>
+                <option value="O">Grupo O</option>
+                <option value="A">Grupo A</option>
+                <option value="B">Grupo B</option>
+                <option value="AB">Grupo AB</option>
+                <option value="No se acuerda">No se acuerda</option>
+              </select>
+            </div>
+            <div>
+              <label for="rh_select_mod4" style="font-size:0.74rem; font-weight:700; color:#881337;">Factor RH:</label>
+              <select id="rh_select_mod4" class="input-full" onchange="actualizarGsRh('mod4')">
+                <option value="Desconocido" selected>Por tipificar / Desconocido</option>
+                <option value="+">Positivo (+)</option>
+                <option value="-">Negativo (-)</option>
+                <option value="No se acuerda">No se acuerda</option>
+              </select>
+            </div>
+            <div style="background:#ffffff; border:1px solid #fecdd3; border-radius:8px; padding:8px 12px; font-size:0.80rem; font-weight:800; color:#9f1239;">
+              Resultado GS/RH: <span id="lbl_gs_rh_consolidado">Desconocido</span>
             </div>
           </div>
         </div>
@@ -5947,19 +5983,29 @@
             </div>
           </div>
 
-          <!-- 2. CHECK DE CÓDIGO ROJO -->
-          <div id="card_check_codigo_rojo" style="background:#f8fafc; border:2px solid #cbd5e1; border-radius:10px; padding:12px 14px; margin-bottom:16px; transition:all 0.2s;">
-            <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer; margin:0;">
-              <input type="checkbox" id="nn_check_codigo_rojo" onchange="actualizarPreEvaluacionNNUI()" style="width:20px; height:20px; margin-top:2px; accent-color:#dc2626; cursor:pointer;">
-              <div>
-                <strong id="lbl_nn_check_rojo" style="font-size:0.92rem; color:#b91c1c; display:flex; align-items:center; gap:6px;">
-                  <span>🚨</span> <span>¿Es Código Rojo? (Riesgo Vital Inminente)</span>
-                </strong>
-                <p style="margin:3px 0 0; font-size:0.74rem; color:#475569; line-height:1.35;">
-                  Compromiso de vía aérea, shock, insuficiencia respiratoria severa, hemorragia exanguinante o trauma vital (Ley N° 27604).
-                </p>
-              </div>
+          <!-- 2. PRIORIDAD / VÍA ASISTENCIAL (ATENCIÓN INMEDIATA VS FLUJO REGULAR DE TRIAJE) -->
+          <div id="card_check_codigo_rojo" style="margin-bottom:14px;">
+            <label style="font-weight:700; font-size:0.82rem; color:#1e293b; display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+              <span>🚦</span> <span>2. Prioridad y Vía Asistencial:</span>
+              <span style="font-size:0.72rem; color:#64748b; font-weight:400;">(Elija si requiere atención inmediata o pasa a triaje regular)</span>
             </label>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <label id="lbl_nn_prio_inmediata" style="border:2px solid #cbd5e1; border-radius:10px; padding:10px 12px; display:flex; align-items:flex-start; gap:8px; cursor:pointer; background:#ffffff;">
+                <input type="radio" name="nn_via_prioridad" id="nn_via_inmediata" value="INMEDIATA" onchange="seleccionarViaPrioridadNN('INMEDIATA')" style="margin-top:3px; accent-color:#dc2626; width:16px; height:16px;">
+                <div>
+                  <strong style="display:block; font-size:0.84rem; color:#b91c1c;">⚡ Atención Inmediata</strong>
+                  <span style="font-size:0.71rem; color:#64748b; display:block; margin-top:2px;">Código Rojo (P-I) · Pase directo a Shock Trauma</span>
+                </div>
+              </label>
+              <label id="lbl_nn_prio_regular" style="border:2px solid #16a34a; border-radius:10px; padding:10px 12px; display:flex; align-items:flex-start; gap:8px; cursor:pointer; background:#f0fdf4;">
+                <input type="radio" name="nn_via_prioridad" id="nn_via_regular" value="REGULAR" checked onchange="seleccionarViaPrioridadNN('REGULAR')" style="margin-top:3px; accent-color:#16a34a; width:16px; height:16px;">
+                <div>
+                  <strong style="display:block; font-size:0.84rem; color:#15803d;">📋 Flujo Regular de Triaje</strong>
+                  <span style="font-size:0.71rem; color:#64748b; display:block; margin-top:2px;">Pasa a Sala de Espera / Triaje para evaluar prioridad</span>
+                </div>
+              </label>
+            </div>
+            <input type="checkbox" id="nn_check_codigo_rojo" style="display:none;">
           </div>
 
           <!-- 3. BANNER DINÁMICO DE DECISIÓN DE VÍA ASISTENCIAL -->

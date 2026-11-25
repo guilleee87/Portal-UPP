@@ -1794,6 +1794,7 @@ function ingresarPacienteNN() {
 
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
+  if (typeof sincronizarSelectsGsRh === "function") sincronizarSelectsGsRh("Desconocido");
   const elAlergiasFull = document.getElementById("alergias_full");
   if (elAlergiasFull) elAlergiasFull.value = "Desconocido";
   const elAlergiasM1 = document.getElementById("alergias_mod1");
@@ -1941,6 +1942,41 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
     ? master.ingresos_historia
     : (pxVivo.id ? [{ dia: pxVivo.fecha || new Date().toLocaleDateString("es-PE"), hora: pxVivo.horaLlegada || "—", tipo: "Ingreso a Emergencia", modalidad: pxVivo.modalidad || "—", ubicacion: pxVivo.camaNombre || "—", enfermera: enfermeraReg }] : []);
   const episodios = obtenerEpisodiosDePaciente(ident, hc);
+  const kardexDetallado = Array.isArray(stVivo.kardexItems) && stVivo.kardexItems.length ? stVivo.kardexItems : (Array.isArray(pxVivo.kardexItems) ? pxVivo.kardexItems : []);
+  const labsDetallado = Array.isArray(stVivo.ordenesLaboratorio) && stVivo.ordenesLaboratorio.length ? stVivo.ordenesLaboratorio : [];
+  const imgsDetallado = Array.isArray(stVivo.ordenesImagenes) && stVivo.ordenesImagenes.length ? stVivo.ordenesImagenes : [];
+  const bitacoraPasos = [];
+  if (pxVivo.id) {
+    bitacoraPasos.push({ cuando: `${pxVivo.fecha || new Date().toLocaleDateString("es-PE")} ${pxVivo.horaLlegada || "—"}`, paso: "1. Ingreso a Emergencia", donde: pxVivo.camaNombre || "Sala de Espera / Triaje", como: `Modalidad: ${pxVivo.modalidad || "—"} · Ticket: ${pxVivo.turno || pxVivo.identificador || "—"}`, quien: enfermeraReg !== "—" ? enfermeraReg : "Recepción / Triaje" });
+  }
+  if (pxVivo.prioridad || stVivo.prioridad || pxVivo.firmas?.triaje) {
+    bitacoraPasos.push({ cuando: pxVivo.firmas?.triaje?.fecha ? new Date(pxVivo.firmas.triaje.fecha).toLocaleString("es-PE") : "En triaje", paso: `2. Categorización Triaje (P-${pxVivo.prioridad || stVivo.prioridad})`, donde: "Módulo 1 — Triaje", como: `Motivo: ${stVivo.motivoConsulta || pxVivo.motivo || "—"} · SpO2: ${stVivo.spo2 ?? "—"}%, FC: ${stVivo.fc ?? "—"}, PA: ${stVivo.pasSistolica ?? "—"}/${stVivo.paDiastolica ?? "—"}`, quien: enfermeraReg });
+  }
+  if (pxVivo.coberturaValidada || stVivo.coberturaValidada || pxVivo.firmas?.admision) {
+    bitacoraPasos.push({ cuando: pxVivo.firmas?.admision?.fecha ? new Date(pxVivo.firmas.admision.fecha).toLocaleString("es-PE") : "Validado", paso: "3. Admisión & Validación de Seguro", donde: "Módulo 2-3 — Admisión", como: `Seguro: ${seguro} ${stVivo.nroFua ? "· FUA " + stVivo.nroFua : (stVivo.nroEssi ? "· ESSI " + stVivo.nroEssi : "")}`, quien: pxVivo.firmas?.admision?.usuario || "Admisión SUSALUD" });
+  }
+  kardexDetallado.forEach(k => {
+    bitacoraPasos.push({ cuando: new Date().toLocaleString("es-PE"), paso: `4. Administración / Prescripción: ${k.nombre}`, donde: pxVivo.camaNombre || "Tópico / Shock Trauma", como: `Dosis: ${k.dosis || "—"} · Vía: ${k.via || "EV"} · Frecuencia: ${k.frecuencia || "STAT"} · Costo: S/. ${Number(k.costo || 25).toFixed(2)}`, quien: enfermeraReg !== "—" ? enfermeraReg : medicoReg });
+  });
+  labsDetallado.forEach(l => {
+    bitacoraPasos.push({ cuando: new Date().toLocaleString("es-PE"), paso: `5. Análisis de Laboratorio: ${l.nombre}`, donde: "Laboratorio Clínico", como: `CPMS: ${l.cpms || "—"} · Estado: ${l.estado || "Procesando"} · S/. ${Number(l.costo || 45).toFixed(2)}`, quien: medicoReg });
+  });
+  imgsDetallado.forEach(im => {
+    bitacoraPasos.push({ cuando: new Date().toLocaleString("es-PE"), paso: `6. Estudio por Imágenes: ${im.nombre}`, donde: "Diagnóstico por Imágenes", como: `CPMS: ${im.cpms || "—"} · Indicación: ${im.indicacion || "Emergencia"} · S/. ${Number(im.costo || 150).toFixed(2)}`, quien: medicoReg });
+  });
+  if (pxVivo.firmas?.medico || diagReg !== "—") {
+    bitacoraPasos.push({ cuando: pxVivo.firmas?.medico?.fecha ? new Date(pxVivo.firmas.medico.fecha).toLocaleString("es-PE") : "En atención", paso: "7. Evaluación Médica / Diagnóstico", donde: "Módulo 4 — Atención Médica", como: `CIE-10: ${diagReg}`, quien: medicoReg });
+  }
+  const modsHC = Array.isArray(master.modificaciones_auditoria) ? master.modificaciones_auditoria : [];
+  const selloMedicoHC = (typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: (medicoReg && medicoReg !== "—") ? medicoReg : "Dr. Carlos Vega Alva", colegiatura: "CMP 58321 · RNE 23901" })
+    : "";
+  const selloEnfHC = (enfermeraReg !== "—" && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("TRIAJE", { nombre: enfermeraReg, colegiatura: "CEP 92410" })
+    : "";
+  const selloAuditorHC = (modsHC.length > 0 && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("AUDITOR", { nombre: modsHC[0].usuario || "Dra. Elena Ríos Salazar", cargo: "Auditora Médica · Comité de Historias Clínicas", colegiatura: "CMP 41209 · RNE 18452", fechaHora: `${modsHC[0].dia} ${modsHC[0].hora}` })
+    : "";
   const esAlergico = alergias && !alergias.toLowerCase().includes("niega") && !alergias.toLowerCase().includes("ninguna");
   let htmlEpisodios = "";
   if (episodios.length === 0) {
@@ -2102,7 +2138,32 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
         ${htmlEpisodios}
       </div>
     </div>
+    <!-- BITÁCORA COMPLETA DE ATENCIÓN PASO A PASO (QUÉ, CUÁNDO, DÓNDE, CÓMO, CUÁNTO) -->
+    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+      <div style="font-size:0.84rem;font-weight:900;color:#0f172a;margin-bottom:8px;">
+        🧾 Bitácora Cronológica Completa de Atención (Cada Paso: Cuándo, Dónde, Cómo, Cuánto y Responsable)
+      </div>
+      ${bitacoraPasos.length === 0
+        ? '<div style="font-size:0.76rem;color:#94a3b8;">— Sin pasos registrados en la atención actual (ver histórico de episodios arriba si aplica).</div>'
+        : `<table style="width:100%;border-collapse:collapse;font-size:0.74rem;">
+            <thead><tr style="background:#f1f5f9;border-bottom:1.5px solid #cbd5e1;"><th style="padding:6px;text-align:left;">Cuándo</th><th style="padding:6px;text-align:left;">Paso / Intervención</th><th style="padding:6px;text-align:left;">Dónde</th><th style="padding:6px;text-align:left;">Cómo / Cuánto / Detalle</th><th style="padding:6px;text-align:left;">Personal</th></tr></thead>
+            <tbody>${bitacoraPasos.map(b => `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:6px;font-family:monospace;">${b.cuando}</td><td style="padding:6px;font-weight:700;">${b.paso}</td><td style="padding:6px;">${b.donde}</td><td style="padding:6px;">${b.como}</td><td style="padding:6px;">${b.quien}</td></tr>`).join("")}</tbody>
+          </table>`}
+    </div>
+
     ${renderizarBloqueAuditoriaEdicionHC(master, ident, hc)}
+
+    <!-- FIRMAS ELECTRÓNICAS DEL PERSONAL DE SALUD (+ AUDITOR AL COSTADO SI HUBO MODIFICACIÓN) -->
+    <div id="hc_modal_firmas_electronicas" style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px 14px;margin-top:12px;">
+      <div style="font-size:0.80rem;font-weight:900;color:#0f172a;margin-bottom:8px;">
+        🔏 Firmas Electrónicas Digitales del Personal Interviniente (Ley N° 27269)
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+        <div>${selloMedicoHC}</div>
+        ${selloEnfHC ? `<div>${selloEnfHC}</div>` : ""}
+        ${selloAuditorHC ? `<div id="hc_modal_firma_auditor_col">${selloAuditorHC}</div>` : ""}
+      </div>
+    </div>
   `;
   // Asignar eventos de botones del modal
   const btnCargar = document.getElementById("btn_modal_cargar_paciente");
@@ -2125,25 +2186,44 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
   modal.classList.add("show");
   modal.style.setProperty("display", "flex", "important");
 }
-function imprimirFichaHistoriaClinica(pacienteEncoded) {
+function construirHTMLImpresionHC(pacienteEncoded) {
   let p;
   try {
     p = typeof pacienteEncoded === "string" ? JSON.parse(decodeURIComponent(pacienteEncoded)) : pacienteEncoded;
   } catch (e) {
     p = pacienteEncoded;
   }
-  if (!p) return;
-  const ident = p.identificador || "—";
+  if (!p) return "";
+  const ident = p.identificador || p.dni || "—";
   const nom = p.nombre_completo || ident;
   const hc = p.historia_clinica || "—";
   const master = obtenerOInicializarPacienteMaster(ident, hc, nom, p.tipo_seguro);
-  const seguro = master.tipo_seguro || p.tipo_seguro || "EsSalud / SIS / Particular";
+  const seguro = master.tipo_seguro || p.tipo_seguro || "—";
   const alergias = master.alergias || p.alergias || "Niega alergias medicamentosas conocidas";
+  const antecedentes = master.antecedentes || p.antecedentes || "Sin antecedentes patológicos declarados";
+  const gSan = master.grupo_sanguineo || p.grupo_sanguineo || "—";
+  const edadPx = master.edad || p.edad || "—";
+  const sexoPx = master.sexo || p.sexo || "—";
+  const pxVivo = (Array.isArray(PACIENTES_COLA) ? PACIENTES_COLA.find(x => (x.dni && x.dni === ident) || x.historiaClinica === hc || x.nombre === nom) : null) || {};
+  const stVivo = (typeof STATE !== "undefined" && (STATE.numDni === ident || STATE.historiaClinica === hc)) ? STATE : {};
+  const enfermeraReg = master.enfermera_responsable || pxVivo.enfermeraTriaje || pxVivo.firmas?.triaje?.usuario || stVivo.firmas?.triaje?.usuario || "—";
+  const medVivoVal = (pxVivo.medico && pxVivo.medico !== "Por asignar") ? pxVivo.medico : ((stVivo.medicoTratante && stVivo.medicoTratante !== "Por asignar") ? stVivo.medicoTratante : null);
+  const medicoReg = master.medico_responsable || medVivoVal || pxVivo.medicoTratante || pxVivo.firmas?.medico?.usuario || stVivo.firmas?.medico?.usuario || "—";
+  const diagReg = master.diagnostico_cie10 || pxVivo.cie10 || stVivo.cie10 || "—";
+  const labsReg = master.resultados_texto ? [master.resultados_texto] : (Array.isArray(master.resultados_lab) ? master.resultados_lab : (Array.isArray(stVivo.ordenesLaboratorio) && stVivo.ordenesLaboratorio.length ? stVivo.ordenesLaboratorio.map(l => `${l.nombre} (${l.estado || 'Validado'})`) : []));
+  const imgsReg = master.imagenes_texto ? [master.imagenes_texto] : (Array.isArray(master.estudios_imagenes) ? master.estudios_imagenes : (Array.isArray(stVivo.ordenesImagenes) && stVivo.ordenesImagenes.length ? stVivo.ordenesImagenes.map(im => `${im.nombre} (${im.estado || 'Informado'})`) : []));
+  const kardexReg = master.kardex_texto ? [master.kardex_texto] : (Array.isArray(master.kardex_resumen) ? master.kardex_resumen : (Array.isArray(stVivo.kardexItems) && stVivo.kardexItems.length ? stVivo.kardexItems.map(k => `${k.nombre} — ${k.dosis || ''} ${k.frecuencia || ''} (${k.administrado ? 'Administrado' : 'Prescrito'})`) : []));
+  const consultasExt = Array.isArray(master.consultas_externas) ? master.consultas_externas : [];
+  const ingresosReg = Array.isArray(master.ingresos_historia) && master.ingresos_historia.length
+    ? master.ingresos_historia
+    : (pxVivo.id ? [{ dia: pxVivo.fecha || new Date().toLocaleDateString("es-PE"), hora: pxVivo.horaLlegada || "—", tipo: "Ingreso a Emergencia", modalidad: pxVivo.modalidad || "—", ubicacion: pxVivo.camaNombre || "—", enfermera: enfermeraReg }] : []);
   const episodios = obtenerEpisodiosDePaciente(ident, hc);
+  const mods = Array.isArray(master.modificaciones_auditoria) ? master.modificaciones_auditoria : [];
   const esAlergico = alergias && !alergias.toLowerCase().includes("niega") && !alergias.toLowerCase().includes("ninguna");
+
   let filasHtml = "";
   if (episodios.length === 0) {
-    filasHtml = `<tr><td colspan="7" style="text-align:center;padding:16px;color:#64748b;">Expediente sin atenciones de emergencia previas registradas.</td></tr>`;
+    filasHtml = `<tr><td colspan="7" style="text-align:center;padding:12px;color:#64748b;">—</td></tr>`;
   } else {
     episodios.forEach((ep, i) => {
       const sv = ep.signos_vitales || {};
@@ -2155,98 +2235,132 @@ function imprimirFichaHistoriaClinica(pacienteEncoded) {
           <td style="font-weight:700;">#${episodios.length - i}<br><code style="font-size:10px;">${ep.folio || ""}</code></td>
           <td>${ep.fecha || "—"}<br><span style="font-size:10px;color:#64748b;">${ep.hora || ""}</span></td>
           <td style="font-weight:800;color:#0284c7;">${ep.prioridad || "—"}</td>
-          <td>${ep.motivo_consulta || "Triaje de Emergencia"}</td>
+          <td>${ep.motivo_consulta || ep.motivo || "—"}</td>
           <td style="font-size:11px;">${vitalsStr}</td>
-          <td>${ep.cama_asignada || "Observación"}</td>
+          <td>${ep.cama_asignada || ep.cama || "—"}</td>
           <td style="font-weight:800;">${pagoStr}<br><span style="font-size:10px;color:#16a34a;">${ep.tipo_seguro || seguro}</span></td>
         </tr>
       `;
     });
   }
+
+  const selloMedico = (typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: (medicoReg && medicoReg !== "—") ? medicoReg : "Dr. Carlos Vega Alva (Médico Tratante)" })
+    : `<div class="firma-line">${medicoReg}</div>`;
+  const selloAuditor = (mods.length > 0 && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("AUDITOR", { nombre: mods[0].usuario, fechaHora: `${mods[0].dia} ${mods[0].hora}` })
+    : "";
+
+  const modsHtml = mods.length === 0 ? "" : `
+    <div class="section-box">
+      <div class="section-title">VI. Bitácora Inmutable de Rectificaciones (NTS N° 139-MINSA num. 4.2.7)</div>
+      <table>
+        <thead><tr><th>Fecha / Hora</th><th>Auditor</th><th>IP PC</th><th>Campo</th><th>Antes → Después</th><th>Motivo Obligatorio</th></tr></thead>
+        <tbody>
+          ${mods.map(m => `<tr><td>${m.dia} ${m.hora}</td><td>${m.usuario}</td><td>${m.ip_pc}</td><td>${m.campo || 'HC'}</td><td>${m.valor_anterior || '—'} → <strong>${m.valor_nuevo || '—'}</strong></td><td>${m.motivo || '—'}</td></tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+
   const printHtml = `
     <html><head><title>Expediente de Historia Clínica — ${hc}</title><style>
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; padding: 30px; max-width: 900px; margin: auto; color: #0f172a; line-height: 1.45; font-size: 12px; }
-      .header-hc { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #0284c7; padding-bottom: 12px; margin-bottom: 16px; }
-      .inst-info h2 { margin: 0; font-size: 1.2rem; color: #0f172a; font-weight: 900; }
-      .inst-info p { margin: 2px 0 0; font-size: 0.78rem; color: #64748b; font-weight: 600; }
-      .hc-badge { border: 2px solid #0284c7; background: #e0f2fe; color: #0369a1; padding: 6px 14px; border-radius: 8px; font-size: 1.1rem; font-weight: 900; text-align: center; font-family: monospace; }
-      .section-box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-bottom: 14px; }
-      .section-title { font-size: 0.82rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 8px; }
-      .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; padding: 26px; max-width: 920px; margin: auto; color: #0f172a; line-height: 1.4; font-size: 11.5px; }
+      .header-hc { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #0284c7; padding-bottom: 10px; margin-bottom: 14px; }
+      .inst-info h2 { margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 900; }
+      .inst-info p { margin: 2px 0 0; font-size: 0.76rem; color: #64748b; font-weight: 600; }
+      .hc-badge { border: 2px solid #0284c7; background: #e0f2fe; color: #0369a1; padding: 6px 14px; border-radius: 8px; font-size: 1.05rem; font-weight: 900; text-align: center; font-family: monospace; }
+      .section-box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+      .section-title { font-size: 0.78rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 8px; }
+      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
       .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
-      .field label { font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 2px; }
-      .field span { font-size: 0.88rem; font-weight: 700; color: #0f172a; }
-      .alergia-alert { background: ${esAlergico ? "#fee2e2" : "#f0fdf4"}; border: 2px solid ${esAlergico ? "#ef4444" : "#86efac"}; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
-      table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 11px; }
-      th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
+      .field label { font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 2px; }
+      .field span { font-size: 0.84rem; font-weight: 700; color: #0f172a; }
+      .alergia-alert { background: ${esAlergico ? "#fee2e2" : "#f0fdf4"}; border: 2px solid ${esAlergico ? "#ef4444" : "#86efac"}; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 10.5px; }
+      th, td { border: 1px solid #cbd5e1; padding: 5px 7px; text-align: left; vertical-align: top; }
       th { background: #f8fafc; font-weight: 800; color: #334155; }
-      .firma-box { margin-top: 40px; display: flex; justify-content: space-around; text-align: center; }
-      .firma-line { border-top: 1px solid #0f172a; width: 220px; padding-top: 6px; font-size: 0.75rem; font-weight: 700; }
+      .firma-box { margin-top: 24px; display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
     </style></head>
     <body>
       <div class="header-hc">
         <div class="inst-info">
-          <h2>UNIVERSIDAD POLITÉCNICA DEL PERÚ — FCS</h2>
-          <p>Departamento de Emergencia y Cuidados Críticos · Hospital Docente UPP</p>
-          <p style="color:#0284c7;font-weight:700;">EXPEDIENTE DE HISTORIA CLÍNICA INTEGRAL (CON HISTORIAL EPISÓDICO)</p>
+          <h2>UNIVERSIDAD POLITÉCNICA DEL PERÚ — HOSPITAL DOCENTE UPP</h2>
+          <p>Departamento de Emergencia, Consulta Externa y Archivo Clínico · NTS N° 139-MINSA/2018/DGAIN</p>
+          <p style="color:#0284c7;font-weight:700;">HISTORIA CLÍNICA DIGITAL INTEGRAL</p>
         </div>
         <div>
           <div class="hc-badge">${hc}</div>
-          <div style="font-size:0.72rem;text-align:center;color:#64748b;margin-top:3px;">FOLIO HIS OFICIAL</div>
+          <div style="font-size:0.70rem;text-align:center;color:#64748b;margin-top:3px;">FOLIO HIS OFICIAL</div>
         </div>
       </div>
+
       <div class="section-box">
-        <div class="section-title">I. Filiación y Datos de Identificación</div>
-        <div class="grid-4">
+        <div class="section-title">I. Filiación, Equipo Asistencial y Diagnóstico</div>
+        <div class="grid-4" style="margin-bottom:8px;">
           <div class="field"><label>Apellidos y Nombres</label><span>${nom}</span></div>
-          <div class="field"><label>Documento de Identidad</label><span>DNI ${ident}</span></div>
-          <div class="field"><label>Edad / Sexo</label><span>${master.edad ? `${master.edad} años` : "—"} (${master.sexo || "M"})</span></div>
-          <div class="field"><label>Régimen de Aseguramiento</label><span>${seguro}</span></div>
+          <div class="field"><label>Documento</label><span>${ident}</span></div>
+          <div class="field"><label>Edad / Sexo / Grupo</label><span>${edadPx} años · ${sexoPx} · ${gSan}</span></div>
+          <div class="field"><label>Seguro / IAFAS</label><span>${seguro}</span></div>
+        </div>
+        <div class="grid-2">
+          <div><strong>Antecedentes:</strong> ${antecedentes}<br><strong>Diagnóstico CIE-10:</strong> ${diagReg}</div>
+          <div><strong>Enfermera(o) Responsable:</strong> ${enfermeraReg}<br><strong>Médico Tratante:</strong> ${medicoReg}</div>
         </div>
       </div>
+
       <div class="alergia-alert">
-        <div style="font-size:0.8rem;font-weight:900;color:${esAlergico ? "#991b1b" : "#166534"};text-transform:uppercase;">
-          ${esAlergico ? "⚠️ ALERGIAS MEDICAMENTOSAS REGISTRADAS (ALERTA MÉDICA PERMANENTE)" : "✓ ALERGIAS MEDICAMENTOSAS REGISTRADAS"}
-        </div>
-        <div style="font-size:1rem;font-weight:900;color:${esAlergico ? "#7f1d1d" : "#14532d"};margin-top:3px;">
-          ${alergias}
+        <div style="font-size:0.75rem;font-weight:900;color:${esAlergico ? "#991b1b" : "#166534"};text-transform:uppercase;">
+          ${esAlergico ? "⚠️ ALERGIAS REGISTRADAS" : "✓ ALERGIAS REGISTRADAS"}: ${alergias}
         </div>
       </div>
+
+      <div class="grid-2">
+        <div class="section-box">
+          <div class="section-title">II. Registro de Ingresos</div>
+          ${ingresosReg.length === 0 ? '<div>—</div>' : ingresosReg.map(ing => `<div><strong>${ing.dia} ${ing.hora}</strong> · ${ing.tipo} (${ing.modalidad}) → ${ing.ubicacion}${ing.enfermera && ing.enfermera !== '—' ? ` · Enf.: ${ing.enfermera}` : ''}</div>`).join("")}
+        </div>
+        <div class="section-box">
+          <div class="section-title">III. Consultas Externas</div>
+          ${consultasExt.length === 0 ? '<div>—</div>' : consultasExt.map(ce => `<div><strong>${ce.fecha} ${ce.hora}</strong> · ${ce.servicio}: ${ce.detalle} (${ce.profesional || '—'})</div>`).join("")}
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="section-box">
+          <div class="section-title">IV. Resultados de Análisis de Laboratorio</div>
+          ${labsReg.length === 0 ? '<div>—</div>' : `<ul style="margin:0 0 0 16px;padding:0;">${labsReg.map(l => `<li>${l}</li>`).join("")}</ul>`}
+        </div>
+        <div class="section-box">
+          <div class="section-title">V. Estudios por Imágenes &amp; Kardex</div>
+          ${imgsReg.length === 0 ? '<div>—</div>' : `<ul style="margin:0 0 0 16px;padding:0;">${imgsReg.map(im => `<li>${im}</li>`).join("")}</ul>`}
+          <div style="margin-top:4px;"><strong>Kardex:</strong> ${kardexReg.length ? kardexReg.join(" | ") : "—"}</div>
+        </div>
+      </div>
+
       <div class="section-box">
-        <div class="section-title">II. Registro Histórico y Cronológico de Atenciones de Emergencia (${episodios.length} episodio${episodios.length === 1 ? "" : "s"})</div>
+        <div class="section-title">Histórico Cronológico de Episodios (${episodios.length})</div>
         <table>
           <thead>
-            <tr>
-              <th style="width:75px;">Episodio</th>
-              <th style="width:85px;">Fecha / Hora</th>
-              <th style="width:90px;">Prioridad</th>
-              <th>Motivo de Consulta</th>
-              <th>Signos Vitales</th>
-              <th>Cama / Destino</th>
-              <th style="width:95px;">Liquidación</th>
-            </tr>
+            <tr><th>Episodio</th><th>Fecha / Hora</th><th>Prioridad</th><th>Motivo</th><th>Signos Vitales</th><th>Cama / Destino</th><th>Liquidación</th></tr>
           </thead>
-          <tbody>
-            ${filasHtml}
-          </tbody>
+          <tbody>${filasHtml}</tbody>
         </table>
       </div>
-      <div class="section-box">
-        <div class="section-title">III. Marco Legal y Derechos Asistenciales</div>
-        <p style="font-size:0.74rem;color:#475569;margin:0;">
-          Atención brindada en estricto cumplimiento de la <strong>Ley N° 27604</strong> (Atención de Emergencia sin condicionamiento previo) y Ley N° 26842 (Ley General de Salud). La confidencialidad y preservación del histórico clínico se rige bajo la Ley N° 29733 de Protección de Datos Personales.
-        </p>
-      </div>
+
+      ${modsHtml}
+
       <div class="firma-box">
-        <div>
-          <div class="firma-line">Lic. Enfermería de Turno / Triaje<br>Colegio de Enfermeros del Perú</div>
-        </div>
-        <div>
-          <div class="firma-line">Médico Emergentólogo / Asistencial<br>Colegio Médico del Perú</div>
-        </div>
+        <div>${selloMedico}</div>
+        ${selloAuditor ? `<div>${selloAuditor}</div>` : ""}
       </div>
-    </body></html>
-  `;
+    </body></html>`;
+  return printHtml;
+}
+window.construirHTMLImpresionHC = construirHTMLImpresionHC;
+
+function imprimirFichaHistoriaClinica(pacienteEncoded) {
+  const printHtml = construirHTMLImpresionHC(pacienteEncoded);
+  if (!printHtml) return;
   const w = window.open("", "_blank");
   w.document.write(printHtml);
   w.document.close();
@@ -2763,8 +2877,12 @@ function procesarIdentificadorFull() {
       }
       if (masterP.grupo_sanguineo) {
         STATE.grupoSanguineo = masterP.grupo_sanguineo;
-        const elGsan = document.getElementById("gsan_full");
-        if (elGsan) elGsan.value = masterP.grupo_sanguineo;
+        if (typeof sincronizarSelectsGsRh === "function") {
+          sincronizarSelectsGsRh(masterP.grupo_sanguineo);
+        } else {
+          const elGsan = document.getElementById("gsan_full");
+          if (elGsan) elGsan.value = masterP.grupo_sanguineo;
+        }
       }
       if (masterP.tipo_seguro) {
         STATE.tipoSeguro = masterP.tipo_seguro;
@@ -2827,8 +2945,12 @@ function procesarIdentificadorFull() {
       }
       if (masterP.grupo_sanguineo) {
         STATE.grupoSanguineo = masterP.grupo_sanguineo;
-        const elGsan = document.getElementById("gsan_full");
-        if (elGsan) elGsan.value = masterP.grupo_sanguineo;
+        if (typeof sincronizarSelectsGsRh === "function") {
+          sincronizarSelectsGsRh(masterP.grupo_sanguineo);
+        } else {
+          const elGsan = document.getElementById("gsan_full");
+          if (elGsan) elGsan.value = masterP.grupo_sanguineo;
+        }
       }
     }
   }
@@ -3197,15 +3319,39 @@ async function consultarReniec() {
     console.warn("Aviso sincronizar padron susalud:", eSusalud);
   }
 
-  // 5. Recuperar alergias previas si existían en el expediente maestro
+  // 5. Recuperar alergias y grupo sanguíneo/factor Rh previos si existían en el expediente maestro (NTS N° 139-MINSA)
   try {
     const masterReniec = obtenerPacienteMaster(ident, STATE.historiaClinica, nombreCompleto);
-    if (masterReniec && masterReniec.alergias) {
-      STATE.alergias = masterReniec.alergias;
-      const elAlergias = document.getElementById("alergias_full");
-      if (elAlergias) {
-        elAlergias.value = masterReniec.alergias;
-        actualizarIndicadorVisualAlergias(masterReniec.alergias);
+    if (masterReniec) {
+      if (masterReniec.alergias) {
+        STATE.alergias = masterReniec.alergias;
+        const elAlergias = document.getElementById("alergias_full");
+        if (elAlergias) {
+          elAlergias.value = masterReniec.alergias;
+          actualizarIndicadorVisualAlergias(masterReniec.alergias);
+        }
+      }
+      if (masterReniec.grupo_sanguineo) {
+        STATE.grupoSanguineo = masterReniec.grupo_sanguineo;
+        if (typeof sincronizarSelectsGsRh === "function") {
+          sincronizarSelectsGsRh(masterReniec.grupo_sanguineo);
+        } else {
+          const elGsan = document.getElementById("gsan_full");
+          if (elGsan) elGsan.value = masterReniec.grupo_sanguineo;
+        }
+        if (accionDisplay) {
+          accionDisplay.innerHTML += ` · 🩸 GS/RH HC: <strong>${masterReniec.grupo_sanguineo}</strong>`;
+        }
+      }
+      if (masterReniec.edad && !STATE.edad) {
+        STATE.edad = masterReniec.edad;
+        const elEdad = document.getElementById("edad_full");
+        if (elEdad) elEdad.value = masterReniec.edad;
+      }
+      if (masterReniec.fecha_nacimiento && !STATE.fechaNacimiento) {
+        STATE.fechaNacimiento = masterReniec.fecha_nacimiento;
+        const elFecha = document.getElementById("fecha_nac_full");
+        if (elFecha) elFecha.value = masterReniec.fecha_nacimiento;
       }
     }
   } catch (eMaster) {}
@@ -6051,10 +6197,29 @@ function actualizarFactura() {
   // Actualizar desglose detallado en Módulo 8
   const detalleEl = document.getElementById("liquidacion_detalle_box");
   if (detalleEl) {
+  const esNNDoc = Boolean(
+    STATE.esNN ||
+    (STATE.numDni && (String(STATE.numDni).toUpperCase() === "NN" || String(STATE.numDni).toUpperCase() === "S/D" || String(STATE.numDni).toUpperCase().startsWith("NN-"))) ||
+    (STATE.identificador && String(STATE.identificador).toUpperCase().startsWith("NN-")) ||
+    (STATE.padronSalud && STATE.padronSalud.tipo_aseguramiento === "NN_EMERGENCIA") ||
+    (STATE.nombreReniec && String(STATE.nombreReniec).toUpperCase().includes("PACIENTE NO IDENTIFICADO"))
+  );
+    const nombreDetalle = esNNDoc
+      ? "No se sabe su nombre (Paciente No Identificado - NN)"
+      : (STATE.nombreReniec || STATE.identificador || "—");
+    const seguroDetalle = esNNDoc
+      ? "No se sabe qué seguro tiene (Sin seguro acreditado)"
+      : (STATE.tipoSeguro ||
+         (STATE.esAccidenteTransito && !STATE.soatVehiculoFuga ? "SOAT Activo (D.S. N° 024-2002-MTC)" :
+          (STATE.padronSalud?.privado?.tiene_seguro ? `${STATE.padronSalud.privado.iafas_eps || "IAFAS EPS"}` :
+           (STATE.padronSalud?.publico?.tiene_seguro ? `${STATE.padronSalud.publico.entidad}` :
+            (liq.etiquetaRegimen || "Particular / Sin seguro")))));
     detalleEl.innerHTML = `
       <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:14px;margin-top:14px;font-size:13px;">
         <div style="font-weight:800;color:#0f172a;margin-bottom:8px;font-size:14px;">📊 Desglose de Auditoría Financiera — Ley N° 29414 (SUSALUD)</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px;">
+          <div><span style="color:#64748b;">Paciente:</span> <strong>${nombreDetalle}</strong></div>
+          <div><span style="color:#64748b;">Seguro:</span> <strong>${seguroDetalle}</strong></div>
           <div><span style="color:#64748b;">Régimen:</span> <strong>${liq.etiquetaRegimen}</strong></div>
           <div><span style="color:#64748b;">Total Bruto Generado:</span> <strong>S/. ${liq.totalBruto.toFixed(2)}</strong></div>
           <div><span style="color:#64748b;">Cobertura Aseguradora:</span> <strong style="color:#15803d;">S/. ${liq.coberturaSeguro.toFixed(2)}</strong></div>
@@ -6717,6 +6882,8 @@ function imprimirBrazalete() {
               <span><strong>DOC / DNI:</strong> ${docPaciente}</span>
               <span><strong>EDAD:</strong> ${edadNum} años</span>
               <span><strong>SEXO:</strong> ${sexoPaciente}</span>
+              <span><strong>GS:</strong> ${(typeof obtenerGsRhParaBrazalete === "function" ? obtenerGsRhParaBrazalete().gs : (STATE.grupoSanguineo || "Por tipificar"))}</span>
+              <span><strong>FACTOR RH:</strong> ${(typeof obtenerGsRhParaBrazalete === "function" ? obtenerGsRhParaBrazalete().rh : "Por tipificar")}</span>
               <span><strong>INGRESO:</strong> ${fechaActual} ${horaActual}</span>
             </div>
           </div>
@@ -7768,6 +7935,7 @@ function activarPanicoShockTrauma() {
   if (elMotivo) elMotivo.value = "Paro Cardiorrespiratorio / Shock Circulatorio Extremo (P-I)";
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
+  if (typeof sincronizarSelectsGsRh === "function") sincronizarSelectsGsRh("Desconocido");
   const elAlergiasFull = document.getElementById("alergias_full");
   if (elAlergiasFull) elAlergiasFull.value = "Desconocido";
   const elAlergiasM1 = document.getElementById("alergias_mod1");
@@ -8037,6 +8205,7 @@ function activarIngresoDirectoQuirofano() {
   if (elMotivo) elMotivo.value = "Laparotomía Exploratoria de Emergencia / Control de Daños (P-I)";
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
+  if (typeof sincronizarSelectsGsRh === "function") sincronizarSelectsGsRh("Desconocido");
   const elAlergiasFull = document.getElementById("alergias_full");
   if (elAlergiasFull) elAlergiasFull.value = "Desconocido";
   const elAlergiasM1 = document.getElementById("alergias_mod1");
@@ -10128,7 +10297,23 @@ function imprimirFacturaOficial() {
   const w = window.open("", "_blank");
   if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
   const fecha = new Date().toLocaleString();
-  const nombre = STATE.nombreReniec || STATE.identificador || "PACIENTE";
+  const esNNDoc = Boolean(
+    STATE.esNN ||
+    (STATE.numDni && (String(STATE.numDni).toUpperCase() === "NN" || String(STATE.numDni).toUpperCase() === "S/D" || String(STATE.numDni).toUpperCase().startsWith("NN-"))) ||
+    (STATE.identificador && String(STATE.identificador).toUpperCase().startsWith("NN-")) ||
+    (STATE.padronSalud && STATE.padronSalud.tipo_aseguramiento === "NN_EMERGENCIA") ||
+    (STATE.nombreReniec && String(STATE.nombreReniec).toUpperCase().includes("PACIENTE NO IDENTIFICADO"))
+  );
+  const nombre = esNNDoc
+    ? "No se sabe su nombre (Paciente No Identificado - NN)"
+    : (STATE.nombreReniec || STATE.identificador || "PACIENTE");
+  const seguroDoc = esNNDoc
+    ? "No se sabe qué seguro tiene (Sin seguro acreditado)"
+    : (STATE.tipoSeguro ||
+       (STATE.esAccidenteTransito && !STATE.soatVehiculoFuga ? "SOAT Activo (D.S. N° 024-2002-MTC)" :
+        (STATE.padronSalud?.privado?.tiene_seguro ? `${STATE.padronSalud.privado.iafas_eps || "IAFAS EPS"} (${STATE.padronSalud.privado.plan_salud || "Privado"})` :
+         (STATE.padronSalud?.publico?.tiene_seguro ? `${STATE.padronSalud.publico.entidad} (${STATE.padronSalud.publico.regimen || "Público"})` :
+          (liq.etiquetaRegimen || "Particular / Sin seguro")))));
 
   let itemsHtml = "";
   STATE.items_factura.forEach((item, idx) => {
@@ -10149,9 +10334,9 @@ function imprimirFacturaOficial() {
       <h2 style="margin:0;color:#0f172a;">HOSPITAL REGIONAL DOCENTE UPP — COMPROBANTE DE LIQUIDACIÓN DE ATENCIÓN</h2>
       <h4 style="margin:0 0 10px 0;color:#475569;">AUDITORÍA FINANCIERA Y TRANSPARENCIA ASISTENCIAL (LEY N° 29414 - SUSALUD)</h4>
       <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:10px;border-radius:6px;">
-        <strong>Paciente:</strong> ${nombre} | <strong>Identificador:</strong> ${STATE.identificador} | <strong>HC:</strong> ${STATE.historiaClinica}<br>
-        <strong>Régimen Prestacional:</strong> ${liq.etiquetaRegimen} | <strong>Fecha de Liquidación:</strong> ${fecha}<br>
-        <strong>Lugar de Prestación:</strong> ${liq.lugarAtencion}
+        <strong>Paciente:</strong> ${nombre} | <strong>Identificador:</strong> ${STATE.identificador || (esNNDoc ? "NN / Indocumentado" : "—")} | <strong>HC:</strong> ${STATE.historiaClinica || "—"}<br>
+        <strong>Seguro del Paciente:</strong> ${seguroDoc} | <strong>Régimen Prestacional:</strong> ${liq.etiquetaRegimen}<br>
+        <strong>Fecha de Liquidación:</strong> ${fecha} | <strong>Lugar de Prestación:</strong> ${liq.lugarAtencion}
       </div>
       <table>
         <thead>
@@ -11370,6 +11555,7 @@ function limpiarFormularioCompletoState() {
   if (elSexo) elSexo.value = "";
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
+  if (typeof sincronizarSelectsGsRh === "function") sincronizarSelectsGsRh("Desconocido");
   const elClave = document.getElementById("clave_obstetrica_sel");
   if (elClave) elClave.value = "ninguna";
   const _selProcCons = document.getElementById("sel_procedimiento_consentimiento"); if (_selProcCons) _selProcCons.value = "NO_APLICA_CONSULTA_NO_INVASIVA"; if (typeof actualizarCondicionConsentimiento === "function") actualizarCondicionConsentimiento("paciente_lucido");
@@ -11578,6 +11764,28 @@ function cerrarAtencionPaciente(id, event) {
   mostrarToastCola(`✅ Alta clínica registrada: <strong>${px.nombre}</strong> (conservado en Bandeja de Posta para trazabilidad).`);
 }
 
+function seleccionarViaPrioridadNN(via) {
+  const chk = document.getElementById("nn_check_codigo_rojo");
+  const rInm = document.getElementById("nn_via_inmediata");
+  const rReg = document.getElementById("nn_via_regular");
+  const lInm = document.getElementById("lbl_nn_prio_inmediata");
+  const lReg = document.getElementById("lbl_nn_prio_regular");
+  const esInmediata = (via === "INMEDIATA");
+  if (chk) chk.checked = esInmediata;
+  if (rInm) rInm.checked = esInmediata;
+  if (rReg) rReg.checked = !esInmediata;
+  if (lInm) {
+    lInm.style.border = esInmediata ? "2px solid #dc2626" : "2px solid #cbd5e1";
+    lInm.style.background = esInmediata ? "#fef2f2" : "#ffffff";
+  }
+  if (lReg) {
+    lReg.style.border = !esInmediata ? "2px solid #16a34a" : "2px solid #cbd5e1";
+    lReg.style.background = !esInmediata ? "#f0fdf4" : "#ffffff";
+  }
+  if (typeof actualizarPreEvaluacionNNUI === "function") actualizarPreEvaluacionNNUI();
+}
+window.seleccionarViaPrioridadNN = seleccionarViaPrioridadNN;
+
 function abrirModalPreEvaluacionNN(modoInicial) {
   const m = document.getElementById("modalAdmisionNN");
   if (!m) return;
@@ -11602,7 +11810,7 @@ function abrirModalPreEvaluacionNN(modoInicial) {
       if (chkRojo) chkRojo.checked = false;
     }
   }
-  actualizarPreEvaluacionNNUI();
+  seleccionarViaPrioridadNN((chkRojo && chkRojo.checked) ? 'INMEDIATA' : 'REGULAR');
 }
 
 function abrirModalAdmisionRapidaNN(modo) {
@@ -12139,10 +12347,54 @@ if (document.readyState === 'loading') {
 window.advertirEntornoBloqueado = advertirEntornoBloqueado;
 window.resetearEntornoEstablecimientoAPendiente = resetearEntornoEstablecimientoAPendiente;
 
+function sincronizarSelectsGsRh(val) {
+  const v = String(val || "Desconocido").trim();
+  const hiddenEl = document.getElementById("gsan_full");
+  if (hiddenEl) hiddenEl.value = v;
+  const lbl = document.getElementById("lbl_gs_rh_consolidado");
+  if (lbl) lbl.textContent = v;
+
+  let gs = "Desconocido", rh = "Desconocido";
+  if (v === "No se acuerda") {
+    gs = "No se acuerda";
+    rh = "No se acuerda";
+  } else if (v.includes("GS:") && v.includes("/ RH:")) {
+    const partes = v.split("/");
+    gs = (partes[0] || "").replace("GS:", "").trim() || "Desconocido";
+    rh = (partes[1] || "").replace("RH:", "").trim() || "Desconocido";
+  } else if (v !== "Desconocido" && (v.endsWith("+") || v.endsWith("-"))) {
+    rh = v.slice(-1);
+    gs = v.slice(0, -1);
+  }
+  ["gs_select_mod1", "gs_select_mod4"].forEach(id => { const el = document.getElementById(id); if (el) el.value = gs; });
+  ["rh_select_mod1", "rh_select_mod4"].forEach(id => { const el = document.getElementById(id); if (el) el.value = rh; });
+}
+
+function actualizarGsRh(origen) {
+  const gs = document.getElementById(origen === "mod4" ? "gs_select_mod4" : "gs_select_mod1")?.value || "Desconocido";
+  const rh = document.getElementById(origen === "mod4" ? "rh_select_mod4" : "rh_select_mod1")?.value || "Desconocido";
+  let combinado = "Desconocido";
+  if (gs !== "Desconocido" && gs !== "No se acuerda" && rh !== "Desconocido" && rh !== "No se acuerda") {
+    combinado = `${gs}${rh}`;
+  } else if (gs === "No se acuerda" && rh === "No se acuerda") {
+    combinado = "No se acuerda";
+  } else if (gs === "No se acuerda" || rh === "No se acuerda") {
+    combinado = `GS: ${gs} / RH: ${rh}`;
+  }
+  sincronizarSelectsGsRh(combinado);
+  actualizarGrupoSanguineo(combinado);
+}
+window.actualizarGsRh = actualizarGsRh;
+
 function actualizarGrupoSanguineo(val) {
   STATE.grupoSanguineo = val;
-  autoGuardarCambioEnHistoriaClinica(`Grupo sanguíneo actualizado a ${val}`);
-  guardarEnHistoriaClinicaMaster({ grupo_sanguineo: val });
+  sincronizarSelectsGsRh(val);
+  if (typeof autoGuardarCambioEnHistoriaClinica === "function") {
+    autoGuardarCambioEnHistoriaClinica(`Grupo sanguíneo (GS/RH) actualizado a ${val}`);
+  }
+  if (STATE.identificador && STATE.historiaClinica && typeof guardarEnHistoriaClinicaMaster === "function") {
+    guardarEnHistoriaClinicaMaster({ grupo_sanguineo: val });
+  }
 }
 window.actualizarGrupoSanguineo = actualizarGrupoSanguineo;
 
@@ -13977,11 +14229,22 @@ function sincronizarFacturacionYExportar(silencioso = false) {
     }
     STATE.exportadoFacturacionEn = new Date().toISOString();
 
-    const nombre = STATE.nombreReniec || STATE.identificador || "Paciente en Atención";
+    const esNNExp = Boolean(
+      STATE.esNN ||
+      (STATE.numDni && (String(STATE.numDni).toUpperCase() === "NN" || String(STATE.numDni).toUpperCase() === "S/D" || String(STATE.numDni).toUpperCase().startsWith("NN-"))) ||
+      (STATE.identificador && String(STATE.identificador).toUpperCase().startsWith("NN-")) ||
+      (STATE.padronSalud && STATE.padronSalud.tipo_aseguramiento === "NN_EMERGENCIA") ||
+      (STATE.nombreReniec && String(STATE.nombreReniec).toUpperCase().includes("PACIENTE NO IDENTIFICADO"))
+    );
+    const nombre = esNNExp
+      ? "No se sabe su nombre (Paciente No Identificado - NN)"
+      : (STATE.nombreReniec || STATE.identificador || "Paciente en Atención");
     const dni = STATE.numDni || (STATE.identificador ? STATE.identificador.replace(/\D/g, '') : '') || '';
     const hc = STATE.historiaClinica || `HC-2026-${dni.slice(-4)}`;
     const prio = STATE.prioridad ? STATE.prioridad.toString().replace("P-", "") : "";
-    const seguro = STATE.tipoSeguro || (STATE.tipoOrigenEvento === "soat" ? "SOAT Activo (La Positiva Seguros)" : "SIS Gratuito (MINSA)");
+    const seguro = esNNExp
+      ? "No se sabe qué seguro tiene (Sin seguro acreditado)"
+      : (STATE.tipoSeguro || (STATE.tipoOrigenEvento === "soat" ? "SOAT Activo (La Positiva Seguros)" : "SIS Gratuito (MINSA)"));
     const esAccidente = Boolean(STATE.esAccidenteTransito || STATE.tipoOrigenEvento === "soat" || seguro.toLowerCase().includes("soat"));
     const esFuga = Boolean(STATE.soatVehiculoFuga || STATE.eventoFugaTransversal);
     const medico = STATE.medicoTratante || "Médico de Guardia (Emergenciólogo / CMP 0001)";
@@ -14063,6 +14326,35 @@ function abrirPortalFacturacion(event) {
 window.abrirPortalFacturacion = abrirPortalFacturacion;
 
 // --- 2. GENERACIÓN Y GESTIÓN DE BRAZALETE DE EMERGENCIA UNIFICADO (BLOQUE 2.1 & NTS 042/139) ---
+function obtenerGsRhParaBrazalete() {
+  let raw = (STATE.grupoSanguineo || document.getElementById("gsan_full")?.value || "").trim();
+  if (!raw || raw === "Desconocido") {
+    const gsSel = document.getElementById("gs_select_mod1")?.value || document.getElementById("gs_select_mod4")?.value || "Desconocido";
+    const rhSel = document.getElementById("rh_select_mod1")?.value || document.getElementById("rh_select_mod4")?.value || "Desconocido";
+    if (gsSel !== "Desconocido" && gsSel !== "No se acuerda" && rhSel !== "Desconocido" && rhSel !== "No se acuerda") {
+      raw = `${gsSel}${rhSel}`;
+    } else if (gsSel === "No se acuerda" && rhSel === "No se acuerda") {
+      raw = "No se acuerda";
+    } else if (gsSel === "No se acuerda" || rhSel === "No se acuerda") {
+      raw = `GS: ${gsSel} / RH: ${rhSel}`;
+    } else {
+      raw = "Desconocido";
+    }
+  }
+  let gs = "Por tipificar", rh = "Por tipificar";
+  if (raw === "No se acuerda") {
+    gs = "No se acuerda"; rh = "No se acuerda";
+  } else if (raw.includes("GS:") && raw.includes("/ RH:")) {
+    const p = raw.split("/");
+    gs = (p[0] || "").replace("GS:", "").trim() || "Por tipificar";
+    rh = (p[1] || "").replace("RH:", "").trim() || "Por tipificar";
+  } else if (raw !== "Desconocido" && (raw.endsWith("+") || raw.endsWith("-"))) {
+    gs = raw.slice(0, -1);
+    rh = raw.slice(-1) === "+" ? "Positivo (+)" : "Negativo (-)";
+  }
+  return { raw, gs, rh };
+}
+
 function construirHTMLBrazalete(esTemporal = false) {
   const prio = STATE.prioridad || "I";
   const coloresPrio = { "I": "#dc2626", "II": "#ea580c", "III": "#ca8a04", "IV": "#16a34a", "V": "#2563eb" };
@@ -14108,9 +14400,8 @@ function construirHTMLBrazalete(esTemporal = false) {
   let generoRaw = STATE.sexo || document.getElementById("sexo_full")?.value;
   let generoDisplay = (generoRaw && generoRaw !== "Desconocido") ? generoRaw : "desconocido";
 
-  // GRUPO SANGUÍNEO Y FACTOR RH
-  let gsanRaw = STATE.grupoSanguineo || document.getElementById("gsan_full")?.value || "Desconocido";
-  let gsanDisplay = (gsanRaw && gsanRaw !== "Desconocido") ? gsanRaw : "Desconocido / Por tipificar";
+  // GRUPO SANGUÍNEO Y FACTOR RH (NTS N° 139-MINSA)
+  const gsRhInfo = obtenerGsRhParaBrazalete();
 
   // CORRECCIÓN ALERGIAS: VISIBILIDAD GARANTIZADA Y REGLAS DE CONDICIÓN DE INGRESO
   const esAdmisionRapidaEmergencia = Boolean(
@@ -14180,7 +14471,8 @@ function construirHTMLBrazalete(esTemporal = false) {
             <span><strong>DOC/DNI:</strong> ${docPaciente}</span>
             <span><strong>EDAD:</strong> ${edadDisplay}</span>
             <span><strong>GÉNERO:</strong> ${generoDisplay}</span>
-            <span><strong>GS/Rh:</strong> <span style="background:#fee2e2; color:#991b1b; padding:1px 4px; border-radius:3px; font-weight:800;">${gsanDisplay}</span></span>
+            <span><strong>GS:</strong> <span style="background:#fee2e2; color:#991b1b; padding:1px 4px; border-radius:3px; font-weight:800;">${gsRhInfo.gs}</span></span>
+            <span><strong>FACTOR RH:</strong> <span style="background:#fee2e2; color:#991b1b; padding:1px 4px; border-radius:3px; font-weight:800;">${gsRhInfo.rh}</span></span>
             <span><strong>INGRESO:</strong> <span style="font-family:monospace; font-weight:700;">${fechaActual} ${horaActual}</span></span>
           </div>
         </div>
@@ -18231,6 +18523,7 @@ function admitirEmergenciaNN() {
   if (elSexo) elSexo.value = "Desconocido";
   const elGsan = document.getElementById("gsan_full");
   if (elGsan) elGsan.value = "Desconocido";
+  if (typeof sincronizarSelectsGsRh === "function") sincronizarSelectsGsRh("Desconocido");
   const elAlergiasFull = document.getElementById("alergias_full");
   if (elAlergiasFull) elAlergiasFull.value = "Desconocido";
   const elAlergiasM1 = document.getElementById("alergias_mod1");

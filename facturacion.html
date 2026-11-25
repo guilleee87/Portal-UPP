@@ -396,7 +396,7 @@
 
       <div class="demo-grid">
         <div class="demo-item">
-          <div class="demo-label">Paciente Asegurado</div>
+          <div class="demo-label">Paciente</div>
           <div class="demo-value" id="disp_nombre">—</div>
         </div>
         <div class="demo-item">
@@ -416,7 +416,7 @@
           <div class="demo-value" id="disp_prioridad">—</div>
         </div>
         <div class="demo-item">
-          <div class="demo-label">Régimen Acreditado</div>
+          <div class="demo-label">Seguro / Régimen Acreditado</div>
           <div class="demo-value" id="disp_regimen">—</div>
         </div>
         <div class="demo-item">
@@ -670,6 +670,17 @@
         }
       }
 
+      const esNN = Boolean(
+        (expActual && (expActual.esNN || expActual.padronSalud?.tipo_aseguramiento === "NN_EMERGENCIA")) ||
+        (dniActual && (String(dniActual).toUpperCase() === "NN" || String(dniActual).toUpperCase() === "S/D" || String(dniActual).toUpperCase().startsWith("NN-"))) ||
+        (nombreActual && String(nombreActual).toUpperCase().includes("PACIENTE NO IDENTIFICADO")) ||
+        (seguroActual && String(seguroActual).toLowerCase().includes("no se sabe"))
+      );
+      if (esNN) {
+        nombreActual = "No se sabe su nombre (Paciente No Identificado - NN)";
+        seguroActual = "No se sabe qué seguro tiene (Sin seguro acreditado)";
+      }
+
       // Desplegar datos filiatorios y clínicos exactos
       document.getElementById("disp_nombre").textContent = nombreActual;
       document.getElementById("disp_dni").textContent = dniActual;
@@ -701,7 +712,14 @@
       let badgeHtml = "";
       let establecimiento = "Hospital Regional Docente UPP (Red Asistencial Pública)";
 
-      if (esAccidente || seguroL.includes("soat")) {
+      if (esNN) {
+        establecimiento = "Hospital Regional Docente UPP (Red Asistencial Pública)";
+        badgeHtml = `<span style="background:#dc2626; color:#fff; padding:4px 10px; border-radius:9999px;">⚠️ NN — NO SE SABE SU NOMBRE NI SU SEGURO</span>`;
+        coberturaMonto = 0;
+        totalPaciente = totalBruto;
+        document.getElementById("liq_row_particular").style.display = "flex";
+        explicacion = `Paciente No Identificado (NN): al no conocerse su identidad ni acreditarse ningún seguro de salud (SIS, EsSalud ni EPS), la cuenta hospitalaria se liquida al 100% para gestión de cobro y recupero institucional.`;
+      } else if (esAccidente || seguroL.includes("soat")) {
         // Régimen SOAT
         establecimiento = "Clínica Privada / Hospital - Red de Emergencias SOAT";
         badgeHtml = `<span style="background:#ea580c; color:#fff; padding:4px 10px; border-radius:9999px;">🚗 ACCIDENTE DE TRÁNSITO (SOAT)</span>`;
