@@ -6198,24 +6198,24 @@
   </div>
 
   <!-- Modal de accidente agregado para acceso desde la botonera rápida. -->
-  <div class="modal-hc-overlay" id="modalAccidenteRapido" style="display:none;" onclick="if(event.target===this)cerrarModalAccidenteTransitoRapido()">
+  <div class="modal-hc-overlay" id="modalAccidenteRapido" style="display:none; z-index:12000;" onclick="if(event.target===this)cerrarModalAccidenteTransitoRapido()">
     <div class="modal-hc-container" style="max-width:560px;" onclick="event.stopPropagation()">
       <div class="modal-hc-header" style="background:#0369a1;color:#fff;">
-        <div><strong style="font-size:1rem;">🚗 Accidente de tránsito</strong><div style="font-size:.75rem;opacity:.9;">Registre la situación del SOAT/CAT y el destino inicial. La gravedad no asigna por sí sola una prioridad.</div></div>
+        <div><strong style="font-size:1rem;">🚗 Accidente de tránsito</strong><div style="font-size:.75rem;opacity:.9;">Registre la placa, la cobertura SOAT/CAT y la ruta inicial.</div></div>
         <button type="button" onclick="cerrarModalAccidenteTransitoRapido()" style="background:none;border:0;color:#fff;font-size:1.4rem;cursor:pointer;">&times;</button>
       </div>
       <div class="modal-hc-body" style="padding:18px;">
         <fieldset style="border:1px solid #cbd5e1;border-radius:8px;padding:12px;margin:0 0 14px;">
-          <legend style="font-weight:800;">¿Cuenta con SOAT/CAT?</legend>
-          <label style="display:block;margin:8px 0;"><input type="radio" name="acc_soat" value="identificado" checked> Con SOAT/CAT identificado</label>
-          <label style="display:block;margin:8px 0;"><input type="radio" name="acc_soat" value="sin_soat"> Sin SOAT/CAT acreditado</label>
-          <label style="display:block;margin:8px 0;"><input type="radio" name="acc_soat" value="fuga"> Vehículo no identificado / fuga</label>
+          <legend style="font-weight:800;">¿Se identificó la placa?</legend>
+          <label style="display:block;margin:8px 0;"><input type="radio" name="acc_placa" value="si" checked onchange="actualizarOpcionesAccidenteRapido()"> Sí, se identificó</label>
+          <label style="display:block;margin:8px 0;"><input type="radio" name="acc_placa" value="no" onchange="actualizarOpcionesAccidenteRapido()"> No, vehículo no identificado / fuga</label>
+          <div id="acc_box_placa" style="margin-top:10px;"><label for="acc_placa_input" style="display:block;font-weight:700;margin-bottom:5px;">Placa del vehículo</label><input type="text" id="acc_placa_input" maxlength="10" placeholder="ABC-123" autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #94a3b8;border-radius:7px;text-transform:uppercase;"></div>
         </fieldset>
+        <fieldset id="acc_box_soat" style="border:1px solid #cbd5e1;border-radius:8px;padding:12px;margin:0 0 14px;"><legend style="font-weight:800;">¿Cuenta con SOAT/CAT acreditado?</legend><label style="display:block;margin:8px 0;"><input type="radio" name="acc_soat" value="si" checked> Sí, aplicar cobertura SOAT/CAT</label><label style="display:block;margin:8px 0;"><input type="radio" name="acc_soat" value="no"> No / no acreditado, continuar sin aplicar SOAT/CAT</label><div style="font-size:.74rem;color:#475569;margin-top:6px;">La cobertura queda registrada según lo seleccionado; la vigencia requiere la verificación documental correspondiente. Sin placa identificada, se registra para evaluación del mecanismo aplicable al vehículo no identificado.</div></fieldset>
         <fieldset style="border:1px solid #cbd5e1;border-radius:8px;padding:12px;margin:0 0 16px;">
-          <legend style="font-weight:800;">¿El equipo identifica riesgo vital inmediato?</legend>
-          <label style="display:block;margin:8px 0;"><input type="radio" name="acc_gravedad" value="grave"> Sí: pase inmediato a evaluación/reanimación</label>
-          <label style="display:block;margin:8px 0;"><input type="radio" name="acc_gravedad" value="triaje" checked> No / aún no determinado: conducir a triaje inmediato</label>
-          <div style="font-size:.75rem;color:#475569;margin-top:8px;">Ejemplos: paro, obstrucción de vía aérea, dificultad respiratoria grave, shock/inestabilidad, hemorragia profusa o falta de respuesta. La clasificación definitiva corresponde al personal clínico.</div>
+          <legend style="font-weight:800;">Condición inicial del paciente</legend>
+          <label style="display:block;margin:8px 0;"><input type="radio" name="acc_gravedad" value="grave"> Grave: atención inmediata con Prioridad I (Rojo)</label>
+          <label style="display:block;margin:8px 0;"><input type="radio" name="acc_gravedad" value="triaje" checked> No grave: conducir a triaje inmediato</label>
         </fieldset>
         <div style="display:flex;justify-content:flex-end;gap:8px;"><button type="button" class="btn-full-secondary" onclick="cerrarModalAccidenteTransitoRapido()">Cancelar</button><button type="button" class="btn-full-primary" onclick="confirmarAccidenteTransitoRapido()">Registrar y continuar</button></div>
       </div>

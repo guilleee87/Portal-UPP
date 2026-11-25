@@ -12739,19 +12739,45 @@ window.registrarPacienteEnEspera = registrarPacienteEnEspera;
 
 function abrirModalAccidenteTransitoRapido() {
   const modal = document.getElementById("modalAccidenteRapido");
-  if (modal) modal.style.display = "flex";
+  if (!modal) {
+    mostrarToastCola("No se encontró la ventana de registro de accidente de tránsito en esta pantalla.");
+    return;
+  }
+  const placaSi = document.querySelector('input[name="acc_placa"][value="si"]');
+  const soatSi = document.querySelector('input[name="acc_soat"][value="si"]');
+  const gravedadNo = document.querySelector('input[name="acc_gravedad"][value="triaje"]');
+  if (placaSi) placaSi.checked = true;
+  if (soatSi) soatSi.checked = true;
+  if (gravedadNo) gravedadNo.checked = true;
+  const inputPlaca = document.getElementById("acc_placa_input");
+  if (inputPlaca) inputPlaca.value = "";
+  actualizarOpcionesAccidenteRapido();
+  modal.style.display = "flex";
 }
+function actualizarOpcionesAccidenteRapido() {
+  const placaIdentificada = document.querySelector('input[name="acc_placa"]:checked')?.value === "si";
+  const boxPlaca = document.getElementById("acc_box_placa");
+  const boxSoat = document.getElementById("acc_box_soat");
+  if (boxPlaca) boxPlaca.style.display = placaIdentificada ? "block" : "none";
+  if (boxSoat) boxSoat.style.display = placaIdentificada ? "block" : "none";
+}
+window.actualizarOpcionesAccidenteRapido = actualizarOpcionesAccidenteRapido;
 function cerrarModalAccidenteTransitoRapido() {
   const modal = document.getElementById("modalAccidenteRapido");
   if (modal) modal.style.display = "none";
 }
 function confirmarAccidenteTransitoRapido() {
-  const soat = document.querySelector('input[name="acc_soat"]:checked')?.value;
+  const placaIdentificada = document.querySelector('input[name="acc_placa"]:checked')?.value === "si";
+  const tieneSoat = document.querySelector('input[name="acc_soat"]:checked')?.value === "si";
+  const placa = (document.getElementById("acc_placa_input")?.value || "").trim().toUpperCase();
   const gravedad = document.querySelector('input[name="acc_gravedad"]:checked')?.value;
-  if (!soat || !gravedad) {
-    mostrarToastCola("Seleccione si cuenta con SOAT/CAT y el destino inicial por gravedad.");
+  if (!gravedad || (placaIdentificada && !placa)) {
+    mostrarToastCola(placaIdentificada && !placa
+      ? "Ingrese la placa identificada para registrar el accidente."
+      : "Seleccione la ruta inicial del paciente según su gravedad.");
     return;
   }
+  const soat = placaIdentificada ? (tieneSoat ? "identificado" : "sin_soat") : "fuga";
   cerrarModalAccidenteTransitoRapido();
   const entornoElegido = STATE.entornoOperativo || "publico";
   const seguroPaciente = STATE.tipoSeguro;
@@ -12759,6 +12785,10 @@ function confirmarAccidenteTransitoRapido() {
   cambiarOrigenEvento("soat");
   STATE.entornoAntesAccidente = entornoElegido;
   cambiarOpcionSoat(soat);
+  STATE.soatPlaca = placaIdentificada ? placa : "NO IDENTIFICADO (SIN PLACA)";
+  STATE.placaVehicularAccidente = placaIdentificada ? placa : "";
+  STATE.accidentePlacaIdentificada = placaIdentificada;
+  STATE.soatAcreditadoAccidente = placaIdentificada && tieneSoat;
   STATE.accidenteGravedadInicial = gravedad;
   STATE.paseInmediatoAccidente = gravedad === "grave";
   STATE.requiereTriajeTrasEstabilizacion = gravedad === "grave";
@@ -12775,19 +12805,42 @@ function confirmarAccidenteTransitoRapido() {
     px.tipoSeguro = seguroPaciente || "Pendiente de Acreditación";
     px.tipoSeguroPaciente = seguroPaciente;
     px.tipoSeguroAccidente = STATE.tipoSeguroAccidente;
+    px.soatPlaca = STATE.soatPlaca;
+    px.placaVehicularAccidente = STATE.placaVehicularAccidente;
+    px.accidentePlacaIdentificada = placaIdentificada;
+    px.soatAcreditadoAccidente = placaIdentificada && tieneSoat;
     px.padronSusalud = padronPaciente;
     px.accidenteGravedadInicial = gravedad;
     px.motivo = "Accidente de tránsito";
     if (gravedad === "grave") {
-      // Pase a evaluación inmediata no equivale por sí solo a prioridad P-I.
       px.paseInmediatoAccidente = true;
       px.requiereTriajeTrasEstabilizacion = true;
-      px.ingresoDirectoCritico = false;
+      px.ingresoDirectoCritico = true;
       px.estadoFlujo = "EN_ATENCION_MEDICA";
-      px.estadoAtencion = "Pase inmediato a evaluación clínica; prioridad pendiente de valoración profesional";
-      px.estadoFlujo = "EN_ATENCION_MEDICA";
-      px.prioridad = null;
-      STATE.ingresoDirectoCritico = false;
+      px.estadoAtencion = "Atención inmediata — Prioridad I (Rojo), accidente de tránsito";
+      px.prioridad = "I";
+      px.colorPrioridad = "ROJO";
+      px.alertaPrioridad1 = true;
+      STATE.ingresoDirectoCritico = true;
+      STATE.motivoIngresoCritico = "Accidente de tránsito marcado como grave en admisión rápida";
+      STATE.prioridad = "I";
+      STATE.colorPrioridad = "ROJO";
+      STATE.alertaPrioridad1 = true;
+      const panelPrioridad = document.getElementById("prioridad_display");
+      if (panelPrioridad) {
+        panelPrioridad.className = "prioridad-display visible prioridad-I";
+        panelPrioridad.style.display = "block";
+      }
+      const numeroPrioridad = document.getElementById("prio_numero");
+      if (numeroPrioridad) { numeroPrioridad.textContent = "I"; numeroPrioridad.className = "prioridad-numero " + (PRIORIDADES.I?.clase || ""); }
+      const nombrePrioridad = document.getElementById("prio_color_name");
+      if (nombrePrioridad) { nombrePrioridad.textContent = "● Rojo"; nombrePrioridad.style.color = PRIORIDADES.I?.hex || "#dc2626"; }
+      const tipoPrioridad = document.getElementById("prio_tipo");
+      if (tipoPrioridad) { tipoPrioridad.textContent = "EMERGENCIA — Prioridad I (Rojo)"; tipoPrioridad.style.color = PRIORIDADES.I?.hex || "#dc2626"; }
+      const slaPrioridad = document.getElementById("prio_sla_display");
+      if (slaPrioridad) slaPrioridad.textContent = "⏱️ Atención inmediata — 0 min";
+      const chipPrioridad = document.getElementById("chipPrioLive");
+      if (chipPrioridad) { chipPrioridad.textContent = "EMERGENCIA (P-I Rojo)"; chipPrioridad.className = "top-prio-chip prio-I"; }
       STATE.paseInmediatoAccidente = true;
       STATE.requiereTriajeTrasEstabilizacion = true;
       STATE.estadoFlujo = "EN_ATENCION_MEDICA";
@@ -12797,6 +12850,8 @@ function confirmarAccidenteTransitoRapido() {
       px.estadoFlujo = "PENDIENTE_TRIAJE";
       px.estadoAtencion = "En espera de triaje inmediato";
       STATE.prioridad = null;
+      STATE.colorPrioridad = null;
+      STATE.alertaPrioridad1 = false;
       STATE.ingresoDirectoCritico = false;
       STATE.estadoFlujo = "PENDIENTE_TRIAJE";
       STATE.estadoAtencion = px.estadoAtencion;
@@ -12807,6 +12862,10 @@ function confirmarAccidenteTransitoRapido() {
     STATE.tipoOrigenEvento = "soat";
     STATE.esAccidenteTransito = true;
     STATE.soatOpcion = soat;
+    STATE.soatPlaca = placaIdentificada ? placa : "NO IDENTIFICADO (SIN PLACA)";
+    STATE.placaVehicularAccidente = placaIdentificada ? placa : "";
+    STATE.accidentePlacaIdentificada = placaIdentificada;
+    STATE.soatAcreditadoAccidente = placaIdentificada && tieneSoat;
     STATE.entornoAntesAccidente = entornoElegido;
     STATE.entornoOperativo = entornoElegido;
     STATE.esClinicaPrivada = entornoElegido === "privado";
@@ -12834,14 +12893,14 @@ function confirmarAccidenteTransitoRapido() {
   const sec = document.getElementById("sec_mod1");
   if (sec) sec.scrollIntoView({behavior:"smooth",block:"start"});
   if (typeof actualizarFactura === "function") actualizarFactura();
-  if (typeof registrarLogAuditoria === "function") registrarLogAuditoria("Módulo 1", "REGISTRAR_ACCIDENTE_TRANSITO", `SOAT/CAT: ${soat}; ruta inicial: ${gravedad === "grave" ? "evaluación inmediata" : "triaje inmediato"}; sector: ${entornoElegido}`);
+  if (typeof registrarLogAuditoria === "function") registrarLogAuditoria("Módulo 1", "REGISTRAR_ACCIDENTE_TRANSITO", `Placa: ${placaIdentificada ? placa : "no identificada"}; SOAT/CAT: ${soat}; ruta inicial: ${gravedad === "grave" ? "Prioridad I (Rojo), atención inmediata" : "triaje inmediato"}; sector: ${entornoElegido}`);
   // Mantener el expediente activo para su valoración, triaje y liquidación.
   actualizarMedidorSoat(calcularLiquidacionSeguro());
   if (typeof guardarColaCompartidaEnStorage === "function") guardarColaCompartidaEnStorage();
   if (typeof renderizarTableroColaPacientes === "function") renderizarTableroColaPacientes();
   if (typeof renderizarBandejaPosta === "function") renderizarBandejaPosta();
   mostrarToastCola(gravedad === "grave"
-    ? "🚑 Accidente registrado. Atención clínica inmediata; completar evaluación y triaje documentado cuando la condición lo permita."
+    ? "🚑 Accidente grave registrado con Prioridad I (Rojo). Atención inmediata; completar la documentación clínica correspondiente."
     : "🚑 Accidente registrado. Conducir a triaje prioritario inmediato, sin demora por la verificación del SOAT/CAT.");
 }
 window.abrirModalAccidenteTransitoRapido = abrirModalAccidenteTransitoRapido;
