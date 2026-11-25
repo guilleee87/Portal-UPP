@@ -2641,6 +2641,7 @@
           <span id="badge_doc_normativo_activo" style="font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:6px; background:#dbeafe; color:#1e40af; border:1px solid #93c5fd;">
             📄 FUA: Pendiente de Apertura
           </span>
+          <button type="button" id="btn_imprimir_fua_header" onclick="imprimirDocumentoNormativoFuaEssi('MINSA')" style="font-size:0.70rem;padding:3px 9px;border-radius:6px;border:1px solid #0284c7;background:#ffffff;color:#0369a1;font-weight:800;cursor:pointer;">🖨️ Imprimir FUA</button>
         </div>
 
         <div id="subselector_essalud" style="display:none; align-items:center; gap:8px; background:#ecfeff; border:1px solid #a5f3fc; border-radius:8px; padding:6px 12px; flex-wrap:wrap;">
@@ -2651,6 +2652,7 @@
           <span id="badge_doc_normativo_essalud" style="font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:6px; background:#cffafe; color:#155e75; border:1px solid #67e8f9;">
             📄 ESSI: Pendiente de Acreditación
           </span>
+          <button type="button" id="btn_imprimir_essi_header" onclick="imprimirDocumentoNormativoFuaEssi('ESSALUD')" style="font-size:0.70rem;padding:3px 9px;border-radius:6px;border:1px solid #0e7490;background:#ffffff;color:#0e7490;font-weight:800;cursor:pointer;">🖨️ Imprimir Hoja ESSI</button>
         </div>
 
         <div id="subselector_plan_privado" style="display:none; align-items:center; gap:8px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:6px 12px;">
@@ -3827,6 +3829,125 @@
       </div>
       <div class="module-section-body" id="body_mod4" style="display: none;">
 
+        <!-- AMBIENTE ASIGNADO Y MÉDICO DE GUARDIA -->
+        <div class="form-grid-3" style="margin-bottom:14px;">
+          <div class="form-field">
+            <label>Ambiente Asignado por Triaje:</label>
+            <div style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:8px; padding:9px 12px; font-weight:800; color:#0f172a;" id="topico_asignado_lbl">
+              Tópico de Emergencia General
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="cie10_select">Diagnóstico CIE-10 (Obligatorio para Cobertura):</label>
+                        <select id="cie10_select" class="input-full" onchange="seleccionarCIE10(this.value)">
+              <option value="">Seleccione diagnóstico CIE-10...</option>
+              
+              <optgroup label="❤️ Cardiovascular y Hemodinámica Crítica">
+                <option value="I21.9 — Infarto agudo del miocardio sin otra especificación">I21.9 — Infarto agudo del miocardio (SCACEST / SCASEST)</option>
+                <option value="I20.0 — Angina inestable de esfuerzo / reposo">I20.0 — Angina inestable de esfuerzo o reposo</option>
+                <option value="I50.9 — Insuficiencia cardíaca congestiva descompensada">I50.9 — Insuficiencia cardíaca congestiva aguda</option>
+                <option value="I10.X — Crisis hipertensiva (Urgencia / Emergencia)">I10.X — Crisis hipertensiva (Emergencia / Urgencia)</option>
+                <option value="I49.9 — Arritmia cardíaca no especificada / Fibrilación auricular">I49.9 — Fibrilación auricular / Arritmia cardíaca aguda</option>
+                <option value="I26.9 — Tromboembolismo pulmonar (TEP)">I26.9 — Tromboembolismo pulmonar (TEP)</option>
+                <option value="R57.0 — Shock cardiogénico">R57.0 — Shock cardiogénico</option>
+              </optgroup>
+
+              <optgroup label="🧠 Neurología y Neurocirugía">
+                <option value="I64.X — Accidente vascular encefálico agudo (Ictus)">I64.X — Accidente vascular encefálico (Ictus isquémico / hemorrágico)</option>
+                <option value="S06.9 — Traumatismo intracraneal no especificado (TEC)">S06.9 — Traumatismo intracraneal (TEC moderado / severo)</option>
+                <option value="G40.9 — Crisis convulsiva / Estatus epiléptico">G40.9 — Crisis convulsiva activa / Estatus epiléptico</option>
+                <option value="G03.9 — Meningitis aguda no especificada">G03.9 — Meningitis bacteriana / viral aguda</option>
+                <option value="R55.X — Síncope y colapso cardiovascular">R55.X — Síncope y colapso</option>
+                <option value="G45.9 — Isquemia cerebral transitoria (AIT)">G45.9 — Isquemia cerebral transitoria (AIT)</option>
+              </optgroup>
+
+              <optgroup label="🚗 Trauma, Accidentes de Tránsito y Shock">
+                <option value="T14.9 — Traumatismo no especificado por accidente de tránsito">T14.9 — Politraumatismo por accidente de tránsito (SOAT)</option>
+                <option value="T07.X — Politraumatismo severo (Accidente múltiple)">T07.X — Politraumatismo severo / Lesiones múltiples</option>
+                <option value="S36.9 — Traumatismo abdominal cerrado / Hemoperitoneo">S36.9 — Traumatismo abdominal cerrado con sospecha de hemoperitoneo</option>
+                <option value="S27.0 — Neumotórax traumático a tensión / Hemotórax">S27.0 — Neumotórax a tensión / Hemotórax masivo</option>
+                <option value="T30.0 — Quemadura térmica extensa (Grado II / III)">T30.0 — Quemadura térmica extensa (>15% SC)</option>
+                <option value="S82.9 — Fractura de miembro inferior / diáfisis ósea">S82.9 — Fractura diafisiaria de fémur / tibia y peroné</option>
+                <option value="R57.1 — Shock hipovolémico / hemorrágico">R57.1 — Shock hipovolémico hemorrágico</option>
+              </optgroup>
+
+              <optgroup label="🩺 Cirugía General y Abdomen Agudo">
+                <option value="K35.8 — Apendicitis aguda">K35.8 — Apendicitis aguda</option>
+                <option value="R10.4 — Otros dolores abdominales y los no especificados">R10.4 — Dolor abdominal agudo / Abdomen agudo quirúrgico</option>
+                <option value="K80.0 — Colecistitis aguda litiásica">K80.0 — Colecistitis aguda litiásica / Cólico biliar</option>
+                <option value="K85.9 — Pancreatitis aguda no especificada">K85.9 — Pancreatitis aguda biliar / enólica</option>
+                <option value="K92.2 — Hemorragia digestiva alta (HDA) / Melena">K92.2 — Hemorragia digestiva alta activa (HDA / Melena)</option>
+                <option value="K92.0 — Hematemesis aguda">K92.0 — Hematemesis aguda</option>
+                <option value="K56.6 — Obstrucción intestinal aguda / Íleo mecánico">K56.6 — Obstrucción intestinal aguda / Íleo obstructivo</option>
+                <option value="A09.0 — Gastroenteritis aguda con deshidratación severa">A09.0 — Gastroenteritis aguda infecciosa con deshidratación</option>
+              </optgroup>
+
+              <optgroup label="🫁 Neumología y Vía Respiratoria">
+                <option value="J45.9 — Asma, no especificada (Crisis asmática)">J45.9 — Crisis asmática aguda severa</option>
+                <option value="J18.9 — Neumonía adquirida en la comunidad (NAC)">J18.9 — Neumonía adquirida en la comunidad (NAC) severa</option>
+                <option value="J44.1 — EPOC con exacerbación aguda sobreinfectada">J44.1 — Exacerbación aguda de EPOC</option>
+                <option value="J96.0 — Insuficiencia respiratoria aguda tipo I / II">J96.0 — Insuficiencia respiratoria aguda</option>
+                <option value="J81.X — Edema agudo de pulmón cardiogénico">J81.X — Edema agudo de pulmón (EAP)</option>
+              </optgroup>
+
+              <optgroup label="🦠 Infectología y Medicina Crítica">
+                <option value="A41.9 — Sepsis, no especificada">A41.9 — Sepsis de foco no especificado / Shock séptico</option>
+                <option value="N39.0 — Infección del tracto urinario complicada (ITU)">N39.0 — Infección de vías urinarias complicada (ITU)</option>
+                <option value="N10.X — Pielonefritis aguda grave">N10.X — Pielonefritis aguda grave</option>
+                <option value="A90.X — Dengue con signos de alarma / Dengue grave">A90.X — Dengue con signos de alarma / Dengue grave</option>
+                <option value="B34.9 — Síndrome febril agudo en estudio">B34.9 — Síndrome febril agudo prolongado en estudio</option>
+              </optgroup>
+
+              <optgroup label="🧪 Endocrinología, Metabolismo y Nefrología">
+                <option value="E10.1 — Diabetes mellitus con cetoacidosis diabética (CAD)">E10.1 — Cetoacidosis diabética (CAD)</option>
+                <option value="E11.0 — Diabetes tipo 2 con estado hiperosmolar (EHH)">E11.0 — Estado hiperosmolar hiperglucémico (EHH)</option>
+                <option value="E16.2 — Hipoglucemia severa sintomática">E16.2 — Hipoglucemia sintomática severa (<50 mg/dL)</option>
+                <option value="N17.9 — Insuficiencia renal aguda (IRA)">N17.9 — Insuficiencia renal aguda / Injuria renal aguda (LRA)</option>
+                <option value="N23.X — Cólico nefrítico agudo / Urolitiasis">N23.X — Cólico nefrítico agudo / Litiasis renal</option>
+                <option value="E87.6 — Trastorno hidroelectrolítico severo (Hipopotasemia)">E87.6 — Trastorno hidroelectrolítico severo</option>
+              </optgroup>
+
+              <optgroup label="🤰 Ginecología y Obstetricia (Claves Rojas / Azules / Amarillas)">
+                <option value="O14.9 — Preeclampsia severa / Síndrome HELLP (Clave Azul)">O14.9 — Preeclampsia severa / Síndrome HELLP (Clave Azul)</option>
+                <option value="O15.9 — Eclampsia en embarazo / puerperio (Clave Azul)">O15.9 — Eclampsia gestacional o puerperal (Clave Azul)</option>
+                <option value="O72.1 — Hemorragia posparto inmediata / Atonía uterina (Clave Roja)">O72.1 — Hemorragia posparto inmediata (Clave Roja)</option>
+                <option value="O00.9 — Embarazo ectópico roto (Clave Roja)">O00.9 — Embarazo ectópico roto con abdomen agudo (Clave Roja)</option>
+                <option value="O85.X — Sepsis puerperal / Endometritis (Clave Amarilla)">O85.X — Sepsis puerperal / Infección obstétrica (Clave Amarilla)</option>
+                <option value="O60.0 — Amenaza de parto pretérmino">O60.0 — Amenaza de parto pretérmino en evolución</option>
+              </optgroup>
+
+              <optgroup label="⚠️ Toxicología y Reacciones Severas">
+                <option value="T78.2 — Choque anafiláctico / Anafilaxia severa">T78.2 — Choque anafiláctico / Anafilaxia medicamentosa</option>
+                <option value="T65.9 — Intoxicación aguda por plaguicidas / organofosforados">T65.9 — Intoxicación aguda por plaguicidas / organofosforados</option>
+                <option value="T51.0 — Intoxicación etílica aguda complicada">T51.0 — Intoxicación etílica aguda con compromiso sensorial</option>
+              </optgroup>
+
+              <optgroup label="🧠 Psiquiatría y Salud Mental de Emergencia">
+                <option value="F41.0 — Trastorno de pánico / Crisis de angustia aguda">F41.0 — Trastorno de pánico / Crisis de ansiedad paroxística</option>
+                <option value="F19.0 — Agitación psicomotriz aguda">F19.0 — Agitación psicomotriz aguda</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="medico_responsable_select">Médico Asistencial de Guardia:</label>
+            <div style="display:flex; gap:6px;">
+              <select id="medico_responsable_select" class="input-full" onchange="actualizarMedicoAsignado(this.value)" style="font-weight:700;">
+                <option value="Dr. Carlos Alberto Vega Morales (Emergenciólogo · CMP 58321)">Dr. Carlos Alberto Vega Morales — Emergenciólogo · CMP 58321 — 🟢 Disponible</option>
+                <option value="Dr. Ricardo Javier Paredes Quispe (Cirujano de Guardia · CMP 61409)">Dr. Ricardo Javier Paredes Quispe — Cirujano de Guardia · CMP 61409 — 🟢 Disponible</option>
+                <option value="Dra. Patricia Elena Mendoza Salazar (Médico Internista · CMP 54821)">Dra. Patricia Elena Mendoza Salazar — Médico Internista · CMP 54821 — 🟢 Disponible</option>
+                <option value="Dra. Lucía Fernanda Torres Huamán (Pediatra de Turno · CMP 63914)">Dra. Lucía Fernanda Torres Huamán — Pediatra de Turno · CMP 63914 — 🟢 Disponible</option>
+                <option value="Dra. Sofía Valentina Chávez Rojas (Ginecóloga Obstetra · CMP 59742)">Dra. Sofía Valentina Chávez Rojas — Ginecóloga Obstetra · CMP 59742 — 🟢 Disponible</option>
+                <option value="Dr. Andrés Eduardo Navarro Castillo (Traumatólogo de Guardia · CMP 62185)">Dr. Andrés Eduardo Navarro Castillo — Traumatólogo de Guardia · CMP 62185 — 🟢 Disponible</option>
+              </select>
+              <button type="button" class="btn-full-primary" style="white-space:nowrap; padding:0 14px; font-weight:700; background:#0284c7; display:flex; align-items:center; gap:6px;" onclick="asignarMedicoDisponible()" title="Verificar rol de guardia y asignar médico disponible según especialidad">
+                🩺 Asignar Disponible
+              </button>
+            </div>
+          </div>
+        </div>
+
+
+
         <div class="norma-pill-banner">
           <span class="norma-tag">NTS N° 139-MINSA</span>
           <span><strong>Órdenes Asistenciales y Kardex Auditable:</strong> Prescripción de fármacos, analítica de laboratorio y estudios radiológicos de emergencia. Solo los medicamentos efectivamente administrados por Enfermería se debitan en la cuenta del paciente.</span>
@@ -3936,123 +4057,6 @@
                 <div><strong>Historia Clínica:</strong> <span id="m4_disp_hc" style="color:#0284c7; font-weight:800;">—</span></div>
                 <div id="m4_badge_sincronizado" style="padding:2px 8px; border-radius:4px; font-weight:800; font-size:0.75rem; background:#dcfce7; color:#15803d;">✅ Validado en RENIEC (Solo Lectura)</div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- AMBIENTE ASIGNADO Y MÉDICO DE GUARDIA -->
-        <div class="form-grid-3" style="margin-bottom:14px;">
-          <div class="form-field">
-            <label>Ambiente Asignado por Triaje:</label>
-            <div style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:8px; padding:9px 12px; font-weight:800; color:#0f172a;" id="topico_asignado_lbl">
-              Tópico de Emergencia General
-            </div>
-          </div>
-          <div class="form-field">
-            <label for="cie10_select">Diagnóstico CIE-10 (Obligatorio para Cobertura):</label>
-                        <select id="cie10_select" class="input-full" onchange="seleccionarCIE10(this.value)">
-              <option value="">Seleccione diagnóstico CIE-10...</option>
-              
-              <optgroup label="❤️ Cardiovascular y Hemodinámica Crítica">
-                <option value="I21.9 — Infarto agudo del miocardio sin otra especificación">I21.9 — Infarto agudo del miocardio (SCACEST / SCASEST)</option>
-                <option value="I20.0 — Angina inestable de esfuerzo / reposo">I20.0 — Angina inestable de esfuerzo o reposo</option>
-                <option value="I50.9 — Insuficiencia cardíaca congestiva descompensada">I50.9 — Insuficiencia cardíaca congestiva aguda</option>
-                <option value="I10.X — Crisis hipertensiva (Urgencia / Emergencia)">I10.X — Crisis hipertensiva (Emergencia / Urgencia)</option>
-                <option value="I49.9 — Arritmia cardíaca no especificada / Fibrilación auricular">I49.9 — Fibrilación auricular / Arritmia cardíaca aguda</option>
-                <option value="I26.9 — Tromboembolismo pulmonar (TEP)">I26.9 — Tromboembolismo pulmonar (TEP)</option>
-                <option value="R57.0 — Shock cardiogénico">R57.0 — Shock cardiogénico</option>
-              </optgroup>
-
-              <optgroup label="🧠 Neurología y Neurocirugía">
-                <option value="I64.X — Accidente vascular encefálico agudo (Ictus)">I64.X — Accidente vascular encefálico (Ictus isquémico / hemorrágico)</option>
-                <option value="S06.9 — Traumatismo intracraneal no especificado (TEC)">S06.9 — Traumatismo intracraneal (TEC moderado / severo)</option>
-                <option value="G40.9 — Crisis convulsiva / Estatus epiléptico">G40.9 — Crisis convulsiva activa / Estatus epiléptico</option>
-                <option value="G03.9 — Meningitis aguda no especificada">G03.9 — Meningitis bacteriana / viral aguda</option>
-                <option value="R55.X — Síncope y colapso cardiovascular">R55.X — Síncope y colapso</option>
-                <option value="G45.9 — Isquemia cerebral transitoria (AIT)">G45.9 — Isquemia cerebral transitoria (AIT)</option>
-              </optgroup>
-
-              <optgroup label="🚗 Trauma, Accidentes de Tránsito y Shock">
-                <option value="T14.9 — Traumatismo no especificado por accidente de tránsito">T14.9 — Politraumatismo por accidente de tránsito (SOAT)</option>
-                <option value="T07.X — Politraumatismo severo (Accidente múltiple)">T07.X — Politraumatismo severo / Lesiones múltiples</option>
-                <option value="S36.9 — Traumatismo abdominal cerrado / Hemoperitoneo">S36.9 — Traumatismo abdominal cerrado con sospecha de hemoperitoneo</option>
-                <option value="S27.0 — Neumotórax traumático a tensión / Hemotórax">S27.0 — Neumotórax a tensión / Hemotórax masivo</option>
-                <option value="T30.0 — Quemadura térmica extensa (Grado II / III)">T30.0 — Quemadura térmica extensa (>15% SC)</option>
-                <option value="S82.9 — Fractura de miembro inferior / diáfisis ósea">S82.9 — Fractura diafisiaria de fémur / tibia y peroné</option>
-                <option value="R57.1 — Shock hipovolémico / hemorrágico">R57.1 — Shock hipovolémico hemorrágico</option>
-              </optgroup>
-
-              <optgroup label="🩺 Cirugía General y Abdomen Agudo">
-                <option value="K35.8 — Apendicitis aguda">K35.8 — Apendicitis aguda</option>
-                <option value="R10.4 — Otros dolores abdominales y los no especificados">R10.4 — Dolor abdominal agudo / Abdomen agudo quirúrgico</option>
-                <option value="K80.0 — Colecistitis aguda litiásica">K80.0 — Colecistitis aguda litiásica / Cólico biliar</option>
-                <option value="K85.9 — Pancreatitis aguda no especificada">K85.9 — Pancreatitis aguda biliar / enólica</option>
-                <option value="K92.2 — Hemorragia digestiva alta (HDA) / Melena">K92.2 — Hemorragia digestiva alta activa (HDA / Melena)</option>
-                <option value="K92.0 — Hematemesis aguda">K92.0 — Hematemesis aguda</option>
-                <option value="K56.6 — Obstrucción intestinal aguda / Íleo mecánico">K56.6 — Obstrucción intestinal aguda / Íleo obstructivo</option>
-                <option value="A09.0 — Gastroenteritis aguda con deshidratación severa">A09.0 — Gastroenteritis aguda infecciosa con deshidratación</option>
-              </optgroup>
-
-              <optgroup label="🫁 Neumología y Vía Respiratoria">
-                <option value="J45.9 — Asma, no especificada (Crisis asmática)">J45.9 — Crisis asmática aguda severa</option>
-                <option value="J18.9 — Neumonía adquirida en la comunidad (NAC)">J18.9 — Neumonía adquirida en la comunidad (NAC) severa</option>
-                <option value="J44.1 — EPOC con exacerbación aguda sobreinfectada">J44.1 — Exacerbación aguda de EPOC</option>
-                <option value="J96.0 — Insuficiencia respiratoria aguda tipo I / II">J96.0 — Insuficiencia respiratoria aguda</option>
-                <option value="J81.X — Edema agudo de pulmón cardiogénico">J81.X — Edema agudo de pulmón (EAP)</option>
-              </optgroup>
-
-              <optgroup label="🦠 Infectología y Medicina Crítica">
-                <option value="A41.9 — Sepsis, no especificada">A41.9 — Sepsis de foco no especificado / Shock séptico</option>
-                <option value="N39.0 — Infección del tracto urinario complicada (ITU)">N39.0 — Infección de vías urinarias complicada (ITU)</option>
-                <option value="N10.X — Pielonefritis aguda grave">N10.X — Pielonefritis aguda grave</option>
-                <option value="A90.X — Dengue con signos de alarma / Dengue grave">A90.X — Dengue con signos de alarma / Dengue grave</option>
-                <option value="B34.9 — Síndrome febril agudo en estudio">B34.9 — Síndrome febril agudo prolongado en estudio</option>
-              </optgroup>
-
-              <optgroup label="🧪 Endocrinología, Metabolismo y Nefrología">
-                <option value="E10.1 — Diabetes mellitus con cetoacidosis diabética (CAD)">E10.1 — Cetoacidosis diabética (CAD)</option>
-                <option value="E11.0 — Diabetes tipo 2 con estado hiperosmolar (EHH)">E11.0 — Estado hiperosmolar hiperglucémico (EHH)</option>
-                <option value="E16.2 — Hipoglucemia severa sintomática">E16.2 — Hipoglucemia sintomática severa (<50 mg/dL)</option>
-                <option value="N17.9 — Insuficiencia renal aguda (IRA)">N17.9 — Insuficiencia renal aguda / Injuria renal aguda (LRA)</option>
-                <option value="N23.X — Cólico nefrítico agudo / Urolitiasis">N23.X — Cólico nefrítico agudo / Litiasis renal</option>
-                <option value="E87.6 — Trastorno hidroelectrolítico severo (Hipopotasemia)">E87.6 — Trastorno hidroelectrolítico severo</option>
-              </optgroup>
-
-              <optgroup label="🤰 Ginecología y Obstetricia (Claves Rojas / Azules / Amarillas)">
-                <option value="O14.9 — Preeclampsia severa / Síndrome HELLP (Clave Azul)">O14.9 — Preeclampsia severa / Síndrome HELLP (Clave Azul)</option>
-                <option value="O15.9 — Eclampsia en embarazo / puerperio (Clave Azul)">O15.9 — Eclampsia gestacional o puerperal (Clave Azul)</option>
-                <option value="O72.1 — Hemorragia posparto inmediata / Atonía uterina (Clave Roja)">O72.1 — Hemorragia posparto inmediata (Clave Roja)</option>
-                <option value="O00.9 — Embarazo ectópico roto (Clave Roja)">O00.9 — Embarazo ectópico roto con abdomen agudo (Clave Roja)</option>
-                <option value="O85.X — Sepsis puerperal / Endometritis (Clave Amarilla)">O85.X — Sepsis puerperal / Infección obstétrica (Clave Amarilla)</option>
-                <option value="O60.0 — Amenaza de parto pretérmino">O60.0 — Amenaza de parto pretérmino en evolución</option>
-              </optgroup>
-
-              <optgroup label="⚠️ Toxicología y Reacciones Severas">
-                <option value="T78.2 — Choque anafiláctico / Anafilaxia severa">T78.2 — Choque anafiláctico / Anafilaxia medicamentosa</option>
-                <option value="T65.9 — Intoxicación aguda por plaguicidas / organofosforados">T65.9 — Intoxicación aguda por plaguicidas / organofosforados</option>
-                <option value="T51.0 — Intoxicación etílica aguda complicada">T51.0 — Intoxicación etílica aguda con compromiso sensorial</option>
-              </optgroup>
-
-              <optgroup label="🧠 Psiquiatría y Salud Mental de Emergencia">
-                <option value="F41.0 — Trastorno de pánico / Crisis de angustia aguda">F41.0 — Trastorno de pánico / Crisis de ansiedad paroxística</option>
-                <option value="F19.0 — Agitación psicomotriz aguda">F19.0 — Agitación psicomotriz aguda</option>
-              </optgroup>
-            </select>
-          </div>
-          <div class="form-field">
-            <label for="medico_responsable_select">Médico Asistencial de Guardia:</label>
-            <div style="display:flex; gap:6px;">
-              <select id="medico_responsable_select" class="input-full" onchange="actualizarMedicoAsignado(this.value)" style="font-weight:700;">
-                <option value="Médico de Turno 1 (Emergenciólogo / CMP 0001)">Médico de Turno 1 (Emergenciólogo) — 🟢 Disponible</option>
-                <option value="Médico de Turno 2 (Cirujano de Guardia / CMP 0002)">Médico de Turno 2 (Cirujano de Guardia) — 🟢 Disponible</option>
-                <option value="Médico de Turno 3 (Médico Internista / CMP 0003)">Médico de Turno 3 (Médico Internista) — 🟢 Disponible</option>
-                <option value="Médico de Turno 4 (Pediatra de Turno / CMP 0004)">Médico de Turno 4 (Pediatra de Turno) — 🟢 Disponible</option>
-                <option value="Médico de Turno 5 (Ginecólogo Obstetra / CMP 0005)">Médico de Turno 5 (Ginecólogo Obstetra) — 🟢 Disponible</option>
-                <option value="Médico de Turno 6 (Traumatólogo de Guardia / CMP 0006)">Médico de Turno 6 (Traumatólogo de Guardia) — 🟢 Disponible</option>
-              </select>
-              <button type="button" class="btn-full-primary" style="white-space:nowrap; padding:0 14px; font-weight:700; background:#0284c7; display:flex; align-items:center; gap:6px;" onclick="asignarMedicoDisponible()" title="Verificar rol de guardia y asignar médico disponible según especialidad">
-                🩺 Asignar Disponible
-              </button>
             </div>
           </div>
         </div>
@@ -4513,6 +4517,7 @@
         <span class="toggle-arrow" id="arrow_mod5">▼</span>
       </div>
       <div class="module-section-body" id="body_mod5" style="display: none;">
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:7px 12px; margin-bottom:10px; font-size:0.76rem; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;"><strong style="color:#1e40af;">📋 Sustento en Observación (FUA Cód. 063 / Hoja ESSI):</strong><span style="display:flex;align-items:center;gap:8px;"><span id="m5_doc_normativo_pill" style="font-weight:800; color:#0369a1;">📄 FUA / ESSI: En espera</span><button type="button" id="btn_imprimir_doc_m5" onclick="imprimirDocumentoNormativoFuaEssi()" style="font-size:0.70rem;padding:3px 8px;border-radius:6px;border:1px solid #0284c7;background:#ffffff;color:#0369a1;font-weight:800;cursor:pointer;">🖨️ Imprimir FUA</button></span></div>
         <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:8px 12px; margin-bottom:10px; font-size:0.8rem; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
           <span><strong>🏷️ Diagnóstico CIE-10 en Observación:</strong> <span id="m5_cie10_display" style="color:#0369a1; font-weight:800;">Por determinar</span></span>
           <span style="font-size:0.71rem; color:#475569;">NTS N° 042-MINSA · Reevaluación vinculada al diagnóstico</span>
@@ -4692,6 +4697,7 @@
         <span class="toggle-arrow" id="arrow_mod6">▼</span>
       </div>
       <div class="module-section-body" id="body_mod6" style="display: none;">
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:7px 12px; margin-bottom:10px; font-size:0.76rem; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;"><strong style="color:#1e40af;">📋 Cobertura de Estancia / Área Crítica (FUA / Hoja ESSI):</strong><span style="display:flex;align-items:center;gap:8px;"><span id="m6_doc_normativo_pill" style="font-weight:800; color:#0369a1;">📄 FUA / ESSI: En espera</span><button type="button" id="btn_imprimir_doc_m6" onclick="imprimirDocumentoNormativoFuaEssi()" style="font-size:0.70rem;padding:3px 8px;border-radius:6px;border:1px solid #0284c7;background:#ffffff;color:#0369a1;font-weight:800;cursor:pointer;">🖨️ Imprimir FUA</button></span></div>
         <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:8px 12px; margin-bottom:10px; font-size:0.8rem; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
           <span><strong>🏷️ Diagnóstico CIE-10 Justificativo (UCI / SOP):</strong> <span id="m6_cie10_display" style="color:#0369a1; font-weight:800;">Por determinar</span></span>
           <span style="font-size:0.71rem; color:#475569;">NTS N° 031-MINSA · Criterio clínico de cama crítica</span>
@@ -4934,6 +4940,7 @@
         <span class="toggle-arrow" id="arrow_mod7">▼</span>
       </div>
       <div class="module-section-body" id="body_mod7" style="display: none;">
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:7px 12px; margin-bottom:10px; font-size:0.76rem; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;"><strong style="color:#1e40af;">📋 Destino &amp; Cierre Clínico (FUA SIS / Hoja ESSI):</strong><span style="display:flex;align-items:center;gap:8px;"><span id="m7_doc_normativo_pill" style="font-weight:800; color:#0369a1;">📄 FUA / ESSI: En espera</span><button type="button" id="btn_imprimir_doc_m7" onclick="imprimirDocumentoNormativoFuaEssi()" style="font-size:0.70rem;padding:3px 8px;border-radius:6px;border:1px solid #0284c7;background:#ffffff;color:#0369a1;font-weight:800;cursor:pointer;">🖨️ Imprimir FUA</button></span></div>
 
         <div class="norma-pill-banner">
           <span class="norma-tag">Código Procesal Penal Art. 195°</span>
