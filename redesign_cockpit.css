@@ -151,10 +151,10 @@ input[type="number"],
 .cockpit-px-name {
   font-weight: 800;
   color: #0F172A;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .cockpit-px-bed {
@@ -1539,11 +1539,13 @@ html.dark .mts-subpanel-toggle-btn:hover,
 }
 
 .cockpit-queue-track {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scroll-snap-type: x mandatory;
+  max-height: 360px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 2px;
 }
 
 .cockpit-queue-track::-webkit-scrollbar {
@@ -1607,9 +1609,10 @@ html.dark .mts-subpanel-toggle-btn:hover,
   font-size: 0.84rem;
   font-weight: 800;
   color: #0F172A;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .cockpit-px-dni-row {
@@ -1714,21 +1717,31 @@ html.dark .cockpit-px-name {
 }
 
 .cockpit-px-card {
-  flex: 0 0 220px !important;
-  max-width: 225px !important;
-  height: 112px !important;
-  max-height: 115px !important;
-  padding: 8px 10px !important;
+  flex: none !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 118px !important;
+  height: auto !important;
+  max-height: none !important;
+  padding: 10px 12px !important;
   box-sizing: border-box !important;
-  overflow: hidden !important;
-  gap: 4px !important;
+  overflow: visible !important;
+  gap: 6px !important;
+  justify-content: space-between !important;
 }
 
 .cockpit-px-name {
-  font-size: 0.80rem !important;
+  font-size: 0.82rem !important;
   font-weight: 800 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  line-height: 1.2 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  line-height: 1.25 !important;
+}
+
+.cockpit-px-dni-row,
+.cockpit-px-bottom {
+  flex-wrap: wrap !important;
+  gap: 4px 8px !important;
 }

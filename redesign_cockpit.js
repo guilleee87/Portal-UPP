@@ -112,7 +112,7 @@
         <button type="button" class="cockpit-tactical-btn btn-pulsera" onclick="generarEImprimirPulseraInmediata()" title="Generar e Imprimir Inmediatamente la Pulsera QR de Emergencia">
           🏷️ Pulsera QR
         </button>
-        <button type="button" class="cockpit-tactical-btn btn-main-cta" onclick="registrarPacienteEnEspera()" title="Registrar llegada de paciente en blanco a sala de espera">
+        <button type="button" class="cockpit-tactical-btn btn-main-cta" onclick="abrirModalLlegadaEnEspera()" title="Registrar llegada de paciente a sala de espera (elegir modalidad de llegada)">
           ➕ En Espera
         </button>
         <button type="button" class="cockpit-tactical-btn btn-nn-eval" onclick="abrirModalPreEvaluacionNN('CONSCIENTE')" title="Paciente NN Consciente / Indocumentado (Pasa a Evaluación de Triaje)">

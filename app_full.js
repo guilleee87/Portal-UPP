@@ -8437,6 +8437,7 @@ function seleccionarCIE10(codigo, desc) {
   STATE.estadoFua = "CON_SUSTENTO_MEDICO";
   STATE.estadoEssi = "CON_SUSTENTO_MEDICO";
   STATE.horaSustentoMedico = horaIndicacion;
+  if (typeof actualizarIndicadoresFuaEssi === "function") actualizarIndicadoresFuaEssi();
 
   if (window.pacienteActivoId && Array.isArray(window.PACIENTES_COLA)) {
     const px = window.PACIENTES_COLA.find(x => x.id === window.pacienteActivoId);
@@ -9560,6 +9561,36 @@ function asignarPacienteActualARecurso(idRecurso, duracionManual = null, motivoM
   if (rec.estado === "ocupada") {
     alert(`⛔ El recurso ${rec.nombre} ya se encuentra ocupado. Seleccione otra cama o libérela.`);
     return;
+  }
+
+  // Traslado hospitalario: liberar automáticamente la cama/sala anterior del mismo paciente (1 paciente = 1 recurso)
+  const prevId = STATE.camaAsignadaId;
+  if (prevId && prevId !== idRecurso && RECURSOS_HOSPITALARIOS[prevId] && RECURSOS_HOSPITALARIOS[prevId].estado === "ocupada") {
+    const prevRec = RECURSOS_HOSPITALARIOS[prevId];
+    prevRec.estado = "disponible";
+    prevRec.paciente = null;
+    prevRec.inicioMs = null;
+    prevRec.finMs = null;
+    prevRec.horasAmpliadas = 0;
+    prevRec.tiempoFormateado = "--:--:--";
+    prevRec.progresoPct = 0;
+    if (prevId.startsWith("SOP-")) {
+      const nSop = parseInt(prevId.replace("SOP-", ""), 10);
+      const bSop = document.getElementById(`badge_sop${nSop}`);
+      if (bSop) {
+        bSop.textContent = "🟢 Disponible";
+        bSop.style.background = "#dcfce7";
+        bSop.style.color = "#15803d";
+      }
+    } else if (prevId.startsWith("URPA-")) {
+      const libresU = ["URPA-01", "URPA-02"].filter(id => RECURSOS_HOSPITALARIOS[id]?.estado === "disponible").length;
+      const bUrpa = document.getElementById("badge_urpa");
+      if (bUrpa) {
+        bUrpa.textContent = libresU === 2 ? "🟢 2 Camas Libres" : `🟡 ${libresU} Cama Libre`;
+        bUrpa.style.background = libresU === 2 ? "#dcfce7" : "#fef9c3";
+        bUrpa.style.color = libresU === 2 ? "#15803d" : "#854d0e";
+      }
+    }
   }
 
   const horas = parseFloat(duracionManual) || rec.duracionHoras || 6;
@@ -12269,6 +12300,10 @@ window.cerrarModalLlegadaEnEspera = cerrarModalLlegadaEnEspera;
 window.confirmarLlegadaEnEspera = confirmarLlegadaEnEspera;
 
 function registrarPacienteEnEspera(modalidadElegida = null) {
+  if (!modalidadElegida && document.getElementById("modalLlegadaEnEspera")) {
+    abrirModalLlegadaEnEspera();
+    return;
+  }
   guardarEstadoPacienteActivo();
   const num = contadorSecuencialPx++;
   const ticket = `T-${String(num).padStart(3, '0')}`;
@@ -13586,11 +13621,17 @@ window.actualizarVisibilidadBotonesEntorno = actualizarVisibilidadBotonesEntorno
 
 function cambiarEntornoOperativo(modo) {
   const modoAnterior = STATE.entornoOperativo || "publico";
+  const subIpressReq = (modo === "essalud") ? "ESSALUD" : (modo === "sis" ? "MINSA" : (STATE.tipoIpressPublica || "MINSA"));
   const nuevoModo = (modo === "privado") ? "privado" : "publico";
   const debeBorrarAvance = (nuevoModo === "privado" && (modoAnterior === "publico" || STATE.numDni || STATE.identificador || (document.getElementById("dni_mod1")?.value) || (document.getElementById("ident_full")?.value)));
 
   STATE.entornoOperativo = nuevoModo;
   STATE.esClinicaPrivada = (nuevoModo === "privado");
+  if (nuevoModo === "publico") {
+    STATE.tipoIpressPublica = subIpressReq;
+    const selIp = document.getElementById("select_ipress_publica");
+    if (selIp) selIp.value = subIpressReq;
+  }
 
   if (debeBorrarAvance) {
     // Requerimiento: Si ya estoy ingresando los datos en SIS o ESSALUD, al cambiar de pestaña a Privado se borra el avance
@@ -13654,50 +13695,76 @@ function cambiarEntornoOperativo(modo) {
     }
   }
 
-  // Actualizar estilos de los botones del selector
-  const btnPub = document.getElementById("tab_entorno_publico");
+  // Actualizar estilos de los 3 botones del selector (SIS | EsSalud | Privado)
+  const btnSis = document.getElementById("tab_entorno_publico");
+  const btnEssalud = document.getElementById("tab_entorno_essalud");
   const btnPriv = document.getElementById("tab_entorno_privado");
   const txtBanner = document.getElementById("entorno_sector_info_texto");
   const badgeSector = document.getElementById("badge_sector_factura");
 
+  const desactivarTab = (el) => {
+    if (!el) return;
+    el.classList.remove("active");
+    el.style.border = "2px solid #e2e8f0";
+    el.style.background = "#f8fafc";
+    el.style.color = "#64748b";
+    el.style.boxShadow = "none";
+  };
+
   if (nuevoModo === "publico") {
-    if (btnPub) {
-      btnPub.classList.add("active");
-      btnPub.style.border = "2.5px solid #0284c7";
-      btnPub.style.background = "#eff6ff";
-      btnPub.style.color = "#0369a1";
-      btnPub.style.boxShadow = "0 2px 6px rgba(2,132,199,0.18)";
+    const esEssalud = (STATE.tipoIpressPublica === "ESSALUD");
+    desactivarTab(btnPriv);
+    if (esEssalud) {
+      desactivarTab(btnSis);
+      if (btnEssalud) {
+        btnEssalud.classList.add("active");
+        btnEssalud.style.border = "2.5px solid #0284c7";
+        btnEssalud.style.background = "#eff6ff";
+        btnEssalud.style.color = "#0369a1";
+        btnEssalud.style.boxShadow = "0 2px 6px rgba(2,132,199,0.18)";
+      }
+      STATE.nroEssi = STATE.nroEssi || `ESSI-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+      STATE.estadoEssi = STATE.estadoEssi || "ACREDITADO_ADMISION";
+      if (txtBanner) {
+        txtBanner.innerHTML = "<strong>Módulo EsSalud (ESSI):</strong> Afiliados EsSalud cubiertos al 100% con <strong>Hoja de Atención ESSI</strong> (Ley N° 26790). SIS en P-I/II por Intercambio Prestacional (D.L. 1302/1466). No asegurados: 100% Particular post-estabilización.";
+      }
+      if (badgeSector) {
+        badgeSector.textContent = "Sector: EsSalud (Formato ESSI · Ley N° 26790)";
+        badgeSector.style.background = "#eff6ff";
+        badgeSector.style.color = "#1d4ed8";
+        badgeSector.style.border = "1px solid #bfdbfe";
+      }
+    } else {
+      desactivarTab(btnEssalud);
+      if (btnSis) {
+        btnSis.classList.add("active");
+        btnSis.style.border = "2.5px solid #0284c7";
+        btnSis.style.background = "#eff6ff";
+        btnSis.style.color = "#0369a1";
+        btnSis.style.boxShadow = "0 2px 6px rgba(2,132,199,0.18)";
+      }
+      STATE.nroFua = STATE.nroFua || `FUA-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+      STATE.estadoFua = STATE.estadoFua || "APERTURA_ADMISION";
+      if (txtBanner) {
+        txtBanner.innerHTML = "<strong>Módulo MINSA / SIS (FUA):</strong> Afiliados SIS cubiertos al 100% con <strong>FUA</strong> (R.J. N° 107-2015/SIS). EsSalud en P-I/II por Intercambio Prestacional (D.L. 1302/1466). Solo EPS o sin seguro: 100% Particular post-estabilización.";
+      }
+      if (badgeSector) {
+        badgeSector.textContent = "Sector: MINSA / SIS (FUA · R.J. N° 107-2015/SIS)";
+        badgeSector.style.background = "#eff6ff";
+        badgeSector.style.color = "#1d4ed8";
+        badgeSector.style.border = "1px solid #bfdbfe";
+      }
     }
-    if (btnPriv) {
-      btnPriv.classList.remove("active");
-      btnPriv.style.border = "2px solid #e2e8f0";
-      btnPriv.style.background = "#f8fafc";
-      btnPriv.style.color = "#64748b";
-      btnPriv.style.boxShadow = "none";
-    }
-    if (txtBanner) {
-      txtBanner.innerHTML = "<strong>Regla Sectorial Activa:</strong> Afiliados SIS y EsSalud gozan de cobertura al 100% (Pago S/ 0.00). Pacientes particulares o con seguro privado puro pagan 100%.";
-    }
-    if (badgeSector) {
-      badgeSector.textContent = "Sector: Modo Público (MINSA / SIS / EsSalud)";
-      badgeSector.style.background = "#eff6ff";
-      badgeSector.style.color = "#1d4ed8";
-      badgeSector.style.border = "1px solid #bfdbfe";
-    }
+    if (typeof actualizarIndicadoresFuaEssi === "function") actualizarIndicadoresFuaEssi();
   } else {
+    desactivarTab(btnSis);
+    desactivarTab(btnEssalud);
     if (btnPriv) {
       btnPriv.classList.add("active");
       btnPriv.style.border = "2.5px solid #7c3aed";
       btnPriv.style.background = "#f5f3ff";
       btnPriv.style.color = "#6d28d9";
       btnPriv.style.boxShadow = "0 2px 6px rgba(124,58,237,0.18)";
-    }
-    if (btnPub) {
-      btnPub.classList.remove("active");
-      btnPub.style.border = "2px solid #e2e8f0";
-      btnPub.style.background = "#f8fafc";
-      btnPub.style.color = "#64748b";
-      btnPub.style.boxShadow = "none";
     }
     if (txtBanner) {
       txtBanner.innerHTML = "<strong>Regla Sectorial Activa:</strong> Afiliados EPS con póliza activa cubiertos según copago y coaseguro (o 100% en P-I/II Ley N° 27604). Afiliados SIS o Solo EsSalud pagan 100% como particulares.";
@@ -18652,15 +18719,42 @@ window.admitirEmergenciaNN = admitirEmergenciaNN;
 // ==============================================================================
 // GESTIÓN DE SUB-SELECTORES: IPRESS PÚBLICA (FUA / ESSI) Y PLANES PRIVADOS EPS
 // ==============================================================================
+function actualizarIndicadoresFuaEssi() {
+  const esPriv = (STATE.entornoOperativo === "privado");
+  const esEssalud = (!esPriv && STATE.tipoIpressPublica === "ESSALUD");
+  let txtDoc = "📄 SITEDS / Póliza Privada";
+  if (!esPriv) {
+    if (esEssalud) {
+      STATE.nroEssi = STATE.nroEssi || `ESSI-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+      STATE.estadoEssi = STATE.estadoEssi || "ACREDITADO_ADMISION";
+      txtDoc = `📄 ESSI ${STATE.nroEssi} · ${STATE.estadoEssi}`;
+    } else {
+      STATE.nroFua = STATE.nroFua || `FUA-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+      STATE.estadoFua = STATE.estadoFua || "APERTURA_ADMISION";
+      txtDoc = `📄 FUA ${STATE.nroFua} · ${STATE.estadoFua}`;
+    }
+  }
+  const elTop = document.getElementById("badge_doc_normativo_activo");
+  if (elTop) elTop.textContent = txtDoc;
+  const elM4 = document.getElementById("m4_doc_normativo_pill");
+  if (elM4) elM4.textContent = txtDoc;
+}
+window.actualizarIndicadoresFuaEssi = actualizarIndicadoresFuaEssi;
+
 function cambiarIpressPublica(valor) {
   STATE.tipoIpressPublica = valor || "MINSA";
   if (valor === "MINSA") {
     STATE.nroFua = STATE.nroFua || `FUA-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-    STATE.estadoFua = STATE.estadoFua || "ABIERTO";
+    STATE.estadoFua = STATE.estadoFua || "APERTURA_ADMISION";
   } else if (valor === "ESSALUD") {
     STATE.nroEssi = STATE.nroEssi || `ESSI-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-    STATE.estadoEssi = STATE.estadoEssi || "ABIERTO";
+    STATE.estadoEssi = STATE.estadoEssi || "ACREDITADO_ADMISION";
   }
+  if (typeof cambiarEntornoOperativo === "function") {
+    cambiarEntornoOperativo(valor === "ESSALUD" ? "essalud" : "sis");
+    return;
+  }
+  actualizarIndicadoresFuaEssi();
   actualizarFactura();
   if (window.COCKPIT && typeof window.COCKPIT.actualizarTarjetaResumenTriaje === "function") {
     window.COCKPIT.actualizarTarjetaResumenTriaje();
@@ -18947,11 +19041,10 @@ function renderizarFilaPacientesCockpit(pacientesActivosEnCurso) {
     else if (rawDestCockpit.includes("Observación")) destTexto = "🛏️ Observación";
     else if (rawDestCockpit.includes("Tópico") || rawDestCockpit.includes("Topico")) destTexto = "🩺 Tópico";
     else if (rawDestCockpit.includes("Espera")) destTexto = "⏳ Sala Espera";
-    else if (rawDestCockpit.length > 18) destTexto = rawDestCockpit.substring(0, 16) + "…";
     else destTexto = rawDestCockpit;
 
     const rawNombreCockpit = (p.nombre || "Paciente").trim();
-    const nombreCortoCockpit = rawNombreCockpit.length > 20 ? rawNombreCockpit.substring(0, 18) + "…" : rawNombreCockpit;
+    const nombreCortoCockpit = rawNombreCockpit;
     const indicadorActivo = esActivo
       ? `<span style="background:#0284c7; color:#ffffff; font-size:0.62rem; font-weight:800; padding:2px 6px; border-radius:4px;">▶ EN ATENCIÓN</span>`
       : `<span style="color:#64748b; font-size:0.62rem; font-weight:600;">👆 Evaluar</span>`;
@@ -18967,7 +19060,7 @@ function renderizarFilaPacientesCockpit(pacientesActivosEnCurso) {
         </span>
         <span class="cockpit-px-timer">⏱️ ${tiempoEspera}</span>
       </div>
-      <div class="cockpit-px-name" title="${p.nombre}" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+      <div class="cockpit-px-name" title="${p.nombre}" style="white-space:normal !important; word-break:break-word !important; overflow:visible !important; text-overflow:clip !important;">
         ${p.esNN ? '🚨 ' : ''}${nombreCortoCockpit}
       </div>
       <div class="cockpit-px-dni-row">
