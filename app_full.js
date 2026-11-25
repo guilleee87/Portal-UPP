@@ -7199,6 +7199,11 @@ function mostrarModalRegistroExitoso(ep) {
         onclick="imprimirFichaHistoriaClinica('${encodeURIComponent(JSON.stringify({identificador: ep.identificador, historia_clinica: ep.historia_clinica, nombre_completo: ep.nombre_completo}))}')">
         🖨️ Imprimir Ficha Oficial
       </button>
+      ${STATE.entornoOperativo !== "privado" ? `
+      <button type="button" id="btn_imprimir_doc_modal_exito" class="btn-full-secondary" style="padding:8px 14px;font-size:0.82rem;border-color:#0284c7;color:#0369a1;font-weight:700;"
+        onclick="imprimirDocumentoNormativoFuaEssi()">
+        🖨️ Imprimir ${STATE.tipoIpressPublica === "ESSALUD" ? "Hoja ESSI" : "FUA"}
+      </button>` : ""}
       <button type="button" class="btn-full-primary" style="background:#16a34a;padding:8px 16px;font-size:0.82rem;font-weight:700;border:none;border-radius:8px;color:#ffffff;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(22,163,74,0.25);"
         onclick="cerrarModalRegistroGuardado()">
         🔄 Finalizar Flujo y Empezar Nuevamente
@@ -9689,7 +9694,7 @@ function asignarPacienteActualARecurso(idRecurso, duracionManual = null, motivoM
     dni: STATE.numDni || "—",
     prioridad: STATE.prioridad || "III",
     diagnostico: motivo,
-    medico: STATE.medicoTratante || "Médico de Guardia"
+    medico: STATE.medicoTratante || "Dr. Carlos Alberto Vega Morales (CMP 58321)"
   };
 
   STATE.camaAsignada = rec.nombre;
@@ -10843,7 +10848,7 @@ function cargarCasoPreset(prioNum) {
       origen: "soat",
       seguro: "SOAT Activo (La Positiva Seguros — Póliza 99214)",
       cie10: "T14.9 — Traumatismo no especificado por accidente de tránsito",
-      medico: "Médico de Turno 1 (Emergenciólogo / CMP 0001)",
+      medico: "Dr. Carlos Alberto Vega Morales (Emergenciólogo · CMP 58321)",
       camaId: "ST-01",
       camaNombre: "Shock Trauma ST-01",
       condicionConsentimiento: "exonerado_emergencia",
@@ -10886,7 +10891,7 @@ function cargarCasoPreset(prioNum) {
       origen: "comun",
       seguro: "SIS Gratuito (Padrón Único SUSALUD Acreditado)",
       cie10: "R10.4 — Otros dolores abdominales y los no especificados",
-      medico: "Médico de Turno 1 (Emergenciólogo / CMP 0001)",
+      medico: "Dr. Carlos Alberto Vega Morales (Emergenciólogo · CMP 58321)",
       camaId: "OBS-02",
       camaNombre: "Observación OBS-02",
       condicionConsentimiento: "paciente_lucido",
@@ -14503,7 +14508,7 @@ function sincronizarFacturacionYExportar(silencioso = false) {
       : (STATE.tipoSeguro || (STATE.tipoOrigenEvento === "soat" ? "SOAT Activo (La Positiva Seguros)" : "SIS Gratuito (MINSA)"));
     const esAccidente = Boolean(STATE.esAccidenteTransito || STATE.tipoOrigenEvento === "soat" || seguro.toLowerCase().includes("soat"));
     const esFuga = Boolean(STATE.soatVehiculoFuga || STATE.eventoFugaTransversal);
-    const medico = STATE.medicoTratante || "Médico de Guardia (Emergenciólogo / CMP 0001)";
+    const medico = STATE.medicoTratante || "Dr. Carlos Alberto Vega Morales (Emergenciólogo · CMP 58321)";
 
     // 1. Guardar expediente consolidado completo en LocalStorage
     localStorage.setItem('EXPEDIENTE_FACTURACION_ACTUAL', JSON.stringify(STATE));
@@ -15304,7 +15309,7 @@ function archivarDiaActualEnHistorico(fechaTarget = null) {
         camaAsignada: p.camaAsignada || exp.camaAsignada || "Sin Cama",
         motivo: p.motivo || exp.motivoConsulta || "Atención de Emergencia",
         diagnosticoCie10: exp.diagnosticoCie10 || p.diagnosticoCie10 || "Evaluación Clínica Concluida",
-        medicoTratante: exp.medicoResponsable || p.medicoTratante || "Médico de Guardia UPP",
+        medicoTratante: exp.medicoResponsable || p.medicoTratante || "Dr. Carlos Alberto Vega Morales (CMP 58321)",
         seguro: p.tipoSeguro || exp.tipoSeguro || "SIS",
         tipoCobertura: exp.tipoCobertura || "Cobertura Ordinaria",
         estadoFlujo: p.estadoFlujo || exp.estadoFlujo || "ATENDIDO_ALTA",
@@ -15618,7 +15623,7 @@ function cargarDiaHistoricoSeleccionado(fecha) {
           <div style="font-size:0.7rem; color:#16a34a; font-weight:800;">✓ Concluido</div>
         </td>
         <td style="padding:10px 8px;">
-          <div style="color:#334155; font-size:0.75rem;">${px.medicoTratante || 'Médico de Guardia'}</div>
+          <div style="color:#334155; font-size:0.75rem;">${px.medicoTratante || 'Dr. Carlos Alberto Vega Morales (CMP 58321)'}</div>
           <span style="font-size:0.68rem; background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:800; color:#475569;">${px.seguro || 'SIS'}</span>
         </td>
         <td style="padding:10px 8px; text-align:right; font-weight:800; font-family:monospace; color:#0f172a;">
@@ -18942,69 +18947,206 @@ function actualizarIndicadoresFuaEssi() {
 }
 window.actualizarIndicadoresFuaEssi = actualizarIndicadoresFuaEssi;
 
-function imprimirDocumentoNormativoFuaEssi() {
-  if (STATE.entornoOperativo === "privado") {
+function imprimirDocumentoNormativoFuaEssi(forzarSector) {
+  if (!forzarSector && STATE.entornoOperativo === "privado") {
     if (typeof imprimirFacturaOficial === "function") imprimirFacturaOficial();
     return;
   }
-  const esEssalud = (STATE.tipoIpressPublica === "ESSALUD");
+  const esEssalud = forzarSector ? (forzarSector === "ESSALUD") : (STATE.tipoIpressPublica === "ESSALUD");
   const nroDoc = esEssalud
     ? (STATE.nroEssi || `ESSI-2026-${Math.floor(100000 + Math.random() * 900000)}`)
-    : (STATE.nroFua || `FUA-2026-${Math.floor(100000 + Math.random() * 900000)}`);
+    : (STATE.nroFua || STATE.numerFua || `0410-26-${String(Math.floor(10000000 + Math.random() * 89999999))}`);
   const estadoDoc = esEssalud ? (STATE.estadoEssi || "ACREDITADO_ADMISION") : (STATE.estadoFua || "APERTURA_ADMISION");
-  const tituloDoc = esEssalud
-    ? "HOJA DE ATENCIÓN DE EMERGENCIA — SISTEMA ESSI (EsSalud)"
-    : "FORMATO ÚNICO DE ATENCIÓN — FUA (SIS / MINSA)";
-  const normaDoc = esEssalud
-    ? "Ley N° 26790 · D.S. N° 009-97-SA · Directiva N° 011-GG-ESSALUD"
-    : "R.J. N° 107-2015/SIS · Ley N° 29344 (AUS) · Ley N° 27604";
-
   const liq = (typeof calcularLiquidacionSeguro === "function") ? calcularLiquidacionSeguro() : { totalBruto: 0, coberturaSeguro: 0, totalPaciente: 0 };
-  const nombre = STATE.esNN ? "No se sabe su nombre (Paciente No Identificado - NN)" : (STATE.nombreReniec || STATE.identificador || "—");
-  const cie10 = STATE.cie10 || (STATE.cie10Codigo ? `${STATE.cie10Codigo} — ${STATE.cie10Descripcion || ""}` : "Por determinar");
-  const meds = Array.isArray(STATE.kardexItems) && STATE.kardexItems.length ? STATE.kardexItems.map(k => `${k.nombre} (${k.dosis || "—"} ${k.via || ""})`).join(", ") : "—";
-  const labs = Array.isArray(STATE.ordenesLaboratorio) && STATE.ordenesLaboratorio.length ? STATE.ordenesLaboratorio.map(l => l.nombre).join(", ") : "—";
-  const imgs = Array.isArray(STATE.ordenesImagenes) && STATE.ordenesImagenes.length ? STATE.ordenesImagenes.map(i => i.nombre).join(", ") : "—";
+  const nombre = STATE.esNN ? "PACIENTE NO IDENTIFICADO (NN)" : (STATE.nombreReniec || STATE.identificador || "—");
+  const partesNom = String(nombre).trim().split(/\s+/);
+  const apPat = partesNom.length >= 3 ? partesNom[0] : (partesNom[0] || "—");
+  const apMat = partesNom.length >= 3 ? partesNom[1] : "—";
+  const nombresOnly = partesNom.length >= 3 ? partesNom.slice(2).join(" ") : (partesNom.slice(1).join(" ") || nombre);
+  const cieCode = STATE.cie10Codigo || (STATE.cie10 ? String(STATE.cie10).split("—")[0].trim() : "R50.9");
+  const cieDesc = STATE.cie10Descripcion || (STATE.cie10 ? String(STATE.cie10).split("—").slice(1).join("—").trim() : "Por determinar");
+  const medsArr = Array.isArray(STATE.kardexItems) ? STATE.kardexItems : [];
+  const labsArr = Array.isArray(STATE.ordenesLaboratorio) ? STATE.ordenesLaboratorio : [];
+  const imgsArr = Array.isArray(STATE.ordenesImagenes) ? STATE.ordenesImagenes : [];
+  const destRaw = String(STATE.modalidadEgreso || STATE.destino || (STATE.altaClinicaConcluida ? "alta" : "observacion")).toLowerCase();
+  const medNombre = STATE.medicoTratante || STATE.firmas?.medico?.usuario || "Dr. Carlos Alberto Vega Morales (CMP 58321)";
+  const cmpMatch = String(medNombre).match(/CMP\s*(\d+)/i);
+  const cmpNum = cmpMatch ? cmpMatch[1] : (STATE.firmas?.medico?.colegiatura || "58321");
+  const fechaHoy = new Date().toLocaleDateString("es-PE");
+  const horaHoy = new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
+  const firmaMedDoc = (typeof generarSelloFirmaDigitalHTML === "function") ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: medNombre }) : "";
 
   const w = window.open("", "_blank");
   if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
-  const renaes = esEssalud ? "00000425 — Hospital Nacional EsSalud / Red Prestacional" : "00000410 — Hospital Regional Docente UPP (MINSA)";
-  const codPrestacion = (STATE.horasObservacion && STATE.horasObservacion > 0) ? "063 — Atención por Emergencia con Observación" : "062 — Atención por Emergencia";
-  const destinoFinal = STATE.modalidadEgreso || STATE.destino || (STATE.altaClinicaConcluida ? "ALTA MÉDICA" : "EN ATENCIÓN / OBSERVACIÓN");
-  const firmaMedDoc = (typeof generarSelloFirmaDigitalHTML === "function") ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: STATE.medicoTratante || STATE.firmas?.medico?.usuario || "Médico de Guardia" }) : "";
-  w.document.write(`
-    <html><head><title>${tituloDoc} - ${nroDoc}</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;font-size:11px;color:#0f172a;} .hdr{border:2px solid #0f172a;padding:8px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;background:#f1f5f9;} .sec{border:1px solid #475569;margin-bottom:8px;} .sec-t{background:#1e293b;color:#fff;font-weight:bold;padding:4px 8px;font-size:10px;text-transform:uppercase;} .sec-b{padding:7px 9px;line-height:1.45;} table{width:100%;border-collapse:collapse;font-size:10px;margin-top:4px;} th,td{border:1px solid #94a3b8;padding:4px 6px;text-align:left;} th{background:#e2e8f0;}</style>
-    </head><body>
-      <div class="hdr">
-        <div><strong style="font-size:14px;">${tituloDoc}</strong><br><span style="font-size:10px;color:#334155;">${normaDoc} · IPRESS RENAES: ${renaes}</span></div>
-        <div style="text-align:right;"><strong style="font-size:13px;font-family:monospace;">N° ${nroDoc}</strong><br><span>Estado: <strong>${estadoDoc}</strong></span></div>
-      </div>
-      <div class="sec"><div class="sec-t">${esEssalud ? "1. Datos Generales del Asegurado (ESSI)" : "1. Lugar/Tipo de Atención y Datos del Asegurado (FUA - SIS)"}</div><div class="sec-b">
-        <strong>Lugar / Tipo:</strong> [X] Intramural · [X] Emergencia · <strong>HC:</strong> ${STATE.historiaClinica || "—"} · <strong>Prioridad Triaje:</strong> ${STATE.prioridad ? "P-" + STATE.prioridad : "—"}<br>
-        <strong>Apellidos y Nombres:</strong> ${nombre} | <strong>TDI/DNI:</strong> ${STATE.numDni || "—"} | <strong>Edad/Sexo:</strong> ${STATE.edad || "—"} / ${STATE.sexo || "—"} | <strong>GS/RH:</strong> ${STATE.grupoSanguineo || "Por determinar"}<br>
-        <strong>Seguro / Código Afiliado:</strong> ${STATE.tipoSeguro || "—"} (${nroDoc}) | <strong>Cód. Prestación:</strong> ${esEssalud ? "FAEH-EMERG" : codPrestacion}
-      </div></div>
-      <div class="sec"><div class="sec-t">2. Funciones Vitales, Evaluación Clínica y Diagnósticos (CIE-10)</div><div class="sec-b">
-        <strong>Funciones Vitales:</strong> PA ${STATE.pasSistolica ?? "—"}/${STATE.paDiastolica ?? "—"} mmHg | FC ${STATE.fc ?? "—"} lpm | FR ${STATE.fr ?? "—"} rpm | T° ${STATE.temperatura ?? "—"} °C | SpO2 ${STATE.spo2 ?? "—"}% | Glasgow ${STATE.glasgow ?? "—"}/15<br>
-        <strong>Motivo de Emergencia:</strong> ${STATE.motivoConsulta || "—"}<br>
-        <strong>Diagnóstico Principal (CIE-10):</strong> <strong>${cie10}</strong> (Tipo: Definitivo / Presuntivo)
-      </div></div>
-      <div class="sec"><div class="sec-t">${esEssalud ? "3. Manejo Médico, Terapéutica y Exámenes Auxiliares (ESSI)" : "3. Reverso FUA — Terapéutica (SISMED), Procedimientos y Apoyo al Diagnóstico"}</div><div class="sec-b">
-        <table><thead><tr><th>Rubro</th><th>Detalle Registrado</th></tr></thead><tbody>
-          <tr><td><strong>Medicamentos / Insumos</strong></td><td>${meds}</td></tr>
-          <tr><td><strong>Laboratorio Clínico</strong></td><td>${labs}</td></tr>
-          <tr><td><strong>Imágenes / Procedimientos</strong></td><td>${imgs}</td></tr>
-          <tr><td><strong>Destino del Paciente</strong></td><td><strong>${String(destinoFinal).toUpperCase()}</strong></td></tr>
-          <tr><td><strong>Valorización</strong></td><td>Bruto: S/. ${(liq.totalBruto || 0).toFixed(2)} | Cubierto Seguro: <strong>S/. ${(liq.coberturaSeguro || 0).toFixed(2)}</strong> | Copago Paciente: <strong>S/. ${(liq.totalPaciente || 0).toFixed(2)}</strong></td></tr>
-        </tbody></table>
-      </div></div>
-      <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;">
-        <div style="flex:1;">${firmaMedDoc || "<div style='border-top:1px solid #000;width:220px;padding-top:4px;text-align:center;'>Firma y Sello del Médico Tratante (CMP)</div>"}</div>
-        <div style="border-top:1px solid #000;width:220px;padding-top:4px;text-align:center;">Firma / Huella Digital del Asegurado o Apoderado<br><small>DNI: ${STATE.numDni || "________"}</small></div>
-      </div>
-    </body></html>
-  `);
+
+  if (!esEssalud) {
+    // FORMATO ÚNICO DE ATENCIÓN - FUA OFICIAL SIS (R.J. N° 107-2015/SIS · ANVERSO Y REVERSO)
+    const partesFua = String(nroDoc).replace(/[^A-Z0-9-]/gi, "").split("-");
+    const fuaDisa = partesFua[0] || "0410";
+    const fuaLote = (partesFua[1] || "26").slice(-2);
+    const fuaCorr = (partesFua[2] || "00004812").padStart(8, "0");
+    const codPrest = (STATE.horasObservacion && STATE.horasObservacion > 0) ? "063" : "062";
+    const chkAlta = destRaw.includes("alta") ? "X" : "&nbsp;";
+    const chkObs = destRaw.includes("observ") ? "X" : "&nbsp;";
+    const chkHosp = (destRaw.includes("hosp") || destRaw.includes("uci") || destRaw.includes("quirofano")) ? "X" : "&nbsp;";
+    const chkRef = destRaw.includes("ref") ? "X" : "&nbsp;";
+    const chkFall = (destRaw.includes("defunc") || destRaw.includes("fall")) ? "X" : "&nbsp;";
+    w.document.write(`
+      <html><head><title>FUA Oficial SIS - ${nroDoc}</title>
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#0f172a;margin:14px;}
+        .fua-box{border:1.5px solid #000;margin-bottom:6px;}
+        .fua-hdr{display:flex;justify-content:space-between;align-items:center;border:2px solid #000;padding:6px 10px;background:#f8fafc;margin-bottom:6px;}
+        .fua-sec{background:#1e3a8a;color:#fff;font-weight:bold;padding:3px 7px;font-size:9px;text-transform:uppercase;letter-spacing:0.3px;}
+        .fua-grid{width:100%;border-collapse:collapse;}
+        .fua-grid td,.fua-grid th{border:1px solid #334155;padding:3px 5px;vertical-align:middle;}
+        .fua-lbl{font-size:8px;color:#475569;display:block;font-weight:bold;text-transform:uppercase;}
+        .casilla{display:inline-block;border:1px solid #000;min-width:14px;text-align:center;font-weight:bold;padding:0 3px;background:#fff;}
+        .page-break{page-break-before:always;margin-top:18px;border-top:2px dashed #94a3b8;padding-top:12px;}
+      </style></head><body>
+        <div class="fua-hdr">
+          <div><strong style="font-size:12px;color:#1e3a8a;">MINISTERIO DE SALUD · SEGURO INTEGRAL DE SALUD (SIS)</strong><br><strong style="font-size:13px;">FORMATO ÚNICO DE ATENCIÓN — FUA (ANVERSO)</strong><br><span style="font-size:8.5px;">R.J. N° 107-2015/SIS · Directiva N° 001-2015-SIS/GREP · Estado: ${estadoDoc}</span></div>
+          <div style="text-align:center;border:1.5px solid #000;padding:4px 8px;background:#fff;">
+            <span class="fua-lbl">NÚMERO DE FORMATO</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:bold;">${fuaDisa} - ${fuaLote} - ${fuaCorr}</span>
+          </div>
+        </div>
+        <div class="fua-box"><div class="fua-sec">1. De la Institución Prestadora de Servicios de Salud (IPRESS) y Lugar / Tipo de Atención</div>
+          <table class="fua-grid"><tr>
+            <td style="width:18%;"><span class="fua-lbl">Código RENIPRESS</span><strong>00000410</strong></td>
+            <td style="width:42%;"><span class="fua-lbl">Nombre de la IPRESS</span><strong>Hospital Regional Docente UPP (MINSA)</strong></td>
+            <td style="width:20%;"><span class="fua-lbl">Lugar de Atención</span><span class="casilla">X</span> Intramural &nbsp; <span class="casilla">&nbsp;</span> Extramural</td>
+            <td style="width:20%;"><span class="fua-lbl">Tipo de Atención</span><span class="casilla">X</span> Emergencia &nbsp; <span class="casilla">&nbsp;</span> Amb.</td>
+          </tr></table>
+        </div>
+        <div class="fua-box"><div class="fua-sec">2. Del Asegurado / Usuario</div>
+          <table class="fua-grid"><tr>
+            <td><span class="fua-lbl">TDI</span><span class="casilla">2</span> DNI</td>
+            <td><span class="fua-lbl">N° Documento</span><strong>${STATE.numDni || "—"}</strong></td>
+            <td><span class="fua-lbl">Código Asegurado SIS</span><strong>2 - ${STATE.numDni || "00000000"}</strong></td>
+            <td><span class="fua-lbl">N° Historia Clínica</span><strong>${STATE.historiaClinica || "—"}</strong></td>
+            <td><span class="fua-lbl">Sexo / Edad</span><strong>${STATE.sexo || "—"} · ${STATE.edad || "—"} años</strong></td>
+          </tr><tr>
+            <td colspan="2"><span class="fua-lbl">Apellido Paterno</span><strong>${apPat}</strong></td>
+            <td colspan="2"><span class="fua-lbl">Apellido Materno</span><strong>${apMat}</strong></td>
+            <td><span class="fua-lbl">Nombres</span><strong>${nombresOnly}</strong></td>
+          </tr></table>
+        </div>
+        <div class="fua-box"><div class="fua-sec">3. De la Atención y Signos Vitales</div>
+          <table class="fua-grid"><tr>
+            <td><span class="fua-lbl">Fecha Atención</span><strong>${fechaHoy}</strong></td>
+            <td><span class="fua-lbl">Hora</span><strong>${horaHoy}</strong></td>
+            <td><span class="fua-lbl">UPS</span><strong>220100 - Emergencia</strong></td>
+            <td><span class="fua-lbl">Cód. Prestacional</span><strong>${codPrest} (${codPrest === "063" ? "Emerg. Observación" : "Emergencia"})</strong></td>
+            <td><span class="fua-lbl">Prioridad</span><strong>P-${STATE.prioridad || "—"}</strong></td>
+          </tr><tr>
+            <td colspan="5"><span class="fua-lbl">Funciones Vitales y Datos Clínicos</span>PA: <strong>${STATE.pasSistolica ?? "—"}/${STATE.paDiastolica ?? "—"} mmHg</strong> | FC: <strong>${STATE.fc ?? "—"} lpm</strong> | FR: <strong>${STATE.fr ?? "—"} rpm</strong> | T°: <strong>${STATE.temperatura ?? "—"} °C</strong> | SpO2: <strong>${STATE.spo2 ?? "—"}%</strong> | GS/RH: <strong>${STATE.grupoSanguineo || "Por determinar"}</strong></td>
+          </tr></table>
+        </div>
+        <div class="fua-box"><div class="fua-sec">4. Diagnósticos (CIE-10)</div>
+          <table class="fua-grid"><thead><tr><th style="width:6%;">N°</th><th>Descripción del Diagnóstico</th><th style="width:22%;">Tipo Diagnóstico</th><th style="width:14%;">Código CIE-10</th></tr></thead><tbody>
+            <tr><td>1</td><td>${cieDesc}</td><td><span class="casilla">P</span> &nbsp; <span class="casilla">X</span> D &nbsp; <span class="casilla">R</span></td><td><strong>${cieCode}</strong></td></tr>
+          </tbody></table>
+        </div>
+        <div class="fua-box"><div class="fua-sec">5. Destino del Asegurado / Usuario</div>
+          <table class="fua-grid"><tr>
+            <td><span class="casilla">${chkAlta}</span> Alta</td>
+            <td><span class="casilla">${chkObs}</span> Observación</td>
+            <td><span class="casilla">${chkHosp}</span> Hospitalización / SOP</td>
+            <td><span class="casilla">${chkRef}</span> Referido</td>
+            <td><span class="casilla">${chkFall}</span> Fallecido</td>
+          </tr></table>
+        </div>
+        <div class="fua-box"><div class="fua-sec">6. Responsable de la Atención y Conformidad del Asegurado</div>
+          <table class="fua-grid"><tr>
+            <td style="width:55%;vertical-align:top;"><strong>Responsable de la Atención:</strong> ${medNombre}<br><strong>N° Colegiatura:</strong> CMP ${cmpNum}<br>${firmaMedDoc}</td>
+            <td style="width:45%;vertical-align:bottom;text-align:center;"><div style="display:flex;justify-content:space-around;align-items:flex-end;"><div><div style="height:46px;border-bottom:1px solid #000;width:150px;"></div><span>Firma Asegurado / Apoderado<br>DNI: ${STATE.numDni || "________"}</span></div><div style="border:1px solid #000;width:48px;height:58px;font-size:7px;display:flex;align-items:center;justify-content:center;">HUELLA<br>DIGITAL</div></div></td>
+          </tr></table>
+        </div>
+        <div class="page-break">
+          <div class="fua-hdr"><div><strong style="font-size:12px;color:#1e3a8a;">FORMATO ÚNICO DE ATENCIÓN — FUA (REVERSO)</strong><br><span style="font-size:8.5px;">Terapéutica SISMED, Insumos, Procedimientos CPMS y Apoyo al Diagnóstico</span></div><div style="font-family:monospace;font-weight:bold;">FUA ${fuaDisa}-${fuaLote}-${fuaCorr}</div></div>
+          <div class="fua-box"><div class="fua-sec">Productos Farmacéuticos (SISMED)</div>
+            <table class="fua-grid"><thead><tr><th>Cód. SISMED</th><th>Nombre / Concentración / Forma</th><th>Presc.</th><th>Entreg.</th><th>Dx</th></tr></thead><tbody>
+              ${medsArr.length ? medsArr.map((m, i) => `<tr><td>MED-${String(i+1).padStart(4,"0")}</td><td>${m.nombre} (${m.dosis || "—"} ${m.via || ""})</td><td>1</td><td>1</td><td>1</td></tr>`).join("") : "<tr><td colspan=\"5\">Sin medicamentos dispensados en tópico</td></tr>"}
+            </tbody></table>
+          </div>
+          <div class="fua-box"><div class="fua-sec">Procedimientos (CPMS) y Exámenes de Apoyo al Diagnóstico</div>
+            <table class="fua-grid"><thead><tr><th>Cód. CPMS</th><th>Procedimiento / Laboratorio / Imágenes</th><th>Ind.</th><th>Ejec.</th><th>Dx</th></tr></thead><tbody>
+              ${[...labsArr, ...imgsArr].length ? [...labsArr, ...imgsArr].map((x, i) => `<tr><td>8${String(100+i)}</td><td>${x.nombre}</td><td>1</td><td>1</td><td>1</td></tr>`).join("") : "<tr><td colspan=\"5\">Evaluación clínica de emergencia (Cód. 99281)</td></tr>"}
+            </tbody></table>
+          </div>
+          <div class="fua-box"><div class="fua-sec">Valorización Prestacional SIS &amp; Conformidad de Farmacia / Laboratorio</div>
+            <table class="fua-grid"><tr><td><strong>Total Bruto:</strong> S/. ${(liq.totalBruto||0).toFixed(2)}</td><td><strong>Financiado SIS:</strong> S/. ${(liq.coberturaSeguro||0).toFixed(2)}</td><td><strong>Copago Asegurado:</strong> S/. ${(liq.totalPaciente||0).toFixed(2)}</td><td><strong>V°B° Farmacia / Lab:</strong> Conforme</td></tr></table>
+          </div>
+        </div>
+      </body></html>
+    `);
+  } else {
+    // HOJA DE ATENCIÓN DE EMERGENCIA — SISTEMA ESSI (EsSalud · Ley N° 26790)
+    const autogen = STATE.autogeneradoEssi || `9505151AVNH${String(STATE.numDni || "010").slice(-3)}`;
+    w.document.write(`
+      <html><head><title>Hoja de Atención de Emergencia ESSI - ${nroDoc}</title>
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#0f172a;margin:16px;}
+        .essi-hdr{border:2px solid #0284c7;background:#f0f9ff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+        .essi-sec{border:1px solid #0369a1;margin-bottom:8px;}
+        .essi-t{background:#0284c7;color:#fff;font-weight:bold;padding:4px 8px;font-size:9.5px;text-transform:uppercase;}
+        .essi-g{width:100%;border-collapse:collapse;}
+        .essi-g td,.essi-g th{border:1px solid #94a3b8;padding:4px 6px;}
+        .lbl{font-size:8px;color:#475569;font-weight:bold;display:block;text-transform:uppercase;}
+      </style></head><body>
+        <div class="essi-hdr">
+          <div><strong style="font-size:13px;color:#0369a1;">EsSalud · SEGURO SOCIAL DE SALUD — SISTEMA ESSI</strong><br><strong style="font-size:14px;">HOJA DE ATENCIÓN DE EMERGENCIA (FAEH)</strong><br><span style="font-size:8.5px;">Red Prestacional Rebagliati · Hospital Nacional EsSalud (RENAES 00000425) · Ley N° 26790</span></div>
+          <div style="text-align:right;border:1px solid #0284c7;padding:4px 8px;background:#fff;"><span class="lbl">N° ACTO MÉDICO / ESSI</span><strong style="font-family:monospace;font-size:12px;">${nroDoc}</strong><br><span style="font-size:8px;">Estado: ${estadoDoc}</span></div>
+        </div>
+        <div class="essi-sec"><div class="essi-t">A. Datos Generales del Asegurado y Acreditación ESSI</div>
+          <table class="essi-g"><tr>
+            <td colspan="2"><span class="lbl">Apellidos y Nombres</span><strong>${nombre}</strong></td>
+            <td><span class="lbl">DNI / CE</span><strong>${STATE.numDni || "—"}</strong></td>
+            <td><span class="lbl">Código Autogenerado ESSI</span><strong>${autogen}</strong></td>
+            <td><span class="lbl">N° Historia Clínica</span><strong>${STATE.historiaClinica || "—"}</strong></td>
+          </tr><tr>
+            <td><span class="lbl">Tipo de Seguro</span><strong>${STATE.tipoSeguro || "EsSalud Regular"}</strong></td>
+            <td><span class="lbl">Edad / Sexo</span><strong>${STATE.edad || "—"} años / ${STATE.sexo || "—"}</strong></td>
+            <td><span class="lbl">Fecha / Hora Ingreso</span><strong>${fechaHoy} ${horaHoy}</strong></td>
+            <td><span class="lbl">Prioridad Triaje</span><strong>P-${STATE.prioridad || "—"}</strong></td>
+            <td><span class="lbl">Tópico / Cama</span><strong>${STATE.camaAsignada || "Tópico Emergencia"}</strong></td>
+          </tr></table>
+        </div>
+        <div class="essi-sec"><div class="essi-t">B. Triaje, Funciones Vitales y Anamnesis (Acto Médico)</div>
+          <table class="essi-g"><tr>
+            <td><strong>PA:</strong> ${STATE.pasSistolica ?? "—"}/${STATE.paDiastolica ?? "—"} mmHg</td>
+            <td><strong>FC:</strong> ${STATE.fc ?? "—"} lpm</td>
+            <td><strong>FR:</strong> ${STATE.fr ?? "—"} rpm</td>
+            <td><strong>T°:</strong> ${STATE.temperatura ?? "—"} °C</td>
+            <td><strong>SpO2:</strong> ${STATE.spo2 ?? "—"}%</td>
+            <td><strong>Glasgow:</strong> ${STATE.glasgow ?? "—"}/15</td>
+          </tr><tr>
+            <td colspan="6"><span class="lbl">Motivo de Consulta / Enfermedad Actual</span>${STATE.motivoConsulta || "Evaluación clínica de emergencia"}<br><span class="lbl" style="margin-top:4px;">Alergias / GS-RH</span>Alergias: ${STATE.alergias || "Niega"} · GS/RH: ${STATE.grupoSanguineo || "Por determinar"}</td>
+          </tr></table>
+        </div>
+        <div class="essi-sec"><div class="essi-t">C. Diagnósticos (CIE-10) y Manejo Terapéutico / Exámenes Auxiliares</div>
+          <table class="essi-g"><thead><tr><th>CIE-10</th><th>Descripción Diagnóstica</th><th>Tipo</th></tr></thead><tbody>
+            <tr><td><strong>${cieCode}</strong></td><td>${cieDesc}</td><td>Definitivo / Presuntivo</td></tr>
+          </tbody></table>
+          <table class="essi-g" style="margin-top:4px;"><tr>
+            <td style="width:50%;"><span class="lbl">Medicamentos / Tratamiento en Tópico</span>${medsArr.length ? medsArr.map(m => `${m.nombre} (${m.dosis || ""})`).join(", ") : "—"}</td>
+            <td style="width:50%;"><span class="lbl">Exámenes Auxiliares (Lab / Imágenes)</span>${[...labsArr, ...imgsArr].length ? [...labsArr, ...imgsArr].map(x => x.nombre).join(", ") : "—"}</td>
+          </tr></table>
+        </div>
+        <div class="essi-sec"><div class="essi-t">D. Destino del Paciente, Cobertura EsSalud y Cierre del Acto Médico</div>
+          <table class="essi-g"><tr>
+            <td><span class="lbl">Condición de Egreso</span><strong>${String(destRaw).toUpperCase()}</strong></td>
+            <td><span class="lbl">Valorización</span>Bruto: S/. ${(liq.totalBruto||0).toFixed(2)} | Cubierto EsSalud: <strong>S/. ${(liq.coberturaSeguro||0).toFixed(2)}</strong> | Copago: <strong>S/. ${(liq.totalPaciente||0).toFixed(2)}</strong></td>
+          </tr></table>
+        </div>
+        <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;">
+          <div style="flex:1;">${firmaMedDoc || `<div style="border-top:1px solid #000;width:230px;padding-top:4px;">${medNombre}<br>CMP ${cmpNum}</div>`}</div>
+          <div style="border-top:1px solid #000;width:210px;padding-top:4px;text-align:center;">Enfermería / Admisión ESSI<br>Acreditación Ley N° 26790</div>
+        </div>
+      </body></html>
+    `);
+  }
   w.document.close();
   w.print();
 }

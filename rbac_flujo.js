@@ -2286,6 +2286,11 @@
           <button type="button" onclick="window.cerrarModalHistorialFlujo(); seleccionarExpedienteYVisualizarPorRol('${px.id}');" class="btn-full-primary" style="background:#0284c7; font-size:0.78rem; font-weight:800; padding:7px 14px; border-radius:6px; cursor:pointer;" title="Cargar y posicionar en pantalla para el rol ${rolActivo}">
             🎯 Seleccionar y Cargar en Pantalla (${rolActivo})
           </button>
+          ${(!String(seguro).toLowerCase().includes("particular") && !String(seguro).toLowerCase().includes("eps puro")) ? `
+            <button type="button" id="btn_imprimir_doc_historial" onclick="if(typeof window.imprimirDocumentoNormativoFuaEssi==='function')window.imprimirDocumentoNormativoFuaEssi('${String(seguro).toLowerCase().includes("essalud") ? "ESSALUD" : "MINSA"}')" class="btn-full-secondary" style="font-size:0.78rem; font-weight:800; padding:7px 14px; border-radius:6px; cursor:pointer; background:#eff6ff; border:1px solid #0284c7; color:#0369a1;">
+              🖨️ Imprimir ${String(seguro).toLowerCase().includes("essalud") ? "Hoja ESSI" : "FUA"}
+            </button>
+          ` : ""}
           <button type="button" onclick="window.cerrarModalHistorialFlujo()" class="btn-full-secondary" style="font-size:0.78rem; padding:7px 14px; border-radius:6px; cursor:pointer;">
             ✕ Cerrar Consulta
           </button>

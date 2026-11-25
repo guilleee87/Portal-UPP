@@ -2641,6 +2641,7 @@
           <span id="badge_doc_normativo_activo" style="font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:6px; background:#dbeafe; color:#1e40af; border:1px solid #93c5fd;">
             📄 FUA: Pendiente de Apertura
           </span>
+          <button type="button" id="btn_imprimir_fua_header" onclick="imprimirDocumentoNormativoFuaEssi('MINSA')" style="font-size:0.70rem;padding:3px 9px;border-radius:6px;border:1px solid #0284c7;background:#ffffff;color:#0369a1;font-weight:800;cursor:pointer;">🖨️ Imprimir FUA</button>
         </div>
 
         <div id="subselector_essalud" style="display:none; align-items:center; gap:8px; background:#ecfeff; border:1px solid #a5f3fc; border-radius:8px; padding:6px 12px; flex-wrap:wrap;">
@@ -2651,6 +2652,7 @@
           <span id="badge_doc_normativo_essalud" style="font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:6px; background:#cffafe; color:#155e75; border:1px solid #67e8f9;">
             📄 ESSI: Pendiente de Acreditación
           </span>
+          <button type="button" id="btn_imprimir_essi_header" onclick="imprimirDocumentoNormativoFuaEssi('ESSALUD')" style="font-size:0.70rem;padding:3px 9px;border-radius:6px;border:1px solid #0e7490;background:#ffffff;color:#0e7490;font-weight:800;cursor:pointer;">🖨️ Imprimir Hoja ESSI</button>
         </div>
 
         <div id="subselector_plan_privado" style="display:none; align-items:center; gap:8px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:6px 12px;">
@@ -4043,12 +4045,12 @@
             <label for="medico_responsable_select">Médico Asistencial de Guardia:</label>
             <div style="display:flex; gap:6px;">
               <select id="medico_responsable_select" class="input-full" onchange="actualizarMedicoAsignado(this.value)" style="font-weight:700;">
-                <option value="Médico de Turno 1 (Emergenciólogo / CMP 0001)">Médico de Turno 1 (Emergenciólogo) — 🟢 Disponible</option>
-                <option value="Médico de Turno 2 (Cirujano de Guardia / CMP 0002)">Médico de Turno 2 (Cirujano de Guardia) — 🟢 Disponible</option>
-                <option value="Médico de Turno 3 (Médico Internista / CMP 0003)">Médico de Turno 3 (Médico Internista) — 🟢 Disponible</option>
-                <option value="Médico de Turno 4 (Pediatra de Turno / CMP 0004)">Médico de Turno 4 (Pediatra de Turno) — 🟢 Disponible</option>
-                <option value="Médico de Turno 5 (Ginecólogo Obstetra / CMP 0005)">Médico de Turno 5 (Ginecólogo Obstetra) — 🟢 Disponible</option>
-                <option value="Médico de Turno 6 (Traumatólogo de Guardia / CMP 0006)">Médico de Turno 6 (Traumatólogo de Guardia) — 🟢 Disponible</option>
+                <option value="Dr. Carlos Alberto Vega Morales (Emergenciólogo · CMP 58321)">Dr. Carlos Alberto Vega Morales — Emergenciólogo · CMP 58321 — 🟢 Disponible</option>
+                <option value="Dr. Ricardo Javier Paredes Quispe (Cirujano de Guardia · CMP 61409)">Dr. Ricardo Javier Paredes Quispe — Cirujano de Guardia · CMP 61409 — 🟢 Disponible</option>
+                <option value="Dra. Patricia Elena Mendoza Salazar (Médico Internista · CMP 54821)">Dra. Patricia Elena Mendoza Salazar — Médico Internista · CMP 54821 — 🟢 Disponible</option>
+                <option value="Dra. Lucía Fernanda Torres Huamán (Pediatra de Turno · CMP 63914)">Dra. Lucía Fernanda Torres Huamán — Pediatra de Turno · CMP 63914 — 🟢 Disponible</option>
+                <option value="Dra. Sofía Valentina Chávez Rojas (Ginecóloga Obstetra · CMP 59742)">Dra. Sofía Valentina Chávez Rojas — Ginecóloga Obstetra · CMP 59742 — 🟢 Disponible</option>
+                <option value="Dr. Andrés Eduardo Navarro Castillo (Traumatólogo de Guardia · CMP 62185)">Dr. Andrés Eduardo Navarro Castillo — Traumatólogo de Guardia · CMP 62185 — 🟢 Disponible</option>
               </select>
               <button type="button" class="btn-full-primary" style="white-space:nowrap; padding:0 14px; font-weight:700; background:#0284c7; display:flex; align-items:center; gap:6px;" onclick="asignarMedicoDisponible()" title="Verificar rol de guardia y asignar médico disponible según especialidad">
                 🩺 Asignar Disponible

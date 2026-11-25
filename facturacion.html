@@ -555,12 +555,45 @@
       <button type="button" class="btn-act btn-act-success" onclick="window.print()">
         🖨️ Imprimir Liquidación Oficial
       </button>
+      <button type="button" id="btn_imprimir_fua_essi_facturacion" class="btn-act btn-act-primary" onclick="imprimirFuaEssiDesdeFacturacion()">
+        🖨️ Imprimir FUA / Hoja ESSI
+      </button>
     </section>
 
   </main>
 
   <!-- SCRIPT DE AUDITORÍA Y SINCRONIZACIÓN -->
   <script>
+    function imprimirFuaEssiDesdeFacturacion() {
+      let exp = {};
+      try { exp = JSON.parse(localStorage.getItem("EXPEDIENTE_FACTURACION_ACTUAL") || "{}"); } catch(e) {}
+      const seg = String(exp.tipoSeguro || "").toLowerCase();
+      const esEssalud = exp.tipoIpressPublica === "ESSALUD" || seg.includes("essalud");
+      const titulo = esEssalud ? "HOJA DE ATENCIÓN DE EMERGENCIA — SISTEMA ESSI (EsSalud)" : "FORMATO ÚNICO DE ATENCIÓN — FUA (SIS / MINSA)";
+      const norma = esEssalud ? "Ley N° 26790 · D.S. N° 009-97-SA" : "R.J. N° 107-2015/SIS · Ley N° 29344";
+      const nroDoc = esEssalud ? (exp.nroEssi || "ESSI-2026-000001") : (exp.nroFua || exp.numerFua || "FUA-2026-000001");
+      const w = window.open("", "_blank");
+      if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
+      w.document.write(`
+        <html><head><title>${titulo} - ${nroDoc}</title>
+        <style>body{font-family:Arial,sans-serif;padding:24px;font-size:12px;color:#0f172a;}.box{border:1px solid #475569;padding:10px;margin-bottom:10px;}</style>
+        </head><body>
+          <h2>${titulo}</h2>
+          <p><strong>${norma}</strong> · N° Documento: <strong>${nroDoc}</strong></p>
+          <div class="box">
+            <strong>Paciente:</strong> ${exp.nombreReniec || exp.identificador || "—"} | <strong>DNI:</strong> ${exp.numDni || "—"} | <strong>HC:</strong> ${exp.historiaClinica || "—"}<br>
+            <strong>Seguro:</strong> ${exp.tipoSeguro || "—"} | <strong>Diagnóstico CIE-10:</strong> ${exp.cie10 || "—"}
+          </div>
+          <div style="margin-top:36px;display:flex;justify-content:space-between;text-align:center;">
+            <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Médico Tratante (${exp.medicoTratante || "CMP 58321"})</div>
+            <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Asegurado / Apoderado</div>
+          </div>
+        </body></html>
+      `);
+      w.document.close();
+      w.print();
+    }
+
     // Recuperar datos consolidados del expediente
     function cargarExpedienteFacturacion() {
       // 1. Obtener parámetros de URL
