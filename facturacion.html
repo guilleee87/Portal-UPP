@@ -513,7 +513,7 @@
         </div>
 
         <div class="liq-row total-row">
-          <span>MONTO TOTAL A CARGO DEL PACIENTE:</span>
+          <span id="liq_total_label">MONTO TOTAL A CARGO DEL PACIENTE:</span>
           <span id="liq_total_paciente" style="color:#16a34a;">S/. 0.00 (PAGO CERO)</span>
         </div>
 
@@ -556,7 +556,7 @@
         🖨️ Imprimir Liquidación Oficial
       </button>
       <button type="button" id="btn_imprimir_fua_essi_facturacion" class="btn-act btn-act-primary" onclick="imprimirDocumentoAseguradorFacturacion()">
-        🖨️ Imprimir documento del asegurador
+        🖨️ Imprimir ficha de atención / liquidación EPS
       </button>
     </section>
 
@@ -576,10 +576,13 @@
         : esSIS
           ? "FORMATO ÚNICO DE ATENCIÓN — FUA (SIS)"
           : esPrivado
-            ? "SOLICITUD DE ATENCIÓN Y LIQUIDACIÓN — ASEGURADOR PRIVADO"
+            ? "FICHA DE ATENCIÓN Y LIQUIDACIÓN EPS — DOCUMENTO INTERNO"
             : "COMPROBANTE DE ATENCIÓN PARTICULAR";
-      const norma = esEssalud ? "Registro asistencial EsSalud" : esSIS ? "Registro de prestaciones del SIS" : "No existe un FUA universal para EPS; documento administrativo según contrato/IAFAS";
+      const norma = esEssalud ? "Registro asistencial EsSalud" : esSIS ? "Registro de prestaciones del SIS" : "Formato interno de soporte; adjuntar el formato exigido por el contrato y la IAFAS";
       const nroDoc = esEssalud ? (exp.nroEssi || "ESSI-2026-000001") : esSIS ? (exp.nroFua || exp.numerFua || "FUA-2026-000001") : (exp.nroDocumentoAsegurador || exp.folio || exp.ticket || "Por asignar");
+      const items = Array.isArray(exp.items_factura) ? exp.items_factura : [];
+      const liquidacion = exp.liquidacionAuditada || {};
+      const filasItems = items.map((it, i) => `<tr><td>${i + 1}</td><td>${it.servicio || it.nombre || "Prestación"}</td><td>${it.categoria || "Servicio"}</td><td style="text-align:right">S/ ${(Number(it.costo) || 0).toFixed(2)}</td></tr>`).join("");
       const w = window.open("", "_blank");
       if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
       w.document.write(`
@@ -590,8 +593,11 @@
           <p><strong>${norma}</strong> · N° Documento: <strong>${nroDoc}</strong></p>
           <div class="box">
             <strong>Paciente:</strong> ${exp.nombreReniec || exp.identificador || "—"} | <strong>DNI:</strong> ${exp.numDni || "—"} | <strong>HC:</strong> ${exp.historiaClinica || "—"}<br>
-            <strong>Seguro:</strong> ${exp.tipoSeguro || "—"} | <strong>Diagnóstico CIE-10:</strong> ${exp.cie10 || "—"}
+            <strong>Seguro / Plan:</strong> ${exp.tipoSeguro || "—"} · ${exp.padronSusalud?.privado?.plan_salud || exp.planPrivado || "—"} | <strong>Prioridad:</strong> ${exp.prioridad || "—"}<br>
+            <strong>Diagnóstico CIE-10:</strong> ${exp.cie10 || "—"} | <strong>Fecha:</strong> ${exp.fecha || new Date().toLocaleDateString("es-PE")}
           </div>
+          <table style="width:100%;border-collapse:collapse;margin-top:12px"><thead><tr style="background:#e2e8f0"><th style="border:1px solid #94a3b8;padding:6px">#</th><th style="border:1px solid #94a3b8;padding:6px">Prestación / medicamento</th><th style="border:1px solid #94a3b8;padding:6px">Tipo</th><th style="border:1px solid #94a3b8;padding:6px;text-align:right">Importe</th></tr></thead><tbody>${filasItems || '<tr><td colspan="4" style="border:1px solid #94a3b8;padding:8px;text-align:center">Sin prestaciones registradas</td></tr>'}</tbody></table>
+          <div class="box" style="margin-top:12px"><strong>Resumen de liquidación:</strong><br>Bruto: S/ ${(Number(liquidacion.totalBruto) || 0).toFixed(2)} · Cobertura estimada: S/ ${(Number(liquidacion.coberturaSeguro) || 0).toFixed(2)} · Aporte paciente: S/ ${(Number(liquidacion.totalPaciente) || 0).toFixed(2)}<br><strong>Este documento es un soporte interno y no reemplaza la autorización, formato de reclamo o comprobante tributario que exija la IAFAS/EPS o el contrato.</strong></div>
           <div style="margin-top:36px;display:flex;justify-content:space-between;text-align:center;">
             <div style="border-top:1px solid #000;width:220px;padding-top:4px;">${(exp.medicoTratante && !String(exp.medicoTratante).toLowerCase().includes("por asignar")) ? `Médico Tratante (${exp.medicoTratante})` : "Médico Tratante (Firma y Sello)"}</div>
             <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Asegurado / Apoderado</div>
@@ -633,6 +639,7 @@
       let prioridadActual = "—";
       let esAccidente = false;
       let esFuga = false;
+      let esSinSoat = false;
       let medicoTratante = "Por asignar";
       let facturaItems = [];
 
@@ -642,9 +649,10 @@
         dniActual = expActual.numDni || (expActual.identificador ? expActual.identificador.replace(/\D/g, "") : "") || "44418504";
         hcActual = expActual.historiaClinica || `HC-2026-${dniActual.slice(-4)}`;
         prioridadActual = (expActual.prioridad || prioParam || "I").toString().replace("P-", "");
-        seguroActual = expActual.tipoSeguro || (expActual.tipoOrigenEvento === "soat" ? "SOAT Activo (La Positiva Seguros)" : "SIS Gratuito (MINSA)");
+        seguroActual = expActual.tipoSeguro || (expActual.tipoOrigenEvento === "soat" ? "SOAT/CAT — Accidente de tránsito" : "Pendiente de acreditar");
         esAccidente = Boolean(expActual.esAccidenteTransito || expActual.tipoOrigenEvento === "soat" || seguroActual.toLowerCase().includes("soat"));
-        esFuga = Boolean(expActual.soatVehiculoFuga || expActual.eventoFugaTransversal);
+        esFuga = Boolean(expActual.soatVehiculoFuga || expActual.eventoFugaTransversal || expActual.soatOpcion === "fuga" || expActual.soatOpcion === "sin_placa");
+        esSinSoat = expActual.soatOpcion === "sin_soat";
         medicoTratante = expActual.medicoTratante || expActual.medico || "Dr. Médico Asistente de Turno (CMP 0001)";
         if (Array.isArray(expActual.items_factura) && expActual.items_factura.length > 0) {
           facturaItems = expActual.items_factura;
@@ -751,7 +759,7 @@
         .filter(i => (i.categoria || "").toLowerCase().includes("farmacia"))
         .reduce((acc, i) => acc + (parseFloat(i.costo) || 0), 0);
 
-      const esEmergencia = (prioridadActual === "I" || prioridadActual === "II" || prioridadActual === "1" || prioridadActual === "2" || Boolean(expActual && expActual.ingresoDirectoCritico) || facturaItems.some(i => /shock trauma|quir[oó]fano|\bUCI\b|cuidados intensivos|URPA|reanimaci[oó]n/i.test(String(i.servicio || i.nombre || ""))));
+      const esEmergencia = !esAccidente && (prioridadActual === "I" || prioridadActual === "II" || prioridadActual === "1" || prioridadActual === "2" || Boolean(expActual && expActual.ingresoDirectoCritico) || facturaItems.some(i => /shock trauma|quir[oó]fano|\bUCI\b|cuidados intensivos|URPA|reanimaci[oó]n/i.test(String(i.servicio || i.nombre || ""))));
       const seguroL = seguroActual.toLowerCase();
 
       let coberturaMonto = 0;
@@ -770,20 +778,35 @@
         copagoEps = Number(liqAudit.copagoFijo || 0);
         const pctCoasAudit = Number(liqAudit.pctCoaseguro || 0);
         coaseguroFarmacia = Math.max(0, totalPaciente - copagoEps);
+        const provisionalFonsat = liqAudit.estadoLiquidacion === "PENDIENTE_EVALUACION_FONSAT";
+        const provisionalSoat = provisionalFonsat || liqAudit.estadoLiquidacion === "EXCEDENTE_SOAT_PENDIENTE_COORDINACION" || liqAudit.estadoLiquidacion === "SOAT_PENDIENTE_ACREDITACION";
         establecimiento = liqAudit.lugarAtencion || establecimiento;
         explicacion = liqAudit.motivoLiquidacion || "";
+        if (provisionalSoat) {
+          // Excedentes y cobertura no acreditada no son deuda firme del paciente.
+          if (liqAudit.estadoLiquidacion !== "PENDIENTE_EVALUACION_FONSAT") totalPaciente = 0;
+          document.getElementById("liq_total_label").textContent = provisionalFonsat ? "SALDO PROVISIONAL · EVALUACIÓN FONSAT PENDIENTE:" : "SALDO PROVISIONAL · COBERTURA/COORDINACIÓN PENDIENTE:";
+          document.getElementById("liq_row_particular").style.display = "none";
+          if (provisionalFonsat) explicacion += ` Monto sujeto a evaluación, hasta S/. ${Number(liqAudit.montoReclamableFonsat || 0).toFixed(2)}.`;
+        }
 
-        if (esNN) {
+        if (provisionalFonsat) {
+          badgeHtml = `<span style="background:#a16207; color:#fff; padding:4px 10px; border-radius:9999px;">🚗 FONSAT · EVALUACIÓN PENDIENTE</span>`;
+        } else if (provisionalSoat) {
+          badgeHtml = `<span style="background:#a16207; color:#fff; padding:4px 10px; border-radius:9999px;">🚗 SOAT/CAT · LIQUIDACIÓN PROVISIONAL</span>`;
+        } else if (esNN) {
           badgeHtml = `<span style="background:#dc2626; color:#fff; padding:4px 10px; border-radius:9999px;">⚠️ NN — NO SE SABE SU NOMBRE NI SU SEGURO</span>`;
           document.getElementById("liq_row_particular").style.display = "flex";
-        } else if (esAccidente || seguroL.includes("soat")) {
-          badgeHtml = `<span style="background:#ea580c; color:#fff; padding:4px 10px; border-radius:9999px;">🚗 ACCIDENTE DE TRÁNSITO (SOAT)</span>`;
-          const topeSoat = 27500;
-          const cubiertoSoat = Math.min(totalBruto, topeSoat);
-          document.getElementById("soat_box").style.display = "block";
-          document.getElementById("soat_saldo_txt").textContent = `Saldo: S/. ${Math.max(0, topeSoat - cubiertoSoat).toFixed(2)}`;
-          document.getElementById("soat_consumo_txt").textContent = `S/. ${cubiertoSoat.toFixed(2)}`;
-          document.getElementById("soat_bar").style.width = `${Math.min(100, (cubiertoSoat / topeSoat) * 100)}%`;
+        } else if ((esAccidente || seguroL.includes("soat")) && !esSinSoat) {
+          badgeHtml = `<span style="background:#ea580c; color:#fff; padding:4px 10px; border-radius:9999px;">🚗 ACCIDENTE DE TRÁNSITO${esFuga ? " · VEHÍCULO NO IDENTIFICADO / FUGA" : " (SOAT)"}</span>`;
+          if (!esFuga) {
+            const topeSoat = 27500;
+            const cubiertoSoat = Math.min(totalBruto, topeSoat);
+            document.getElementById("soat_box").style.display = "block";
+            document.getElementById("soat_saldo_txt").textContent = `Saldo: S/. ${Math.max(0, topeSoat - cubiertoSoat).toFixed(2)}`;
+            document.getElementById("soat_consumo_txt").textContent = `S/. ${cubiertoSoat.toFixed(2)}`;
+            document.getElementById("soat_bar").style.width = `${Math.min(100, (cubiertoSoat / topeSoat) * 100)}%`;
+          }
         } else if (liqAudit.esEpsPrivado) {
           badgeHtml = `<span style="background:#4f46e5; color:#fff; padding:4px 10px; border-radius:9999px;">🏢 CLÍNICA PRIVADA (${(seguroActual || "EPS").toUpperCase()})</span>`;
           if (!esEmergencia && pctCoasAudit < 100) {
@@ -794,7 +817,7 @@
             if (coaseguroFarmacia > 0) {
               document.getElementById("liq_row_coaseguro_meds").style.display = "flex";
               const lblCoas = document.getElementById("liq_coaseguro_lbl");
-              if (lblCoas) lblCoas.textContent = `Coaseguro (${pctCoasAudit.toFixed(0)}% según Plan EPS sobre prestaciones y farmacia):`;
+              if (lblCoas) lblCoas.textContent = `Coaseguro (${pctCoasAudit.toFixed(0)}% según plan sobre farmacia y servicios):`;
               document.getElementById("liq_coaseguro_meds_val").textContent = `+ S/. ${coaseguroFarmacia.toFixed(2)}`;
             }
           } else if (pctCoasAudit === 100 && totalPaciente > 0) {
@@ -808,6 +831,17 @@
           badgeHtml = `<span style="background:#dc2626; color:#fff; padding:4px 10px; border-radius:9999px;">👤 PARTICULAR (SIN COBERTURA)</span>`;
           if (totalPaciente > 0) document.getElementById("liq_row_particular").style.display = "flex";
         }
+      } else if (esAccidente && (STATE.soatOpcion === "sin_soat" || esFuga || STATE.soatOpcion === "fuga")) {
+        establecimiento = esFuga ? "Accidente de tránsito · Fondo SOAT/CAT" : "Accidente de tránsito · cobertura/responsable por verificar";
+        badgeHtml = `<span style="background:#a16207;color:#fff;padding:4px 10px;border-radius:9999px;">🚗 ${esFuga ? "FONSAT · EVALUACIÓN PENDIENTE" : "COBERTURA SOAT/CAT POR VERIFICAR"}</span>`;
+        document.getElementById("liq_total_label").textContent = "LIQUIDACIÓN PROVISIONAL · SIN DEUDA FINAL:";
+        document.getElementById("liq_row_particular").style.display = "none";
+        document.getElementById("soat_box").style.display = "none";
+        coberturaMonto = 0;
+        totalPaciente = 0;
+        explicacion = esFuga
+          ? "Caso pendiente de evaluación y reconocimiento FONSAT; se requiere documentación según procedimiento."
+          : "Atención no condicionada. Identificar responsable y cobertura aplicable para regularización posterior.";
       } else if (esNN) {
         establecimiento = "Hospital Regional Docente UPP (Red Asistencial Pública)";
         badgeHtml = `<span style="background:#dc2626; color:#fff; padding:4px 10px; border-radius:9999px;">⚠️ NN — NO SE SABE SU NOMBRE NI SU SEGURO</span>`;
@@ -815,14 +849,14 @@
         totalPaciente = totalBruto;
         document.getElementById("liq_row_particular").style.display = "flex";
         explicacion = `Paciente No Identificado (NN): al no conocerse su identidad ni acreditarse ningún seguro de salud (SIS, EsSalud ni EPS), la cuenta hospitalaria se liquida al 100% para gestión de cobro y recupero institucional.`;
-      } else if (esAccidente || seguroL.includes("soat")) {
+      } else if ((esAccidente || seguroL.includes("soat")) && !esSinSoat) {
         // Régimen SOAT
         establecimiento = "Clínica Privada / Hospital - Red de Emergencias SOAT";
         badgeHtml = `<span style="background:#ea580c; color:#fff; padding:4px 10px; border-radius:9999px;">🚗 ACCIDENTE DE TRÁNSITO (SOAT)</span>`;
         const topeSoat = 27500;
         const cubiertoSoat = Math.min(totalBruto, topeSoat);
         coberturaMonto = cubiertoSoat;
-        totalPaciente = Math.max(0, totalBruto - topeSoat);
+        totalPaciente = 0;
 
         document.getElementById("soat_box").style.display = "block";
         const saldoSoat = Math.max(0, topeSoat - cubiertoSoat);
@@ -831,7 +865,9 @@
         const pctSoat = Math.min(100, (cubiertoSoat / topeSoat) * 100);
         document.getElementById("soat_bar").style.width = `${pctSoat}%`;
 
-        explicacion = `Accidente de tránsito amparado por Ley General de Transporte y D.S. N° 024-2002-MTC. Cobertura obligatoria de gastos médicos hasta 5 UIT (S/. 27,500.00). Cobertura al 100% sin deducible. Copago paciente: S/. 0.00.`;
+        explicacion = totalBruto > topeSoat
+          ? `Liquidación provisional: SOAT/CAT cubre hasta S/. ${topeSoat.toFixed(2)}; el excedente requiere coordinación y determinación de responsable/cobertura. No constituye deuda definitiva del paciente.`
+          : `Accidente de tránsito sujeto a cobertura SOAT/CAT hasta 5 UIT. Cobertura provisional al 100% dentro del límite, sujeta a validación documental.`;
       } else if (/\bsis\b|\bminsa\b/i.test(seguroActual)) {
         // SIS
         establecimiento = "Hospital Nacional Docente Madre Niño San Bartolomé (MINSA - Lima)";
@@ -866,9 +902,12 @@
           copagoEps = Number.isFinite(Number(padronPrivado.copago_fijo))
             ? Number(padronPrivado.copago_fijo)
             : ((planSel === "vip_100") ? 0 : (planSel === "integral_90_10" ? 50 : 80));
-          const subtotalServicios = Math.max(0, totalBruto - subtotalFarmacia);
+          const subtotalAtencion = facturaItems
+            .filter(i => /consulta|atenci[oó]n m[eé]dica|honorario/i.test(`${i.categoria || ""} ${i.nombre || i.servicio || ""}`))
+            .reduce((acc, i) => acc + (parseFloat(i.costo) || 0), 0);
+          const subtotalServicios = Math.max(0, totalBruto - subtotalFarmacia - subtotalAtencion);
           coaseguroFarmacia = (subtotalFarmacia + subtotalServicios) * pctCoas;
-          totalPaciente = copagoEps + coaseguroFarmacia;
+          totalPaciente = Math.min(totalBruto, copagoEps + coaseguroFarmacia);
           coberturaMonto = Math.max(0, totalBruto - totalPaciente);
 
           if (copagoEps > 0) {
@@ -878,11 +917,11 @@
           if (coaseguroFarmacia > 0) {
             document.getElementById("liq_row_coaseguro_meds").style.display = "flex";
             const lblCoas = document.getElementById("liq_coaseguro_lbl");
-            if (lblCoas) lblCoas.textContent = `Coaseguro (${(pctCoas * 100).toFixed(0)}% según Plan EPS sobre prestaciones y farmacia):`;
+            if (lblCoas) lblCoas.textContent = `Coaseguro (${(pctCoas * 100).toFixed(0)}% según plan sobre servicios y farmacia):`;
             document.getElementById("liq_coaseguro_meds_val").textContent = `+ S/. ${coaseguroFarmacia.toFixed(2)}`;
           }
 
-          explicacion = `Atención en Clínica Privada con póliza EPS clasificada como Urgencia Médica (No Emergencia / P-${prioridadActual}). Se aplica copago fijo de S/. ${copagoEps.toFixed(2)} + coaseguro del ${(pctCoas * 100).toFixed(0)}% sobre prestaciones y farmacia (S/. ${coaseguroFarmacia.toFixed(2)}).`;
+          explicacion = `Atención en Clínica Privada con póliza EPS clasificada como Urgencia (P-${prioridadActual}). Se aplica copago de atención del plan (S/. ${copagoEps.toFixed(2)}) y coaseguro del ${(pctCoas * 100).toFixed(0)}% sobre servicios facturados y farmacia (S/. ${coaseguroFarmacia.toFixed(2)}). En emergencia, la cobertura para atención y medicamentos es la misma.`;
         }
       } else {
         // Particular (Sin seguro)
@@ -902,10 +941,11 @@
       const tfoot = document.getElementById("invoice_tfoot");
       tbody.innerHTML = "";
       const ratioCobFac = totalBruto > 0 ? (coberturaMonto / totalBruto) : 0;
+      const provisionalCierreSoat = Boolean(liqAudit && ["PENDIENTE_EVALUACION_FONSAT", "EXCEDENTE_SOAT_PENDIENTE_COORDINACION", "SOAT_PENDIENTE_ACREDITACION"].includes(liqAudit.estadoLiquidacion));
       facturaItems.forEach((it, idx) => {
         const tr = document.createElement("tr");
         const c = parseFloat(it.costo) || 0;
-        const cubreIt = +(c * ratioCobFac).toFixed(2);
+        const cubreIt = provisionalCierreSoat ? 0 : +(c * ratioCobFac).toFixed(2);
         const nuevoTotalIt = +(c - cubreIt).toFixed(2);
         const catClass = `cat-${(it.categoria || "general").toLowerCase().replace(/[^a-z]/g, "")}`;
         tr.innerHTML = `

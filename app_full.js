@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ==============================================================================
  * SIMULADOR HIS COMPLETO — EMERGENCIA NIVEL III-1
  * Curso: Pensamiento Algorítmico - Ciclo II (Trabajo Parcial UPP)
@@ -683,7 +683,7 @@ function obtenerIpEstacionAuditor() {
   if (window._ipEstacionAuditorCache) return window._ipEstacionAuditorCache;
   const host = (typeof location !== "undefined" && location.hostname && location.hostname !== "localhost" && location.hostname !== "127.0.0.1")
     ? location.hostname
-    : "192.168.10.42";
+    : "No disponible desde el navegador";
   window._ipEstacionAuditorCache = host;
   return host;
 }
@@ -711,7 +711,7 @@ function renderizarBloqueAuditoriaEdicionHC(master, ident, hc) {
   return `
     <div id="hc_audit_modificaciones_lista" style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px 14px;margin-top:12px;">
       <div style="font-size:0.80rem;font-weight:900;color:#312e81;margin-bottom:6px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-        <span>🛡️ Bitácora Inmutable de Rectificaciones (NTS N° 139-MINSA)</span>
+        <span>🛡️ Historial local de rectificaciones (no inmutable)</span>
         ${(rolAct === "AUDITOR" || rolAct === "ADMIN") ? '<span style="font-size:0.72rem;color:#4338ca;">Use el ícono ✏️ junto a cualquier campo para rectificar</span>' : ''}
       </div>
       ${modsHtml}
@@ -775,7 +775,7 @@ window.abrirEditorCampoHCAuditor = abrirEditorCampoHCAuditor;
 
 function guardarRectificacionCampoHC(ident, hc, prop, label, valorAnterior, valorNuevo, motivo) {
   const ses = (window.RBAC_FLUJO && typeof window.RBAC_FLUJO.obtenerSesionActiva === "function") ? window.RBAC_FLUJO.obtenerSesionActiva() : null;
-  const nombreAuditor = ses?.nombre || ses?.usuario || "Dra. Elena Ríos Salazar (Auditora Médica · CMP 41209)";
+  const nombreAuditor = ses?.nombre || ses?.usuario || "Auditor no identificado";
   const ipPc = obtenerIpEstacionAuditor();
   const ahora = new Date();
   const diaStr = ahora.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -1971,16 +1971,23 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
     });
   }
   const modsHC = Array.isArray(master.modificaciones_auditoria) ? master.modificaciones_auditoria : [];
-  const huboMedicoHC = Boolean((medicoReg && medicoReg !== "—") || pxVivo.firmas?.medico || stVivo.firmas?.medico || episodios.some(e => e.firmante));
-  const nombreMedHC = (medicoReg && medicoReg !== "—") ? medicoReg : (episodios.find(e => e.firmante)?.firmante || "");
-  const selloMedicoHC = (huboMedicoHC && nombreMedHC && typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: nombreMedHC, colegiatura: "CMP 58321 · RNE 23901" })
+  const huboMedicoHC = Boolean(pxVivo.firmas?.medico?.fecha || stVivo.firmas?.medico?.fecha);
+  const nombreMedHC = pxVivo.firmas?.medico?.usuario || stVivo.firmas?.medico?.usuario || "";
+  const tieneFirmaMedHC = Boolean(pxVivo.firmas?.medico?.fecha || stVivo.firmas?.medico?.fecha);
+  const selloMedicoHC = (tieneFirmaMedHC && nombreMedHC && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: nombreMedHC, colegiatura: pxVivo.firmas?.medico?.colegiatura || stVivo.firmas?.medico?.colegiatura || "", fechaHora: pxVivo.firmas?.medico?.fecha || stVivo.firmas?.medico?.fecha })
     : "";
-  const selloEnfHC = (enfermeraReg && enfermeraReg !== "—" && typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("TRIAJE", { nombre: enfermeraReg, colegiatura: "CEP 92410" })
+  const tieneFirmaTriHC = Boolean(pxVivo.firmas?.triaje?.fecha || stVivo.firmas?.triaje?.fecha);
+  const selloEnfHC = (tieneFirmaTriHC && enfermeraReg && enfermeraReg !== "—" && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("TRIAJE", { nombre: enfermeraReg, colegiatura: pxVivo.firmas?.triaje?.colegiatura || stVivo.firmas?.triaje?.colegiatura || "", fechaHora: pxVivo.firmas?.triaje?.fecha || stVivo.firmas?.triaje?.fecha })
     : "";
-  const selloAuditorHC = (modsHC.length > 0 && typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("AUDITOR", { nombre: modsHC[0].usuario || "Dra. Elena Ríos Salazar", cargo: "Auditora Médica · Comité de Historias Clínicas", colegiatura: "CMP 41209 · RNE 18452", fechaHora: `${modsHC[0].dia} ${modsHC[0].hora}` })
+  const auditorFirmanteHC = pxVivo.firmas?.auditor || stVivo.firmas?.auditor;
+  const selloAuditorHC = (auditorFirmanteHC?.fecha && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("AUDITOR", { nombre: auditorFirmanteHC.usuario, cargo: "Auditoría Médica", fechaHora: auditorFirmanteHC.fecha })
+    : "";
+  const tieneFirmaAdmHC = Boolean(pxVivo.firmas?.admision?.fecha || stVivo.firmas?.admision?.fecha);
+  const selloAdmHC = tieneFirmaAdmHC && typeof generarSelloFirmaDigitalHTML === "function"
+    ? generarSelloFirmaDigitalHTML("ADMISION", { nombre: pxVivo.firmas?.admision?.usuario || stVivo.firmas?.admision?.usuario, fechaHora: pxVivo.firmas?.admision?.fecha || stVivo.firmas?.admision?.fecha })
     : "";
   const esAlergico = alergias && !alergias.toLowerCase().includes("niega") && !alergias.toLowerCase().includes("ninguna");
   let htmlEpisodios = "";
@@ -2160,14 +2167,15 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
 
     <!-- FIRMAS ELECTRÓNICAS DEL PERSONAL DE SALUD (+ AUDITOR AL COSTADO SI HUBO MODIFICACIÓN) -->
     <div id="hc_modal_firmas_electronicas" style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px 14px;margin-top:12px;">
-      <div style="font-size:0.80rem;font-weight:900;color:#0f172a;margin-bottom:8px;">
-        🔏 Firmas Electrónicas Digitales del Personal Interviniente (Ley N° 27269)
+        <div style="font-size:0.80rem;font-weight:900;color:#0f172a;margin-bottom:8px;">
+        🔏 Registros visuales de firma del personal interviniente
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">
         ${selloMedicoHC ? `<div>${selloMedicoHC}</div>` : ""}
         ${selloEnfHC ? `<div>${selloEnfHC}</div>` : ""}
         ${selloAuditorHC ? `<div id="hc_modal_firma_auditor_col">${selloAuditorHC}</div>` : ""}
-        ${(!selloMedicoHC && !selloEnfHC && !selloAuditorHC) ? `<div style="font-size:0.78rem;color:#64748b;">— Sin firmas electrónicas aún (se generarán conforme el personal de salud realice y registre cada atención).</div>` : ""}
+        ${selloAdmHC}
+        ${(!selloMedicoHC && !selloEnfHC && !selloAuditorHC && !selloAdmHC) ? `<div style="font-size:0.78rem;color:#64748b;">— Sin registros de firma aún.</div>` : ""}
       </div>
     </div>
   `;
@@ -2250,16 +2258,18 @@ function construirHTMLImpresionHC(pacienteEncoded) {
     });
   }
 
-  const selloMedico = (typeof generarSelloFirmaDigitalHTML === "function")
-    ? ((medicoReg && medicoReg !== "—") ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: medicoReg }) : `<div class="firma-line" style="color:#64748b;">Pendiente de evaluación / firma médica</div>`)
-    : `<div class="firma-line">${medicoReg}</div>`;
-  const selloAuditor = (mods.length > 0 && typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("AUDITOR", { nombre: mods[0].usuario, fechaHora: `${mods[0].dia} ${mods[0].hora}` })
+  const firmaMedFirmadaHC = Boolean(pxVivo.firmas?.medico?.fecha || stVivo.firmas?.medico?.fecha);
+  const selloMedico = (firmaMedFirmadaHC && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: medicoReg, fechaHora: pxVivo.firmas?.medico?.fecha || stVivo.firmas?.medico?.fecha })
+    : `<div class="firma-line" style="color:#64748b;">Pendiente de evaluación / firma médica</div>`;
+  const firmaAudFirmadaHC = pxVivo.firmas?.auditor || stVivo.firmas?.auditor;
+  const selloAuditor = (firmaAudFirmadaHC?.fecha && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("AUDITOR", { nombre: firmaAudFirmadaHC.usuario, fechaHora: firmaAudFirmadaHC.fecha })
     : "";
 
   const modsHtml = mods.length === 0 ? "" : `
     <div class="section-box">
-      <div class="section-title">VI. Bitácora Inmutable de Rectificaciones (NTS N° 139-MINSA num. 4.2.7)</div>
+        <div class="section-title">VI. Historial local de rectificaciones (no inmutable)</div>
       <table>
         <thead><tr><th>Fecha / Hora</th><th>Auditor</th><th>IP PC</th><th>Campo</th><th>Antes → Después</th><th>Motivo Obligatorio</th></tr></thead>
         <tbody>
@@ -2304,7 +2314,7 @@ function construirHTMLImpresionHC(pacienteEncoded) {
         <div class="section-title">I. Filiación, Equipo Asistencial y Diagnóstico</div>
         <div class="grid-4" style="margin-bottom:8px;">
           <div class="field"><label>Apellidos y Nombres</label><span>${nom}</span></div>
-          <div class="field"><label>DNI</label><span>${docDni}</span></div>
+          <div class="field"><label>Número de documento (DNI)</label><span>${docDni}</span></div>
           <div class="field"><label>Edad / Sexo / Grupo</label><span>${edadPx} años · ${sexoPx} · ${gSan}</span></div>
           <div class="field"><label>Seguro / IAFAS</label><span>${seguro}</span></div>
         </div>
@@ -2466,13 +2476,17 @@ var STATE = window.STATE = Object.assign(window.STATE || {}, {
   numerFua: null,
   acreditadoEsSalud: null,
   porcentajeCopago: null,
-  soatOpcion: "placa", // "placa", "fuga"
+  soatOpcion: "sin_verificar", // "identificado", "sin_soat", "fuga", "sin_verificar"
   soatPlaca: "",
   soatAseguradora: "Pacífico Compañía de Seguros y Reaseguros",
   soatPoliza: "SOAT-2026-981245",
   soatEstado: "ACTIVO / VIGENTE (APESEG)",
   soatVehiculoFuga: false,
   soatTopeLegal: 27500, // 5 UIT
+  entornoAntesAccidente: null,
+  accidenteGravedadInicial: null,
+  paseInmediatoAccidente: false,
+  requiereTriajeTrasEstabilizacion: false,
   soatConsumido: 0,
   soatDisponible: 27500,
 
@@ -3736,7 +3750,7 @@ async function procesarResultadoAcreditacion(datos, ident) {
         <div><span style="color:#64748b;">N° Póliza / Certificado:</span><br><strong style="font-family:monospace;color:#0284c7;">${datos.poliza || "POL-PACIFICO-98210"}</strong></div>
         <div><span style="color:#64748b;">Estado en Registro IAFAS:</span><br><strong>Vigente y Activa</strong></div>
         <div><span style="color:#64748b;">Consulta de Urgencia (P-III/IV/V):</span><br><strong style="color:#b45309;">S/. 80.00 (Tarifa Fija)</strong></div>
-        <div><span style="color:#64748b;">Coaseguro Farmacia:</span><br><strong style="color:#b45309;">10% del total de medicamentos</strong></div>
+        <div><span style="color:#64748b;">Copago / coaseguro según plan:</span><br><strong style="color:#b45309;">Consulta según copago del plan; porcentaje sobre farmacia y servicios</strong></div>
       `;
     }
 
@@ -3744,8 +3758,8 @@ async function procesarResultadoAcreditacion(datos, ident) {
       bannerCondicion.style.borderLeftColor = "#10b981";
       bannerCondicion.innerHTML = `
         <strong style="color:#065f46;display:block;margin-bottom:4px;">⚖️ CONDICIÓN DE COBRO OFICIAL APLICADA — CLÍNICA PRIVADA EN LIMA (EPS):</strong>
-        • <strong>Si es Emergencia Médica (Prioridad I o II):</strong> Por Ley N° 27604, la atención médica, sala de reanimación, cama y exámenes tienen costo S/. 0.00 para el asegurado. En farmacia asume únicamente el <strong>10% de coaseguro</strong>.<br>
-        • <strong>Si NO es Emergencia (Prioridad III, IV o V):</strong> El sistema clasifica <strong>AUTOMÁTICAMENTE COMO URGENCIA</strong>. Aplica cobro fijo de <strong>S/. 80.00 por consulta de urgencia</strong> y el <strong>10% del total de medicamentos</strong> prescritos. Exámenes de laboratorio e imágenes quedan 100% cubiertos por la aseguradora EPS.
+        • <strong>Si es Emergencia Médica (Prioridad I o II):</strong> atención y medicamentos tienen la misma cobertura de emergencia conforme a la regla configurada; copago y coaseguro de urgencia no se aplican.<br>
+        • <strong>Si es Urgencia (Prioridad III, IV o V):</strong> se aplica el copago de atención y porcentaje de coaseguro que figuran en el plan EPS vigente. El porcentaje se calcula sobre farmacia y servicios facturados.
       `;
     }
 
@@ -3880,7 +3894,7 @@ function validarSOAT() {
     document.getElementById("resultado_soat").innerHTML = `<span style="color:#ef4444;">⚠️ Formato de placa inválido</span>`;
     return;
   }
-  STATE.tipoSeguro = "SOAT";
+      STATE.tipoSeguro = "SOAT";
   document.getElementById("resultado_soat").innerHTML = `
     <strong>SOAT — ${aseg || "Aseguradora"} | Placa: ${placa}</strong>
     <span class="seguro-badge seguro-badge-soat">✓</span><br>
@@ -4386,7 +4400,7 @@ function evaluarTriajeEstandar(datos = {}) {
   // El usuario ingresó signos vitales posteriormente: actualizar el puntaje fisiológico sin degradar P-I
       const motivosConSignos = [motivoCritico];
       if (news2.scoreTotal > 0) {
-        motivosConSignos.push(`Monitoreo hemodinámico en curso: NEWS2 ${news2.scoreTotal} pts (Máx. indiv. ${news2.maxParametroUnico} pts)`);
+        motivosConSignos.push(`Monitoreo hemodinámico en curso: puntaje fisiológico parcial ${news2.scoreTotal} pts (Máx. indiv. ${news2.maxParametroUnico} pts)`);
       }
       return {
         prioridad: "I",
@@ -4441,7 +4455,7 @@ function evaluarTriajeEstandar(datos = {}) {
     amenazasA.push("Paro Cardiorrespiratorio Inminente / Botón de Pánico Shock Trauma");
   }
   if (news2.scoreTotal >= 7) {
-    amenazasA.push(`NEWS2 Crítico ≥ 7 pts (${news2.scoreTotal} pts - Alto Riesgo Fisiológico)`);
+    amenazasA.push(`Puntaje fisiológico parcial crítico ≥ 7 pts (${news2.scoreTotal} pts - Alto Riesgo Fisiológico)`);
   }
   if (glasgow !== null && glasgow <= 8) {
     amenazasA.push(`Glasgow Coma Scale ≤ 8 (${glasgow}/15 - Coma / Vía Aérea en Riesgo Inminente)`);
@@ -4569,10 +4583,10 @@ function evaluarTriajeEstandar(datos = {}) {
 
   if (!esFisiologicamenteIntacto) {
     if (news2.scoreTotal >= 5 && news2.scoreTotal <= 6) {
-      criteriosB.push(`NEWS2 Nivel Medio (5-6 pts: ${news2.scoreTotal} pts - Monitoreo Continuo Obligatorio)`);
+      criteriosB.push(`Puntaje fisiológico parcial medio (5-6 pts: ${news2.scoreTotal} pts)`);
     }
     if (news2.maxParametroUnico === 3) {
-      criteriosB.push("Parámetro Fisiológico Individual Extremo (NEWS2 = 3 pts en al menos 1 constante vital)");
+      criteriosB.push("Parámetro fisiológico individual extremo (3 pts en una variable)");
     }
     if (glucosa !== null && (glucosa > 400 || (glucosa >= 54 && glucosa <= 69))) {
       criteriosB.push(`Desbalance Glucémico Crítico ADA (Glucosa ${glucosa} mg/dL - Requiere Estabilización Urgente)`);
@@ -4581,7 +4595,7 @@ function evaluarTriajeEstandar(datos = {}) {
       criteriosB.push(`Crisis Hipertensiva Sintomática / Alto Riesgo PA ${pas || "--"}/${pad || "--"} mmHg`);
     }
     if (eva !== null && eva >= 8) {
-      criteriosB.push(`Dolor Severo Agudo EVA ${eva}/10 (ESI Punto B)`);
+      criteriosB.push(`Dolor Severo Agudo EVA ${eva}/10 (regla local de prioridad)`);
     }
     if (tieneCodTiempo) {
       criteriosB.push("Código Tiempo-Dependiente (Infarto / Ictus / Sepsis) en Ventana Terapéutica sin Shock");
@@ -4631,7 +4645,7 @@ function evaluarTriajeEstandar(datos = {}) {
     if (datos.ped_sospecha_maltrato) motivosC.push("Historia Discordante / Sospecha de Maltrato MTS");
     if (datos.obst_estable) motivosC.push("Condición Obstétrica Estable MTS");
     if (temp !== null && temp >= 38.0 && temp < 38.5) motivosC.push(`Fiebre ≥ 38.0 °C (${temp} °C)`);
-    if (news2.scoreTotal >= 2) motivosC.push(`NEWS2 Leve/Moderado (${news2.scoreTotal} pts)`);
+    if (news2.scoreTotal >= 2) motivosC.push(`Puntaje fisiológico parcial leve/moderado (${news2.scoreTotal} pts)`);
     if (eva !== null && eva >= 4 && eva <= 7) motivosC.push(`Dolor Moderado EVA ${eva}/10`);
     if (glucosa !== null && glucosa >= 250 && glucosa <= 400) motivosC.push(`Hiperglucemia Moderada (${glucosa} mg/dL)`);
     if ((pas !== null && pas >= 140) || (pad !== null && pad >= 90)) motivosC.push(`Presión Arterial Elevada (${pas || "--"}/${pad || "--"} mmHg)`);
@@ -4661,7 +4675,7 @@ function evaluarTriajeEstandar(datos = {}) {
     const motivosD1 = [];
     if (datos.mts_agudeza === "reciente") motivosD1.push("Problema Reciente < 7 Días MTS");
     if (temp !== null && temp >= 37.5 && temp < 38.0) motivosD1.push(`Febrícula (${temp} °C)`);
-    if (news2.scoreTotal === 1) motivosD1.push(`NEWS2 Mínimo (${news2.scoreTotal} pt)`);
+    if (news2.scoreTotal === 1) motivosD1.push(`Puntaje fisiológico parcial mínimo (${news2.scoreTotal} pt)`);
     if (eva !== null && eva >= 1 && eva <= 3) motivosD1.push(`Dolor Leve EVA ${eva}/10`);
     if (glucosa !== null && glucosa >= 180 && glucosa < 250) motivosD1.push(`Hiperglucemia Leve (${glucosa} mg/dL)`);
     if (motivosD1.length === 0) motivosD1.push("Requiere 1 solo recurso simple o evaluación médica general");
@@ -5183,7 +5197,7 @@ function mostrarPrioridad(prio, detalle) {
     slaEl.textContent = (detalle && detalle.slaNormativo) ? `⏱️ SLA: ${detalle.slaNormativo}` : (slaMap[prio] || '⏱️ SLA: --');
   }
 
-  // Trazabilidad Estándar NTS N° 042 / ESI v5 / NEWS2 / ADA
+  // Trazabilidad de reglas locales y referencias clínicas
   const trazaEl = document.getElementById("prio_trazabilidad_estandar");
   if (trazaEl) {
     trazaEl.style.display = "block";
@@ -5828,12 +5842,14 @@ function calcularLiquidacionSeguro() {
   const padron = STATE.padronSusalud;
   const esAccidente = STATE.esAccidenteTransito || STATE.tipoOrigenEvento === "soat";
   const esFuga = STATE.soatVehiculoFuga || STATE.eventoFugaTransversal || (padron && padron.condicion_evento === "ACCIDENTE_TRANSITO_FUGA");
+  const esNoSoat = STATE.soatOpcion === "sin_soat";
   const totalBruto = STATE.items_factura.reduce((s, i) => s + (parseFloat(i.costo) || 0), 0);
   const subtotalFarmacia = STATE.items_factura
     .filter(i => (i.categoria || "").toLowerCase().includes("farmacia"))
     .reduce((s, i) => s + (parseFloat(i.costo) || 0), 0);
   const subtotalServicios = Math.max(0, totalBruto - subtotalFarmacia);
   const esEmergencia = esEventoEmergenciaVital();
+  const esEmergenciaEPS = esEmergencia && !esAccidente;
   const esUrgencia = !esEmergencia;
 
   let lugarAtencion = "";
@@ -5841,6 +5857,7 @@ function calcularLiquidacionSeguro() {
   let coaseguroFarmacia = 0;
   let copagoFijo = 0;
   let pctCoaseguro = 0;
+  let baseCoaseguro = 0;
   let totalPaciente = 0;
   let motivoLiquidacion = "";
   let etiquetaRegimen = "";
@@ -5854,21 +5871,19 @@ function calcularLiquidacionSeguro() {
 
   // =========================================================================
   // CASO 1: ACCIDENTE DE TRÁNSITO CON VEHÍCULO EN FUGA (SIN PLACA / SIN SOAT)
-  // NORMA VIAL SUSALUD: Si el vehículo se dio a la fuga, NO SE ACTIVA SOAT.
-  // Por mandato de ley, NINGÚN SEGURO (ni SIS, ni EsSalud, ni Privado) lo cubre.
-  // Se cobra el 100% al paciente con cargo a recupero posterior ante FONSAT.
+  // Vehículo no identificado/fuga: mantener la cuenta provisional mientras se evalúa FONSAT.
   // =========================================================================
-  if (esFuga) {
+  if (esAccidente && esFuga) {
     lugarAtencion = "Emergencia Hospitalaria (Accidente de Tránsito con Chofer en Fuga)";
-    etiquetaRegimen = "🚨 Chofer en Fuga (Sin SOAT Identificado · Cobro 100% Particular)";
+    etiquetaRegimen = "🚨 Vehículo en fuga · evaluación FONSAT pendiente";
     condicionSusalud = "🚨 Accidente de Tránsito con Fuga (Sin SOAT Identificado)";
-    coberturaSector = "0% (Sin Cobertura: Chofer en Fuga)";
+    coberturaSector = "Pendiente de evaluación del Fondo SOAT/CAT";
     copagoFijo = 0.00;
-    pctCoaseguro = 100;
-    coberturaSeguro = 0.00;
-    totalPaciente = totalBruto;
-    alertaSector = "🚨 Sin SOAT identificable por fuga vehicular: Ningún seguro (SIS, EsSalud, Privado) cubre este evento. El paciente asume el 100% de la liquidación.";
-    motivoLiquidacion = "ACCIDENTE DE TRÁNSITO CON VEHÍCULO EN FUGA (Art. 31° D.S. N° 024-2002-MTC). Al no existir vehículo ni placa identificada, NO SE ACTIVA EL SOAT. Conforme a la normativa nacional de SUSALUD, ningún seguro público ni privado (SIS, EsSalud o IAFAS EPS) cubre la atención de siniestros viales. Se liquida y cobra el 100% al paciente con derecho a trámite de recupero ante el Fondo de Compensación del SOAT (FONSAT).";
+    pctCoaseguro = 0;
+    coberturaSeguro = Math.min(totalBruto, 27500);
+    totalPaciente = 0;
+    alertaSector = "🚨 Vehículo no identificado/fuga: documentar y tramitar evaluación del Fondo SOAT/CAT; gastos médicos y farmacéuticos hasta 5 UIT sujetos a requisitos y reconocimiento.";
+    motivoLiquidacion = "ACCIDENTE DE TRÁNSITO CON VEHÍCULO NO IDENTIFICADO O EN FUGA. Fondo SOAT/CAT: gastos médicos (incluidos hospitalarios, quirúrgicos y farmacéuticos) hasta 5 UIT, sujeto a denuncia, reporte/HC y trámite de reconocimiento.";
 
     STATE.soatConsumido = 0;
     STATE.soatDisponible = 0;
@@ -5878,11 +5893,11 @@ function calcularLiquidacionSeguro() {
       totalBruto,
       subtotalServicios,
       subtotalFarmacia,
-      coberturaSeguro: 0,
+      coberturaSeguro: Math.min(totalBruto, 27500),
       coaseguroFarmacia: 0,
       copagoUrgencia: 0,
       copagoFijo: 0,
-      pctCoaseguro: 100,
+      pctCoaseguro: 0,
       totalPaciente,
       motivoLiquidacion,
       etiquetaRegimen,
@@ -5890,8 +5905,26 @@ function calcularLiquidacionSeguro() {
       coberturaSector,
       alertaSector,
       esEpsPrivado,
-      esPublico
+      esPublico,
+      estadoLiquidacion: "PENDIENTE_EVALUACION_FONSAT",
+      montoReclamableFonsat: Math.min(totalBruto, 27500)
     };
+  }
+
+  // No SOAT acreditado: mantener liquidación provisional hasta identificar
+  // responsable/cobertura. La urgencia/emergencia continúa sin condición.
+  if (esAccidente && STATE.soatOpcion === "sin_soat") {
+    lugarAtencion = "Accidente de tránsito · cobertura/responsable por verificar";
+    etiquetaRegimen = "🚗 Accidente vial · liquidación provisional";
+    condicionSusalud = "Accidente de tránsito · SOAT/CAT no acreditado";
+    coberturaSector = "Pendiente de identificación del responsable y cobertura";
+    copagoFijo = 0;
+    pctCoaseguro = 0;
+    coberturaSeguro = 0;
+    totalPaciente = 0;
+    alertaSector = "Atención no condicionada por ausencia de SOAT/CAT. No emitir deuda final al paciente hasta verificar responsable y cobertura aplicable.";
+    motivoLiquidacion = "ACCIDENTE SIN SOAT/CAT ACREDITADO. Liquidación provisional; verificar responsable, póliza, cobertura complementaria o mecanismo aplicable. La atención se brinda sin demora.";
+    return { lugarAtencion, totalBruto, subtotalServicios, subtotalFarmacia, coberturaSeguro, coaseguroFarmacia: 0, copagoUrgencia: 0, copagoFijo, pctCoaseguro, totalPaciente, motivoLiquidacion, etiquetaRegimen, condicionSusalud, coberturaSector, alertaSector, esEpsPrivado, esPublico, estadoLiquidacion: "SOAT_PENDIENTE_ACREDITACION", montoPendienteCoordinacion: totalBruto };
   }
 
   // =========================================================================
@@ -5899,15 +5932,25 @@ function calcularLiquidacionSeguro() {
   // Siempre para accidente de tránsito se aplica el monto máximo de cobertura
   // de 5 UIT (S/. 27,500.00) cuando se identifica al vehículo.
   // =========================================================================
-  if (esAccidente && !esFuga) {
+  if (esAccidente && !esFuga && esNoSoat) {
+    lugarAtencion = "Accidente de tránsito · cobertura/responsable por verificar";
+    etiquetaRegimen = "Accidente vial · liquidación provisional";
+    condicionSusalud = "Accidente de tránsito · SOAT/CAT no acreditado";
+    coberturaSector = "Pendiente de identificación del responsable y cobertura";
+    copagoFijo = 0; pctCoaseguro = 0; coberturaSeguro = 0; totalPaciente = 0;
+    alertaSector = "Atención inmediata sin condicionamiento por falta de SOAT/CAT; verificar responsable y cobertura para regularización posterior.";
+    motivoLiquidacion = "Liquidación provisional. No emitir deuda final al paciente hasta verificar responsable, cobertura SOAT/CAT, asegurador o mecanismo aplicable.";
+    return { lugarAtencion, totalBruto, subtotalServicios, subtotalFarmacia, coberturaSeguro, coaseguroFarmacia: 0, copagoUrgencia: 0, copagoFijo, pctCoaseguro, totalPaciente, motivoLiquidacion, etiquetaRegimen, condicionSusalud, coberturaSector, alertaSector, esEpsPrivado, esPublico, estadoLiquidacion: "SOAT_PENDIENTE_ACREDITACION", montoPendienteCoordinacion: totalBruto };
+  }
+  if (esAccidente && !esFuga && !esNoSoat) {
     lugarAtencion = "Servicio de Emergencia Especializado SOAT — D.S. N° 024-2002-MTC";
-    etiquetaRegimen = "🚗 SOAT Ley D.S. N° 024-2002-MTC (Tope 5 UIT = S/. 27,500)";
-    condicionSusalud = "🚗 Siniestro Vial SOAT Activo (Placa Identificada)";
+    etiquetaRegimen = STATE.soatOpcion === "sin_soat" ? "🚗 Accidente de tránsito · cobertura SOAT/CAT pendiente de acreditación" : "🚗 SOAT/CAT de accidente (tope médico 5 UIT)";
+    condicionSusalud = STATE.soatOpcion === "sin_soat" ? "Accidente vial · responsable/cobertura por verificar" : "Siniestro vial SOAT/CAT";
     coberturaSector = "100% Cobertura SOAT (Hasta 5 UIT = S/. 27,500)";
     copagoFijo = 0.00;
     pctCoaseguro = 0;
     const topeSoat = STATE.soatTopeLegal || 27500;
-    if (totalBruto <= topeSoat) {
+      if (totalBruto <= topeSoat) {
       coberturaSeguro = totalBruto;
       totalPaciente = 0.00;
       coberturaSoatAplicada = totalBruto;
@@ -5916,11 +5959,11 @@ function calcularLiquidacionSeguro() {
       motivoLiquidacion = `COBERTURA TOTAL POR SOAT ACTIVO (D.S. N° 024-2002-MTC). Total facturado S/. ${totalBruto.toFixed(2)} cubierto al 100% dentro del tope legal de 5 UIT (S/. 27,500.00). Saldo SOAT remanente disponible: S/. ${saldoSoatRestante.toFixed(2)}. Paciente paga: S/. 0.00.`;
     } else {
       coberturaSeguro = topeSoat;
-      totalPaciente = totalBruto - topeSoat;
+      totalPaciente = 0;
       coberturaSoatAplicada = topeSoat;
       saldoSoatRestante = 0.00;
-      alertaSector = `⚠️ Tope máximo legal de SOAT (5 UIT = S/. 27,500.00) agotado. Excedente de S/. ${totalPaciente.toFixed(2)} a cargo del paciente.`;
-      motivoLiquidacion = `TOPE SOAT AGOTADO (5 UIT = S/. 27,500.00). El SOAT cubrió el límite legal máximo de S/. 27,500.00. El excedente de S/. ${totalPaciente.toFixed(2)} pasa a responsabilidad del paciente o seguro complementario.`;
+      alertaSector = `⚠️ Tope SOAT/CAT de gastos médicos (5 UIT) alcanzado. Saldo excedente S/. ${totalPaciente.toFixed(2)} sujeto a coordinación de cobertura complementaria y liquidación documentada.`;
+      motivoLiquidacion = `TOPE SOAT/CAT DE GASTOS MÉDICOS ALCANZADO (5 UIT). Saldo de S/. ${totalPaciente.toFixed(2)} pendiente de determinar cobertura complementaria y responsabilidad; no se imputa automáticamente como deuda definitiva al paciente.`;
     }
 
     STATE.soatConsumido = coberturaSoatAplicada;
@@ -5933,6 +5976,9 @@ function calcularLiquidacionSeguro() {
       subtotalFarmacia,
       coberturaSeguro,
       coaseguroFarmacia: 0,
+      estadoLiquidacion: totalBruto > topeSoat ? "EXCEDENTE_SOAT_PENDIENTE_COORDINACION" : "SOAT_ACTIVO",
+      montoCubiertoSoat: coberturaSoatAplicada,
+      montoPendienteCoordinacion: Math.max(0, totalBruto - topeSoat),
       copagoUrgencia: 0,
       copagoFijo: 0,
       pctCoaseguro: 0,
@@ -6143,13 +6189,18 @@ function calcularLiquidacionSeguro() {
         copagoFijo = 80.00;
         pctCoaseguro = 0.20;
       }
-      const gastoProcYFar = subtotalFarmacia + subtotalServicios;
+      const subtotalAtencion = STATE.items_factura
+        .filter(i => /consulta|atenci[oó]n m[eé]dica|honorario/i.test(`${i.categoria || ""} ${i.nombre || i.servicio || ""}`))
+        .reduce((s, i) => s + (parseFloat(i.costo) || 0), 0);
+      const subtotalServiciosCoasegurables = Math.max(0, subtotalServicios - subtotalAtencion);
+      const gastoProcYFar = subtotalFarmacia + subtotalServiciosCoasegurables;
+      baseCoaseguro = gastoProcYFar;
       const coaseguroMonto = gastoProcYFar * pctCoaseguro;
       if (totalBruto === 0) {
         totalPaciente = 0.00;
         coberturaSeguro = 0.00;
       } else {
-        totalPaciente = copagoFijo + coaseguroMonto;
+        totalPaciente = Math.min(totalBruto, copagoFijo + coaseguroMonto);
         coberturaSeguro = Math.max(0, totalBruto - totalPaciente);
       }
 
@@ -6157,7 +6208,7 @@ function calcularLiquidacionSeguro() {
       condicionSusalud = `${priv.iafas_eps} · ${priv.plan_salud} (SITEDS: ${priv.siteds_codigo || 'AUTORIZADO'})`;
       coberturaSector = `Copago Fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% Coaseguro (${((1 - pctCoaseguro) * 100).toFixed(0)}% Cubierto por EPS)`;
       alertaSector = `Atención de Urgencia/Ambulatoria EPS: Paciente abona copago fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% coaseguro (S/. ${coaseguroMonto.toFixed(2)}). Saldo facturado a la EPS.`;
-      motivoLiquidacion = `ATENCIÓN DE URGENCIA / CONSULTORIO EPS (P-${STATE.prioridad || 'III'}). Póliza ${priv.iafas_eps} activa (${priv.plan_salud}). Se liquida copago fijo de S/. ${copagoFijo.toFixed(2)} más coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% sobre farmacia y procedimientos (S/. ${coaseguroMonto.toFixed(2)}). Total a cargo del paciente: S/. ${totalPaciente.toFixed(2)}. Saldo de S/. ${coberturaSeguro.toFixed(2)} derivado electrónicamente a la IAFAS EPS vía SITEDS.`;
+      motivoLiquidacion = `ATENCIÓN DE URGENCIA EPS (P-${STATE.prioridad || 'III'}). Póliza ${priv.iafas_eps} activa (${priv.plan_salud}). Se aplica copago de atención según plan: S/. ${copagoFijo.toFixed(2)}, más coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% sobre farmacia y servicios facturados (S/. ${coaseguroMonto.toFixed(2)}). Total paciente limitado al total facturado: S/. ${totalPaciente.toFixed(2)}; cobertura EPS: S/. ${coberturaSeguro.toFixed(2)}.`;
     }
   }
 
@@ -6174,6 +6225,7 @@ function calcularLiquidacionSeguro() {
     copagoUrgencia: copagoFijo,
     copagoFijo,
     pctCoaseguro: (pctCoaseguro * 100),
+    baseCoaseguro,
     totalPaciente,
     motivoLiquidacion,
     etiquetaRegimen,
@@ -6352,7 +6404,7 @@ function actualizarMedidorSoat(liq) {
   const fillMod3 = document.getElementById("soat_progress_fill");
   const factMod3 = document.getElementById("soat_facturado_lbl");
 
-  if (!STATE.esAccidenteTransito) {
+  if (!STATE.esAccidenteTransito && STATE.tipoOrigenEvento !== "soat") {
     if (container) container.style.display = "none";
     if (badgeNav) badgeNav.style.display = "none";
     if (miniBadge) miniBadge.style.display = "none";
@@ -6361,7 +6413,7 @@ function actualizarMedidorSoat(liq) {
   }
 
   // Si es Accidente de Tránsito SIN PLACA / EN FUGA:
-  if (STATE.soatVehiculoFuga) {
+  if (STATE.soatVehiculoFuga || STATE.soatOpcion === "sin_soat" || STATE.soatOpcion === "fuga" || STATE.soatOpcion === "sin_placa") {
     if (container) container.style.display = "none";
     if (badgeNav) badgeNav.style.display = "none";
     if (cardMod3) cardMod3.style.display = "none";
@@ -6370,7 +6422,7 @@ function actualizarMedidorSoat(liq) {
       miniBadge.style.background = "#fee2e2";
       miniBadge.style.color = "#991b1b";
       miniBadge.style.borderColor = "#fca5a5";
-      miniBadge.textContent = "🚨 SOAT: Sin Placa (Sin Seguro / Cargo Completo)";
+      miniBadge.textContent = STATE.soatOpcion === "sin_soat" ? "⚠️ SOAT/CAT no acreditado · atención sin demora" : "🚨 Vehículo no identificado / fuga · tramitar FONSAT";
     }
     return;
   }
@@ -6414,7 +6466,7 @@ function actualizarMedidorSoat(liq) {
 
 function generarFacturaPDF() {
   const validacion = validarSignosVitalesEnVivo();
-  if (!validacion.esValido) {
+  if (!validacion.esValido && !STATE.esAccidenteTransito) {
     alert("⛔ Facturación retenida: Se detectaron parámetros de signos vitales fuera de rango biológico en el triaje.");
     return;
   }
@@ -6466,7 +6518,7 @@ function generarFacturaPDF() {
         ${liq.esPublico ? `<div class="liq-row" style="color:#16a34a;"><span>Cobertura Seguro Estatal (100% de todo):</span><strong>- S/. ${liq.coberturaSeguro.toFixed(2)}</strong></div>` : ''}
         ${liq.esEpsPrivado ? `<div class="liq-row" style="color:#0284c7;"><span>Cobertura Plan EPS / Privado:</span><strong>- S/. ${liq.coberturaSeguro.toFixed(2)}</strong></div>` : ''}
         ${liq.copagoUrgencia > 0 ? `<div class="liq-row" style="color:#b45309;"><span>Cobro Consulta de Urgencia (P-III/IV/V):</span><strong>+ S/. ${liq.copagoUrgencia.toFixed(2)}</strong></div>` : ''}
-        ${liq.subtotalFarmacia > 0 && liq.esEpsPrivado ? `<div class="liq-row" style="color:#b45309;"><span>Coaseguro Farmacia EPS (10% de S/. ${liq.subtotalFarmacia.toFixed(2)}):</span><strong>+ S/. ${liq.coaseguroFarmacia.toFixed(2)}</strong></div>` : ''}
+        ${liq.baseCoaseguro > 0 && liq.esEpsPrivado ? `<div class="liq-row" style="color:#b45309;"><span>Coaseguro EPS (${liq.pctCoaseguro}% sobre farmacia y servicios, base S/. ${liq.baseCoaseguro.toFixed(2)}):</span><strong>+ S/. ${liq.coaseguroFarmacia.toFixed(2)}</strong></div>` : ''}
         <div class="liq-row total-final">
           <span>TOTAL A PAGAR POR EL PACIENTE:</span>
           <span>${liq.totalPaciente === 0 ? "S/. 0.00 (PAGO CERO)" : `S/. ${liq.totalPaciente.toFixed(2)}`}</span>
@@ -6480,7 +6532,7 @@ function generarFacturaPDF() {
       <br><br>
       <div style="display:flex;justify-content:space-between;margin-top:30px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;width:100%;">
-        <div>${typeof generarSelloFirmaDigitalHTML === "function" ? generarSelloFirmaDigitalHTML("CAJA") : ""}</div>
+        <div>${STATE.firmas?.caja?.fecha && typeof generarSelloFirmaDigitalHTML === "function" ? generarSelloFirmaDigitalHTML("CAJA", { nombre: STATE.firmas.caja.usuario, fechaHora: STATE.firmas.caja.fecha }) : "<div style='border:1px dashed #94a3b8;padding:8px;color:#475569;'>Firma de Caja pendiente de cierre.</div>"}</div>
         <div style="text-align:center;min-width:210px;"><div style="border-bottom:1.5px solid #000;height:40px;"></div><small style="font-weight:700;">Firma del Paciente / Responsable</small><br><span style="font-size:9px;color:#64748b;">(En blanco — firma física)</span></div>
       </div>
         <div style="text-align:center;">_______________________<br><small>Jefe de Caja y Facturación HIS</small></div>
@@ -6602,17 +6654,17 @@ function generarReporteAuditoria() {
                 <span>Consulta Urgencia (P-III/IV/V):</span>
                 <span>+ S/. ${liq.copagoUrgencia.toFixed(2)}</span>
               </div>` : ''}
-              ${liq.subtotalFarmacia > 0 && liq.esEpsPrivado ? `
+              ${liq.baseCoaseguro > 0 && liq.esEpsPrivado ? `
               <div style="display:flex;justify-content:space-between;margin-bottom:3px;color:#b45309;font-weight:700;">
-                <span>Coaseguro Farmacia EPS (10%):</span>
+                <span>Coaseguro EPS (${liq.pctCoaseguro}% sobre farmacia y servicios):</span>
                 <span>+ S/. ${liq.coaseguroFarmacia.toFixed(2)}</span>
               </div>` : ''}
               <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:1.05rem;font-weight:900;border-top:2px solid #0284c7;margin-top:6px;color:#0284c7;">
-                <span>TOTAL A CARGO DEL PACIENTE:</span>
+        <span>${["PENDIENTE_EVALUACION_FONSAT","SOAT_PENDIENTE_ACREDITACION","EXCEDENTE_SOAT_PENDIENTE_COORDINACION"].includes(liq.estadoLiquidacion) ? "SALDO PROVISIONAL · SOAT/CAT PENDIENTE:" : "TOTAL A CARGO DEL PACIENTE:"}</span>
                 <span style="color:${liq.totalPaciente === 0 ? '#16a34a' : '#0284c7'};">${liq.totalPaciente === 0 ? "S/. 0.00 (PAGO CERO)" : `S/. ${liq.totalPaciente.toFixed(2)}`}</span>
               </div>
               <div style="margin-top:6px;font-size:0.75rem;color:#475569;line-height:1.4;">
-                ℹ️ ${liq.motivoLiquidacion}
+        ℹ️ ${liq.motivoLiquidacion}${liq.estadoLiquidacion === "PENDIENTE_EVALUACION_FONSAT" ? ` Monto sujeto a evaluación, hasta S/. ${Number(liq.montoReclamableFonsat || 0).toFixed(2)}.` : ""}
               </div>
             </div>
           `
@@ -7908,6 +7960,10 @@ function seleccionarRegimenSeguroDirecto(tipo) {
 function cambiarOrigenEvento(tipo) {
   // Aceptar tanto 'soat' como 'transito' indistintamente
   const esTransito = (tipo === "soat" || tipo === "transito");
+  if (esTransito && STATE.tipoOrigenEvento !== "soat") {
+    STATE.entornoAntesAccidente = STATE.entornoOperativo || "publico";
+    STATE.tipoSeguroPaciente = STATE.tipoSeguroPaciente || STATE.tipoSeguro || "Pendiente de Acreditación";
+  }
   STATE.tipoOrigenEvento = esTransito ? "soat" : "comun";
   STATE.esAccidenteTransito = esTransito;
 
@@ -7922,6 +7978,7 @@ function cambiarOrigenEvento(tipo) {
   const pideWrapper = document.getElementById("seccion_pide_wrapper");
 
   if (esTransito) {
+    const entornoConservado = STATE.entornoAntesAccidente || STATE.entornoOperativo || "publico";
     // 1. Estilos visuales del selector en Módulo 1
     if (optSoat) {
       optSoat.classList.add("selected");
@@ -7952,10 +8009,10 @@ function cambiarOrigenEvento(tipo) {
     // 5. Configurar estado y candado médico legal (Art. 195 CPP)
     STATE.bloqueoSinadef = true;
 
-    // Inicializar con opción identificado por defecto si no estaba configurado
-    if (typeof cambiarOpcionSoat === "function") {
-      cambiarOpcionSoat(STATE.soatVehiculoFuga ? "fuga" : "identificado");
-    }
+    // Cambiar origen no debe asignar SOAT identificado ni sobreescribir el seguro del paciente.
+    STATE.entornoOperativo = entornoConservado;
+    STATE.esClinicaPrivada = entornoConservado === "privado";
+    STATE.tipoSeguro = STATE.tipoSeguroPaciente || STATE.tipoSeguro || "Pendiente de Acreditación";
 
     console.log("🚗 Modo Accidente de Tránsito SOAT activado correctamente.");
   } else {
@@ -7987,7 +8044,18 @@ function cambiarOrigenEvento(tipo) {
     // 5. Desactivar candado de accidente
     STATE.bloqueoSinadef = false;
     STATE.soatVehiculoFuga = false;
-    STATE.tipoSeguro = "Particular";
+    STATE.entornoOperativo = STATE.entornoAntesAccidente || "publico";
+    STATE.entornoAntesAccidente = null;
+    STATE.esClinicaPrivada = STATE.entornoOperativo === "privado";
+    STATE.tipoSeguro = STATE.tipoSeguroPaciente || "Particular";
+    STATE.tipoOrigenEvento = "comun";
+    STATE.soatOpcion = "sin_verificar";
+    STATE.eventoFugaTransversal = false;
+    STATE.tipoSeguroAccidente = null;
+    STATE.padronSusalud = null;
+    STATE.paseInmediatoAccidente = false;
+    STATE.requiereTriajeTrasEstabilizacion = false;
+    STATE.accidenteGravedadInicial = null;
 
     console.log("🩺 Modo Emergencia Común activado.");
   }
@@ -8208,17 +8276,22 @@ function consultarSoatApeseg() {
 function cambiarOpcionSoat(opcion) {
   STATE.soatOpcion = opcion;
   const esFuga = (opcion === "fuga" || opcion === "sin_placa");
+  const esSinSoat = opcion === "sin_soat";
   STATE.soatVehiculoFuga = esFuga;
   STATE.eventoFugaTransversal = esFuga;
   STATE.esAccidenteTransito = true;
   STATE.tipoOrigenEvento = "soat";
+  const tipoSeguroAccidente = opcion === "identificado" ? "SOAT/CAT — Accidente de tránsito" : opcion === "fuga" ? "Fondo SOAT/CAT pendiente — vehículo no identificado/fuga" : "SIN SOAT/CAT acreditado — responsable por determinar";
+  STATE.tipoSeguroAccidente = tipoSeguroAccidente;
+  STATE.tipoSeguro = STATE.tipoSeguroPaciente || "Pendiente de Acreditación";
+  // Conservar el sector que eligió Admisión; el siniestro SOAT es una regla
+  // financiera transversal y no debe convertir un caso privado en público.
+  STATE.entornoOperativo = STATE.entornoAntesAccidente || (STATE.entornoOperativo === "privado" ? "privado" : "publico");
+  STATE.esClinicaPrivada = STATE.entornoOperativo === "privado";
+  if (STATE.padronSusalud) STATE.padronSusalud.condicion_evento = esFuga ? "ACCIDENTE_TRANSITO_FUGA" : "ACCIDENTE_TRANSITO";
 
   const chkTopFuga = document.getElementById("chk_evento_fuga");
   if (chkTopFuga) chkTopFuga.checked = esFuga;
-
-  if (STATE.padronSusalud) {
-    STATE.padronSusalud.condicion_evento = esFuga ? "ACCIDENTE_TRANSITO_FUGA" : "NORMAL";
-  }
 
   const rbIdent = document.getElementById("rb_soat_identificado");
   const rbFuga = document.getElementById("rb_soat_fuga");
@@ -8228,22 +8301,30 @@ function cambiarOpcionSoat(opcion) {
   const navSoatBadge = document.getElementById("navSoatBadge");
   const miniSoatBadge = document.getElementById("mini_soat_badge");
 
-  if (esFuga) {
-    if (rbFuga) rbFuga.checked = true;
+  const radioSinSoat = document.querySelector('input[name="soat_opcion"][value="sin_soat"]');
+  if (radioSinSoat) radioSinSoat.checked = esSinSoat;
+
+  if (esFuga || esSinSoat) {
+    if (rbFuga) rbFuga.checked = esFuga;
     if (rbIdent) rbIdent.checked = false;
     if (boxCampos) boxCampos.style.display = "none";
     if (meterCard) meterCard.style.display = "none";
-    if (boxFugaAlert) boxFugaAlert.style.display = "block";
+    if (boxFugaAlert) {
+      boxFugaAlert.style.display = "block";
+      boxFugaAlert.innerHTML = esFuga
+        ? "Vehículo no identificado y fuga: brindar atención sin demora y orientar el trámite ante el Fondo de Compensación SOAT/CAT del MTC; la cobertura está sujeta a requisitos y evaluación."
+        : "Sin SOAT acreditado: brindar atención de emergencia sin condicionarla al seguro. Registrar el accidente y continuar la evaluación clínica; verificar luego el responsable y la cobertura aplicable.";
+    }
     if (navSoatBadge) navSoatBadge.style.display = "none";
     if (miniSoatBadge) {
       miniSoatBadge.style.display = "inline-flex";
       miniSoatBadge.style.background = "#fee2e2";
       miniSoatBadge.style.color = "#991b1b";
       miniSoatBadge.style.borderColor = "#fca5a5";
-      miniSoatBadge.textContent = "🚨 Chofer en Fuga: Sin SOAT (Cobro 100%)";
+      miniSoatBadge.textContent = esFuga ? "🚨 Vehículo no identificado / fuga · gestionar Fondo SOAT/CAT" : "⚠️ SOAT no acreditado · atención sin demora";
     }
 
-    STATE.soatPlaca = "NO IDENTIFICADO (SIN PLACA)";
+    STATE.soatPlaca = esFuga ? "NO IDENTIFICADO (SIN PLACA)" : "SIN SOAT ACREDITADO";
   } else {
     if (rbIdent) rbIdent.checked = true;
     if (rbFuga) rbFuga.checked = false;
@@ -8556,9 +8637,6 @@ function seleccionarCIE10(codigo, desc) {
 
   // Bloque 5: Ciclo de vida IPRESS - Sustento Médico con CIE-10 y hora de indicación médica
   const horaIndicacion = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-  STATE.estadoFua = "CON_SUSTENTO_MEDICO";
-  STATE.estadoEssi = "CON_SUSTENTO_MEDICO";
-  STATE.horaSustentoMedico = horaIndicacion;
   if (typeof actualizarIndicadoresFuaEssi === "function") actualizarIndicadoresFuaEssi();
 
   if (window.pacienteActivoId && Array.isArray(window.PACIENTES_COLA)) {
@@ -8567,9 +8645,6 @@ function seleccionarCIE10(codigo, desc) {
       px.cie10 = textoCompleto;
       px.cie10Codigo = codigo;
       px.cie10Descripcion = desc;
-      px.estadoFua = "CON_SUSTENTO_MEDICO";
-      px.estadoEssi = "CON_SUSTENTO_MEDICO";
-      px.horaSustentoMedico = horaIndicacion;
     }
   }
 
@@ -8625,7 +8700,7 @@ function administrarKardexItem(idx, nombre, costo, cat, btnEl) {
 function generarSelloFirmaDigitalHTML(tipoFirmante, datosExtra = {}) {
   const ahora = new Date();
   const fechaHoraStr = datosExtra.fechaHora || ahora.toLocaleString("es-PE", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const hashSimulado = datosExtra.hash || "SHA256:" + Array.from({length: 16}, () => Math.floor(Math.random()*16).toString(16)).join("") + "..." + Array.from({length: 8}, () => Math.floor(Math.random()*16).toString(16)).join("");
+    const hashSimulado = datosExtra.hash || "REGISTRO VISUAL · NO ES FIRMA DIGITAL CRIPTOGRÁFICA";
 
   const perfiles = {
     "MEDICO": {
@@ -8711,10 +8786,10 @@ function generarSelloFirmaDigitalHTML(tipoFirmante, datosExtra = {}) {
     <div class="sello-digital-box" style="border:1.5px solid ${p.borde}; background:${p.bg}; border-radius:8px; padding:10px 14px; display:inline-block; min-width:230px; font-family:sans-serif; text-align:left; box-shadow:0 1px 4px rgba(0,0,0,0.06); margin:4px 0;">
       <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(0,0,0,0.08); padding-bottom:4px; margin-bottom:6px;">
         <span style="font-size:0.68rem; font-weight:800; color:#15803d; display:flex; align-items:center; gap:4px;">
-          <span>🔏</span> <span>Firma Digital Ley N° 27269</span>
+          <span>🔏</span> <span>Registro visual de firma (no criptográfico)</span>
         </span>
         <span style="font-size:0.62rem; background:#dcfce7; color:#166534; padding:1px 6px; border-radius:4px; border:1px solid #86efac; font-weight:800;">
-          ✓ Certificado PKI Válido
+          ✓ Registro de firma de la aplicación
         </span>
       </div>
       <div style="margin:4px 0; text-align:center;">
@@ -8825,21 +8900,11 @@ function ejecutarEvaluacionMedicaProtocolizada() {
   // 3. Renderizar tarjeta de Evaluación Médica con Firma Digital
   if (boxActa) {
     boxActa.style.display = "block";
-    const firmaHtml = generarSelloFirmaDigitalHTML("MEDICO");
+    const firmaHtml = "<div style='border:1px dashed #94a3b8;padding:8px;color:#475569;'>Firma pendiente — se estampa al confirmar atención/alta médica.</div>";
     const medEvalNombre = STATE.medicoTratante || "Dr. Carlos Vega (Emergenciología)";
     STATE.medicoTratante = medEvalNombre;
-    STATE.firmas = STATE.firmas || {};
-    STATE.firmas.medico = { usuario: medEvalNombre, colegiatura: "CMP 54821", fecha: new Date().toISOString(), tipo: "FIRMA_ELECTRONICA_MEDICA" };
-    if (typeof pacienteActivoId !== "undefined" && pacienteActivoId && Array.isArray(PACIENTES_COLA)) {
-      const pxEval = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
-      if (pxEval) {
-        pxEval.medicoTratante = medEvalNombre;
-        pxEval.firmas = pxEval.firmas || {};
-        pxEval.firmas.medico = STATE.firmas.medico;
-      }
-    }
-    if (typeof guardarColaCompartidaEnStorage === "function") guardarColaCompartidaEnStorage();
-    if (typeof registrarLogAuditoria === "function") registrarLogAuditoria("Módulo 4", "FIRMA_ELECTRONICA_MEDICA", `Firma electrónica médica estampada por ${medEvalNombre} (CMP 54821) · CIE-10: ${cie10}`);
+    STATE.medicoTratante = medEvalNombre;
+    STATE.evaluacionMedicaPreparada = { cie10, destino: destinoSugerido, fecha: new Date().toISOString() };
     const destinoNombre = (destinoSugerido === "quirofano_uci") ? "Quirófano SOP / UCI (Cama Crítica)" : (destinoSugerido === "observacion") ? "Sala de Observación de Emergencia (Cama Hospitalaria)" : "Alta Médica Directa con Receta Domiciliaria";
 
     window._ultimoDocumentoClinicoImprimible = {
@@ -8896,7 +8961,7 @@ function ejecutarEvaluacionMedicaProtocolizada() {
 
         <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; border-top:1px dashed #cbd5e1; padding-top:10px;">
           <div>
-            <span style="font-size:0.70rem; font-weight:700; color:#64748b; display:block; margin-bottom:4px;">Suscripción Digital del Acto Médico (Ley N° 27269):</span>
+          <span style="font-size:0.70rem; font-weight:700; color:#64748b; display:block; margin-bottom:4px;">Registro visual de firma (sin firma digital criptográfica):</span>
             ${firmaHtml}
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -8966,21 +9031,10 @@ function ejecutarJuntaMedicaNTS139() {
 
   if (boxActa) {
     boxActa.style.display = "block";
-    const firma1 = generarSelloFirmaDigitalHTML("JUNTA_1");
-    STATE.firmas = STATE.firmas || {};
-    STATE.firmas.medico = { usuario: "Junta Médica Colegiada (3/3)", colegiatura: "CMP 54821 / RNE", fecha: new Date().toISOString(), tipo: "FIRMA_ELECTRONICA_JUNTA_MEDICA" };
-    if (typeof pacienteActivoId !== "undefined" && pacienteActivoId && Array.isArray(PACIENTES_COLA)) {
-      const pxJ = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
-      if (pxJ) {
-        pxJ.medicoTratante = STATE.firmas.medico.usuario;
-        pxJ.firmas = pxJ.firmas || {};
-        pxJ.firmas.medico = STATE.firmas.medico;
-      }
-    }
-    if (typeof guardarColaCompartidaEnStorage === "function") guardarColaCompartidaEnStorage();
-    if (typeof registrarLogAuditoria === "function") registrarLogAuditoria("Módulo 4", "FIRMA_ELECTRONICA_MEDICA", `Firma electrónica de Junta Médica (3/3) estampada · CIE-10: ${cie10Junta}`);
-    const firma2 = generarSelloFirmaDigitalHTML("JUNTA_2");
-    const firma3 = generarSelloFirmaDigitalHTML("JUNTA_3");
+    const firma1 = "<div style='border:1px dashed #94a3b8;padding:8px;color:#475569;'>Firmas de junta pendientes — se estampan al confirmar la atención.</div>";
+    const firma2 = "";
+    const firma3 = "";
+    STATE.juntaMedicaPreparada = { cie10: cie10Junta, fecha: new Date().toISOString() };
 
     window._ultimoDocumentoClinicoImprimible = {
       tipo: "JUNTA_MEDICA",
@@ -8996,7 +9050,7 @@ function ejecutarJuntaMedicaNTS139() {
       ordenes: [
         "Resolución unánime colegiada (3/3 especialistas)",
         `Asignación inmediata de recurso crítico: ${camaJunta}`,
-        "Registro inmutable en Historia Clínica y Bitácora SUSALUD"
+        "Borrador de acta; pendiente de confirmación clínica y registro institucional"
       ],
       firmasHtml: `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">${firma1}${firma2}${firma3}</div>`
     };
@@ -9024,8 +9078,8 @@ function ejecutarJuntaMedicaNTS139() {
 
         <div style="margin-bottom:12px;">
           <div style="font-size:0.74rem; font-weight:800; color:#312e81; text-transform:uppercase; margin-bottom:8px; display:flex; justify-content:space-between;">
-            <span>Miembros Colegiados Firmantes (Ley N° 27269 de Firmas y Certificados Digitales):</span>
-            <span style="color:#16a34a; font-weight:800;">✓ 3 Firmas Digitales PKI Validadas</span>
+            <span>Firmantes previstos para el acta (aún sin firma ni validación PKI):</span>
+            <span style="color:#16a34a; font-weight:800;">Registros visuales · sin validación PKI</span>
           </div>
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px;">
             ${firma1}
@@ -9036,7 +9090,7 @@ function ejecutarJuntaMedicaNTS139() {
 
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:8px 12px;">
           <span style="font-size:0.72rem; color:#166534; font-weight:700;">
-            ⚖️ Acta inmutable registrada en bitácora audit_logs de SUSALUD y archivada en la Historia Clínica digital.
+            ⚖️ Borrador de acta preparado; el sistema local no registra directamente en audit_logs de SUSALUD ni garantiza inmutabilidad.
           </span>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button type="button" class="btn-full-secondary" style="background:#eef2ff; color:#3730a3; border:1.5px solid #6366f1; padding:8px 14px; font-size:0.80rem; font-weight:800;" onclick="imprimirActaEvaluacionOJunta()">
@@ -10459,7 +10513,7 @@ function imprimirEpicrisisReceta() {
       <h2>HOSPITAL REGIONAL DOCENTE UPP — SERVICIO DE EMERGENCIA</h2>
       <h3>EPICRISIS MÉDICA DE ALTA (NTS N° 139-MINSA/2018/DGAIN)</h3>
       <div class="box">
-        <strong>Paciente:</strong> ${nombre} | <strong>HC:</strong> ${STATE.historiaClinica} | <strong>DNI:</strong> ${STATE.identificador}<br>
+        <strong>Paciente:</strong> ${nombre} | <strong>HC:</strong> ${STATE.historiaClinica} | <strong>DNI:</strong> ${String(STATE.numDni || STATE.identificador || "").match(/\d{8}/)?.[0] || "—"}<br>
         <strong>Fecha/Hora de Egreso:</strong> ${fecha} | <strong>Médico:</strong> ${STATE.medicoTratante}<br>
         <strong>Diagnóstico de Egreso (CIE-10):</strong> ${cie}
       </div>
@@ -10476,8 +10530,8 @@ function imprimirEpicrisisReceta() {
       </div>
       <div style="margin-top:30px;display:flex;justify-content:space-between;align-items:flex-end;">
         <div>
-          <span style="font-size:11px;font-weight:bold;color:#475569;display:block;margin-bottom:4px;">Firma Digital del Médico Tratante (Ley N° 27269):</span>
-          ${typeof generarSelloFirmaDigitalHTML === "function" ? generarSelloFirmaDigitalHTML("MEDICO", { fechaHora: fecha }) : ""}
+          <span style="font-size:11px;font-weight:bold;color:#475569;display:block;margin-bottom:4px;">Registro de firma del Médico Tratante:</span>
+          ${STATE.firmas?.medico?.fecha && typeof generarSelloFirmaDigitalHTML === "function" ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: STATE.firmas.medico.usuario, fechaHora: STATE.firmas.medico.fecha }) : "<div>Firma pendiente hasta confirmar atención y alta clínica.</div>"}
         </div>
         <div style="text-align:center;width:240px;">
           <div style="border-bottom:1.5px solid #000;height:44px;"></div>
@@ -10504,7 +10558,7 @@ function imprimirFormatoRefcon() {
       <h3 style="margin:0 0 10px 0;">HOJA DE REFERENCIA DE EMERGENCIA — MINSA / SUSALUD</h3>
       <table>
         <tr><th>Establecimiento Origen:</th><td>Hospital Regional Docente UPP (Nivel III-1)</td><th>Fecha/Hora:</th><td>${fecha}</td></tr>
-        <tr><th>Paciente:</th><td>${nombre}</td><th>DNI / HC:</th><td>${STATE.identificador} / ${STATE.historiaClinica}</td></tr>
+        <tr><th>Paciente:</th><td>${nombre}</td><th>DNI / HC:</th><td>${String(STATE.numDni || STATE.identificador || "").match(/\d{8}/)?.[0] || "—"} / ${STATE.historiaClinica}</td></tr>
         <tr><th>Prioridad Clínica:</th><td>Prioridad ${STATE.prioridad}</td><th>Tipo Ambulancia:</th><td>Tipo II / III (Soporte Vital Avanzado)</td></tr>
         <tr><th>Diagnóstico CIE-10:</th><td colspan="3">${STATE.cie10Codigo} - ${STATE.cie10Descripcion}</td></tr>
         <tr><th>Motivo de Referencia:</th><td colspan="3">Falta de capacidad resolutiva quirúrgica / cupo en UCI especializada.</td></tr>
@@ -10530,7 +10584,7 @@ function imprimirActaAltaVoluntaria() {
     </head><body>
       <h2>ACTA DE RETIRO VOLUNTARIO / ALTA VOLUNTARIA</h2>
       <h3>Amparo Legal: Artículo 4° de la Ley N° 26842 (Ley General de Salud)</h3>
-      <p>En la ciudad de Lima, con fecha y hora <strong>${fecha}</strong>, en el Servicio de Emergencia del Hospital Regional Docente UPP, el/la paciente <strong>${nombre}</strong> identificado con DNI/Documento <strong>${STATE.identificador}</strong>, (o su representante legal debidamente acreditado), manifiesta de forma libre, consciente y voluntaria su decisión irrevocable de <strong>RETIRARSE DEL ESTABLECIMIENTO DE SALUD</strong> en contra de la indicación médica expresa.</p>
+      <p>En la ciudad de Lima, con fecha y hora <strong>${fecha}</strong>, en el Servicio de Emergencia del Hospital Regional Docente UPP, el/la paciente <strong>${nombre}</strong> identificado con DNI/Documento <strong>${String(STATE.numDni || STATE.identificador || "").match(/\d{8}/)?.[0] || "—"}</strong>, (o su representante legal debidamente acreditado), manifiesta de forma libre, consciente y voluntaria su decisión irrevocable de <strong>RETIRARSE DEL ESTABLECIMIENTO DE SALUD</strong> en contra de la indicación médica expresa.</p>
       <p><strong>Constancia Médica:</strong> Se deja constancia de que el médico tratante ha informado detalladamente al paciente y sus familiares respecto a su estado clínico, el diagnóstico presuntivo (${STATE.cie10Codigo} - ${STATE.cie10Descripcion}) y los riesgos graves de complicaciones, secuelas permanentes o riesgo vital derivados de la interrupción del tratamiento hospitalario.</p>
       <p>El firmante exonera de toda responsabilidad penal, civil o administrativa al cuerpo médico, asistencial y directivo del establecimiento de salud.</p>
       <div style="margin-top:50px;display:flex;justify-content:space-between;text-align:center;">
@@ -10556,7 +10610,7 @@ function imprimirCertificadoSinadef() {
     </head><body>
       <h2>SISTEMA INFORMÁTICO NACIONAL DE DEFUNCIONES (SINADEF)</h2>
       <h3>CERTIFICADO DE DEFUNCIÓN GENERAL — DIRECTIVA N° 216-MINSA</h3>
-      <p>Fallecido: ${STATE.nombreReniec || STATE.identificador} | DNI: ${STATE.identificador}</p>
+      <p>Fallecido: ${STATE.nombreReniec || STATE.identificador} | DNI: ${String(STATE.numDni || STATE.identificador || "").match(/\d{8}/)?.[0] || "—"}</p>
       <p>Diagnóstico de Causa Básica: ${STATE.cie10Codigo} - ${STATE.cie10Descripcion}</p>
       <p>Fallecimiento en sala hospitalaria tras más de 24 horas de internamiento continuo por causa médica natural debidamente documentada.</p>
       <div style="margin-top:40px;border-top:1px solid #000;width:250px;padding-top:4px;">Médico Certificante (CMP / RNE)</div>
@@ -10608,7 +10662,7 @@ function imprimirFacturaOficial() {
   );
   const nombre = esNNDoc
     ? "No se sabe su nombre (Paciente No Identificado - NN)"
-    : (STATE.nombreReniec || STATE.identificador || "PACIENTE");
+    : (STATE.nombreReniec || String(STATE.identificador || "PACIENTE").replace(/\s*\(DNI\s*\d{8}\)\s*/i, "").trim());
   const seguroDoc = esNNDoc
     ? "No se sabe qué seguro tiene (Sin seguro acreditado)"
     : (STATE.tipoSeguro ||
@@ -10617,6 +10671,12 @@ function imprimirFacturaOficial() {
          (STATE.padronSalud?.publico?.tiene_seguro ? `${STATE.padronSalud.publico.entidad} (${STATE.padronSalud.publico.regimen || "Público"})` :
           (liq.etiquetaRegimen || "Particular / Sin seguro")))));
 
+  const numeroDocumento = String(STATE.numDni || STATE.identificador || "").match(/\d{8}/)?.[0] || "—";
+  const esLiquidacionPrivada = Boolean(liq.esEpsPrivado && STATE.entornoOperativo === "privado" &&
+    (STATE.padronSusalud?.privado?.estado_poliza === "ACTIVA" || /eps|pac[ií]fico|r[ií]mac|mapfre|sanitas/i.test(String(STATE.tipoSeguro || ""))));
+  const tituloLiquidacion = esLiquidacionPrivada
+    ? "FICHA DE ATENCIÓN Y LIQUIDACIÓN EPS — SOPORTE INTERNO"
+    : "COMPROBANTE DE LIQUIDACIÓN DE ATENCIÓN";
   const ratioCobDoc = liq.totalBruto > 0 ? (liq.coberturaSeguro / liq.totalBruto) : 0;
   let itemsHtml = "";
   STATE.items_factura.forEach((item, idx) => {
@@ -10636,13 +10696,13 @@ function imprimirFacturaOficial() {
   });
 
   w.document.write(`
-    <html><head><title>Liquidación Hospitalaria Oficial - Ley N° 29414</title>
+    <html><head><title>${tituloLiquidacion}</title>
     <style>body{font-family:Arial,sans-serif;padding:30px;font-size:12px;line-height:1.4;}table{width:100%;border-collapse:collapse;margin-top:12px;}th{background:#f1f5f9;border:1px solid #cbd5e1;padding:8px 10px;text-align:left;}</style>
     </head><body>
-      <h2 style="margin:0;color:#0f172a;">HOSPITAL REGIONAL DOCENTE UPP — COMPROBANTE DE LIQUIDACIÓN DE ATENCIÓN</h2>
+      <h2 style="margin:0;color:#0f172a;">HOSPITAL REGIONAL DOCENTE UPP — ${tituloLiquidacion}</h2>
       <h4 style="margin:0 0 10px 0;color:#475569;">AUDITORÍA FINANCIERA Y TRANSPARENCIA ASISTENCIAL (LEY N° 29414 - SUSALUD)</h4>
       <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:10px;border-radius:6px;">
-        <strong>Paciente:</strong> ${nombre} | <strong>Identificador:</strong> ${STATE.identificador || (esNNDoc ? "NN / Indocumentado" : "—")} | <strong>HC:</strong> ${STATE.historiaClinica || "—"}<br>
+        <strong>Paciente:</strong> ${nombre} | <strong>Número de documento (DNI):</strong> ${numeroDocumento} | <strong>HC:</strong> ${STATE.historiaClinica || "—"}<br>
         <strong>Seguro del Paciente:</strong> ${seguroDoc} | <strong>Régimen Prestacional:</strong> ${liq.etiquetaRegimen}<br>
         <strong>Diagnóstico Principal (CIE-10):</strong> ${STATE.cie10 || (STATE.cie10Codigo ? `${STATE.cie10Codigo} — ${STATE.cie10Descripcion || ""}` : "Por determinar")} | <strong>Fecha de Liquidación:</strong> ${fecha}<br>
         <strong>Lugar de Prestación:</strong> ${liq.lugarAtencion}
@@ -10673,8 +10733,9 @@ function imprimirFacturaOficial() {
       <div style="margin-top:14px;background:#f8fafc;border:1px solid #cbd5e1;padding:12px;border-radius:6px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Total Bruto Facturado:</span><strong>S/. ${liq.totalBruto.toFixed(2)}</strong></div>
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#15803d;"><span>Cobertura Asumida por Aseguradora:</span><strong>- S/. ${liq.coberturaSeguro.toFixed(2)}</strong></div>
-        <div style="display:flex;justify-content:space-between;border-top:2px solid #0f172a;padding-top:6px;font-size:15px;color:#0f172a;"><span>TOTAL NETO A PAGAR PACIENTE:</span><strong>S/. ${liq.totalPaciente.toFixed(2)}</strong></div>
-        <div style="font-size:11px;color:#475569;margin-top:8px;"><strong>Fundamento Auditoría:</strong> ${liq.motivoLiquidacion}</div>
+        <div style="display:flex;justify-content:space-between;border-top:2px solid #0f172a;padding-top:6px;font-size:15px;color:#0f172a;"><span>${["PENDIENTE_EVALUACION_FONSAT","SOAT_PENDIENTE_ACREDITACION","EXCEDENTE_SOAT_PENDIENTE_COORDINACION"].includes(liq.estadoLiquidacion) ? "SALDO PROVISIONAL · SOAT/CAT PENDIENTE:" : "TOTAL NETO A PAGAR PACIENTE:"}</span><strong>S/. ${liq.totalPaciente.toFixed(2)}</strong></div>
+        <div style="font-size:11px;color:#475569;margin-top:8px;"><strong>Fundamento:</strong> ${liq.motivoLiquidacion}${liq.estadoLiquidacion === "PENDIENTE_EVALUACION_FONSAT" ? ` Monto sujeto a evaluación, hasta S/. ${Number(liq.montoReclamableFonsat || 0).toFixed(2)}.` : ""}</div>
+        ${esLiquidacionPrivada ? '<div style="font-size:10px;color:#475569;margin-top:8px;"><strong>Nota:</strong> Documento de soporte interno. No reemplaza la autorización, formato de reclamación ni comprobante tributario que exija la IAFAS/EPS o el contrato.</div>' : ''}
       </div>
       <div style="margin-top:50px;display:flex;justify-content:space-between;text-align:center;">
         <div style="border-top:1px solid #000;width:220px;padding-top:4px;">Cuentas Corrientes y Facturación</div>
@@ -11115,7 +11176,7 @@ function cargarCasoPreset(prioNum) {
     if (typeof cambiarOrigenEvento === "function") cambiarOrigenEvento("comun");
   }
 
-  // Ejecutar evaluación de triaje completa (ESI v5 + NEWS2 + MINSA)
+  // Ejecutar reglas locales de prioridad con discriminadores y variables fisiológicas
   evaluarPacienteCompleto();
 
   // 3. MÓDULO 2: DATOS FILIATORIOS Y RENIEC COMPLETOS
@@ -11441,6 +11502,22 @@ function guardarEstadoPacienteActivo() {
   }
   p.dni = STATE.numDni || p.dni || "";
   p.motivo = STATE.motivoConsulta || p.motivo || "";
+  p.nombreReniec = STATE.nombreReniec || p.nombreReniec || null;
+  p.historiaClinica = STATE.historiaClinica || p.historiaClinica || null;
+  p.numDni = STATE.numDni || p.numDni || p.dni || null;
+  p.esAccidenteTransito = Boolean(STATE.esAccidenteTransito || STATE.tipoOrigenEvento === "soat");
+  p.tipoOrigenEvento = p.esAccidenteTransito ? "soat" : "comun";
+  p.soatOpcion = STATE.soatOpcion || p.soatOpcion || "sin_verificar";
+  p.soatVehiculoFuga = Boolean(STATE.soatVehiculoFuga || STATE.eventoFugaTransversal || p.soatVehiculoFuga);
+  p.eventoFugaTransversal = p.soatVehiculoFuga;
+  p.entornoOperativo = STATE.entornoOperativo || p.entornoOperativo || "publico";
+  p.tipoSeguro = STATE.tipoSeguro || p.tipoSeguro || "Pendiente de Acreditación";
+  p.tipoSeguroPaciente = STATE.tipoSeguroPaciente || p.tipoSeguroPaciente || p.tipoSeguro;
+  p.tipoSeguroAccidente = STATE.tipoSeguroAccidente || p.tipoSeguroAccidente || null;
+  p.padronSusalud = STATE.padronSusalud ? JSON.parse(JSON.stringify(STATE.padronSusalud)) : (p.padronSusalud || null);
+  p.paseInmediatoAccidente = Boolean(STATE.paseInmediatoAccidente || p.paseInmediatoAccidente);
+  p.requiereTriajeTrasEstabilizacion = Boolean(STATE.requiereTriajeTrasEstabilizacion || p.requiereTriajeTrasEstabilizacion);
+  p.accidenteGravedadInicial = STATE.accidenteGravedadInicial || p.accidenteGravedadInicial || null;
   p.camaId = STATE.camaAsignadaId;
   p.camaNombre = STATE.camaAsignada;
   p.medico = STATE.medicoTratante || p.medico || "Por asignar";
@@ -11697,6 +11774,25 @@ function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
     if (selMedResponsable && STATE.medicoTratante) selMedResponsable.value = STATE.medicoTratante;
   }
 
+  // Las propiedades del expediente prevalecen sobre cualquier estado previo
+  // del formulario, evitando heredar SOAT/seguro/sector entre pacientes.
+  STATE.esAccidenteTransito = Boolean(nuevoPx.esAccidenteTransito || nuevoPx.tipoOrigenEvento === "soat");
+  STATE.tipoOrigenEvento = STATE.esAccidenteTransito ? "soat" : "comun";
+  STATE.soatOpcion = STATE.esAccidenteTransito ? (nuevoPx.soatOpcion || "sin_verificar") : "sin_verificar";
+  STATE.soatVehiculoFuga = STATE.esAccidenteTransito && Boolean(nuevoPx.soatVehiculoFuga || nuevoPx.soatOpcion === "fuga");
+  STATE.eventoFugaTransversal = STATE.soatVehiculoFuga;
+  STATE.entornoOperativo = nuevoPx.entornoOperativo || STATE.entornoOperativo || "publico";
+  STATE.esClinicaPrivada = STATE.entornoOperativo === "privado";
+  STATE.tipoSeguroPaciente = nuevoPx.tipoSeguroPaciente || nuevoPx.tipoSeguro || STATE.tipoSeguroPaciente || "Pendiente de Acreditación";
+  STATE.tipoSeguro = nuevoPx.tipoSeguro || STATE.tipoSeguroPaciente;
+  STATE.tipoSeguroAccidente = nuevoPx.tipoSeguroAccidente || null;
+  STATE.seguroPrevio = nuevoPx.seguroPrevio || nuevoPx.tipoSeguroPaciente || null;
+  STATE.padronSusalud = nuevoPx.padronSusalud || (STATE.esAccidenteTransito ? STATE.padronSusalud : null);
+  STATE.paseInmediatoAccidente = Boolean(nuevoPx.paseInmediatoAccidente);
+  STATE.requiereTriajeTrasEstabilizacion = Boolean(nuevoPx.requiereTriajeTrasEstabilizacion);
+  STATE.accidenteGravedadInicial = nuevoPx.accidenteGravedadInicial || null;
+  if (STATE.paseInmediatoAccidente && !nuevoPx.prioridad) STATE.prioridad = null;
+
   if (nuevoPx.formSnapshot) {
     aplicarFormulario(nuevoPx.formSnapshot);
   } else {
@@ -11844,6 +11940,10 @@ function limpiarFormularioCompletoState() {
   STATE.ordenesLaboratorio = [];
   STATE.ordenesImagenes = [];
   STATE.tipoSeguro = "Pendiente de Acreditación";
+  STATE.entornoAntesAccidente = null;
+  STATE.accidenteGravedadInicial = null;
+  STATE.paseInmediatoAccidente = false;
+  STATE.requiereTriajeTrasEstabilizacion = false;
   STATE.esAccidenteTransito = false;
   STATE.tipoOrigenEvento = "comun";
   STATE.soatVehiculoFuga = false;
@@ -12599,16 +12699,30 @@ function registrarPacienteEnEspera(modalidadElegida = null) {
   STATE.prioridad = null; STATE.colorPrioridad = null; STATE.alertaPrioridad1 = false;
   STATE.ingresoDirectoCritico = false; STATE.panicoShockTrauma = false; STATE.claveObstetrica = "ninguna";
   cambiarPacienteActivo(nuevoPx.id, true);
+  Object.assign(STATE, {
+    esAccidenteTransito: false, tipoOrigenEvento: "comun", soatOpcion: "sin_verificar",
+    soatVehiculoFuga: false, eventoFugaTransversal: false, tipoSeguroAccidente: null,
+    padronSusalud: null, paseInmediatoAccidente: false,
+    requiereTriajeTrasEstabilizacion: false, accidenteGravedadInicial: null,
+    estadoFlujo: "PENDIENTE_TRIAJE"
+  });
+  Object.assign(nuevoPx, { esAccidenteTransito: false, tipoOrigenEvento: "comun", soatOpcion: "sin_verificar" });
+  nuevoPx.entornoOperativo = STATE.entornoOperativo || "publico";
+  nuevoPx.tipoSeguro = STATE.tipoSeguro || "Pendiente de Acreditación";
+  nuevoPx.tipoSeguroPaciente = STATE.tipoSeguroPaciente || nuevoPx.tipoSeguro;
+  nuevoPx.stateSnapshot = JSON.parse(JSON.stringify(STATE));
   // Paciente en espera NO evaluado: sin prioridad hasta que enfermería complete el triaje
-  STATE.prioridad = null; STATE.colorPrioridad = null; STATE.alertaPrioridad1 = false;
+  STATE.prioridad = null;
+  STATE.colorPrioridad = null; STATE.alertaPrioridad1 = false;
   STATE.ingresoDirectoCritico = false; STATE.panicoShockTrauma = false;
   STATE.modalidadIngreso = nuevoPx.modalidad;
   if (typeof selectModalidad === "function") selectModalidad(nuevoPx.modalidad);
-  nuevoPx.prioridad = null; nuevoPx.alertaPrioridad1 = false;
+  nuevoPx.prioridad = null;
+  nuevoPx.alertaPrioridad1 = false;
   limpiarPrioridadUI();
 
   if (typeof window.refrescarTrackBoardYBandeja === "function") {
-    window.refrescarTrackBoardYBandeja({ idExpediente: nuevoPx.id, estadoFlujo: "PENDIENTE_TRIAJE" });
+    window.refrescarTrackBoardYBandeja({ idExpediente: nuevoPx.id, estadoFlujo: nuevoPx.estadoFlujo || "PENDIENTE_TRIAJE" });
   } else {
     renderizarTableroColaPacientes();
     if (typeof window.renderizarTrackBoardLista === "function") {
@@ -12622,6 +12736,128 @@ function registrarPacienteEnEspera(modalidadElegida = null) {
   mostrarToastCola(`👤 <strong>Llegada Registrada:</strong> ${nombrePx} (${nuevoPx.identificador}) ingresado a sala de espera.`);
 }
 window.registrarPacienteEnEspera = registrarPacienteEnEspera;
+
+function abrirModalAccidenteTransitoRapido() {
+  const modal = document.getElementById("modalAccidenteRapido");
+  if (modal) modal.style.display = "flex";
+}
+function cerrarModalAccidenteTransitoRapido() {
+  const modal = document.getElementById("modalAccidenteRapido");
+  if (modal) modal.style.display = "none";
+}
+function confirmarAccidenteTransitoRapido() {
+  const soat = document.querySelector('input[name="acc_soat"]:checked')?.value;
+  const gravedad = document.querySelector('input[name="acc_gravedad"]:checked')?.value;
+  if (!soat || !gravedad) {
+    mostrarToastCola("Seleccione si cuenta con SOAT/CAT y el destino inicial por gravedad.");
+    return;
+  }
+  cerrarModalAccidenteTransitoRapido();
+  const entornoElegido = STATE.entornoOperativo || "publico";
+  const seguroPaciente = STATE.tipoSeguro;
+  const padronPaciente = STATE.padronSusalud ? JSON.parse(JSON.stringify(STATE.padronSusalud)) : null;
+  cambiarOrigenEvento("soat");
+  STATE.entornoAntesAccidente = entornoElegido;
+  cambiarOpcionSoat(soat);
+  STATE.accidenteGravedadInicial = gravedad;
+  STATE.paseInmediatoAccidente = gravedad === "grave";
+  STATE.requiereTriajeTrasEstabilizacion = gravedad === "grave";
+  registrarPacienteEnEspera("Accidente de tránsito");
+  const px = Array.isArray(PACIENTES_COLA) ? PACIENTES_COLA.find(p => p.id === pacienteActivoId) : null;
+  if (px) {
+    px.esAccidenteTransito = true;
+    px.entornoOperativo = entornoElegido;
+    px.soatOpcion = soat;
+    px.soatVehiculoFuga = soat === "fuga";
+    px.eventoFugaTransversal = soat === "fuga";
+    px.tipoOrigenEvento = "soat";
+    px.seguroPrevio = seguroPaciente;
+    px.tipoSeguro = seguroPaciente || "Pendiente de Acreditación";
+    px.tipoSeguroPaciente = seguroPaciente;
+    px.tipoSeguroAccidente = STATE.tipoSeguroAccidente;
+    px.padronSusalud = padronPaciente;
+    px.accidenteGravedadInicial = gravedad;
+    px.motivo = "Accidente de tránsito";
+    if (gravedad === "grave") {
+      // Pase a evaluación inmediata no equivale por sí solo a prioridad P-I.
+      px.paseInmediatoAccidente = true;
+      px.requiereTriajeTrasEstabilizacion = true;
+      px.ingresoDirectoCritico = false;
+      px.estadoFlujo = "EN_ATENCION_MEDICA";
+      px.estadoAtencion = "Pase inmediato a evaluación clínica; prioridad pendiente de valoración profesional";
+      px.estadoFlujo = "EN_ATENCION_MEDICA";
+      px.prioridad = null;
+      STATE.ingresoDirectoCritico = false;
+      STATE.paseInmediatoAccidente = true;
+      STATE.requiereTriajeTrasEstabilizacion = true;
+      STATE.estadoFlujo = "EN_ATENCION_MEDICA";
+      STATE.estadoAtencion = px.estadoAtencion;
+    } else {
+      px.prioridad = null;
+      px.estadoFlujo = "PENDIENTE_TRIAJE";
+      px.estadoAtencion = "En espera de triaje inmediato";
+      STATE.prioridad = null;
+      STATE.ingresoDirectoCritico = false;
+      STATE.estadoFlujo = "PENDIENTE_TRIAJE";
+      STATE.estadoAtencion = px.estadoAtencion;
+      STATE.paseInmediatoAccidente = false;
+      STATE.requiereTriajeTrasEstabilizacion = false;
+    }
+    STATE.motivoConsulta = "Accidente de tránsito";
+    STATE.tipoOrigenEvento = "soat";
+    STATE.esAccidenteTransito = true;
+    STATE.soatOpcion = soat;
+    STATE.entornoAntesAccidente = entornoElegido;
+    STATE.entornoOperativo = entornoElegido;
+    STATE.esClinicaPrivada = entornoElegido === "privado";
+    STATE.tipoSeguro = seguroPaciente || "Pendiente de Acreditación";
+    px.entornoOperativo = entornoElegido;
+    STATE.tipoSeguroPaciente = seguroPaciente;
+    STATE.padronSusalud = padronPaciente;
+    STATE.paseInmediatoAccidente = gravedad === "grave";
+    STATE.requiereTriajeTrasEstabilizacion = gravedad === "grave";
+    STATE.accidenteGravedadInicial = gravedad;
+    px.padronSusalud = padronPaciente;
+    if (px.padronSusalud) px.padronSusalud.condicion_evento = soat === "fuga" ? "ACCIDENTE_TRANSITO_FUGA" : "ACCIDENTE_TRANSITO";
+    STATE.padronSusalud = padronPaciente;
+    if (STATE.padronSusalud) STATE.padronSusalud.condicion_evento = soat === "fuga" ? "ACCIDENTE_TRANSITO_FUGA" : "ACCIDENTE_TRANSITO";
+    px.stateSnapshot = JSON.parse(JSON.stringify(STATE));
+    storeExpedienteAccidente(px, STATE);
+    try {
+      localStorage.setItem("UPP_PACIENTES_COLA_SHARED", JSON.stringify(PACIENTES_COLA));
+      const raw = localStorage.getItem("upp_expedientes_v1");
+      const store = raw ? JSON.parse(raw) : {};
+      if (store[px.id]) { store[px.id].paciente = JSON.parse(JSON.stringify(px)); store[px.id].state = JSON.parse(JSON.stringify(STATE)); }
+      localStorage.setItem("upp_expedientes_v1", JSON.stringify(store));
+    } catch(e) {}
+  }
+  const sec = document.getElementById("sec_mod1");
+  if (sec) sec.scrollIntoView({behavior:"smooth",block:"start"});
+  if (typeof actualizarFactura === "function") actualizarFactura();
+  if (typeof registrarLogAuditoria === "function") registrarLogAuditoria("Módulo 1", "REGISTRAR_ACCIDENTE_TRANSITO", `SOAT/CAT: ${soat}; ruta inicial: ${gravedad === "grave" ? "evaluación inmediata" : "triaje inmediato"}; sector: ${entornoElegido}`);
+  // Mantener el expediente activo para su valoración, triaje y liquidación.
+  actualizarMedidorSoat(calcularLiquidacionSeguro());
+  if (typeof guardarColaCompartidaEnStorage === "function") guardarColaCompartidaEnStorage();
+  if (typeof renderizarTableroColaPacientes === "function") renderizarTableroColaPacientes();
+  if (typeof renderizarBandejaPosta === "function") renderizarBandejaPosta();
+  mostrarToastCola(gravedad === "grave"
+    ? "🚑 Accidente registrado. Atención clínica inmediata; completar evaluación y triaje documentado cuando la condición lo permita."
+    : "🚑 Accidente registrado. Conducir a triaje prioritario inmediato, sin demora por la verificación del SOAT/CAT.");
+}
+window.abrirModalAccidenteTransitoRapido = abrirModalAccidenteTransitoRapido;
+window.cerrarModalAccidenteTransitoRapido = cerrarModalAccidenteTransitoRapido;
+window.confirmarAccidenteTransitoRapido = confirmarAccidenteTransitoRapido;
+
+function storeExpedienteAccidente(px, state) {
+  try {
+    localStorage.setItem("UPP_PACIENTES_COLA_SHARED", JSON.stringify(PACIENTES_COLA));
+    const raw = localStorage.getItem("upp_expedientes_v1");
+    const store = raw ? JSON.parse(raw) : {};
+    store[px.id] = { id: px.id, paciente: JSON.parse(JSON.stringify(px)), state: JSON.parse(JSON.stringify(state)), form: px.formSnapshot || capturarFormularioActual(), timestamp: Date.now() };
+    localStorage.setItem("upp_expedientes_v1", JSON.stringify(store));
+  } catch(e) {}
+}
+
 function inicializarTableroColaPacientes() {
   // Inicia 100% en blanco: NO coloca automáticamente ningún paciente en espera
   renderizarTableroColaPacientes();
@@ -13288,6 +13524,10 @@ function crearPadronDesdeSeguroExistente(numDni, seguro) {
 // ------------------------------------------------------------------------------
 function guardarPadronEnTodosLosStorages(numDni, padron, seguroTexto) {
   if (!numDni || !padron) return;
+  const seguroEntrada = seguroTexto || (padron.tipo_aseguramiento === "SOLO_SIS" ? "SIS" :
+    padron.tipo_aseguramiento === "SOLO_ESSALUD" ? "EsSalud" :
+    padron.tipo_aseguramiento === "EPS_Y_ESSALUD" || padron.tipo_aseguramiento === "SOLO_PRIVADO"
+      ? (padron.privado?.iafas_eps || "Seguro Privado") : "Particular");
   let seguroGuardado = localStorage.getItem("seguro_asignado_" + numDni);
   let padronGuardado = null;
   try {
@@ -13295,7 +13535,7 @@ function guardarPadronEnTodosLosStorages(numDni, padron, seguroTexto) {
     padronGuardado = rawActual ? JSON.parse(rawActual) : null;
   } catch (e) {}
   if (padronGuardado && padronGuardado.tipo_aseguramiento === padron.tipo_aseguramiento) padron = padronGuardado;
-  const sTextoDerivado = seguroTexto || (padron.tipo_aseguramiento === "SOLO_SIS" ? "SIS" :
+  const sTextoDerivado = (seguroGuardado && seguroGuardado !== "Seguro por confirmar" && seguroGuardado !== "Pendiente de Acreditación") ? seguroGuardado : (padron.tipo_aseguramiento === "SOLO_SIS" ? "SIS" :
                  padron.tipo_aseguramiento === "SOLO_ESSALUD" ? "EsSalud" :
                  padron.tipo_aseguramiento === "EPS_Y_ESSALUD" ? (padron.privado?.iafas_eps || "Pacífico EPS") :
                  padron.tipo_aseguramiento === "SOLO_PRIVADO" ? (padron.privado?.iafas_eps || "Seguro Privado") : "Particular");
@@ -13306,6 +13546,15 @@ function guardarPadronEnTodosLosStorages(numDni, padron, seguroTexto) {
     } catch (e) {}
   }
   const sTexto = (seguroGuardado && seguroGuardado !== "Seguro por confirmar" && seguroGuardado !== "Pendiente de Acreditación") ? seguroGuardado : sTextoDerivado;
+  if (!seguroGuardado || seguroGuardado === "Seguro por confirmar" || seguroGuardado === "Pendiente de Acreditación") {
+    try { localStorage.setItem("seguro_asignado_" + numDni, seguroEntrada); } catch(e) {}
+  }
+  if (padronGuardado && seguroGuardado && seguroGuardado !== "Seguro por confirmar" && seguroGuardado !== "Pendiente de Acreditación") {
+    const norm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (norm(seguroEntrada) !== norm(seguroGuardado)) {
+      try { padron = crearPadronDesdeSeguroExistente(numDni, seguroGuardado); } catch(e) {}
+    }
+  }
   try {
     localStorage.setItem("padron_susalud_" + numDni, JSON.stringify(padron));
     localStorage.setItem("seguro_asignado_" + numDni, sTexto);
@@ -14116,7 +14365,7 @@ function toggleCondicionFugaTransversal(chk) {
 
   actualizarFactura();
   mostrarToastCola(chk
-    ? "🚨 <strong>Accidente en Fuga:</strong> Sin SOAT identificable. Ningún seguro (SIS, EsSalud, Privado) cubre; paciente asume el 100%."
+    ? "🚨 <strong>Accidente con fuga:</strong> documentar y evaluar elegibilidad ante el Fondo SOAT/CAT; la cobertura no es automática."
     : "ℹ️ <strong>Régimen Normal:</strong> Accidente en Fuga desmarcado."
   );
 }
@@ -14343,61 +14592,7 @@ function renderizarBoxAcreditacionSusalud(padron) {
 }
 
 function admitirEmergenciaSoat() {
-  cambiarOrigenEvento("soat");
-  STATE.ingresoDirectoCritico = false;
-  STATE.panicoShockTrauma = false;
-  STATE.motivoIngresoCritico = null;
-  let inmediato = false;
-  const formularioAccidente = window.prompt("Accidente de tránsito\nEscriba: SOAT, SIN_SOAT, FUGA o CANCELAR", "SOAT");
-  if (formularioAccidente === null || formularioAccidente.trim().toUpperCase() === "CANCELAR") return;
-  const opcionAccidente = formularioAccidente.trim().toUpperCase();
-  if (!["SOAT", "SIN_SOAT", "FUGA"].includes(opcionAccidente)) {
-    mostrarToastCola("Opciones: SOAT, SIN_SOAT o FUGA.");
-    return;
-  }
-  cambiarOpcionSoat(opcionAccidente === "SOAT" ? "identificado" : "fuga");
-  if (opcionAccidente !== "SOAT") {
-    STATE.soatVehiculoFuga = false;
-    STATE.eventoFugaTransversal = false;
-    STATE.soatPlaca = "SIN SOAT IDENTIFICADO";
-    const chkFuga = document.getElementById("chk_evento_fuga");
-    if (chkFuga) chkFuga.checked = false;
-    if (STATE.padronSusalud) STATE.padronSusalud.condicion_evento = "NORMAL";
-  }
-
-  inmediato = window.confirm("¿El equipo clínico identifica amenaza vital que exige atención inmediata sin esperar el triaje?\nAceptar: activar pase inmediato.\nCancelar: pasar por triaje.");
-  if (inmediato) {
-    STATE.ingresoDirectoCritico = true;
-    STATE.motivoIngresoCritico = "Amenaza vital inmediata en accidente de tránsito; requiere evaluación clínica inmediata";
-  }
-
-  // Si el Módulo 1 está colapsado, desplegarlo para ingreso inmediato de datos
-  const bodyM1 = document.getElementById("body_mod1");
-  if (bodyM1 && (bodyM1.style.display === "none" || !bodyM1.classList.contains("visible"))) {
-    toggleModule("mod1");
-  }
-
-  // Scroll suave al espacio de trabajo / barra táctica de atenciones
-  const tacBar = document.getElementById("cockpit_tactical_bar");
-  if (tacBar && window.getComputedStyle(tacBar).display !== "none") {
-    tacBar.scrollIntoView({ behavior: "smooth", block: "start" });
-  } else {
-    const secM1 = document.getElementById("sec_mod1");
-    if (secM1) {
-      secM1.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }
-
-  if (typeof recalcularPrioridad === "function") {
-    try { recalcularPrioridad(); } catch(e){}
-  }
-  if (typeof actualizarFactura === "function") {
-    try { actualizarFactura(); } catch(e){}
-  }
-
-  mostrarToastCola(inmediato
-    ? "🚗 Accidente de tránsito registrado. Pase inmediato a evaluación de reanimación."
-    : "🚗 Accidente de tránsito registrado. Complete el triaje clínico; SOAT/CAT no modifica la prioridad.");
+  abrirModalAccidenteTransitoRapido();
 }
 
 window.admitirEmergenciaSoat = admitirEmergenciaSoat;
@@ -14935,7 +15130,7 @@ function construirHTMLBrazalete(esTemporal = false) {
         <!-- 3. FOOTER EXCLUSIVO: ALERGIAS Y ALERTAS CRÍTICAS - PERMANENTEMENTE VISIBLE -->
         <div class="risk-bars" style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #cbd5e1; padding-top:3px; margin-top:2px;">
           <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-            <div class="bar-allergy" style="padding:2px 8px; border-radius:4px; font-size:9.5px; font-weight:900; letter-spacing:0.3px; text-transform:uppercase; ${alergiaBadgeStyle}">
+            <div class="bar-allergy" style="padding:2px 8px; border-radius:4px; font-size:9.5px; font-weight:900; letter-spacing:0.3px; text-transform:uppercase; white-space:pre-wrap; overflow-wrap:anywhere; word-break:normal; ${alergiaBadgeStyle}">
               ${alergiasDisplay}
             </div>
             ${esRealmenteTemporal ? '<div style="background:#7f1d1d; color:#fecaca; font-size:8.5px; font-weight:900; padding:1px 5px; border-radius:3px;">🚨 LEY N° 27604</div>' : ''}
@@ -15886,7 +16081,7 @@ function verDetallePacienteHistorico(idPx, fecha) {
           <div style="font-weight:900; font-size:0.95rem; color:#0f172a;">${vit.temp ?? '—'} °C</div>
         </div>
         <div style="background:#fff; border:1px solid #cbd5e1; padding:6px; border-radius:6px;">
-          <div style="color:#64748b; font-size:0.7rem;">Glasgow / NEWS2</div>
+          <div style="color:#64748b; font-size:0.7rem;">Glasgow / Puntaje parcial</div>
           <div style="font-weight:900; font-size:0.95rem; color:#0f172a;">${vit.glasgow ?? '15'}/15 · N:${vit.news2 ?? '0'}</div>
         </div>
       </div>
@@ -16420,29 +16615,28 @@ function renderizarFichaTrazabilidad(px) {
   }
 
   // Generar sellos digitales SOLO si el paciente ya pasó por ese módulo (cero firmas inventadas)
-  const esReal = Boolean(px.esTiempoReal);
   const f = px.firmas || {};
-  const pasoTriaje = !esReal || Boolean(f.triaje);
-  const pasoAdmision = !esReal || Boolean(f.admision || px.coberturaValidada);
+  const pasoTriaje = Boolean(f.triaje?.fecha);
+  const pasoAdmision = Boolean(f.admision?.fecha);
   const firmaMedActiva = f.medico || ((typeof STATE !== "undefined" && STATE.id === px.id) ? STATE.firmas?.medico : null);
-  const pasoMedico = !esReal || Boolean(firmaMedActiva || (px.medicoTratante && !String(px.medicoTratante).includes("Por asignar")));
-  const pasoCaja = !esReal || Boolean(f.caja || px.estadoFlujo === "CERRADO_FACTURADO" || px.estadoFlujo === "ATENDIDO_ALTA");
-  const pasoAuditor = !esReal || Boolean(f.auditor || (Array.isArray(px.modificaciones_auditoria) && px.modificaciones_auditoria.length > 0));
+  const pasoMedico = Boolean(firmaMedActiva?.fecha);
+  const pasoCaja = Boolean(f.caja?.fecha);
+  const pasoAuditor = Boolean(f.auditor?.fecha);
 
   const selloMedico = (pasoMedico && typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: px.medicoTratante, fechaHora: `${fechaBase} ${px.horaAtencion || ''}` })
+    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: firmaMedActiva.usuario, fechaHora: firmaMedActiva.fecha })
     : "";
   const selloTriaje = (pasoTriaje && typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("TRIAJE", { nombre: px.enfermeraTriaje, fechaHora: `${fechaBase} ${px.horaTriaje || ''}` })
+    ? generarSelloFirmaDigitalHTML("TRIAJE", { nombre: f.triaje.usuario, fechaHora: f.triaje.fecha })
     : "";
   const selloAdmision = (pasoAdmision && typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("ADMISION", { fechaHora: `${fechaBase} ${horaLlegada}` })
+    ? generarSelloFirmaDigitalHTML("ADMISION", { nombre: f.admision.usuario, fechaHora: f.admision.fecha })
     : "";
   const selloCaja = (pasoCaja && typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("CAJA", { fechaHora: `${fechaBase} ${px.horaAlta || ''}` })
+    ? generarSelloFirmaDigitalHTML("CAJA", { nombre: f.caja.usuario, fechaHora: f.caja.fecha })
     : "";
   const selloAuditor = (pasoAuditor && typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("AUDITOR", { fechaHora: `${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}` })
+    ? generarSelloFirmaDigitalHTML("AUDITOR", { nombre: f.auditor.usuario, fechaHora: f.auditor.fecha })
     : "";
 
   cont.innerHTML = `
@@ -16538,7 +16732,7 @@ function renderizarFichaTrazabilidad(px) {
           <div style="font-weight:900; font-size:0.95rem; color:#0f172a;">${vit.glasgow ?? '—'}/15 · EVA:${vit.eva ?? '—'}</div>
         </div>
         <div style="background:#fff; border:1px solid #cbd5e1; padding:6px 8px; border-radius:6px;">
-          <div style="color:#64748b; font-size:0.70rem;">NEWS2 Score</div>
+          <div style="color:#64748b; font-size:0.70rem;">Puntaje fisiológico parcial</div>
           <div style="font-weight:900; font-size:0.95rem; color:${vit.news2 >= 7 ? '#dc2626' : (vit.news2 >= 5 ? '#ea580c' : '#0369a1')};">${vit.news2 ?? '0'} pts</div>
         </div>
       </div>
@@ -16599,7 +16793,7 @@ function renderizarFichaTrazabilidad(px) {
     <!-- 7. Galería de Firmas Digitales Oficiales (Ley N° 27269) -->
     <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:12px 16px; margin-bottom:10px;">
       <div style="font-weight:800; font-size:0.80rem; color:#1e293b; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-        <span>🔏</span> <span>Sellos y Firmas Electrónicas Digitales de Trazabilidad (Ley N° 27269 / SUSALUD):</span>
+        <span>🔏</span> <span>Registros visuales de firma y trazabilidad de la aplicación:</span>
       </div>
       <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-start;">
         ${selloMedico}
@@ -16607,7 +16801,7 @@ function renderizarFichaTrazabilidad(px) {
         ${selloAdmision}
         ${selloCaja}
         ${selloAuditor}
-        ${(!selloMedico && !selloTriaje && !selloAdmision && !selloCaja && !selloAuditor) ? `<div style="font-size:0.78rem; color:#64748b;">— Sin sellos ni firmas digitales aún (se emitirán conforme el paciente avance por cada módulo).</div>` : ""}
+        ${(!selloMedico && !selloTriaje && !selloAdmision && !selloCaja && !selloAuditor) ? `<div style="font-size:0.78rem; color:#64748b;">— Sin registros de firma todavía; aparecen al completar cada etapa.</div>` : ""}
       </div>
     </div>
     <!-- 8. Bitácora Cronológica de Todo lo Realizado (Auditoría) -->
@@ -17207,11 +17401,11 @@ window.grabarAtencionCompleta = async function() {
   if (window.COCKPIT && typeof window.COCKPIT.actualizarContextoCockpit === 'function') window.COCKPIT.actualizarContextoCockpit();
   if (window.COCKPIT && typeof window.COCKPIT.refrescarValoresMonitor === 'function') window.COCKPIT.refrescarValoresMonitor();
 
-  // Bloqueo de Historia Clínica Cerrada e Inmutable (NTS N° 139-MINSA)
+  // Marcar el estado del expediente al cierre; el almacenamiento local no garantiza inmutabilidad.
   const lockBanner = document.getElementById('banner_hc_inmutable_lock');
   if (lockBanner) lockBanner.style.display = 'flex';
   STATE.atencionCerrada = true;
-  registrarLogAuditoria("Módulo 8", "CIERRE_HC_INMUTABLE", `Atención cerrada. Historia Clínica cerrada e inmutable: ${STATE.historiaClinica}`);
+  registrarLogAuditoria("Módulo 8", "CIERRE_HC", `Atención cerrada. Historia Clínica: ${STATE.historiaClinica}`);
 };
 
 // --- 7. PADRÓN ÚNICO SUSALUD BD Y PERSISTENCIA POR DNI (BLOQUE 3.1 & 3.2) ---
@@ -17271,6 +17465,7 @@ window.calcularLiquidacionSeguro = function() {
   let coberturaSeguro = 0;
   let copagoFijo = 0;
   let pctCoaseguro = 0;
+  let baseCoaseguro = 0;
   let totalPaciente = 0;
   let motivoLiquidacion = "";
   let etiquetaRegimen = "";
@@ -17281,30 +17476,41 @@ window.calcularLiquidacionSeguro = function() {
   let esPublico = (entorno === "publico");
 
   // CASO A: ACCIDENTE DE TRÁNSITO CON VEHÍCULO EN FUGA (O SOAT VENCIDO)
-  if (esFuga) {
+  if (esAccidente && esFuga) {
     lugarAtencion = "Emergencia Especializada (Accidente de Tránsito con Chofer en Fuga)";
-    etiquetaRegimen = "🚨 Chofer en Fuga (Sin SOAT Identificado · Cobro 100% Particular)";
+    etiquetaRegimen = "🚨 Vehículo en fuga · evaluación FONSAT pendiente";
     condicionSusalud = "🚨 Accidente de Tránsito con Fuga (Sin SOAT)";
-    coberturaSector = "0% (Sin Cobertura: Chofer en Fuga)";
+    coberturaSector = "Pendiente de evaluación del Fondo SOAT/CAT";
     copagoFijo = 0.00;
-    pctCoaseguro = 100;
+    pctCoaseguro = 0;
     coberturaSeguro = 0.00;
-    totalPaciente = totalBruto;
-    alertaSector = "🚨 Sin SOAT identificable por fuga vehicular: Ningún seguro (SIS, EsSalud, Privado) cubre este evento. El paciente asume el 100% de la liquidación.";
-    motivoLiquidacion = "ACCIDENTE DE TRÁNSITO CON VEHÍCULO EN FUGA (D.S. N° 024-2002-MTC). Al no existir vehículo ni placa identificada, NO SE ACTIVA EL SOAT. Por normativa SUSALUD, ningún seguro regular cubre siniestros viales. 100% a cargo del paciente.";
+    totalPaciente = 0;
+    alertaSector = "🚨 Vehículo no identificado/fuga: documentar y someter el caso a evaluación del Fondo SOAT/CAT; no registrar el total como deuda definitiva del paciente.";
+    motivoLiquidacion = "ACCIDENTE DE TRÁNSITO CON VEHÍCULO NO IDENTIFICADO O EN FUGA. Fondo SOAT/CAT: gastos médicos (incluidos hospitalarios, quirúrgicos y farmacéuticos) hasta 5 UIT, sujeto a denuncia, reporte/HC y trámite de reconocimiento.";
 
     STATE.soatConsumido = 0;
     STATE.soatDisponible = 0;
 
     return {
       lugarAtencion, totalBruto, subtotalServicios, subtotalFarmacia,
-      coberturaSeguro: 0, coaseguroFarmacia: 0, copagoUrgencia: 0, copagoFijo: 0,
-      pctCoaseguro: 100, totalPaciente, motivoLiquidacion, etiquetaRegimen,
-      condicionSusalud, coberturaSector, alertaSector, esEpsPrivado, esPublico
+      coberturaSeguro: Math.min(totalBruto, 27500), coaseguroFarmacia: 0, copagoUrgencia: 0, copagoFijo: 0,
+      pctCoaseguro: 0, totalPaciente, motivoLiquidacion, etiquetaRegimen,
+      condicionSusalud, coberturaSector, alertaSector, esEpsPrivado, esPublico,
+      estadoLiquidacion: "PENDIENTE_EVALUACION_FONSAT", montoReclamableFonsat: Math.min(totalBruto, 27500)
     };
   }
 
   // CASO B: ACCIDENTE DE TRÁNSITO CON PLACA IDENTIFICADA (SOAT ACTIVO)
+  if (esAccidente && !esFuga && STATE.soatOpcion === "sin_soat") {
+    lugarAtencion = "Accidente de tránsito · cobertura/responsable por verificar";
+    etiquetaRegimen = "🚗 Accidente vial · liquidación provisional";
+    condicionSusalud = "Accidente de tránsito · SOAT/CAT no acreditado";
+    coberturaSector = "Pendiente de identificación del responsable y cobertura";
+    copagoFijo = 0; pctCoaseguro = 0; coberturaSeguro = 0; totalPaciente = 0;
+    alertaSector = "Atención no condicionada por ausencia de SOAT/CAT. No emitir deuda final al paciente hasta verificar responsable y cobertura aplicable.";
+    motivoLiquidacion = "ACCIDENTE SIN SOAT/CAT ACREDITADO. Liquidación provisional; verificar responsable, póliza, cobertura complementaria o mecanismo aplicable. La atención se brinda sin demora.";
+    return { lugarAtencion, totalBruto, subtotalServicios, subtotalFarmacia, coberturaSeguro, coaseguroFarmacia: 0, copagoUrgencia: 0, copagoFijo, pctCoaseguro, totalPaciente, motivoLiquidacion, etiquetaRegimen, condicionSusalud, coberturaSector, alertaSector, esEpsPrivado, esPublico, estadoLiquidacion: "SOAT_PENDIENTE_ACREDITACION", montoPendienteCoordinacion: totalBruto };
+  }
   if (esAccidente && !esFuga) {
     lugarAtencion = "Servicio de Emergencia Especializado SOAT — D.S. N° 024-2002-MTC";
     etiquetaRegimen = "🚗 SOAT Ley D.S. N° 024-2002-MTC (Tope 5 UIT = S/. 27,500.00)";
@@ -17319,23 +17525,25 @@ window.calcularLiquidacionSeguro = function() {
       totalPaciente = 0.00;
       STATE.soatConsumido = totalBruto;
       STATE.soatDisponible = topeSoat - totalBruto;
-      alertaSector = "✅ Cobertura SOAT al 100% dentro del tope legal de 5 UIT (S/. 27,500.00). Paciente paga S/. 0.00.";
-      motivoLiquidacion = `COBERTURA TOTAL SOAT ACTIVO. Total facturado S/. ${totalBruto.toFixed(2)} cubierto al 100% dentro del tope de 5 UIT. Saldo disponible: S/. ${STATE.soatDisponible.toFixed(2)}.`;
+      alertaSector = STATE.soatOpcion === "sin_soat" ? "⚠️ Atención no condicionada por SOAT/CAT. Verificar responsable y cobertura para liquidación posterior." : "✅ Gastos médicos considerados bajo SOAT/CAT hasta el límite de 5 UIT, sujetos a validación documental.";
+      motivoLiquidacion = STATE.soatOpcion === "sin_soat" ? "ACCIDENTE SIN SOAT/CAT ACREDITADO. No demorar atención ni triaje; registro financiero provisional para regularización con responsable/cobertura aplicable." : `COBERTURA SOAT/CAT considerada hasta 5 UIT, sujeta a validación documental. Total: S/. ${totalBruto.toFixed(2)}.`;
     } else {
       // REGLA ESTRICTA DE EXCESO SOAT (> 5 UIT = S/. 27,500.00)
       coberturaSeguro = topeSoat;
-      totalPaciente = totalBruto - topeSoat;
+      totalPaciente = 0;
       STATE.soatConsumido = topeSoat;
       STATE.soatDisponible = 0.00;
-      alertaSector = `🚨 TOPE LEGAL SOAT 5 UIT (S/. 27,500.00) AGOTADO: Ningún seguro regular (SIS/EsSalud/EPS) cubre siniestros viales. El saldo excedente de S/. ${totalPaciente.toFixed(2)} es asumido al 100% por el Paciente / Responsable Solidario.`;
-      motivoLiquidacion = `TOPE LEGAL SOAT 5 UIT AGOTADO (S/. 27,500.00). Por mandato de la Ley General de Transporte y SUSALUD, ningún seguro de salud (SIS, EsSalud ni IAFAS EPS) cubre siniestros viales. El excedente de S/. ${totalPaciente.toFixed(2)} es facturado al 100% al paciente.`;
+      alertaSector = `🚨 Tope SOAT/CAT de gastos médicos agotado (5 UIT). Saldo S/. ${totalPaciente.toFixed(2)} pendiente de coordinación con la IAFAS o cobertura complementaria y liquidación documentada; no imputar automáticamente como deuda definitiva del paciente.`;
+      motivoLiquidacion = `TOPE DE GASTOS MÉDICOS SOAT/CAT ALCANZADO (5 UIT). Monto sobre el límite: S/. ${totalPaciente.toFixed(2)}. Requiere determinar cobertura complementaria, responsabilidad y liquidación aplicable; no se imputa automáticamente como deuda definitiva del paciente.`;
     }
 
     return {
       lugarAtencion, totalBruto, subtotalServicios, subtotalFarmacia,
       coberturaSeguro, coaseguroFarmacia: 0, copagoUrgencia: 0, copagoFijo: 0,
       pctCoaseguro: 0, totalPaciente, motivoLiquidacion, etiquetaRegimen,
-      condicionSusalud, coberturaSector, alertaSector, esEpsPrivado, esPublico
+      condicionSusalud, coberturaSector, alertaSector, esEpsPrivado, esPublico,
+      estadoLiquidacion: totalBruto > topeSoat ? "EXCEDENTE_SOAT_PENDIENTE_COORDINACION" : "SOAT_ACTIVO",
+      montoCubiertoSoat: Math.min(totalBruto, topeSoat), montoPendienteCoordinacion: Math.max(0, totalBruto - topeSoat)
     };
   }
 
@@ -17391,7 +17599,9 @@ window.calcularLiquidacionSeguro = function() {
       lugarAtencion, totalBruto: totalCobroNN, subtotalServicios: Math.max(0, totalCobroNN - subtotalFarmacia),
       subtotalFarmacia, coberturaSeguro: 0.00, coaseguroFarmacia: 0, copagoUrgencia: 0, copagoFijo: 0,
       pctCoaseguro: 100, totalPaciente: totalCobroNN, motivoLiquidacion, etiquetaRegimen,
-      condicionSusalud, coberturaSector, alertaSector, esEpsPrivado, esPublico
+      condicionSusalud, coberturaSector, alertaSector, esEpsPrivado, esPublico,
+      estadoLiquidacion: totalBruto > (STATE.soatTopeLegal || 27500) ? "EXCEDENTE_SOAT_PENDIENTE_COORDINACION" : "SOAT_ACTIVO",
+      montoCubiertoSoat: Math.min(totalBruto, STATE.soatTopeLegal || 27500), montoPendienteCoordinacion: Math.max(0, totalBruto - (STATE.soatTopeLegal || 27500))
     };
   }
 
@@ -17485,7 +17695,7 @@ window.calcularLiquidacionSeguro = function() {
     totalPaciente = totalBruto;
     alertaSector = "🚨 Siniestro Rechazado por Exclusión Contractual de Póliza EPS. El paciente asume el 100% de la cuenta hospitalaria (incluso en P-I y P-II).";
     motivoLiquidacion = "SINIESTRO RECHAZADO POR IAFAS EPS. Por causal de exclusión contractual (ej. intoxicación, falta de carencia o riesgo excluido), la aseguradora anula la cobertura. Paciente asume el 100% de la totalidad facturada.";
-  } else if (esEmergencia) {
+  } else if (esEmergenciaEPS) {
     // LEY DE EMERGENCIA N° 27604: EMERGENCIA VITAL (P-I/P-II, SHOCK TRAUMA, SOP, UCI) — SIN COPAGO NI COASEGURO
     etiquetaRegimen = `${priv.iafas_eps} · Emergencia Vital (P-${STATE.prioridad || 'I'} · Ley N° 27604)`;
     condicionSusalud = `${priv.iafas_eps} · ${priv.plan_salud || 'Plan Preferente'} (Emergencia Vital P-${STATE.prioridad || 'I'})`;
@@ -17512,7 +17722,11 @@ window.calcularLiquidacionSeguro = function() {
       copagoFijo = (priv.copago_fijo !== undefined && priv.copago_fijo !== null && !isNaN(parseFloat(priv.copago_fijo))) ? parseFloat(priv.copago_fijo) : 80.00;
       pctCoaseguro = (priv.coaseguro_pct !== undefined && priv.coaseguro_pct !== null && !isNaN(parseFloat(priv.coaseguro_pct))) ? parseFloat(priv.coaseguro_pct) : 0.20;
     }
-    const gastoProcYFar = subtotalFarmacia + subtotalServicios;
+    const subtotalAtencion = (STATE.items_factura || [])
+      .filter(i => /consulta|atenci[oó]n m[eé]dica|honorario/i.test(`${i.categoria || ""} ${i.nombre || i.servicio || ""}`))
+      .reduce((s, i) => s + (parseFloat(i.costo) || 0), 0);
+    const gastoProcYFar = subtotalFarmacia + Math.max(0, subtotalServicios - subtotalAtencion);
+    baseCoaseguro = gastoProcYFar;
     const coaseguroMonto = gastoProcYFar * pctCoaseguro;
 
     if (totalBruto === 0) {
@@ -17526,14 +17740,14 @@ window.calcularLiquidacionSeguro = function() {
     etiquetaRegimen = `${priv.iafas_eps} · Cobertura EPS (P-${STATE.prioridad || 'III'})`;
     condicionSusalud = `${priv.iafas_eps} · ${priv.plan_salud || 'Plan Activo'} (SITEDS: AUTORIZADO)`;
     coberturaSector = `Copago Fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% Coaseguro (${((1 - pctCoaseguro) * 100).toFixed(0)}% Cubierto por EPS)`;
-    alertaSector = `Cobertura EPS (${priv.iafas_eps}): Paciente abona copago fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% coaseguro (S/. ${coaseguroMonto.toFixed(2)}). Total paciente: S/. ${totalPaciente.toFixed(2)}.`;
-    motivoLiquidacion = `COBERTURA EPS (${priv.iafas_eps}, P-${STATE.prioridad || 'III'}). Copago fijo S/. ${copagoFijo.toFixed(2)} + coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% (S/. ${coaseguroMonto.toFixed(2)}). Total a cargo del paciente: S/. ${totalPaciente.toFixed(2)}. Cubierto por EPS: S/. ${coberturaSeguro.toFixed(2)}.`;
+    alertaSector = `Cobertura EPS (${priv.iafas_eps}): copago de atención según plan S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% sobre farmacia y servicios (S/. ${coaseguroMonto.toFixed(2)}). Total paciente: S/. ${totalPaciente.toFixed(2)}.`;
+    motivoLiquidacion = `COBERTURA EPS (${priv.iafas_eps}, P-${STATE.prioridad || 'III'}). Copago de atención según plan: S/. ${copagoFijo.toFixed(2)}; coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% sobre farmacia y servicios (S/. ${coaseguroMonto.toFixed(2)}). Total paciente: S/. ${totalPaciente.toFixed(2)}. Cubierto por EPS: S/. ${coberturaSeguro.toFixed(2)}.`;
   }
 
   return {
     lugarAtencion, totalBruto, subtotalServicios, subtotalFarmacia,
     coberturaSeguro, coaseguroFarmacia: 0, copagoUrgencia: copagoFijo, copagoFijo,
-    pctCoaseguro: (pctCoaseguro * 100), totalPaciente, motivoLiquidacion, etiquetaRegimen,
+    pctCoaseguro: (pctCoaseguro * 100), baseCoaseguro, totalPaciente, motivoLiquidacion, etiquetaRegimen,
     condicionSusalud, coberturaSector, alertaSector, esEpsPrivado, esPublico
   };
 };
@@ -17645,7 +17859,7 @@ window.seleccionarTipoEgreso = function(tipo) {
   }
 };
 
-// --- 11. BITÁCORA INMUTABLE DE AUDITORÍA (AUDIT_LOGS) & HEADER (BLOQUE 4.6) ---
+// --- 11. Bitácora local de eventos de auditoría ---
 const AUDIT_LOGS = [];
 
 function registrarLogAuditoria(modulo, evento, detalle) {
@@ -18724,7 +18938,7 @@ function construirHTMLDocumentoConsentimiento() {
             </div>
           </td>
           <td style="width:36%; vertical-align:bottom; padding:0 8px;">
-            ${typeof generarSelloFirmaDigitalHTML === "function" ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: medResponsable }) : '<div style="border-bottom:1.5px solid #000; height:50px;"></div><div>' + medResponsable + '</div>'}
+            ${STATE.firmas?.medico?.fecha && typeof generarSelloFirmaDigitalHTML === "function" ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: STATE.firmas.medico.usuario || medResponsable, fechaHora: STATE.firmas.medico.fecha }) : '<div style="border-bottom:1.5px dashed #94a3b8; height:50px;"></div><div>Firma pendiente hasta confirmar atención y alta clínica</div>'}
           </td>
         </tr>
       </table>
@@ -19167,9 +19381,9 @@ function imprimirDocumentoNormativoFuaEssi(forzarSector) {
   const cmpNum = medicoAsignado ? (cmpMatch ? cmpMatch[1] : (STATE.firmas?.medico?.colegiatura || "58321")) : "";
   const fechaHoy = new Date().toLocaleDateString("es-PE");
   const horaHoy = new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
-  const firmaMedDoc = (medicoAsignado && STATE.firmas?.medico && typeof generarSelloFirmaDigitalHTML === "function")
-    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: medNombre })
-    : `<div style="height:46px;border-bottom:1px solid #000;width:210px;margin-top:10px;"></div><span style="font-size:8.5px;">Firma y Sello del Responsable de la Atención</span>`;
+  const firmaMedDoc = (medicoAsignado && STATE.firmas?.medico?.fecha && typeof generarSelloFirmaDigitalHTML === "function")
+    ? generarSelloFirmaDigitalHTML("MEDICO", { nombre: STATE.firmas.medico.usuario || medNombre, fechaHora: STATE.firmas.medico.fecha })
+    : `<div style="height:46px;border-bottom:1px solid #000;width:210px;margin-top:10px;"></div><span style="font-size:8.5px;">Firma pendiente hasta confirmar atención y alta clínica</span>`;
 
   const w = window.open("", "_blank");
   if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }

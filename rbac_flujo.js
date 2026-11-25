@@ -142,7 +142,8 @@
     px.nombre = (state.nombreReniec || px.nombre);
     px.edad = (document.getElementById("edad_full")?.value || state.edad || px.edad);
     px.sexo = (document.getElementById("sexo_full")?.value || state.sexo || px.sexo);
-    px.prioridad = (state.prioridad || px.prioridad || "V");
+    px.prioridad = (state.prioridad || px.prioridad || null);
+    if (px.estadoFlujo === "PENDIENTE_TRIAJE" && !state.prioridad && !px.prioridad) px.prioridad = null;
     px.camaId = (state.camaAsignadaId || px.camaId);
     px.camaNombre = (state.camaAsignada || px.camaNombre);
     px.alergias = (document.getElementById("alergias_full")?.value || state.alergias || px.alergias || "");
@@ -161,7 +162,7 @@
       px.estadoFlujo = nuevoEstadoFlujo;
       if (window.STATE) window.STATE.estadoFlujo = nuevoEstadoFlujo;
     }
-    if (firmaObj) {
+    if (firmaObj && firmaObj.fecha) {
       px.firmas = px.firmas || {};
       const keyFirma = (firmaObj.rol || "auditor").toLowerCase();
       px.firmas[keyFirma] = firmaObj;
@@ -883,7 +884,7 @@
     let botonesHtml = "";
 
     // BOTÓN TRIAJE: Sellar Triaje y Derivar a Médico
-    if ((rol === "TRIAJE" || rol === "ADMIN" || modo === "DEMO") && ef === "PENDIENTE_TRIAJE") {
+    if ((rol === "TRIAJE" || rol === "ADMIN" || modo === "DEMO") && (ef === "PENDIENTE_TRIAJE" || (px.requiereTriajeTrasEstabilizacion && ef === "EN_ATENCION_MEDICA"))) {
       botonesHtml += `
         <button type="button" onclick="sellarTriajeYDerivar()" class="posta-action-btn btn-posta-triaje" title="Sella el registro de triaje (NTS 139-MINSA) y deriva automáticamente a la bandeja médica">
           📤 Sellar Triaje y Derivar a Médico
@@ -900,8 +901,10 @@
       `;
     }
 
+    // El accidente grave requiere valoración médica antes de emitir el alta.
+    const bloqueoTriajePostEstabilizacion = Boolean(px.requiereTriajeTrasEstabilizacion && !px.prioridad);
     // BOTÓN MÉDICO: Firmar Alta Clínica y Enviar a Caja
-    if ((rol === "MEDICO" || rol === "ADMIN" || modo === "DEMO") && ef === "EN_ATENCION_MEDICA") {
+    if ((rol === "MEDICO" || rol === "ADMIN" || modo === "DEMO") && ef === "EN_ATENCION_MEDICA" && !bloqueoTriajePostEstabilizacion) {
       botonesHtml += `
         <button type="button" onclick="firmarAltaMedicaYEnviarCaja()" class="posta-action-btn btn-posta-medico" title="Estampa firma médica CMP y envía el expediente a Caja para liquidación">
           📤 Firmar Alta Clínica y Enviar a Cierre Administrativo
@@ -931,17 +934,17 @@
     // Renderizar firmas estampadas
     if (contFirmas) {
       let firmasHtml = "";
-      const f = px.firmas || {};
-      if (f.triaje) {
+    const f = px.firmas || {};
+    if (f.triaje && f.triaje.fecha) {
         firmasHtml += `<span class="firma-chip">✍️ Triaje: ${f.triaje.usuario} (${f.triaje.colegiatura}) · ${new Date(f.triaje.fecha).toLocaleTimeString()}</span>`;
       }
-      if (f.admision) {
+    if (f.admision && f.admision.fecha) {
         firmasHtml += `<span class="firma-chip">✍️ Admisión: ${f.admision.usuario} · Cobertura Validada</span>`;
       }
-      if (f.medico) {
+    if (f.medico && f.medico.fecha) {
         firmasHtml += `<span class="firma-chip">✍️ Médico: ${f.medico.usuario} (${f.medico.colegiatura}) · Alta Clínica</span>`;
       }
-      if (f.caja) {
+    if (f.caja && f.caja.fecha) {
         firmasHtml += `<span class="firma-chip">✍️ Caja: ${f.caja.usuario} · Liquidación y Cierre</span>`;
       }
       contFirmas.innerHTML = firmasHtml;
@@ -1012,6 +1015,7 @@
     const tieneIdentidadValida = (!esGenerico && nombre.length >= 3) || tieneDni || esNN;
 
     // 4. REGLA: Verificar si hay signos vitales o prioridad evaluada
+    const esAccidentePendienteTriaje = Boolean(px.esAccidenteTransito && !px.prioridad && (px.estadoFlujo === "PENDIENTE_TRIAJE" || px.requiereTriajeTrasEstabilizacion));
     const tienePrioridad = Boolean(px.prioridad || window.STATE?.prioridad);
     const tieneSignos = Boolean(
       (px.spo2 || window.STATE?.spo2) ||
@@ -1031,7 +1035,7 @@
 
     // 5. VALIDACIONES ESPECÍFICAS SEGÚN LA ETAPA
     if (accionRequerida === "TRIAJE") {
-      if (!tienePrioridad) {
+      if (!tienePrioridad && !px.ingresoDirectoCritico) {
         const msg = "⚠️ TRIAJE INCOMPLETO: Debe ingresar los signos vitales y categorizar la prioridad clínica (I a V) antes de sellar y derivar (NTS N° 042-MINSA).";
         if (typeof window.mostrarToast === "function") window.mostrarToast("warning", "Prioridad Requerida", msg);
         else alert(msg);
@@ -1049,7 +1053,7 @@
     }
 
     if (accionRequerida === "MEDICO") {
-      if (!tienePrioridad) {
+      if (!tienePrioridad && !px.ingresoDirectoCritico) {
         const msg = "⚠️ SIN EVALUACIÓN DE TRIAJE: El paciente no cuenta con categorización de Triaje. No es posible emitir el alta clínica.";
         if (typeof window.mostrarToast === "function") window.mostrarToast("warning", "Triaje Requerido", msg);
         else alert(msg);
@@ -1077,8 +1081,9 @@
         else alert(msg);
         return { valido: false, px: px };
       }
-      const estadoFlujo = px.estadoFlujo || window.STATE?.estadoFlujo || "";
-      if (estadoFlujo === "PENDIENTE_TRIAJE" && !esNN && !tienePrioridad) {
+    const estadoFlujo = px.estadoFlujo || window.STATE?.estadoFlujo || "";
+    const esAccidentePendienteTriaje = Boolean(px.esAccidenteTransito && !px.prioridad && estadoFlujo !== "CERRADO_FACTURADO");
+      if ((estadoFlujo === "PENDIENTE_TRIAJE" || px.requiereTriajeTrasEstabilizacion) && !esNN && !tienePrioridad && !esAccidentePendienteTriaje) {
         const msg = "⚠️ FACTURACIÓN DENEGADA: El paciente aún se encuentra en Triaje y no ha recibido atención médica. No se puede facturar.";
         if (typeof window.mostrarToast === "function") window.mostrarToast("danger", "Atención Pendiente", msg);
         else alert(msg);
@@ -2148,7 +2153,7 @@
           <div><strong>Diagnóstico Definitivo / Presuntivo (CIE-10):</strong> <strong style="color:#0284c7;">${cie10}</strong></div>
           <div><strong>Destino de Egreso:</strong> ${px.destino || ss.destinoAlta || "Alta Médica a Domicilio con Indicaciones"}</div>
           <div style="color:#15803d; font-weight:700; margin-top:2px;">✓ Criterios de estabilización clínica y epicrisis conformes según NTS N° 042-MINSA.</div>
-          ${(f.medico && typeof window.generarSelloFirmaDigitalHTML === "function") ? `<div style="margin-top:8px;">${window.generarSelloFirmaDigitalHTML("MEDICO", { nombre: f.medico.usuario, colegiatura: f.medico.colegiatura, fechaHora: tMedico ? tMedico.texto : "" })}</div>` : ""}
+          ${(f.medico?.fecha && typeof window.generarSelloFirmaDigitalHTML === "function") ? `<div style="margin-top:8px;">${window.generarSelloFirmaDigitalHTML("MEDICO", { nombre: f.medico.usuario, colegiatura: f.medico.colegiatura, fechaHora: f.medico.fecha })}</div>` : "<div style=\"margin-top:8px;color:#64748b;\">Firma pendiente hasta la confirmación de la atención/alta clínica.</div>"}
         </div>
       </div>
     ` : `
