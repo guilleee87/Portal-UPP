@@ -160,9 +160,10 @@
     // 1.4.1 Mover y Reubicar el Panel de Pacientes en Curso al Sidebar Izquierdo con scroll propio
     const activePanel = document.getElementById("activePatientsPanel");
     if (activePanel) {
-      // Ocultar botones duplicados de la cabecera vieja para dejar solo el carrusel limpio y contador
+      // Mantener disponibles los accesos rápidos de admisión dentro del panel
+      // del cockpit: aquí es donde se traslada la botonera desde la cabecera.
       const oldBtns = activePanel.querySelector(".active-patients-btn-group");
-      if (oldBtns) oldBtns.style.display = "none";
+      if (oldBtns) oldBtns.style.display = "grid";
       activePanel.style.display = "block";
       activePanel.style.margin = "0";
       sidebarLeft.appendChild(activePanel);
@@ -958,9 +959,18 @@
     const st = window.STATE || {};
     const camasOcupadas = new Set();
 
+    const esEstadoEgreso = (flujo, obj) => (
+      flujo === "ALTA_CLINICA" ||
+      flujo === "LIQUIDADO_CERRADO" ||
+      flujo === "EGRESADO" ||
+      flujo === "CERRADO_FACTURADO" ||
+      flujo === "ATENDIDO_ALTA" ||
+      Boolean(obj && (obj.altaClinicaConcluida || obj.estadoAtencion === "Alta" || obj.estadoAtencion === "Finalizado"))
+    );
+
     // 1. Paciente activo en STATE (si no está dado de alta o liquidado)
     const flujoActivo = st.estadoFlujo || "";
-    const estaAltaActivo = flujoActivo === "ALTA_CLINICA" || flujoActivo === "LIQUIDADO_CERRADO" || flujoActivo === "EGRESADO";
+    const estaAltaActivo = esEstadoEgreso(flujoActivo, st);
     const camaActivoNormalizada = (!estaAltaActivo) ? normalizarIdCamaClinica(st.camaAsignadaId || st.camaAsignada || "") : null;
     if (camaActivoNormalizada && idsHospitalarios.includes(camaActivoNormalizada)) {
       camasOcupadas.add(camaActivoNormalizada);
@@ -970,7 +980,7 @@
     const cola = Array.isArray(window.PACIENTES_COLA) ? window.PACIENTES_COLA : [];
     cola.forEach(px => {
       const pxFlujo = px.estadoFlujo || "";
-      if (pxFlujo !== "ALTA_CLINICA" && pxFlujo !== "LIQUIDADO_CERRADO" && pxFlujo !== "EGRESADO") {
+      if (!esEstadoEgreso(pxFlujo, px)) {
         const idCama = normalizarIdCamaClinica(px.camaId || px.camaAsignada || px.camaNombre || "");
         if (idCama && idsHospitalarios.includes(idCama)) {
           camasOcupadas.add(idCama);
@@ -983,7 +993,7 @@
       Object.keys(window.expedientesStore).forEach(k => {
         const exp = window.expedientesStore[k];
         const expFlujo = exp.estadoFlujo || "";
-        if (expFlujo !== "ALTA_CLINICA" && expFlujo !== "LIQUIDADO_CERRADO" && expFlujo !== "EGRESADO") {
+        if (!esEstadoEgreso(expFlujo, exp)) {
           const idCama = normalizarIdCamaClinica(exp.camaId || exp.camaAsignada || exp.camaNombre || "");
           if (idCama && idsHospitalarios.includes(idCama)) {
             camasOcupadas.add(idCama);
@@ -1039,6 +1049,10 @@
       } else if (st.camaAsignada) {
         pxCamaPill.innerHTML = `🛏️ <strong>${st.camaAsignada}</strong>`;
       }
+    }
+
+    if (typeof window.actualizarWidgetFlotanteCamas === "function") {
+      window.actualizarWidgetFlotanteCamas();
     }
 
     return { total, ocupadas, libres };
