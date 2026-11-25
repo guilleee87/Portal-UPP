@@ -68,6 +68,10 @@
           </div>
         </div>
       </div>
+
+      <div id="cockpit_active_patients_wrapper" style="display:flex; flex-direction:column; gap:8px;">
+        <!-- Contenedor donde se aloja el Tablero de Atención y cola de emergencias -->
+      </div>
     `;
 
     // 1.4 Columna Central (Espacio de Trabajo Enfocado)
@@ -79,92 +83,33 @@
     tacticalBar.id = "cockpit_tactical_bar";
     tacticalBar.className = "cockpit-tactical-bar";
     tacticalBar.innerHTML = `
-      <div class="cockpit-tactical-header">
-        <div class="cockpit-tactical-title-box">
-          <span class="cockpit-tactical-icon">⚡</span>
-          <div>
-            <div class="cockpit-tactical-title">BOTONERA DE ADMISIÓN RÁPIDA &amp; ATENCIÓN DE EMERGENCIAS</div>
-            <div class="cockpit-tactical-sub">NTS N° 042-MINSA · Ley N° 27604 (Garantía de Atención Médica de Emergencia)</div>
-          </div>
-        </div>
-        <div class="cockpit-tactical-utility">
-          <button type="button" class="tactical-util-btn btn-trazabilidad-auditor" id="btn_tactical_trazabilidad" onclick="abrirModalTrazabilidadAuditor()" title="Auditoría Forense y Trazabilidad Clínica Integral (Hoy y Días Anteriores)">
-            <span>📜</span> Trazabilidad
-          </button>
-          <button type="button" class="tactical-util-btn" onclick="abrirModalHistoricoDiasAnteriores()" title="Consultar atenciones de días anteriores (NTS N° 139-MINSA)">
-            <span>📅</span> Histórico
-          </button>
-          <button type="button" class="tactical-util-btn btn-util-reset" onclick="abrirModalReinicioSimulacion()" title="⚠️ Botón exclusivo de simulación y demostración: Reiniciar guardia y liberar camas">
-            <span>🔄</span> Reiniciar (Demo)
-          </button>
-        </div>
-      </div>
-      <div class="cockpit-tactical-grid">
+      <div class="cockpit-tactical-group">
         <button type="button" class="cockpit-tactical-btn btn-p1-danger" onclick="activarPanicoShockTrauma()" title="Admisión Inmediata de Emergencia a Shock Trauma (Ley N° 27604)">
           🚨 Trauma Shock P-I
         </button>
-        <button type="button" class="cockpit-tactical-btn btn-sop-action" onclick="activarIngresoDirectoQuirofano()" title="Admisión Directa a Quirófano SOP (Ley N° 27604)">
+        <button type="button" class="cockpit-tactical-btn" onclick="activarIngresoDirectoQuirofano()" title="Admisión Directa a Quirófano SOP">
           🏥 Quirófano SOP
         </button>
-        <button type="button" class="cockpit-tactical-btn btn-nn-shock" onclick="abrirModalPreEvaluacionNN('INCONSCIENTE')" title="Atención Inmediata P-I Shock Trauma Ley 27604">
-          🚨 NN Inconsciente
+        <button type="button" id="btn_tactical_ingresar_nn" class="cockpit-tactical-btn" onclick="abrirModalIngresoNN()" style="border-left:3px solid #ea580c; font-weight:800;" title="Ingreso de Paciente NN / Indocumentado (Elegir estado de conciencia y prioridad)">
+          👤 Ingresar Paciente NN
         </button>
-        <button type="button" class="cockpit-tactical-btn btn-pulsera" onclick="generarEImprimirPulseraInmediata()" title="Generar e Imprimir Inmediatamente la Pulsera QR de Emergencia">
-          🏷️ Pulsera QR
+        <button type="button" class="cockpit-tactical-btn" onclick="generarEImprimirPulseraInmediata()" style="background:#0f172a; color:#38bdf8; border:1.5px solid #0284c7; font-weight:800;" title="Generar e Imprimir Inmediatamente la Pulsera QR de Emergencia">
+          🏷️ Imprimir Pulsera QR
         </button>
-        <button type="button" class="cockpit-tactical-btn btn-main-cta" onclick="registrarPacienteEnEspera()" title="Registrar llegada de paciente en blanco a sala de espera">
-          ➕ En Espera
-        </button>
-        <button type="button" class="cockpit-tactical-btn btn-nn-eval" onclick="abrirModalPreEvaluacionNN('CONSCIENTE')" title="Paciente NN Consciente / Indocumentado (Pasa a Evaluación de Triaje)">
-          👤 NN Consciente
-        </button>
+      </div>
+      <div class="cockpit-tactical-group">
         <button type="button" class="cockpit-tactical-btn" onclick="abrirModalPreTriageSTART()" title="Pre-Triage START de Cola (15s)">
           ⚡ Pre-Triage (15s)
         </button>
-        <button type="button" class="cockpit-tactical-btn btn-desempate" onclick="abrirModalLlegadasSimultaneasDesempate()" title="Protocolo de Desempate ante Llegadas Simultáneas (NTS N° 042-MINSA)">
+        <button type="button" class="cockpit-tactical-btn" onclick="registrarPacienteEnEspera()" title="Registrar llegada a sala de espera">
+          ➕ En Espera
+        </button>
+        <button type="button" class="cockpit-tactical-btn" onclick="abrirModalLlegadasSimultaneasDesempate()" title="Protocolo de Desempate ante Llegadas Simultáneas (NTS N° 042-MINSA)">
           ⚖️ Desempate
         </button>
       </div>
     `;
     workspaceCenter.appendChild(tacticalBar);
-
-    // Fila Reactiva de Pacientes en Atención Activa & Estado del Flujo (Directamente bajo la botonera táctica)
-    const activeQueueRow = document.createElement("div");
-    activeQueueRow.id = "cockpit_active_queue_row";
-    activeQueueRow.className = "cockpit-active-queue-card";
-    activeQueueRow.innerHTML = `
-      <div class="cockpit-queue-header">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span class="widget-beacon-dot" style="display:inline-block; width:9px; height:9px; background:#16a34a; border-radius:50%; box-shadow:0 0 0 3px rgba(34,197,94,0.3);"></span>
-          <strong style="color:#0f172a; font-size:0.80rem; letter-spacing:0.02em;">PACIENTES EN ATENCIÓN ACTIVA &amp; ESTADO DEL FLUJO (TIEMPO REAL)</strong>
-          <span class="badge-active-count" id="cockpit_lbl_total_px_activos" style="font-size:0.70rem; padding:2px 8px; border-radius:9999px;">0 en atención</span>
-        </div>
-        <div style="font-size:0.70rem; color:#64748b;">
-          Sincronizado en tiempo real con Tablero Central · Clic para evaluar o cambiar paciente
-        </div>
-      </div>
-      <div class="cockpit-queue-track" id="cockpit_queue_track_list">
-        <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:10px; color:#64748b; font-size:0.78rem; width:100%;">
-          <span style="font-size:1.2rem;">⏳</span>
-          <div>
-            <strong>Sin pacientes en atención activa:</strong> Registre un nuevo paciente con <strong>[➕ En Espera]</strong> o mediante los botones de admisión rápida.
-          </div>
-        </div>
-      </div>
-    `;
-    workspaceCenter.appendChild(activeQueueRow);
-
-    // 1.4.1 Mover y Reubicar el Panel de Pacientes en Curso al Sidebar Izquierdo
-    // Ubicación: EN EL SIDEBAR IZQUIERDO CON ANCHO ERGONÓMICO Y SCROLL INDEPENDIENTE
-    const activePanel = document.getElementById("activePatientsPanel");
-    if (activePanel) {
-      // Ocultar botones duplicados de la cabecera vieja para dejar solo el carrusel limpio y contador
-      const oldBtns = activePanel.querySelector(".active-patients-btn-group");
-      if (oldBtns) oldBtns.style.display = "none";
-      activePanel.style.display = "block";
-      activePanel.style.margin = "0";
-      sidebarLeft.appendChild(activePanel);
-    }
 
     // Tarjeta Resumen Sellado de Triaje (Solo visible en Rol MÉDICO)
     const triageSealedCard = document.createElement("div");
@@ -176,7 +121,7 @@
         <div class="cockpit-summary-title">
           <span>🩺</span> Resumen Sellado de Triaje · Estándar Nacional IPRESS (NTS N° 139-MINSA) <span id="c_triage_regimen_badge" style="font-size:0.75rem; padding:2px 8px; border-radius:6px; font-weight:800; margin-left:8px;">[MINSA · FUA]</span>
         </div>
-        <span class="ui-badge-pill" id="c_triage_prio_badge" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;">⏳ Triaje Pendiente (Sin Prioridad)</span>
+        <span class="ui-badge-pill ui-badge-p5" id="c_triage_prio_badge">P-V · No Urgente</span>
       </div>
       <div class="cockpit-summary-grid">
         <div class="cockpit-summary-item">
@@ -198,10 +143,6 @@
         <div class="cockpit-summary-item">
           <div class="cockpit-summary-label">Signos Vitales</div>
           <div class="cockpit-summary-val" id="c_triage_vitals_resumen" style="font-size:0.78rem;">SpO2: --% | FC: -- | PA: --/--</div>
-        </div>
-        <div class="cockpit-summary-item" style="grid-column: span 2;">
-          <div class="cockpit-summary-label">🏷️ Diagnóstico Principal CIE-10 (Sustento Asistencial)</div>
-          <div class="cockpit-summary-val" id="c_triage_cie10" style="color:#0284c7; font-weight:800;">Por asignar</div>
         </div>
         <div class="cockpit-summary-item">
           <div class="cockpit-summary-label">Alergias Conocidas</div>
@@ -365,6 +306,15 @@
     const sec7 = document.getElementById("sec_mod7");
     const sec8 = document.getElementById("sec_mod8");
 
+    // Carrusel Slide de Pacientes en Espera Pre-Triaje (Door-to-Triage NTS N° 042-MINSA & CTAS)
+    let pretriageSlide = document.getElementById("cockpit_pretriage_queue_wrapper");
+    if (!pretriageSlide) {
+      pretriageSlide = document.createElement("div");
+      pretriageSlide.id = "cockpit_pretriage_queue_wrapper";
+      pretriageSlide.className = "pretriage-queue-wrapper";
+    }
+    phase1.appendChild(pretriageSlide);
+
     if (sec1) phase1.appendChild(sec1);
     if (sec2) phase1.appendChild(sec2);
     if (sec3) phase2.appendChild(sec3);
@@ -373,6 +323,21 @@
     if (sec6) phase3.appendChild(sec6);
     if (sec7) phase3.appendChild(sec7);
     if (sec8) phase4.appendChild(sec8);
+
+    // Mover el Tablero de Atención y cola de emergencias al sidebar izquierdo
+    const activePanel = document.getElementById("activePatientsPanel");
+    const queueWrapper = document.getElementById("cockpit_active_patients_wrapper");
+    if (activePanel && queueWrapper) {
+      queueWrapper.appendChild(activePanel);
+      activePanel.style.display = "block";
+      activePanel.style.width = "100%";
+    }
+
+    // Eliminar la bandeja de posta clínica si existiese (reemplazada por Tablero de Atención y cola de emergencias)
+    const bandejaPosta = document.getElementById("bandeja_posta_container");
+    if (bandejaPosta) {
+      bandejaPosta.remove();
+    }
 
     // Ocultar main contenedor viejo
     mainContainer.style.display = "none";
@@ -385,6 +350,9 @@
     // 1.9 Aplicar vista de rol inicial
     const rolActual = window.RBAC_FLUJO ? window.RBAC_FLUJO.obtenerRolActivo() : "AUDITOR";
     aplicarVistaYPermisosRol(rolActual);
+    if (typeof window.renderizarCarruselPreTriaje === "function") {
+      window.renderizarCarruselPreTriaje();
+    }
 
     // 1.10 Refrescar contexto periódicamente
     actualizarContextoCockpit();
@@ -423,7 +391,7 @@
         <div class="cockpit-patient-pill">
           <span>👤</span>
           <div class="cockpit-px-name" id="cockpit_pill_px_nombre">Sin paciente seleccionado</div>
-          <span class="ui-badge-pill" id="cockpit_pill_prioridad" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;">⏳ Sin Prioridad (Por evaluar)</span>
+          <span class="ui-badge-pill ui-badge-p5" id="cockpit_pill_prioridad">P-V · No Urgente</span>
           <div class="cockpit-px-bed" id="cockpit_pill_cama">🛏️ Sin cama</div>
         </div>
       </div>
@@ -442,18 +410,13 @@
           🛡️ Rol: AUDITOR
         </span>
 
-        <!-- Botón Historia Clínica -->
-        <button type="button" id="btn_cockpit_historia_clinica" onclick="if(typeof abrirRepositorioHistoriasClinicas==='function')abrirRepositorioHistoriasClinicas()" title="Ver Historia Clínica completa del paciente" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; font-size:12px; font-weight:800; border-radius:6px; border:1.5px solid #0284c7; background:#0284c7; color:#ffffff; cursor:pointer; box-shadow:0 1px 3px rgba(2,132,199,0.3);">
-          <span>📖</span> Historia Clínica
+        <!-- Botón Historia Clínica (Solo Auditor y Médico) -->
+        <button type="button" id="btn_cockpit_historia_clinica" onclick="abrirModalConsultaHC()" class="cockpit-btn-theme" style="background:#0284c7; color:#ffffff; border-color:#0369a1; font-weight:800; white-space:nowrap; display:inline-flex; align-items:center; gap:5px;" title="Consultar y visualizar la Historia Clínica completa de los pacientes (Solo Auditor y Médico)">
+          📋 Historia Clínica
         </button>
 
-        <!-- Botón Trazabilidad Integral en Modo Auditor -->
-        <button type="button" class="cockpit-btn-trazabilidad" id="btn_cockpit_trazabilidad" onclick="abrirModalTrazabilidadAuditor()" title="Auditoría Forense y Trazabilidad Clínica Integral (NTS N° 139-MINSA)" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; font-size:12px; font-weight:800; border-radius:6px; border:1.5px solid #4338ca; background:#4f46e5; color:#ffffff; cursor:pointer; box-shadow:0 1px 3px rgba(79,70,229,0.35);">
-          <span>📜</span> Trazabilidad
-        </button>
-
-        <!-- Botón Expandir/Contraer Todo en Modo Auditor -->
-        <button type="button" class="cockpit-btn-expand-all" id="btn_expand_collapse_all" onclick="window.COCKPIT.toggleExpandirTodoModulos()" title="Expandir o contraer todos los módulos para auditoría panorámica" style="display:inline-flex; align-items:center; gap:4px; padding:5px 10px; font-size:12px; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; cursor:pointer;">
+        <!-- Botón Expandir/Contraer Todo (Modo Auditor) -->
+        <button type="button" class="cockpit-btn-theme" id="btn_expand_all_modules" onclick="window.COCKPIT.toggleExpandirContraerTodo()" title="Expandir o contraer todas las fases y módulos de una sola vez">
           ⤢ Expandir Todo
         </button>
 
@@ -479,12 +442,18 @@
     modo = modo || (window.RBAC_FLUJO ? window.RBAC_FLUJO.obtenerModoOperacion() : "DEMO");
     rolActivoVista = rol;
 
+    // Visibilidad del botón Historia Clínica en la barra superior (Solo Auditor y Médico)
+    const btnCockpitHC = document.getElementById("btn_cockpit_historia_clinica");
+    if (btnCockpitHC) {
+      const esPermHC = (rol === "AUDITOR" || rol === "ADMIN" || rol === "MEDICO");
+      btnCockpitHC.style.setProperty("display", esPermHC ? "inline-flex" : "none", "important");
+    }
+
     const step1 = document.getElementById("cockpit_step_1");
     const step2 = document.getElementById("cockpit_step_2");
     const step3 = document.getElementById("cockpit_step_3");
     const step4 = document.getElementById("cockpit_step_4");
     const tacticalBar = document.getElementById("cockpit_tactical_bar");
-    const activeQueueRow = document.getElementById("cockpit_active_queue_row");
     const triageCard = document.getElementById("cockpit_triage_sealed_card");
     const cajaCard = document.getElementById("cockpit_caja_admin_card");
 
@@ -646,71 +615,11 @@
     }
 
     actualizarBotonAccionPrincipal();
-    if (typeof window.renderizarFilaPacientesCockpit === "function") {
-      window.renderizarFilaPacientesCockpit();
-    }
   }
 
   // ----------------------------------------------------------------------------
   // 4. CONTROL DE FASES (MODO AUDITOR / SUPERVISIÓN)
   // ----------------------------------------------------------------------------
-  let todosModulosExpandidos = false;
-
-  function toggleExpandirTodoModulos() {
-    todosModulosExpandidos = !todosModulosExpandidos;
-    const btn = document.getElementById("btn_expand_collapse_all");
-
-    const phase1 = document.getElementById("cockpit_phase_1");
-    const phase2 = document.getElementById("cockpit_phase_2");
-    const phase3 = document.getElementById("cockpit_phase_3");
-    const phase4 = document.getElementById("cockpit_phase_4");
-
-    if (todosModulosExpandidos) {
-      if (btn) btn.innerHTML = "⤡ Contraer Fases";
-      [phase1, phase2, phase3, phase4].forEach(p => {
-        if (p) {
-          p.classList.add("cockpit-phase-active");
-          p.style.display = "";
-        }
-      });
-
-      for (let i = 1; i <= 8; i++) {
-        const sec = document.getElementById(`sec_mod${i}`);
-        const body = document.getElementById(`body_mod${i}`);
-        const arrow = document.getElementById(`arrow_mod${i}`);
-        if (sec) sec.style.display = "block";
-        if (body) { body.classList.add("open"); body.style.display = "block"; }
-        if (arrow) arrow.classList.add("open");
-      }
-    } else {
-      if (btn) btn.innerHTML = "⤢ Expandir Todo";
-      [phase1, phase2, phase3, phase4].forEach(p => {
-        if (p) {
-          p.classList.remove("cockpit-phase-active");
-          p.style.display = "";
-        }
-      });
-      irAFase(faseActiva);
-    }
-  }
-
-  function irAModulo(numeroModulo) {
-    const num = Number(numeroModulo);
-    let fase = 1;
-    if (num === 3 || num === 5) fase = 2;
-    else if (num === 4 || num === 6 || num === 7) fase = 3;
-    else if (num === 8) fase = 4;
-
-    if (!todosModulosExpandidos) {
-      irAFase(fase);
-    }
-    const sec = document.getElementById(`sec_mod${num}`);
-    if (sec) {
-      sec.style.display = "block";
-      sec.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }
-
   function irAFase(numeroFase) {
     faseActiva = Number(numeroFase);
 
@@ -727,7 +636,7 @@
       } else {
         if (stepEl) stepEl.classList.remove("active");
         if (phaseEl) {
-          if (!todosModulosExpandidos && (rolActivoVista === "AUDITOR" || rolActivoVista === "ADMIN")) {
+          if (rolActivoVista === "AUDITOR" || rolActivoVista === "ADMIN") {
             phaseEl.style.display = "none";
           }
           phaseEl.classList.remove("cockpit-phase-active");
@@ -736,12 +645,7 @@
     }
 
     actualizarBotonAccionPrincipal();
-    const activePhaseEl = document.getElementById(`cockpit_phase_${faseActiva}`);
-    if (activePhaseEl) {
-      activePhaseEl.scrollIntoView({ behavior: "smooth", block: "start" });
-    } else {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // ----------------------------------------------------------------------------
@@ -757,28 +661,15 @@
     const elDni = document.getElementById("c_triage_px_dni");
     const elEdadSexo = document.getElementById("c_triage_px_edad_sexo");
     const elNews2 = document.getElementById("c_triage_news2_score");
-    const elCie = document.getElementById("c_triage_cie10");
-    if (elCie) {
-      elCie.textContent = px.cie10 || state.cie10 || "Por asignar";
-    }
     const elVitals = document.getElementById("c_triage_vitals_resumen");
     const elAlergias = document.getElementById("c_triage_alergias");
     const elFirmante = document.getElementById("c_triage_firmante");
     const elFecha = document.getElementById("c_triage_fecha_sello");
 
-    const prio = px.prioridad || state.prioridad || null;
+    const prio = px.prioridad || state.prioridad || "III";
     if (elPrioBadge) {
-      if (prio) {
-        elPrioBadge.className = `ui-badge-pill ui-badge-p${prio.toLowerCase()}`;
-        elPrioBadge.textContent = `P-${prio} · ${prio === "I" ? "Emergencia Vital" : prio === "II" ? "Emergencia" : prio === "III" ? "Urgencia" : prio === "IV" ? "Menor Urgencia" : "No Urgente"}`;
-        elPrioBadge.style.background = "";
-        elPrioBadge.style.color = "";
-      } else {
-        elPrioBadge.className = "ui-badge-pill";
-        elPrioBadge.textContent = "⏳ Triaje Pendiente (Sin Prioridad)";
-        elPrioBadge.style.background = "#f1f5f9";
-        elPrioBadge.style.color = "#475569";
-      }
+      elPrioBadge.className = `ui-badge-pill ui-badge-p${prio.toLowerCase()}`;
+      elPrioBadge.textContent = `P-${prio} · ${prio === "I" ? "Emergencia Vital" : prio === "II" ? "Emergencia" : "Urgencia"}`;
     }
 
     const turno = px.turno || (state.identificador ? state.identificador.replace("CRITICO-", "") : "E-001");
@@ -788,10 +679,8 @@
     if (elDni) {
       if (esNN) {
         elDni.innerHTML = `<span style="color:#ea580c; font-weight:800;">Identidad: ${px.identificador || "NN-XXX"} (Desconocido) — Validación RENIEC pendiente por Admisión (Ley N° 27604)</span>`;
-      } else if (px.dni || state.numDni) {
-        elDni.innerHTML = `<span style="color:#0f172a; font-weight:700;">${px.dni || state.numDni}</span> <span style="background:#dcfce7; color:#15803d; font-size:0.7rem; font-weight:800; padding:1px 6px; border-radius:4px; margin-left:6px;">✅ Validado en RENIEC</span>`;
       } else {
-        elDni.innerHTML = `<span style="color:#64748b; font-style:italic; font-size:0.78rem;">Pendiente de identificación (Triaje / Admisión)</span>`;
+        elDni.innerHTML = `<span style="color:#0f172a; font-weight:700;">${px.dni || state.numDni || "—"}</span> <span style="background:#dcfce7; color:#15803d; font-size:0.7rem; font-weight:800; padding:1px 6px; border-radius:4px; margin-left:6px;">✅ Validado en RENIEC</span>`;
       }
     }
 
@@ -842,8 +731,7 @@
   function actualizarTarjetaResumenCaja() {
     const state = window.STATE || {};
     const cola = window.PACIENTES_COLA || [];
-    const idActivo = window.pacienteActivoId || (typeof pacienteActivoId !== "undefined" ? pacienteActivoId : null);
-    const px = cola.find(x => x.id === idActivo) || {};
+    const px = cola.find(x => x.id === window.pacienteActivoId) || {};
 
     const elNombre = document.getElementById("c_caja_px_nombre");
     const elDni = document.getElementById("c_caja_px_dni");
@@ -857,22 +745,11 @@
     if (elNombre) elNombre.textContent = `${turno} · ${px.nombre || state.nombreReniec || "Paciente"}`;
     if (elDni) elDni.textContent = px.dni || state.numDni || "NN";
 
-    const esNN = Boolean(
-      px.esNN || state.esNN ||
-      (px.dni && (px.dni === "NN" || px.dni === "S/D" || String(px.dni).startsWith("NN-"))) ||
-      (state.numDni && (state.numDni === "NN" || state.numDni === "S/D" || String(state.numDni).startsWith("NN-"))) ||
-      (px.nombre && String(px.nombre).includes("NN")) ||
-      (state.nombreReniec && String(state.nombreReniec).includes("NN"))
-    );
-
-    const seguro = esNN
-      ? "No Identificado · Sin Seguro (Cobro 100%)"
-      : (state.tipoSeguro || px.tipoSeguro || "SIS Gratuito");
-
+    const seguro = state.tipoSeguro || "SIS Gratuito";
     if (elRegimen) elRegimen.textContent = seguro;
-    if (elBadgeSeguro) elBadgeSeguro.textContent = esNN ? "Seguro: No Acreditado (NN)" : `Seguro: ${seguro.split(" ")[0]}`;
+    if (elBadgeSeguro) elBadgeSeguro.textContent = `Seguro: ${seguro.split(" ")[0]}`;
 
-    if (elCama) elCama.textContent = state.camaAsignada || px.camaNombre || "Sin cama";
+    if (elCama) elCama.textContent = state.camaAsignada || "Sin cama";
 
     const firmaMed = px.firmas?.medico || state.firmas?.medico;
     if (elAlta) {
@@ -880,20 +757,7 @@
       elAlta.style.color = firmaMed ? "#059669" : "#d97706";
     }
 
-    let liq = null;
-    if (typeof window.calcularLiquidacionSeguro === "function") {
-      try { liq = window.calcularLiquidacionSeguro(); } catch(e) {}
-    } else if (typeof calcularLiquidacionSeguro === "function") {
-      try { liq = calcularLiquidacionSeguro(); } catch(e) {}
-    }
-    const montoCalculado = liq && typeof liq.totalPaciente === "number" && liq.totalPaciente > 0
-      ? `S/ ${liq.totalPaciente.toFixed(2)}`
-      : null;
-    const totalNumEl = document.getElementById("factura_total_num") || document.getElementById("liq_monto_paciente");
-    const numVal = totalNumEl ? parseFloat(totalNumEl.textContent.replace(/[^0-9.]/g, "")) : 0;
-    const totalFactura = montoCalculado || (numVal > 0
-      ? `S/ ${numVal.toFixed(2)}`
-      : (document.getElementById("factura_total_monto")?.textContent || (esNN ? "S/ 480.00" : "S/ 0.00")));
+    const totalFactura = document.getElementById("factura_total_monto")?.textContent || "S/ 0.00";
     if (elTotal) elTotal.textContent = totalFactura;
   }
 
@@ -948,7 +812,7 @@
 
     // 1. Paciente activo en STATE (si no está dado de alta o liquidado)
     const flujoActivo = st.estadoFlujo || "";
-    const estaAltaActivo = flujoActivo === "ALTA_CLINICA" || flujoActivo === "LIQUIDADO_CERRADO" || flujoActivo === "EGRESADO";
+    const estaAltaActivo = flujoActivo === "ALTA_CLINICA" || flujoActivo === "LIQUIDADO_CERRADO" || flujoActivo === "EGRESADO" || flujoActivo === "CERRADO_FACTURADO" || flujoActivo === "ALTA" || flujoActivo === "Atendido";
     const camaActivoNormalizada = (!estaAltaActivo) ? normalizarIdCamaClinica(st.camaAsignadaId || st.camaAsignada || "") : null;
     if (camaActivoNormalizada && idsHospitalarios.includes(camaActivoNormalizada)) {
       camasOcupadas.add(camaActivoNormalizada);
@@ -958,7 +822,7 @@
     const cola = Array.isArray(window.PACIENTES_COLA) ? window.PACIENTES_COLA : [];
     cola.forEach(px => {
       const pxFlujo = px.estadoFlujo || "";
-      if (pxFlujo !== "ALTA_CLINICA" && pxFlujo !== "LIQUIDADO_CERRADO" && pxFlujo !== "EGRESADO") {
+      if (pxFlujo !== "ALTA_CLINICA" && pxFlujo !== "LIQUIDADO_CERRADO" && pxFlujo !== "EGRESADO" && pxFlujo !== "CERRADO_FACTURADO" && pxFlujo !== "ALTA" && pxFlujo !== "Atendido") {
         const idCama = normalizarIdCamaClinica(px.camaId || px.camaAsignada || px.camaNombre || "");
         if (idCama && idsHospitalarios.includes(idCama)) {
           camasOcupadas.add(idCama);
@@ -971,7 +835,7 @@
       Object.keys(window.expedientesStore).forEach(k => {
         const exp = window.expedientesStore[k];
         const expFlujo = exp.estadoFlujo || "";
-        if (expFlujo !== "ALTA_CLINICA" && expFlujo !== "LIQUIDADO_CERRADO" && expFlujo !== "EGRESADO") {
+        if (expFlujo !== "ALTA_CLINICA" && expFlujo !== "LIQUIDADO_CERRADO" && expFlujo !== "EGRESADO" && expFlujo !== "CERRADO_FACTURADO" && expFlujo !== "ALTA" && expFlujo !== "Atendido") {
           const idCama = normalizarIdCamaClinica(exp.camaId || exp.camaAsignada || exp.camaNombre || "");
           if (idCama && idsHospitalarios.includes(idCama)) {
             camasOcupadas.add(idCama);
@@ -986,7 +850,7 @@
         const r = recursos[id];
         if (r && r.estado === "ocupada") {
           const pacFlujo = r.paciente?.estadoFlujo || "";
-          if (pacFlujo === "ALTA_CLINICA" || pacFlujo === "LIQUIDADO_CERRADO") {
+          if (pacFlujo === "ALTA_CLINICA" || pacFlujo === "LIQUIDADO_CERRADO" || pacFlujo === "CERRADO_FACTURADO" || pacFlujo === "ALTA" || pacFlujo === "Atendido") {
             r.estado = "disponible";
             r.paciente = null;
           } else {
@@ -1092,8 +956,8 @@ function refrescarValoresMonitor() {
           monEsi.textContent = `Nivel ${state.prioridad}`;
           monEsi.style.color = state.prioridad === "I" ? "#EF4444" : state.prioridad === "II" ? "#F97316" : "#A7F3D0";
         } else {
-          monEsi.textContent = "Sin evaluar";
-          monEsi.style.color = "#94A3B8";
+          monEsi.textContent = "--";
+          monEsi.style.color = "#94a3b8";
         }
       }
     }
@@ -1114,18 +978,20 @@ function refrescarValoresMonitor() {
       const nombre = state.nombreReniec || state.identificador || (state.esNN ? "Paciente NN (Crítico)" : "Sin paciente seleccionado");
       pxNombre.textContent = nombre;
 
-      const prio = state.prioridad || null;
       if (pxPrio) {
-        if (prio) {
+        if (state.prioridad) {
+          const prio = state.prioridad;
           pxPrio.className = `ui-badge-pill ui-badge-p${prio.toLowerCase()}`;
-          pxPrio.textContent = `P-${prio} · ${prio === "I" ? "Emergencia Vital" : prio === "II" ? "Emergencia" : prio === "III" ? "Urgencia" : prio === "IV" ? "Menor Urgencia" : "No Urgente"}`;
           pxPrio.style.background = "";
           pxPrio.style.color = "";
+          pxPrio.style.border = "";
+          pxPrio.textContent = `P-${prio} · ${prio === "I" ? "Emergencia Vital" : prio === "II" ? "Emergencia" : prio === "III" ? "Urgencia" : prio === "IV" ? "Urgencia Menor" : "No Urgente"}`;
         } else {
           pxPrio.className = "ui-badge-pill";
           pxPrio.textContent = "⏳ Sin Prioridad (Por evaluar)";
           pxPrio.style.background = "#f1f5f9";
-          pxPrio.style.color = "#64748b";
+          pxPrio.style.color = "#475569";
+          pxPrio.style.border = "1px solid #cbd5e1";
         }
       }
 
@@ -1153,12 +1019,6 @@ function refrescarValoresMonitor() {
       const esAuditor = rolActual === "AUDITOR" || rolActual === "ADMIN" || (window.RBAC_FLUJO && window.RBAC_FLUJO.obtenerModoOperacion() === "DEMO");
       simSelect.style.display = esAuditor ? "inline-block" : "none";
     }
-
-    const soloAuditor = (rolActual === "AUDITOR" || rolActual === "ADMIN");
-    const btnHcGlobal = document.getElementById("btn_cockpit_historia_clinica");
-    if (btnHcGlobal) btnHcGlobal.style.display = soloAuditor ? "inline-flex" : "none";
-    const btnHcTablero = document.getElementById("btn_tablero_hc");
-    if (btnHcTablero) btnHcTablero.style.display = soloAuditor ? "inline-block" : "none";
 
     if (rolActual === "MEDICO") actualizarTarjetaResumenTriaje();
     if (rolActual === "CAJA") actualizarTarjetaResumenCaja();
@@ -1420,19 +1280,87 @@ function refrescarValoresMonitor() {
     inicializarCockpit();
   }
 
+
+  // ----------------------------------------------------------------------------
+  // RESILIENCIA ANTI-CONGELAMIENTO (VISIBILITYCHANGE, FOCUS & DEBOUNCE RESIZE)
+  // ----------------------------------------------------------------------------
+  let todosModulosExpandidos = false;
+  function toggleExpandirContraerTodo() {
+    todosModulosExpandidos = !todosModulosExpandidos;
+    const btn = document.getElementById("btn_expand_all_modules");
+    if (btn) btn.textContent = todosModulosExpandidos ? "⤡ Contraer Todo" : "⤢ Expandir Todo";
+
+    for (let i = 1; i <= 8; i++) {
+      const body = document.getElementById("body_mod" + i);
+      const arrow = document.getElementById("arrow_mod" + i);
+      if (body) {
+        body.style.display = todosModulosExpandidos ? "block" : (i === 1 ? "block" : "none");
+        if (todosModulosExpandidos) body.classList.add("open");
+        else if (i !== 1) body.classList.remove("open");
+      }
+      if (arrow) {
+        if (todosModulosExpandidos) arrow.classList.add("open");
+        else if (i !== 1) arrow.classList.remove("open");
+      }
+    }
+    if (todosModulosExpandidos) {
+      document.querySelectorAll(".cockpit-phase-container").forEach(p => { p.style.display = "block"; });
+    } else {
+      irAFase(faseActiva);
+    }
+  }
+
+  function resincronizarSilenciosamenteAlReactivar() {
+    if (document.hidden) return;
+    try {
+      if (typeof window.recargarColaCompartidaDesdeStorage === "function") {
+        window.recargarColaCompartidaDesdeStorage();
+      }
+      if (typeof window.renderizarTrackBoardLista === "function") {
+        window.renderizarTrackBoardLista();
+      }
+      if (typeof window.renderizarTableroColaPacientes === "function") {
+        window.renderizarTableroColaPacientes();
+      }
+      if (typeof window.renderizarCarruselPreTriaje === "function") {
+        window.renderizarCarruselPreTriaje();
+      }
+      if (typeof actualizarContextoCockpit === "function") {
+        actualizarContextoCockpit();
+      }
+      if (typeof actualizarCamasMonitorEnTiempoReal === "function") {
+        actualizarCamasMonitorEnTiempoReal();
+      }
+    } catch(e) {
+      console.warn("Silent resync upon reactivation:", e);
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) resincronizarSilenciosamenteAlReactivar();
+  });
+  window.addEventListener("focus", resincronizarSilenciosamenteAlReactivar);
+
+  let resizeDebounceTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeDebounceTimer);
+    resizeDebounceTimer = setTimeout(() => {
+      document.querySelectorAll(".modal-backdrop-orphan").forEach(el => el.remove());
+      if (typeof actualizarCamasMonitorEnTiempoReal === "function") actualizarCamasMonitorEnTiempoReal();
+    }, 150);
+  });
+
   window.COCKPIT = {
     irAFase,
-    irAModulo,
-    toggleExpandirTodoModulos,
     ejecutarAccionPrincipal,
     seleccionarSector,
     cambiarVistaSimulada,
     aplicarVistaYPermisosRol,
     actualizarContextoCockpit,
-    actualizarTarjetaResumenCaja,
-    actualizarTarjetaResumenTriaje,
     refrescarValoresMonitor,
-    toggleDarkMode
+    toggleDarkMode,
+    toggleExpandirContraerTodo,
+    resincronizarSilenciosamenteAlReactivar
   };
 
 })();
