@@ -61,15 +61,6 @@ let contadorHcTemp = 1;
       localStorage.removeItem("UPP_HISTORIAL_EPISODIOS");
       localStorage.removeItem("UPP_CONTADOR_HC");
 
-      const keysToRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && (k.startsWith("padron_susalud_") || k.startsWith("seguro_asignado_"))) {
-          keysToRemove.push(k);
-        }
-      }
-      keysToRemove.forEach(k => localStorage.removeItem(k));
-
       localStorage.setItem(DB_VERSION_KEY, "true");
       localStorage.setItem("UPP_CONTADOR_HC", "1");
       console.log("🧹 Base de datos local purgada con éxito. Comenzando historias clínicas desde cero.");
@@ -87,7 +78,7 @@ let contadorHcTemp = 1;
 // Sustentos: NTS N° 139-MINSA/DGIEM (Historia Clínica) y Ley N° 29414
 // ==============================================================================
 async function autoGuardarCambioEnHistoriaClinica(motivo = "Actualización asistencial") {
-  const cleanId = String(STATE.identificador || STATE.numDni || "").trim();
+  const cleanId = String(STATE.numDni || STATE.identificador || "").match(/\d{8}/)?.[0] || String(STATE.identificador || "").trim();
   const fechaActual = new Date();
   const horaStr = fechaActual.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
@@ -141,7 +132,7 @@ async function autoGuardarCambioEnHistoriaClinica(motivo = "Actualización asist
 
   // 3. Persistir en Base de Datos Local de Pacientes Master
   try {
-    const master = cargarPacientesMaster();
+        const master = cargarPacientesMaster();
     const idKey = cleanId || "PACIENTE_ACTUAL";
     if (!master[idKey]) {
       master[idKey] = {
@@ -152,7 +143,11 @@ async function autoGuardarCambioEnHistoriaClinica(motivo = "Actualización asist
         episodios: []
       };
     }
-    master[idKey].tipo_seguro = snapshotEpisodio.tipo_seguro;
+    if (!master[idKey].tipo_seguro || master[idKey].tipo_seguro === "Seguro por confirmar" || master[idKey].tipo_seguro === "Pendiente de Acreditación") {
+      master[idKey].tipo_seguro = snapshotEpisodio.tipo_seguro;
+    } else {
+      snapshotEpisodio.tipo_seguro = master[idKey].tipo_seguro;
+    }
     master[idKey].historia_clinica = nroHc;
     master[idKey].ultimo_episodio = snapshotEpisodio;
     master[idKey].episodios = Array.isArray(master[idKey].episodios) ? master[idKey].episodios : [];
@@ -173,7 +168,7 @@ async function autoGuardarCambioEnHistoriaClinica(motivo = "Actualización asist
         identificador: cleanId,
         historia_clinica: nroHc,
         nombre_completo: STATE.nombreReniec || cleanId,
-        tipo_seguro: STATE.tipoSeguro || "Particular",
+        tipo_seguro: master[idKey].tipo_seguro || STATE.tipoSeguro || "Particular",
         estado_bd: "Si",
         prioridad: STATE.prioridad ? `P-${STATE.prioridad}` : null,
         ticket: STATE.turno || "T-01"
@@ -445,7 +440,8 @@ function guardarEnHistoriaClinicaMaster(datos = {}) {
     if (datos.edad !== undefined && datos.edad !== null) p.edad = datos.edad;
     if (datos.sexo) p.sexo = datos.sexo;
     if (datos.grupo_sanguineo) p.grupo_sanguineo = datos.grupo_sanguineo;
-    if (datos.tipo_seguro) p.tipo_seguro = datos.tipo_seguro;
+    // La cobertura es un atributo longitudinal del paciente; una consulta no la vuelve a sortear.
+    if ((!p.tipo_seguro || p.tipo_seguro === "Seguro por confirmar" || p.tipo_seguro === "Pendiente de Acreditación") && datos.tipo_seguro) p.tipo_seguro = datos.tipo_seguro;
     if (datos.alergias) p.alergias = datos.alergias;
     if (datos.antecedentes) p.antecedentes = datos.antecedentes;
     if (nroHc && (!p.historia_clinica || p.historia_clinica === "—")) p.historia_clinica = nroHc;
@@ -1312,14 +1308,6 @@ async function purgarTodaLaBaseDeDatos() {
     localStorage.removeItem("UPP_HISTORIAL_EPISODIOS");
     localStorage.setItem("UPP_CONTADOR_HC", "1");
 
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && (k.startsWith("padron_susalud_") || k.startsWith("seguro_asignado_"))) {
-        keysToRemove.push(k);
-      }
-    }
-    keysToRemove.forEach(k => localStorage.removeItem(k));
   } catch (e) {}
 
   // 3. Purgar SQLite en servidor Python
@@ -1903,7 +1891,7 @@ function visualizarHistoriaClinica(pacienteEncoded, opciones = {}) {
   const body = document.getElementById("modal_visualizar_hc_body");
   if (!modal || !body) return;
   const ident = p.identificador || "—";
-  const nom = p.nombre_completo || ident;
+  const nom = p.nombre_completo || ident.replace(/\s*\(DNI\s*\d{8}\)\s*/i, "").trim();
   const hc = p.historia_clinica || "—";
   // Recuperar registro maestro permanente que conserva ALERGIAS y todos los episodios
   const master = obtenerOInicializarPacienteMaster(ident, hc, nom, p.tipo_seguro);
@@ -2212,7 +2200,8 @@ function construirHTMLImpresionHC(pacienteEncoded) {
   }
   if (!p) return "";
   const ident = p.identificador || p.dni || "—";
-  const nom = p.nombre_completo || ident;
+  const docDni = String(p.dni || p.numDni || ident.match(/\d{8}/)?.[0] || "—");
+  const nom = p.nombre_completo || ident.replace(/\s*\(DNI\s*\d{8}\)\s*/i, "").trim();
   const hc = p.historia_clinica || "—";
   const master = obtenerOInicializarPacienteMaster(ident, hc, nom, p.tipo_seguro);
   const seguro = master.tipo_seguro || p.tipo_seguro || "—";
@@ -2221,8 +2210,8 @@ function construirHTMLImpresionHC(pacienteEncoded) {
   const gSan = master.grupo_sanguineo || p.grupo_sanguineo || "—";
   const edadPx = master.edad || p.edad || "—";
   const sexoPx = master.sexo || p.sexo || "—";
-  const pxVivo = (Array.isArray(PACIENTES_COLA) ? PACIENTES_COLA.find(x => (x.dni && x.dni === ident) || x.historiaClinica === hc || x.nombre === nom) : null) || {};
-  const stVivo = (typeof STATE !== "undefined" && (STATE.numDni === ident || STATE.historiaClinica === hc)) ? STATE : {};
+  const pxVivo = (Array.isArray(PACIENTES_COLA) ? PACIENTES_COLA.find(x => (x.dni && String(x.dni) === docDni) || x.historiaClinica === hc || x.nombre === nom) : null) || {};
+  const stVivo = (typeof STATE !== "undefined" && (String(STATE.numDni || "") === docDni || STATE.historiaClinica === hc)) ? STATE : {};
   const enfermeraReg = master.enfermera_responsable || pxVivo.enfermeraTriaje || pxVivo.firmas?.triaje?.usuario || stVivo.firmas?.triaje?.usuario || "—";
   const medVivoVal = (pxVivo.medico && pxVivo.medico !== "Por asignar") ? pxVivo.medico : ((stVivo.medicoTratante && stVivo.medicoTratante !== "Por asignar") ? stVivo.medicoTratante : null);
   const medicoReg = master.medico_responsable || medVivoVal || pxVivo.medicoTratante || pxVivo.firmas?.medico?.usuario || stVivo.firmas?.medico?.usuario || "—";
@@ -2234,7 +2223,7 @@ function construirHTMLImpresionHC(pacienteEncoded) {
   const ingresosReg = Array.isArray(master.ingresos_historia) && master.ingresos_historia.length
     ? master.ingresos_historia
     : (pxVivo.id ? [{ dia: pxVivo.fecha || new Date().toLocaleDateString("es-PE"), hora: pxVivo.horaLlegada || "—", tipo: "Ingreso a Emergencia", modalidad: pxVivo.modalidad || "—", ubicacion: pxVivo.camaNombre || "—", enfermera: enfermeraReg }] : []);
-  const episodios = obtenerEpisodiosDePaciente(ident, hc);
+  const episodios = obtenerEpisodiosDePaciente(docDni, hc);
   const mods = Array.isArray(master.modificaciones_auditoria) ? master.modificaciones_auditoria : [];
   const esAlergico = alergias && !alergias.toLowerCase().includes("niega") && !alergias.toLowerCase().includes("ninguna");
 
@@ -2315,7 +2304,7 @@ function construirHTMLImpresionHC(pacienteEncoded) {
         <div class="section-title">I. Filiación, Equipo Asistencial y Diagnóstico</div>
         <div class="grid-4" style="margin-bottom:8px;">
           <div class="field"><label>Apellidos y Nombres</label><span>${nom}</span></div>
-          <div class="field"><label>Documento</label><span>${ident}</span></div>
+          <div class="field"><label>DNI</label><span>${docDni}</span></div>
           <div class="field"><label>Edad / Sexo / Grupo</label><span>${edadPx} años · ${sexoPx} · ${gSan}</span></div>
           <div class="field"><label>Seguro / IAFAS</label><span>${seguro}</span></div>
         </div>
@@ -3647,7 +3636,7 @@ async function jalarSeguroAleatorioSusalud() {
 }
 window.jalarSeguroAleatorioSusalud = jalarSeguroAleatorioSusalud;
 
-function procesarResultadoAcreditacion(datos, ident) {
+async function procesarResultadoAcreditacion(datos, ident) {
   const box = document.getElementById("pide_acreditacion_box");
   const grid = document.getElementById("pide_detalles_grid");
   const titulo = document.getElementById("pide_tipo_titulo");
@@ -3655,6 +3644,19 @@ function procesarResultadoAcreditacion(datos, ident) {
   const bannerCondicion = document.getElementById("pide_condiciones_cobro_banner");
 
   if (box) box.style.display = "block";
+
+  const dniMatch = String(ident || "").match(/\d{8}/);
+  const seguroPrevio = dniMatch ? await buscarSeguroPacienteEnBd(dniMatch[0]) : null;
+  if (seguroPrevio && seguroPrevio !== datos.tipo_seguro) {
+    const padronPrevio = dniMatch ? await obtenerOGenerarPadronSusalud(dniMatch[0], false) : crearPadronDesdeSeguroExistente("", seguroPrevio);
+    guardarPadronEnTodosLosStorages(dniMatch[0], padronPrevio, seguroPrevio);
+    STATE.padronSusalud = padronPrevio;
+    if (padronPrevio.tipo_aseguramiento === "SOLO_SIS") datos.tipo_seguro = "SIS";
+    else if (padronPrevio.tipo_aseguramiento === "SOLO_ESSALUD") datos.tipo_seguro = "EsSalud";
+    else if (padronPrevio.privado?.estado_poliza === "ACTIVA") datos.tipo_seguro = padronPrevio.privado.iafas_eps || seguroPrevio;
+    else datos.tipo_seguro = "Particular";
+    STATE.tipoSeguro = datos.tipo_seguro;
+  }
 
   if (datos.tipo_seguro === "EsSalud") {
     STATE.tipoSeguro = "EsSalud";
@@ -3782,7 +3784,6 @@ function procesarResultadoAcreditacion(datos, ident) {
   }
 
   // Persistir en Base de Datos de manera inalterable
-  const dniMatch = (ident || "").match(/\d{8}/);
   const numDni = dniMatch ? dniMatch[0] : ident;
   guardarSeguroPacienteEnBd(numDni, STATE.historiaClinica, STATE.nombreReniec, datos.tipo_seguro);
 
@@ -4203,7 +4204,8 @@ function syncEva(val) {
 
 // ===========================================================================
 // MOTOR CLÍNICO ESTANDARIZADO DE TRIAJE HOSPITALARIO
-// Estándares: NTS N° 042-MINSA/DGSP-V.01 · ESI v5 (AHRQ/ENA) · NEWS2 (RCP London) · ADA · PALS
+// Referencias y reglas locales: NTS N° 042-MINSA/DGSP-V.01; el motor es una implementación local,
+// no una certificación de conformidad con ESI, MTS, NEWS2, ADA ni PALS.
 // ===========================================================================
 
 /**
@@ -4222,8 +4224,9 @@ function parseVital(id) {
 window.parseVital = parseVital;
 
 /**
- * PARTE 2: MOTOR 1 — CÁLCULO OFICIAL NEWS2 (ADULTOS >= 14 AÑOS + PALS < 14 AÑOS)
- * Royal College of Physicians (UK) + Rangos Pediátricos PALS
+ * PARTE 2: PUNTAJE FISIOLÓGICO PARCIAL (no equivale a NEWS2 completo)
+ * NEWS2 requiere variables ACVPU, escala de SpO2 y oxígeno suplementario,
+ * que este formulario no recoge. Los rangos pediátricos locales tampoco son NEWS2.
  * Devuelve: { scoreTotal: number, maxParametroUnico: number, desglose: string[] }
  */
 function calcularNEWS2(params = {}) {
@@ -4231,7 +4234,6 @@ function calcularNEWS2(params = {}) {
   const spo2 = params.spo2 ?? null;
   const pas = params.pas ?? null;
   const fc = params.fc ?? null;
-  const glasgow = params.glasgow ?? null;
   const temp = params.temp ?? null;
   const esPediatrico = Boolean(params.esPediatrico);
   const edad = typeof params.edad === "number" ? params.edad : 30;
@@ -4286,7 +4288,7 @@ function calcularNEWS2(params = {}) {
     else if (pas < 100) ptsPAS = 1;
     else ptsPAS = 0;
     desglose.push(`PAS PALS: ${pas} mmHg (+${ptsPAS})`);
-  } else {
+    } else {
     if (pas <= 90 || pas >= 220) ptsPAS = 3;
     else if (pas <= 100) ptsPAS = 2;
     else if (pas <= 110) ptsPAS = 1;
@@ -4317,17 +4319,9 @@ function calcularNEWS2(params = {}) {
   scoreTotal += ptsFC;
   if (ptsFC > maxParametroUnico) maxParametroUnico = ptsFC;
 
-  // 5. Nivel de Conciencia (Glasgow Coma Scale)
-  let ptsGCS = 0;
-  if (glasgow === null || isNaN(glasgow)) {
-    desglose.push("Glasgow: No registrado (+0)");
-  } else {
-    if (glasgow <= 14) ptsGCS = 3;
-    else ptsGCS = 0; // 15
-    desglose.push(`Glasgow: ${glasgow}/15 (+${ptsGCS})`);
-  }
-  scoreTotal += ptsGCS;
-  if (ptsGCS > maxParametroUnico) maxParametroUnico = ptsGCS;
+  // NEWS2 uses ACVPU/new confusion, not the Glasgow Coma Scale. GCS is
+  // evaluated separately by the triage engine and must not inflate NEWS2.
+  desglose.push("Conciencia: NEWS2 requiere ACVPU/confusión nueva (no disponible en este formulario)");
 
   // 6. Temperatura Axilar (°C)
   let ptsTemp = 0;
@@ -4348,7 +4342,7 @@ function calcularNEWS2(params = {}) {
 window.calcularNEWS2 = calcularNEWS2;
 
 /**
- * PARTE 3: MOTOR 2 — ÁRBOL DE DECISIÓN OFICIAL ESI v5 + OVERLAY MINSA/ADA
+ * PARTE 3: MOTOR 2 — REGLAS LOCALES DE PRIORIDAD + REFERENCIAS MTS/MINSA/ADA
  * Aplica secuencialmente las 4 Compuertas Oficiales (A, B, C y D).
  * Cumple estrictamente las 4 leyes matemáticas invariantes.
  */
@@ -4369,7 +4363,7 @@ function evaluarTriajeEstandar(datos = {}) {
   const motivoCritico = datos.motivoIngresoCritico || (typeof STATE !== "undefined" && STATE.motivoIngresoCritico) || "Activación directa de Trauma Shock / Riesgo Vital Inmediato — Ley N° 27604";
   const todosVitalesVacios = (fr === null && spo2 === null && pas === null && pad === null && fc === null && glasgow === null && temp === null);
 
-  const news2 = calcularNEWS2({ fr, spo2, pas, fc, glasgow, temp, esPediatrico, edad });
+  const news2 = calcularNEWS2({ fr, spo2, pas, fc, temp, esPediatrico, edad });
 
   // REGLA CLÍNICA DE INGRESO DIRECTO CRÍTICO (Ley N° 27604 / NTS N° 042-MINSA):
   // Si el paciente ingresó por pase crítico directo, se garantiza Prioridad I obligatoria en auditoría.
@@ -4389,7 +4383,7 @@ function evaluarTriajeEstandar(datos = {}) {
         resumenClinico: "Riesgo vital inminente. Destino: Unidad de Shock Trauma / Reanimación."
       };
     } else {
-      // El usuario ingresó signos vitales posteriormente: calcular puntaje NEWS2 real sin degradar Prioridad I
+  // El usuario ingresó signos vitales posteriormente: actualizar el puntaje fisiológico sin degradar P-I
       const motivosConSignos = [motivoCritico];
       if (news2.scoreTotal > 0) {
         motivosConSignos.push(`Monitoreo hemodinámico en curso: NEWS2 ${news2.scoreTotal} pts (Máx. indiv. ${news2.maxParametroUnico} pts)`);
@@ -4533,6 +4527,9 @@ function evaluarTriajeEstandar(datos = {}) {
   if (datos.mts_conciencia === "alteracion_subita") {
     criteriosB.push("Alteración Súbita de Conciencia MTS (GCS 9-13)");
   }
+  if (datos.glasgow !== null && datos.glasgow >= 9 && datos.glasgow <= 13) {
+    criteriosB.push(`Glasgow ${datos.glasgow}/15: alteración de conciencia (P-II)`);
+  }
   if (datos.mts_agudeza === "subito_agudo") {
     criteriosB.push("Inicio Súbito Agudo de Alta Urgencia MTS");
   }
@@ -4551,13 +4548,13 @@ function evaluarTriajeEstandar(datos = {}) {
   if (datos.obst_alto_riesgo) {
     criteriosB.push("Alto Riesgo Obstétrico MINSA (PA severa / Sepsis / Sangrado)");
   }
-  if (datos.alerta_infarto) {
+  if (datos.alerta_infarto && datos.codigoInfarto) {
     criteriosB.push("Dolor Torácico Cardíaco Típico (Código Infarto MTS)");
   }
-  if (datos.alerta_ictus) {
+  if (datos.alerta_ictus && datos.codigoIctus) {
     criteriosB.push("Déficit Neurológico Focal Agudo < 4.5 h (Código Ictus MTS)");
   }
-  if (datos.alerta_sepsis) {
+  if (datos.alerta_sepsis && datos.codigoSepsis) {
     criteriosB.push("Criterios de Sepsis qSOFA MTS");
   }
   if (datos.alerta_trauma_mayor) {
@@ -4680,6 +4677,19 @@ function evaluarTriajeEstandar(datos = {}) {
     };
   }
 
+  // Prioridad V: el discriminador de cronicidad estable tiene etiqueta P-V en MTS.
+  if (datos.mts_agudeza === "cronico") {
+    return {
+      prioridad: "V",
+      esiNivel: 5,
+      compuerta: "COMPUERTA E (Problema Crónico Estable)",
+      slaNormativo: "Según evaluación clínica",
+      news2,
+      motivos: ["Problema Crónico Estable MTS"],
+      resumenClinico: "Problema crónico estable; confirmar que no haya discriminadores de mayor urgencia."
+    };
+  }
+
   // Prioridad V (Azul, SLA: ≤ 120 min / NTS: hasta 240 min)
   return {
     prioridad: "V",
@@ -4687,7 +4697,7 @@ function evaluarTriajeEstandar(datos = {}) {
     compuerta: "COMPUERTA D2 (No Urgente / 0 Recursos)",
     slaNormativo: "Máx. 120 min (NTS: ≤ 240 min)",
     news2,
-    motivos: (datos.mts_agudeza === "cronico") ? ["Crónico Estable sin Deterioro Agudo MTS"] : ["Constantes vitales normales (NEWS2 = 0 pts)", "Sin dolor o dolor EVA 0", "Sin requerimiento de recursos inmediatos de emergencia"],
+    motivos: ["Sin discriminador de mayor prioridad ni datos clínicos de urgencia"],
     resumenClinico: "No Urgencia. Consulta administrativa, reevaluación o retiro de puntos."
   };
 }
@@ -4765,7 +4775,7 @@ function ejecutarFuzzingTriaje500() {
 window.ejecutarFuzzingTriaje500 = ejecutarFuzzingTriaje500;
 
 // ===========================================================================
-// RECALCULAR PRIORIDAD CLÍNICA MEDIANTE MOTOR ESTANDARIZADO NTS-042 / ESI / NEWS2
+// Recalcular prioridad clínica usando las reglas locales y discriminadores registrados
 // ===========================================================================
 function recalcularPrioridad() {
   const validacion = validarSignosVitalesEnVivo();
@@ -4832,7 +4842,6 @@ function recalcularPrioridad() {
   const alertaSepsis = Boolean(STATE.codigoSepsis || document.getElementById("check_cod_sepsis")?.checked);
 
   const tieneDiscriminadorMTS = (
-    Boolean(motivoMts) ||
     mtsVital ||
     (mtsHemorragia !== "ninguna") ||
     (mtsConciencia !== "alerta") ||
@@ -4860,9 +4869,8 @@ function recalcularPrioridad() {
   const tieneDatosClinicos = (
     spo2 !== null || fc !== null || pas !== null || pad !== null ||
     fr !== null || temp !== null || glucosa !== null || glasgow !== null ||
-    (eva !== null && eva > 0) || (motivo && motivo.trim() !== "") ||
-    tieneDiscriminadorMTS ||
-    alertaInfarto || alertaIctus || alertaSepsis ||
+    (eva !== null && eva > 0) || tieneDiscriminadorMTS ||
+    (alertaInfarto && STATE.codigoInfarto) || (alertaIctus && STATE.codigoIctus) || (alertaSepsis && STATE.codigoSepsis) ||
     Boolean(claveObstetrica) || Boolean(STATE.ingresoDirectoCritico) || Boolean(STATE.panicoShockTrauma)
   );
 
@@ -4878,6 +4886,26 @@ function recalcularPrioridad() {
         px.prioridad = null;
         px.estadoAtencion = "En Espera";
       }
+    }
+    return;
+  }
+
+  // CIE-10 y motivo de presentación orientan la evaluación, pero no sustituyen los discriminadores clínicos.
+  if ((motivoMts || motivo.trim()) && !tieneDiscriminadorMTS &&
+      spo2 === null && fc === null && pas === null && pad === null && fr === null && temp === null && glucosa === null && glasgow === null && !(eva > 0)) {
+    STATE.prioridad = null;
+    STATE.colorPrioridad = null;
+    limpiarPrioridadUI();
+    const pd = document.getElementById("prioridad_display");
+    if (pd) {
+      pd.style.display = "block";
+      pd.classList.add("visible");
+      pd.textContent = "Complete los discriminadores MTS o los signos clínicos para asignar prioridad. El motivo o CIE-10 por sí solo no define triaje.";
+      pd.style.background = "#fffbeb";
+      pd.style.border = "1px solid #fbbf24";
+      pd.style.color = "#92400e";
+      pd.style.padding = "12px";
+      pd.style.borderRadius = "8px";
     }
     return;
   }
@@ -5213,21 +5241,21 @@ function mostrarPrioridad(prio, detalle) {
 
       trazaEl.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.25); padding-bottom:6px; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-          <div style="font-weight:800; font-size:0.8rem; letter-spacing:0.5px;">📋 AUDITORÍA CLÍNICA: NTS N° 042-MINSA · ALGORITMO ESI v5 · NEWS2 (RCP LONDON) · UMBRALES ADA</div>
+          <div style="font-weight:800; font-size:0.8rem; letter-spacing:0.5px;">📋 TRAZABILIDAD CLÍNICA: NTS N° 042-MINSA · REGLAS LOCALES DE TRIAJE · UMBRALES ADA</div>
           <span style="background:rgba(255,255,255,0.22); padding:3px 8px; border-radius:5px; font-weight:800; font-size:0.75rem;">SLA: ${slaTxt}</span>
         </div>
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:8px; margin-bottom:8px;">
           <div style="background:rgba(0,0,0,0.22); padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.15);">
-            <div style="font-size:0.7rem; opacity:0.85; text-transform:uppercase; font-weight:700;">Árbol ESI v5 (AHRQ / ENA)</div>
+            <div style="font-size:0.7rem; opacity:0.85; text-transform:uppercase; font-weight:700;">Nivel de prioridad local</div>
             <div style="font-weight:900; font-size:0.95rem; margin-top:2px;">ESI Nivel ${esiNivel} · ${compuerta}</div>
           </div>
           <div style="background:rgba(0,0,0,0.22); padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.15);">
-            <div style="font-size:0.7rem; opacity:0.85; text-transform:uppercase; font-weight:700;">Score Fisiológico NEWS2 (RCP)</div>
+            <div style="font-size:0.7rem; opacity:0.85; text-transform:uppercase; font-weight:700;">Puntaje fisiológico parcial (no es NEWS2 completo)</div>
             <div style="font-weight:900; font-size:0.95rem; margin-top:2px;">${esPendiente ? `<span style="color:#fde047; font-size:0.8rem; font-weight:800;">Pendiente de monitorización (Ingreso Directo P-I)</span>` : `${scoreNews2} pts <span style="font-size:0.75rem; font-weight:600; opacity:0.9;">(Máx. individual: ${maxIndiv} pts)</span>`}</div>
           </div>
         </div>
         <div style="margin-bottom:8px;">
-          <div style="font-size:0.72rem; opacity:0.9; margin-bottom:4px; font-weight:800; text-transform:uppercase;">Constantes Vitales en Escala NEWS2:</div>
+          <div style="font-size:0.72rem; opacity:0.9; margin-bottom:4px; font-weight:800; text-transform:uppercase;">Variables fisiológicas consideradas:</div>
           <div style="display:flex; flex-wrap:wrap; gap:5px;">
             ${badgesHtml}
           </div>
@@ -6099,8 +6127,13 @@ function calcularLiquidacionSeguro() {
 
     // REGLA D: Urgencia / Observación - Prioridades III, IV y V (sin riesgo vital)
     else {
-      const planSel = STATE.planPrivado || (document.getElementById("select_plan_privado")?.value) || "base_80_20";
-      if (planSel === "integral_90_10") {
+  const planSel = STATE.planPrivado || (document.getElementById("select_plan_privado")?.value) || "base_80_20";
+      const coaseguroGuardado = Number(priv.coaseguro_pct);
+      const copagoGuardado = Number(priv.copago_fijo);
+      if (Number.isFinite(coaseguroGuardado) && Number.isFinite(copagoGuardado)) {
+        pctCoaseguro = coaseguroGuardado;
+        copagoFijo = copagoGuardado;
+      } else if (planSel === "integral_90_10") {
         copagoFijo = 50.00;
         pctCoaseguro = 0.10;
       } else if (planSel === "vip_100") {
@@ -6175,11 +6208,24 @@ function actualizarFactura() {
   const cobEl = document.getElementById("liq_cobertura_sector");
   if (cobEl) cobEl.textContent = liq.coberturaSector || "—";
 
+  const esEmergenciaLiq = (typeof esEventoEmergenciaVital === "function") ? esEventoEmergenciaVital() : (STATE.prioridad === "I" || STATE.prioridad === "II");
+  const mostrarCopagoUrgencia = Boolean(!esEmergenciaLiq && liq.esEpsPrivado && liq.pctCoaseguro < 100);
+
   const copEl = document.getElementById("liq_copago_fijo");
-  if (copEl) copEl.textContent = `S/. ${(liq.copagoFijo || 0).toFixed(2)}`;
+  if (copEl) {
+    copEl.textContent = `S/. ${(liq.copagoFijo || 0).toFixed(2)}`;
+    if (copEl.parentElement) {
+      copEl.parentElement.style.display = mostrarCopagoUrgencia ? "block" : "none";
+    }
+  }
 
   const coasEl = document.getElementById("liq_pct_coaseguro");
-  if (coasEl) coasEl.textContent = `${(liq.pctCoaseguro || 0).toFixed(0)}%`;
+  if (coasEl) {
+    coasEl.textContent = `${(liq.pctCoaseguro || 0).toFixed(0)}%`;
+    if (coasEl.parentElement) {
+      coasEl.parentElement.style.display = (mostrarCopagoUrgencia || liq.pctCoaseguro === 100) ? "block" : "none";
+    }
+  }
 
   const cubEl = document.getElementById("liq_monto_cubierto");
   if (cubEl) cubEl.textContent = `S/. ${liq.coberturaSeguro.toFixed(2)}`;
@@ -7595,6 +7641,8 @@ async function guardarSeguroPacienteEnBd(identificador, nroHc, nombre, tipoSegur
   const cleanId = String(identificador).trim().toLowerCase();
   const dniMatch = cleanId.match(/\d{8}/);
   const numDni = dniMatch ? dniMatch[0] : cleanId;
+  const seguroPrevio = localStorage.getItem("seguro_asignado_" + numDni) || await buscarSeguroPacienteEnBd(numDni);
+  if (seguroPrevio && seguroPrevio !== tipoSeguro) tipoSeguro = seguroPrevio;
 
   // 1. Guardar en localStorage para persistencia inmediata y consistente en el cliente
   try {
@@ -7613,7 +7661,8 @@ async function guardarSeguroPacienteEnBd(identificador, nroHc, nombre, tipoSegur
         episodios: []
       };
     } else {
-      master[numDni].tipo_seguro = tipoSeguro;
+      if (!master[numDni].tipo_seguro || master[numDni].tipo_seguro === "Seguro por confirmar" || master[numDni].tipo_seguro === "Pendiente de Acreditación") master[numDni].tipo_seguro = tipoSeguro;
+      tipoSeguro = master[numDni].tipo_seguro;
       if (nombre) master[numDni].nombre_completo = nombre;
       if (nroHc) master[numDni].historia_clinica = nroHc;
     }
@@ -7631,7 +7680,7 @@ async function guardarSeguroPacienteEnBd(identificador, nroHc, nombre, tipoSegur
           "Content-Type": "application/json",
           "Prefer": "return=representation"
         },
-        body: JSON.stringify({ tipo_seguro: tipoSeguro })
+        body: JSON.stringify({ tipo_seguro: seguroPrevio || tipoSeguro })
       });
       const patched = await resPatch.json();
       if (!patched || patched.length === 0) {
@@ -7646,7 +7695,7 @@ async function guardarSeguroPacienteEnBd(identificador, nroHc, nombre, tipoSegur
             identificador: numDni,
             historia_clinica: nroHc || `HC-2026-${numDni.slice(-3)}`,
             nombre_completo: nombre || numDni,
-            tipo_seguro: tipoSeguro
+            tipo_seguro: seguroPrevio || tipoSeguro
           })
         });
       }
@@ -7737,10 +7786,8 @@ function seleccionarEntornoEstablecimiento(entorno, sincronizarConBd = true, blo
     }
     if (bannerMinsa) bannerMinsa.style.display = "block";
 
-    if (!STATE.esAccidenteTransito) {
-      STATE.tipoSeguro = "SIS";
-      actualizarSeguroConsolidado("SIS Gratuito Integral (MINSA / Formato FUA)");
-    }
+    const seguroFijo = localStorage.getItem("seguro_asignado_" + String(STATE.numDni || "").replace(/\D/g, ""));
+    if (!STATE.esAccidenteTransito && !seguroFijo) STATE.tipoSeguro = "SIS";
   } else if (entorno === "essalud") {
     STATE.entornoOperativo = "publico";
     botonActivo = btnEssalud;
@@ -7757,10 +7804,8 @@ function seleccionarEntornoEstablecimiento(entorno, sincronizarConBd = true, blo
     }
     if (bannerEssalud) bannerEssalud.style.display = "block";
 
-    if (!STATE.esAccidenteTransito) {
-      STATE.tipoSeguro = "EsSalud";
-      actualizarSeguroConsolidado("EsSalud (Asegurado Regular ESSI / D.L. 728)");
-    }
+    const seguroFijo = localStorage.getItem("seguro_asignado_" + String(STATE.numDni || "").replace(/\D/g, ""));
+    if (!STATE.esAccidenteTransito && !seguroFijo) STATE.tipoSeguro = "EsSalud";
   } else if (entorno === "clinica_eps") {
     STATE.entornoOperativo = "privado";
     botonActivo = btnCli;
@@ -7777,12 +7822,10 @@ function seleccionarEntornoEstablecimiento(entorno, sincronizarConBd = true, blo
     }
     if (bannerEps) bannerEps.style.display = "block";
 
-    if (!STATE.esAccidenteTransito) {
-      STATE.tipoSeguro = "EPS";
-      actualizarSeguroConsolidado("Clínica Privada — EPS Activa (Pacífico Salud / Rímac / Mapfre)");
-    }
+    const seguroFijo = localStorage.getItem("seguro_asignado_" + String(STATE.numDni || "").replace(/\D/g, ""));
+    if (!STATE.esAccidenteTransito && !seguroFijo) STATE.tipoSeguro = "EPS";
   } else if (entorno === "particular") {
-    STATE.tipoSeguro = "Particular";
+    if (!localStorage.getItem("seguro_asignado_" + String(STATE.numDni || "").replace(/\D/g, ""))) STATE.tipoSeguro = "Particular";
     STATE.padronSusalud = {
       tipo_aseguramiento: "SIN_SEGURO",
       publico: { entidad: "SIN SEGURO", regimen: "PARTICULAR", estado: "INACTIVO" },
@@ -7804,7 +7847,6 @@ function seleccionarEntornoEstablecimiento(entorno, sincronizarConBd = true, blo
 
     if (!STATE.esAccidenteTransito) {
       STATE.tipoSeguro = "Particular";
-      actualizarSeguroConsolidado("Particular (Sin Seguro Activo — Cobro al 100%)");
     }
   }
 
@@ -7908,7 +7950,6 @@ function cambiarOrigenEvento(tipo) {
     if (pideWrapper) pideWrapper.style.display = "none";
 
     // 5. Configurar estado y candado médico legal (Art. 195 CPP)
-    STATE.tipoSeguro = "SOAT";
     STATE.bloqueoSinadef = true;
 
     // Inicializar con opción identificado por defecto si no estaba configurado
@@ -9872,13 +9913,18 @@ function liberarCamaTotalPaciente(idExpediente = null, motivo = "Conclusión de 
   STATE.camaAsignada = null;
   STATE.camaAsignadaId = null;
 
-  // 4. Limpiar en PACIENTES_COLA si aplica
+  // 4. Limpiar en PACIENTES_COLA y expedientesStore si aplica
   if (Array.isArray(PACIENTES_COLA)) {
     const px = PACIENTES_COLA.find(x => x.id === idBuscar);
     if (px) {
       px.camaId = null;
       px.camaNombre = "Sin Cama";
     }
+  }
+  if (typeof window.expedientesStore !== "undefined" && idBuscar && window.expedientesStore[idBuscar]) {
+    window.expedientesStore[idBuscar].camaId = null;
+    window.expedientesStore[idBuscar].camaAsignada = null;
+    window.expedientesStore[idBuscar].camaNombre = "Sin Cama";
   }
 
   // 5. Ocultar y actualizar displays en el DOM
@@ -9964,6 +10010,27 @@ function liberarCamaRecurso(idRecurso, motivoSalida = "Alta Médica") {
     STATE.camaAsignadaId = null;
   }
 
+  // Limpiar referencia en cola y expedientesStore para que el monitor no vuelva a marcarla ocupada
+  if (Array.isArray(PACIENTES_COLA)) {
+    PACIENTES_COLA.forEach(px => {
+      if (px && (px.camaId === idRecurso || (px.camaNombre && px.camaNombre === rec.nombre))) {
+        px.camaId = null;
+        px.camaNombre = "Sin Cama";
+      }
+    });
+  }
+  if (typeof window.expedientesStore !== "undefined") {
+    Object.keys(window.expedientesStore).forEach(k => {
+      const exp = window.expedientesStore[k];
+      if (exp && (exp.camaId === idRecurso || exp.camaAsignada === rec.nombre || exp.camaNombre === rec.nombre)) {
+        exp.camaId = null;
+        exp.camaAsignada = null;
+        exp.camaNombre = "Sin Cama";
+      }
+    });
+  }
+  if (typeof sincronizarStockCamasConRecursos === "function") sincronizarStockCamasConRecursos();
+
   tickCronometrosCamas();
   renderizarTableroCamasYQuirofanos();
   if (document.getElementById("modalTableroCamasOverlay")?.classList.contains("open")) {
@@ -10003,6 +10070,27 @@ function liberarRecursoPorExpiracion(idRecurso) {
     STATE.camaAsignada = null;
     STATE.camaAsignadaId = null;
   }
+
+  // Limpiar referencia en cola y expedientesStore para que el monitor no vuelva a marcarla ocupada
+  if (Array.isArray(PACIENTES_COLA)) {
+    PACIENTES_COLA.forEach(px => {
+      if (px && (px.camaId === idRecurso || (px.camaNombre && px.camaNombre === rec.nombre))) {
+        px.camaId = null;
+        px.camaNombre = "Sin Cama";
+      }
+    });
+  }
+  if (typeof window.expedientesStore !== "undefined") {
+    Object.keys(window.expedientesStore).forEach(k => {
+      const exp = window.expedientesStore[k];
+      if (exp && (exp.camaId === idRecurso || exp.camaAsignada === rec.nombre || exp.camaNombre === rec.nombre)) {
+        exp.camaId = null;
+        exp.camaAsignada = null;
+        exp.camaNombre = "Sin Cama";
+      }
+    });
+  }
+  if (typeof sincronizarStockCamasConRecursos === "function") sincronizarStockCamasConRecursos();
 
   tickCronometrosCamas();
   renderizarTableroCamasYQuirofanos();
@@ -11649,6 +11737,19 @@ function cambiarPacienteActivo(nuevoId, forzarRehidratacion = false) {
     }
   }
 
+  // Recompute from the restored clinical form when the case is still awaiting triage.
+  // Stored priority alone can be stale or inconsistent with the visible MTS discriminators.
+  if ((nuevoPx.estadoFlujo || STATE.estadoFlujo || "PENDIENTE_TRIAJE") === "PENDIENTE_TRIAJE") {
+    recalcularPrioridad();
+  }
+
+  const dniActivo = String(nuevoPx.dni || STATE.numDni || "").replace(/\D/g, "");
+  if (dniActivo.length === 8 && typeof sincronizarPadronSusalud === "function") {
+    sincronizarPadronSusalud(dniActivo, false).then(() => {
+      if (pacienteActivoId === nuevoId && typeof actualizarFactura === "function") actualizarFactura();
+    }).catch(() => {});
+  }
+
   // Si el paciente aún no concluye el flujo, navegar de inmediato a su estación clínica activa
   const efPxActual = nuevoPx.estadoFlujo || "PENDIENTE_TRIAJE";
   if (efPxActual !== "CERRADO_FACTURADO" && window.COCKPIT && typeof window.COCKPIT.irAFase === "function") {
@@ -13149,7 +13250,7 @@ function crearPadronDesdeSeguroExistente(numDni, seguro) {
       tipo_aseguramiento: "EPS_Y_ESSALUD",
       condicion_evento: "NORMAL",
       publico: { entidad: "ESSALUD", regimen: "EsSalud Activo (Vínculo Laboral EPS)", estado: "ACTIVO", codigo: `AUT-ESS-${rndCode}` },
-      privado: { siteds_codigo: `SITEDS-2026-${rndSiteds}`, iafas_eps: iafas, plan_salud: "Plan Red Preferente", estado_poliza: "ACTIVA", copago_fijo: 60.00, coaseguro_pct: 0.15, exclusiones: [] },
+      privado: { siteds_codigo: `SITEDS-2026-${rndSiteds}`, iafas_eps: iafas, plan_salud: "Plan Red Preferente", estado_poliza: "ACTIVA", copago_fijo: /sanitas/i.test(s) ? 35 : /mapfre/i.test(s) ? 40 : /pac[ií]fico/i.test(s) ? 50 : 60, coaseguro_pct: /sanitas/i.test(s) ? 0.10 : /rimac/i.test(s) ? 0.15 : 0.20, exclusiones: [] },
       origen_registro: "BD_HISTORICA"
     };
   } else if (s.includes("privad")) {
@@ -13159,6 +13260,15 @@ function crearPadronDesdeSeguroExistente(numDni, seguro) {
       condicion_evento: "NORMAL",
       publico: { entidad: "NINGUNA (TIENE SEGURO PRIVADO)", regimen: "No Acreditado en Estado", estado: "INACTIVO", codigo: null },
       privado: { siteds_codigo: `SITEDS-2026-${rndSiteds}`, iafas_eps: "Pacífico Seguros (Individual)", plan_salud: "Plan Individual Preferente", estado_poliza: "ACTIVA", copago_fijo: 80.00, coaseguro_pct: 0.20, exclusiones: [] },
+      origen_registro: "BD_HISTORICA"
+    };
+  } else if (s.includes("sin seguro") || s.includes("particular")) {
+    return {
+      dni: numDni,
+      tipo_aseguramiento: "SOLO_PRIVADO",
+      condicion_evento: "NORMAL",
+      publico: { entidad: "NINGUNA", regimen: "Particular No Afiliado", estado: "INACTIVO", codigo: null },
+      privado: { iafas_eps: "PARTICULAR (SIN SEGURO)", plan_salud: "Tarifario General Particular 100%", estado_poliza: "INACTIVA", copago_fijo: 0, coaseguro_pct: 1.0, exclusiones: [] },
       origen_registro: "BD_HISTORICA"
     };
   } else {
@@ -13178,10 +13288,24 @@ function crearPadronDesdeSeguroExistente(numDni, seguro) {
 // ------------------------------------------------------------------------------
 function guardarPadronEnTodosLosStorages(numDni, padron, seguroTexto) {
   if (!numDni || !padron) return;
-  const sTexto = seguroTexto || (padron.tipo_aseguramiento === "SOLO_SIS" ? "SIS" :
+  let seguroGuardado = localStorage.getItem("seguro_asignado_" + numDni);
+  let padronGuardado = null;
+  try {
+    const rawActual = localStorage.getItem("padron_susalud_" + numDni);
+    padronGuardado = rawActual ? JSON.parse(rawActual) : null;
+  } catch (e) {}
+  if (padronGuardado && padronGuardado.tipo_aseguramiento === padron.tipo_aseguramiento) padron = padronGuardado;
+  const sTextoDerivado = seguroTexto || (padron.tipo_aseguramiento === "SOLO_SIS" ? "SIS" :
                  padron.tipo_aseguramiento === "SOLO_ESSALUD" ? "EsSalud" :
                  padron.tipo_aseguramiento === "EPS_Y_ESSALUD" ? (padron.privado?.iafas_eps || "Pacífico EPS") :
                  padron.tipo_aseguramiento === "SOLO_PRIVADO" ? (padron.privado?.iafas_eps || "Seguro Privado") : "Particular");
+  if (!seguroGuardado) {
+    try {
+      const master = typeof cargarPacientesMaster === "function" ? cargarPacientesMaster() : {};
+      seguroGuardado = master[numDni]?.tipo_seguro || Object.values(master).find(p => String(p.identificador || "").includes(numDni))?.tipo_seguro || "";
+    } catch (e) {}
+  }
+  const sTexto = (seguroGuardado && seguroGuardado !== "Seguro por confirmar" && seguroGuardado !== "Pendiente de Acreditación") ? seguroGuardado : sTextoDerivado;
   try {
     localStorage.setItem("padron_susalud_" + numDni, JSON.stringify(padron));
     localStorage.setItem("seguro_asignado_" + numDni, sTexto);
@@ -13191,21 +13315,18 @@ function guardarPadronEnTodosLosStorages(numDni, padron, seguroTexto) {
     localStorage.setItem("PADRON_UNICO_SUSALUD_BD", JSON.stringify(bd));
   } catch(e){}
 
-  if (typeof guardarSeguroPacienteEnBd === "function") {
-    try {
-      guardarSeguroPacienteEnBd(numDni, STATE?.historiaClinica || `HC-2026-${numDni.slice(-4)}`, STATE?.nombreReniec || numDni, sTexto);
-    } catch(e){}
+  if (typeof guardarSeguroPacienteEnBd === "function" && !seguroGuardado) {
+    try { guardarSeguroPacienteEnBd(numDni, STATE?.historiaClinica || `HC-2026-${numDni.slice(-4)}`, STATE?.nombreReniec || numDni, sTexto); } catch(e){}
   }
 
   if (typeof cargarPacientesMaster === "function") {
     try {
       const master = cargarPacientesMaster();
-      if (master[numDni]) {
-        master[numDni].tipo_seguro = sTexto;
-        master[numDni].padron_susalud = padron;
-        if (typeof guardarPacientesMaster === "function") {
-          guardarPacientesMaster(master);
-        }
+      const keyMaster = master[numDni] ? numDni : Object.keys(master).find(k => String(master[k]?.identificador || "").includes(numDni));
+      if (keyMaster && master[keyMaster]) {
+        if (!master[keyMaster].tipo_seguro || master[keyMaster].tipo_seguro === "Seguro por confirmar" || master[keyMaster].tipo_seguro === "Pendiente de Acreditación") master[keyMaster].tipo_seguro = sTexto;
+        master[keyMaster].padron_susalud = padron;
+        if (typeof guardarPacientesMaster === "function") guardarPacientesMaster(master);
       }
     } catch(e){}
   }
@@ -13244,7 +13365,7 @@ function guardarPadronEnTodosLosStorages(numDni, padron, seguroTexto) {
       fetch(`${SUPABASE_CONFIG.url}/rest/v1/historias_clinicas?identificador=eq.${numDni}`, {
         method: "PATCH",
         headers: { "apikey": SUPABASE_CONFIG.key, "Authorization": `Bearer ${SUPABASE_CONFIG.key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ padron_susalud: padron, tipo_seguro: sTexto })
+      body: JSON.stringify({ padron_susalud: padron, tipo_seguro: seguroGuardado || sTexto })
       }).catch(() => {});
     } catch(e){}
   }
@@ -13432,7 +13553,7 @@ async function fetch_padron_susalud_siteds(dni) {
 // OBTENER O GENERAR PADRÓN SUSALUD (MEMORIZACIÓN PERMANENTE POR PACIENTE / DNI)
 // Si el paciente ya ingresó con algún seguro, se recupera siempre ese mismo seguro.
 // ------------------------------------------------------------------------------
-async function obtenerOGenerarPadronSusalud(dni, forzarAzar = false) {
+async function obtenerOGenerarPadronSusalud(dni, _forzarAzar = false) {
   if (!dni || String(dni).toUpperCase().startsWith("NN") || STATE.esNN) {
     return {
       dni: dni || "NN-001",
@@ -13459,18 +13580,29 @@ async function obtenerOGenerarPadronSusalud(dni, forzarAzar = false) {
   const numDni = String(dni).replace(/\D/g, "");
   if (numDni.length !== 8) return generarPadronAleatorioSusalud(numDni || "70809010");
 
+  const seguroHistorico = await buscarSeguroPacienteEnBd(numDni);
+  if (seguroHistorico) {
+    try {
+      const rawPadron = localStorage.getItem("padron_susalud_" + numDni);
+      const padronLocal = rawPadron ? JSON.parse(rawPadron) : null;
+      const seguroDelPadron = padronLocal?.tipo_aseguramiento === "SOLO_SIS" ? "SIS"
+        : padronLocal?.tipo_aseguramiento === "SOLO_ESSALUD" ? "EsSalud"
+        : padronLocal?.privado?.iafas_eps || "";
+      if (padronLocal && seguroDelPadron === seguroHistorico) {
+        padronLocal.origen_registro = "BD_HISTORICA";
+        return padronLocal;
+      }
+    } catch (e) {}
+    const padronHistorico = crearPadronDesdeSeguroExistente(numDni, seguroHistorico);
+    padronHistorico.origen_registro = "BD_HISTORICA";
+    guardarPadronEnTodosLosStorages(numDni, padronHistorico, seguroHistorico);
+    return padronHistorico;
+  }
+
   // CASO 1: Si se solicita forzar azar explícitamente (vía botón "Jalar Seguro al Azar"):
   // Se sortea un nuevo seguro y se GUARDA / MEMORIZA inmediatamente para las próximas consultas.
-  if (forzarAzar) {
-    const nuevoPadron = generarPadronAleatorioSusalud(numDni);
-    nuevoPadron.origen_registro = "NUEVA_CONSULTA_AZAR";
-    const seguroTexto = nuevoPadron.tipo_aseguramiento === "SOLO_SIS" ? "SIS" :
-                        nuevoPadron.tipo_aseguramiento === "SOLO_ESSALUD" ? "EsSalud" :
-                        nuevoPadron.tipo_aseguramiento === "EPS_Y_ESSALUD" ? (nuevoPadron.privado.iafas_eps || "Pacífico EPS") : "Particular";
-    guardarPadronEnTodosLosStorages(numDni, nuevoPadron, seguroTexto);
-    console.log(`🎲 Seguro sorteado y MEMORIZADO para DNI ${numDni}:`, nuevoPadron);
-    return nuevoPadron;
-  }
+  // La asignación aleatoria solo sucede en el primer registro. El antiguo flag forzarAzar
+  // podía reemplazar la cobertura histórica desde el botón de acreditación.
 
   // CASO 2: MEMORIZACIÓN ESTRICTA (CERO ALTERACIONES)
   // Si el paciente ya ingresó con algún seguro, se recupera exactamente ese mismo seguro:
@@ -14212,10 +14344,32 @@ function renderizarBoxAcreditacionSusalud(padron) {
 
 function admitirEmergenciaSoat() {
   cambiarOrigenEvento("soat");
-  STATE.ingresoDirectoCritico = true;
-  STATE.prioridad = "I";
-  STATE.colorPrioridad = "ROJO";
-  STATE.motivoIngresoCritico = "Protocolo de Emergencia Accidente de Tránsito / Trauma Vial Crítico (SOAT) — Ley N° 27181 & D.S. N° 024-2002-MTC";
+  STATE.ingresoDirectoCritico = false;
+  STATE.panicoShockTrauma = false;
+  STATE.motivoIngresoCritico = null;
+  let inmediato = false;
+  const formularioAccidente = window.prompt("Accidente de tránsito\nEscriba: SOAT, SIN_SOAT, FUGA o CANCELAR", "SOAT");
+  if (formularioAccidente === null || formularioAccidente.trim().toUpperCase() === "CANCELAR") return;
+  const opcionAccidente = formularioAccidente.trim().toUpperCase();
+  if (!["SOAT", "SIN_SOAT", "FUGA"].includes(opcionAccidente)) {
+    mostrarToastCola("Opciones: SOAT, SIN_SOAT o FUGA.");
+    return;
+  }
+  cambiarOpcionSoat(opcionAccidente === "SOAT" ? "identificado" : "fuga");
+  if (opcionAccidente !== "SOAT") {
+    STATE.soatVehiculoFuga = false;
+    STATE.eventoFugaTransversal = false;
+    STATE.soatPlaca = "SIN SOAT IDENTIFICADO";
+    const chkFuga = document.getElementById("chk_evento_fuga");
+    if (chkFuga) chkFuga.checked = false;
+    if (STATE.padronSusalud) STATE.padronSusalud.condicion_evento = "NORMAL";
+  }
+
+  inmediato = window.confirm("¿El equipo clínico identifica amenaza vital que exige atención inmediata sin esperar el triaje?\nAceptar: activar pase inmediato.\nCancelar: pasar por triaje.");
+  if (inmediato) {
+    STATE.ingresoDirectoCritico = true;
+    STATE.motivoIngresoCritico = "Amenaza vital inmediata en accidente de tránsito; requiere evaluación clínica inmediata";
+  }
 
   // Si el Módulo 1 está colapsado, desplegarlo para ingreso inmediato de datos
   const bodyM1 = document.getElementById("body_mod1");
@@ -14241,7 +14395,9 @@ function admitirEmergenciaSoat() {
     try { actualizarFactura(); } catch(e){}
   }
 
-  mostrarToastCola("🚗 <strong>Protocolo SOAT de Emergencia Activado:</strong> Origen establecido como Accidente de Tránsito / Trauma Vial (Ley N° 27181 & D.S. N° 024-2002-MTC).");
+  mostrarToastCola(inmediato
+    ? "🚗 Accidente de tránsito registrado. Pase inmediato a evaluación de reanimación."
+    : "🚗 Accidente de tránsito registrado. Complete el triaje clínico; SOAT/CAT no modifica la prioridad.");
 }
 
 window.admitirEmergenciaSoat = admitirEmergenciaSoat;
@@ -14733,7 +14889,7 @@ function construirHTMLBrazalete(esTemporal = false) {
   const esRealmenteTemporal = Boolean(esTemporal || STATE.esNN || !STATE.numDni || STATE.numDni === "NN" || docPaciente.startsWith("S/D") || hcPaciente.includes("TEMP") || hcPaciente.includes("NN"));
 
   return `
-    <div class="wristband-strip" style="width:100%; max-width:820px; min-width:680px; min-height:122px; height:auto; background:#ffffff; border:1.5px solid #475569; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.12); display:flex; position:relative; overflow:visible; font-family:Arial, Helvetica, sans-serif; box-sizing:border-box; margin:auto;">
+    <div class="wristband-strip" style="width:260mm; max-width:none; min-width:260mm; min-height:40mm; height:auto; background:#ffffff; border:1.5px solid #475569; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.12); display:flex; position:relative; overflow:visible; font-family:Arial, Helvetica, sans-serif; box-sizing:border-box; margin:auto;">
       
       <!-- 1. BANDA LATERAL CON COLOR DE TRIAJE -->
       <div class="band-triage" style="width:48px; min-width:48px; background:${colorBanda}; color:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:900; text-align:center; padding:4px 2px; box-sizing:border-box; border-top-left-radius:6px; border-bottom-left-radius:6px; border-right:2px solid rgba(0,0,0,0.2);">
@@ -14882,7 +15038,7 @@ function imprimirBrazaleteDirecto() {
       <meta charset="UTF-8">
       <title>Brazalete Hospitalario — ${hcPaciente}</title>
       <style>
-        @page { size: landscape; margin: 8mm; }
+        @page { size: A4 landscape; margin: 8mm; }
         body {
           font-family: Arial, Helvetica, sans-serif;
           margin: 0;
@@ -14906,10 +15062,11 @@ function imprimirBrazaleteDirecto() {
           .wristband-strip {
             box-shadow: none !important;
             border: 1.5px solid #000000 !important;
-            width: 100% !important;
-            max-width: 800px !important;
+            width: 260mm !important;
+            min-width: 260mm !important;
+            max-width: none !important;
             height: auto !important;
-            min-height: 120px !important;
+            min-height: 40mm !important;
             overflow: visible !important;
             margin: 8mm auto !important;
             page-break-inside: avoid !important;
@@ -15485,13 +15642,8 @@ function reiniciarGuardiaSimulacionDesdeCero() {
       localStorage.removeItem("UPP_PACIENTES_COLA_SHARED");
       localStorage.removeItem("upp_expedientes_v1");
       localStorage.removeItem("UPP_PACIENTE_ACTIVO_ID");
-      localStorage.removeItem("UPP_HISTORIAL_CLINICO_MASTER");
       localStorage.removeItem("UPP_AUDIT_LOGS");
-      Object.keys(localStorage).forEach(k => {
-        if (k && (k.startsWith("padron_susalud_") || k.startsWith("seguro_asignado_"))) {
-          localStorage.removeItem(k);
-        }
-      });
+      // La cobertura es histórica y no se elimina al reiniciar la guardia.
       localStorage.setItem("UPP_POSTA_LAST_EVENT", JSON.stringify({
         tipo: "REINICIO_GUARDIA_DEMO",
         timestamp: new Date().toISOString()
@@ -17011,7 +17163,7 @@ window.admitirEmergenciaSoat = function() {
   if (typeof orig_admitirEmergenciaSoat === 'function') {
     orig_admitirEmergenciaSoat();
   }
-  generarBrazaleteEmergencia('temporal');
+    if (STATE.ingresoDirectoCritico) generarBrazaleteEmergencia('temporal');
 };
 
 const orig_seleccionarDestinoPostTopico = window.seleccionarDestinoPostTopico;
@@ -19349,13 +19501,6 @@ function seleccionarMotivoMTS(val) {
   } else if (val === "dolor_toracico" || val === "neurologico") {
     const p = document.getElementById("subpanel_mts_alertas");
     if (p) p.style.display = "block";
-    if (val === "dolor_toracico") {
-      const chk = document.getElementById("check_cod_infarto");
-      if (chk) { chk.checked = true; if (typeof toggleCodigoTiempo === "function") toggleCodigoTiempo("infarto", true); }
-    } else if (val === "neurologico") {
-      const chk = document.getElementById("check_cod_ictus");
-      if (chk) { chk.checked = true; if (typeof toggleCodigoTiempo === "function") toggleCodigoTiempo("ictus", true); }
-    }
   }
   if (typeof recalcularPrioridad === "function") recalcularPrioridad();
 }

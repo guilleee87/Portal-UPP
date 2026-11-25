@@ -496,13 +496,13 @@
           <strong id="liq_cobertura_monto">- S/. 0.00</strong>
         </div>
 
-        <!-- CONDICIÓN CLÍNICA PRIVADA EPS: COPAGO S/. 80 + 10% MEDICAMENTOS SI NO FUE EMERGENCIA -->
+        <!-- CONDICIÓN CLÍNICA PRIVADA EPS: SOLO SI ES URGENCIA (NO EMERGENCIA) -->
         <div class="liq-row" id="liq_row_copago_eps" style="display:none; color:#b45309;">
-          <span>Copago Consulta de Urgencia (Clínica Privada EPS - No Emergencia):</span>
-          <strong id="liq_copago_eps_val">+ S/. 80.00</strong>
+          <span>Copago Fijo de Urgencia (Clínica Privada EPS - No Emergencia):</span>
+          <strong id="liq_copago_eps_val">+ S/. 0.00</strong>
         </div>
         <div class="liq-row" id="liq_row_coaseguro_meds" style="display:none; color:#b45309;">
-          <span>Coaseguro Farmacia (10% valor de medicamentos prescritos):</span>
+          <span id="liq_coaseguro_lbl">Coaseguro según Plan EPS (No Emergencia):</span>
           <strong id="liq_coaseguro_meds_val">+ S/. 0.00</strong>
         </div>
 
@@ -555,8 +555,8 @@
       <button type="button" class="btn-act btn-act-success" onclick="window.print()">
         🖨️ Imprimir Liquidación Oficial
       </button>
-      <button type="button" id="btn_imprimir_fua_essi_facturacion" class="btn-act btn-act-primary" onclick="imprimirFuaEssiDesdeFacturacion()">
-        🖨️ Imprimir FUA / Hoja ESSI
+      <button type="button" id="btn_imprimir_fua_essi_facturacion" class="btn-act btn-act-primary" onclick="imprimirDocumentoAseguradorFacturacion()">
+        🖨️ Imprimir documento del asegurador
       </button>
     </section>
 
@@ -564,14 +564,22 @@
 
   <!-- SCRIPT DE AUDITORÍA Y SINCRONIZACIÓN -->
   <script>
-    function imprimirFuaEssiDesdeFacturacion() {
+    function imprimirDocumentoAseguradorFacturacion() {
       let exp = {};
       try { exp = JSON.parse(localStorage.getItem("EXPEDIENTE_FACTURACION_ACTUAL") || "{}"); } catch(e) {}
       const seg = String(exp.tipoSeguro || "").toLowerCase();
       const esEssalud = exp.tipoIpressPublica === "ESSALUD" || seg.includes("essalud");
-      const titulo = esEssalud ? "HOJA DE ATENCIÓN DE EMERGENCIA — SISTEMA ESSI (EsSalud)" : "FORMATO ÚNICO DE ATENCIÓN — FUA (SIS / MINSA)";
-      const norma = esEssalud ? "Ley N° 26790 · D.S. N° 009-97-SA" : "R.J. N° 107-2015/SIS · Ley N° 29344";
-      const nroDoc = esEssalud ? (exp.nroEssi || "ESSI-2026-000001") : (exp.nroFua || exp.numerFua || "FUA-2026-000001");
+      const esSIS = /\bsis\b|\bminsa\b/i.test(seg);
+      const esPrivado = Boolean(exp.liquidacionAuditada?.esEpsPrivado || exp.entornoOperativo === "privado" || /eps|pac[ií]fico|r[ií]mac|mapfre|sanitas|particular/i.test(seg));
+      const titulo = esEssalud
+        ? "HOJA DE ATENCIÓN DE EMERGENCIA — SISTEMA ESSI (EsSalud)"
+        : esSIS
+          ? "FORMATO ÚNICO DE ATENCIÓN — FUA (SIS)"
+          : esPrivado
+            ? "SOLICITUD DE ATENCIÓN Y LIQUIDACIÓN — ASEGURADOR PRIVADO"
+            : "COMPROBANTE DE ATENCIÓN PARTICULAR";
+      const norma = esEssalud ? "Registro asistencial EsSalud" : esSIS ? "Registro de prestaciones del SIS" : "No existe un FUA universal para EPS; documento administrativo según contrato/IAFAS";
+      const nroDoc = esEssalud ? (exp.nroEssi || "ESSI-2026-000001") : esSIS ? (exp.nroFua || exp.numerFua || "FUA-2026-000001") : (exp.nroDocumentoAsegurador || exp.folio || exp.ticket || "Por asignar");
       const w = window.open("", "_blank");
       if (!w) { alert("Permita las ventanas emergentes para imprimir."); return; }
       w.document.write(`
@@ -754,7 +762,53 @@
       let badgeHtml = "";
       let establecimiento = "Hospital Regional Docente UPP (Red Asistencial Pública)";
 
-      if (esNN) {
+      const liqAudit = (expActual && expActual.liquidacionAuditada) ? expActual.liquidacionAuditada : null;
+
+      if (liqAudit && typeof liqAudit.totalPaciente === "number") {
+        coberturaMonto = Number(liqAudit.coberturaSeguro || 0);
+        totalPaciente = Number(liqAudit.totalPaciente || 0);
+        copagoEps = Number(liqAudit.copagoFijo || 0);
+        const pctCoasAudit = Number(liqAudit.pctCoaseguro || 0);
+        coaseguroFarmacia = Math.max(0, totalPaciente - copagoEps);
+        establecimiento = liqAudit.lugarAtencion || establecimiento;
+        explicacion = liqAudit.motivoLiquidacion || "";
+
+        if (esNN) {
+          badgeHtml = `<span style="background:#dc2626; color:#fff; padding:4px 10px; border-radius:9999px;">⚠️ NN — NO SE SABE SU NOMBRE NI SU SEGURO</span>`;
+          document.getElementById("liq_row_particular").style.display = "flex";
+        } else if (esAccidente || seguroL.includes("soat")) {
+          badgeHtml = `<span style="background:#ea580c; color:#fff; padding:4px 10px; border-radius:9999px;">🚗 ACCIDENTE DE TRÁNSITO (SOAT)</span>`;
+          const topeSoat = 27500;
+          const cubiertoSoat = Math.min(totalBruto, topeSoat);
+          document.getElementById("soat_box").style.display = "block";
+          document.getElementById("soat_saldo_txt").textContent = `Saldo: S/. ${Math.max(0, topeSoat - cubiertoSoat).toFixed(2)}`;
+          document.getElementById("soat_consumo_txt").textContent = `S/. ${cubiertoSoat.toFixed(2)}`;
+          document.getElementById("soat_bar").style.width = `${Math.min(100, (cubiertoSoat / topeSoat) * 100)}%`;
+        } else if (liqAudit.esEpsPrivado) {
+          badgeHtml = `<span style="background:#4f46e5; color:#fff; padding:4px 10px; border-radius:9999px;">🏢 CLÍNICA PRIVADA (${(seguroActual || "EPS").toUpperCase()})</span>`;
+          if (!esEmergencia && pctCoasAudit < 100) {
+            if (copagoEps > 0) {
+              document.getElementById("liq_row_copago_eps").style.display = "flex";
+              document.getElementById("liq_copago_eps_val").textContent = `+ S/. ${copagoEps.toFixed(2)}`;
+            }
+            if (coaseguroFarmacia > 0) {
+              document.getElementById("liq_row_coaseguro_meds").style.display = "flex";
+              const lblCoas = document.getElementById("liq_coaseguro_lbl");
+              if (lblCoas) lblCoas.textContent = `Coaseguro (${pctCoasAudit.toFixed(0)}% según Plan EPS sobre prestaciones y farmacia):`;
+              document.getElementById("liq_coaseguro_meds_val").textContent = `+ S/. ${coaseguroFarmacia.toFixed(2)}`;
+            }
+          } else if (pctCoasAudit === 100 && totalPaciente > 0) {
+            document.getElementById("liq_row_particular").style.display = "flex";
+          }
+        } else if (/\bsis\b|\bminsa\b/i.test(seguroActual) && coberturaMonto > 0) {
+          badgeHtml = `<span style="background:#15803d; color:#fff; padding:4px 10px; border-radius:9999px;">🏛️ SIS GRATUITO (MINSA)</span>`;
+        } else if (seguroL.includes("essalud") && coberturaMonto > 0) {
+          badgeHtml = `<span style="background:#0284c7; color:#fff; padding:4px 10px; border-radius:9999px;">🏥 ESSALUD (RED ASISTENCIAL)</span>`;
+        } else {
+          badgeHtml = `<span style="background:#dc2626; color:#fff; padding:4px 10px; border-radius:9999px;">👤 PARTICULAR (SIN COBERTURA)</span>`;
+          if (totalPaciente > 0) document.getElementById("liq_row_particular").style.display = "flex";
+        }
+      } else if (esNN) {
         establecimiento = "Hospital Regional Docente UPP (Red Asistencial Pública)";
         badgeHtml = `<span style="background:#dc2626; color:#fff; padding:4px 10px; border-radius:9999px;">⚠️ NN — NO SE SABE SU NOMBRE NI SU SEGURO</span>`;
         coberturaMonto = 0;
@@ -778,7 +832,7 @@
         document.getElementById("soat_bar").style.width = `${pctSoat}%`;
 
         explicacion = `Accidente de tránsito amparado por Ley General de Transporte y D.S. N° 024-2002-MTC. Cobertura obligatoria de gastos médicos hasta 5 UIT (S/. 27,500.00). Cobertura al 100% sin deducible. Copago paciente: S/. 0.00.`;
-      } else if (seguroL.includes("sis") || seguroL.includes("minsa")) {
+      } else if (/\bsis\b|\bminsa\b/i.test(seguroActual)) {
         // SIS
         establecimiento = "Hospital Nacional Docente Madre Niño San Bartolomé (MINSA - Lima)";
         badgeHtml = `<span style="background:#15803d; color:#fff; padding:4px 10px; border-radius:9999px;">🏛️ SIS GRATUITO (MINSA)</span>`;
@@ -798,22 +852,37 @@
         badgeHtml = `<span style="background:#4f46e5; color:#fff; padding:4px 10px; border-radius:9999px;">🏢 CLÍNICA PRIVADA (SEGURO EPS)</span>`;
 
         if (esEmergencia) {
-          // Emergencia (P-I / P-II) -> 100% Ley 27604
+          // Emergencia: mismo nivel de cobertura para atención y medicamentos.
           coberturaMonto = totalBruto;
           totalPaciente = 0;
           explicacion = `Atención de Emergencia Médica / Quirúrgica (Prioridad ${prioridadActual}). Protegida por el Principio de No Condicionamiento de la Ley N° 27604 y D.S. N° 016-2002-SA. Cobertura al 100% hasta la estabilización clínica hemodinámica completa. Copago paciente: S/. 0.00.`;
         } else {
-          // No es Emergencia (P-III, IV, V) -> Urgencia: Copago S/. 80 + 10% farmacia
-          copagoEps = 80;
-          coaseguroFarmacia = subtotalFarmacia * 0.10;
+          // No es Emergencia (P-III, IV, V) -> Urgencia según Plan EPS contratado
+          const padronPrivado = expActual?.padronSusalud?.privado || episodio?.padronSusalud?.privado || {};
+          const planSel = (expActual && expActual.planPrivado) || "base_80_20";
+          const pctCoas = Number.isFinite(Number(padronPrivado.coaseguro_pct))
+            ? Number(padronPrivado.coaseguro_pct)
+            : ((planSel === "vip_100") ? 0 : (planSel === "integral_90_10" ? 0.10 : 0.20));
+          copagoEps = Number.isFinite(Number(padronPrivado.copago_fijo))
+            ? Number(padronPrivado.copago_fijo)
+            : ((planSel === "vip_100") ? 0 : (planSel === "integral_90_10" ? 50 : 80));
+          const subtotalServicios = Math.max(0, totalBruto - subtotalFarmacia);
+          coaseguroFarmacia = (subtotalFarmacia + subtotalServicios) * pctCoas;
           totalPaciente = copagoEps + coaseguroFarmacia;
           coberturaMonto = Math.max(0, totalBruto - totalPaciente);
 
-          document.getElementById("liq_row_copago_eps").style.display = "flex";
-          document.getElementById("liq_row_coaseguro_meds").style.display = "flex";
-          document.getElementById("liq_coaseguro_meds_val").textContent = `+ S/. ${coaseguroFarmacia.toFixed(2)}`;
+          if (copagoEps > 0) {
+            document.getElementById("liq_row_copago_eps").style.display = "flex";
+            document.getElementById("liq_copago_eps_val").textContent = `+ S/. ${copagoEps.toFixed(2)}`;
+          }
+          if (coaseguroFarmacia > 0) {
+            document.getElementById("liq_row_coaseguro_meds").style.display = "flex";
+            const lblCoas = document.getElementById("liq_coaseguro_lbl");
+            if (lblCoas) lblCoas.textContent = `Coaseguro (${(pctCoas * 100).toFixed(0)}% según Plan EPS sobre prestaciones y farmacia):`;
+            document.getElementById("liq_coaseguro_meds_val").textContent = `+ S/. ${coaseguroFarmacia.toFixed(2)}`;
+          }
 
-          explicacion = `Atención en Clínica Privada con póliza EPS clasificada como Urgencia Médica (No Emergencia / P-${prioridadActual}). Se aplica copago fijo de S/. 80.00 por consulta de urgencia + coaseguro del 10% sobre medicamentos despachados (S/. ${subtotalFarmacia.toFixed(2)} * 10% = S/. ${coaseguroFarmacia.toFixed(2)}).`;
+          explicacion = `Atención en Clínica Privada con póliza EPS clasificada como Urgencia Médica (No Emergencia / P-${prioridadActual}). Se aplica copago fijo de S/. ${copagoEps.toFixed(2)} + coaseguro del ${(pctCoas * 100).toFixed(0)}% sobre prestaciones y farmacia (S/. ${coaseguroFarmacia.toFixed(2)}).`;
         }
       } else {
         // Particular (Sin seguro)
