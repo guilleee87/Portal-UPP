@@ -4098,7 +4098,6 @@ function validarSignosVitalesEnVivo(modoEstricto = false) {
   const bannerParo = document.getElementById("banner_paro_agonia");
   if (esParoOAgonia) {
     if (bannerParo) bannerParo.style.display = "block";
-    STATE.panicoShockTrauma = true;
     STATE.prioridad = "I";
     STATE.colorPrioridad = "ROJO";
     const chipLive = document.getElementById("chipPrioLive");
@@ -4108,6 +4107,9 @@ function validarSignosVitalesEnVivo(modoEstricto = false) {
     }
   } else {
     if (bannerParo) bannerParo.style.display = "none";
+    if (!STATE.ingresoDirectoCritico) {
+      STATE.panicoShockTrauma = false;
+    }
   }
 
   // Banner Nivel 1 de Error de Digitación
@@ -12513,7 +12515,7 @@ function actualizarGsRh(origen) {
     combinado = `${gs}${rh}`;
   } else if (gs === "No me acuerdo" && rh === "No me acuerdo") {
     combinado = "No me acuerdo";
-  } else if (gs === "No me acuerdo" || rh === "No me acuerdo") {
+  } else if (gs !== "Desconocido" || rh !== "Desconocido") {
     combinado = `GS: ${gs} / RH: ${rh}`;
   }
   sincronizarSelectsGsRh(combinado);
