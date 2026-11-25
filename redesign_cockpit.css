@@ -603,30 +603,42 @@ input[type="number"],
   color: #7DD3FC;
 }
 
-html.dark .cockpit-tactical-bar {
+html.dark .cockpit-tactical-bar,
+.dark .cockpit-tactical-bar,
+[data-theme="dark"] .cockpit-tactical-bar {
   background: #1E293B;
   border-color: #334155;
 }
 
-html.dark .cockpit-tactical-header {
+html.dark .cockpit-tactical-header,
+.dark .cockpit-tactical-header,
+[data-theme="dark"] .cockpit-tactical-header {
   border-bottom-color: #334155;
 }
 
-html.dark .cockpit-tactical-title {
+html.dark .cockpit-tactical-title,
+.dark .cockpit-tactical-title,
+[data-theme="dark"] .cockpit-tactical-title {
   color: #F8FAFC;
 }
 
-html.dark .cockpit-tactical-sub {
+html.dark .cockpit-tactical-sub,
+.dark .cockpit-tactical-sub,
+[data-theme="dark"] .cockpit-tactical-sub {
   color: #94A3B8;
 }
 
-html.dark .tactical-util-btn {
+html.dark .tactical-util-btn,
+.dark .tactical-util-btn,
+[data-theme="dark"] .tactical-util-btn {
   background: #0F172A;
   border-color: #334155;
   color: #CBD5E1;
 }
 
-html.dark .cockpit-tactical-btn {
+html.dark .cockpit-tactical-btn,
+.dark .cockpit-tactical-btn,
+[data-theme="dark"] .cockpit-tactical-btn {
   background: #0F172A;
   border-color: #334155;
   color: #E2E8F0;
@@ -1643,31 +1655,43 @@ html.dark .mts-subpanel-toggle-btn:hover,
   border-top: 1px dashed #E2E8F0;
 }
 
-html.dark .cockpit-active-queue-card {
-  background: #1E293B;
+html.dark .cockpit-active-queue-card,
+.dark .cockpit-active-queue-card,
+[data-theme="dark"] .cockpit-active-queue-card {
+  background: #111827;
   border-color: #334155;
 }
 
-html.dark .cockpit-queue-header {
+html.dark .cockpit-queue-header,
+.dark .cockpit-queue-header,
+[data-theme="dark"] .cockpit-queue-header {
   border-bottom-color: #334155;
 }
 
-html.dark .cockpit-px-card {
-  background: #0F172A;
+html.dark .cockpit-px-card,
+.dark .cockpit-px-card,
+[data-theme="dark"] .cockpit-px-card {
+  background: #1E293B;
   border-color: #334155;
   color: #F8FAFC;
 }
 
-html.dark .cockpit-px-card:hover {
-  background: #1E293B;
+html.dark .cockpit-px-card:hover,
+.dark .cockpit-px-card:hover,
+[data-theme="dark"] .cockpit-px-card:hover {
+  background: #273549;
 }
 
-html.dark .cockpit-px-card.active-px {
+html.dark .cockpit-px-card.active-px,
+.dark .cockpit-px-card.active-px,
+[data-theme="dark"] .cockpit-px-card.active-px {
   background: #1E293B;
-  border-color: #38BDF8 !important;
+  border-color: #06B6D4 !important;
 }
 
-html.dark .cockpit-px-name {
+html.dark .cockpit-px-name,
+.dark .cockpit-px-name,
+[data-theme="dark"] .cockpit-px-name {
   color: #F1F5F9;
 }
 
@@ -1744,4 +1768,188 @@ html.dark .cockpit-px-name {
 .cockpit-px-bottom {
   flex-wrap: wrap !important;
   gap: 4px 8px !important;
+}
+
+/* ==================================================================== */
+/* CALM-TECH MODO NOCTURNO — CONTRASTE WCAG 2.1 AA (SIN #000000 PURO)   */
+/* ==================================================================== */
+[data-theme="dark"] .module-section-header,
+html.dark .module-section-header,
+.dark .module-section-header {
+  background-color: #111827 !important;
+  border-bottom-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+[data-theme="dark"] .module-section-title,
+[data-theme="dark"] .module-section-title > div > div:first-child,
+html.dark .module-section-title,
+.dark .module-section-title {
+  color: #F1F5F9 !important;
+}
+
+[data-theme="dark"] .module-section-subtitle,
+[data-theme="dark"] .legal-micro-note,
+[data-theme="dark"] .cockpit-step-sub,
+[data-theme="dark"] .cockpit-summary-label,
+[data-theme="dark"] .cockpit-px-meta,
+[data-theme="dark"] .cockpit-px-dni,
+html.dark .module-section-subtitle,
+html.dark .legal-micro-note,
+html.dark .cockpit-step-sub,
+html.dark .cockpit-summary-label {
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] .norma-pill-banner,
+html.dark .norma-pill-banner {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #E2E8F0 !important;
+}
+
+[data-theme="dark"] .cockpit-role-select,
+[data-theme="dark"] .cockpit-sector-segment,
+[data-theme="dark"] select option,
+html.dark .cockpit-role-select,
+html.dark select option {
+  background-color: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] .cockpit-sector-btn,
+html.dark .cockpit-sector-btn {
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .cockpit-sector-btn.active,
+html.dark .cockpit-sector-btn.active {
+  background-color: #0E7490 !important;
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .cockpit-q-card,
+html.dark .cockpit-q-card {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+[data-theme="dark"] table th,
+html.dark table th {
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] table td,
+html.dark table td {
+  background-color: #111827 !important;
+  color: #E2E8F0 !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] table tbody tr:nth-child(even) td,
+html.dark table tbody tr:nth-child(even) td {
+  background-color: #1E293B !important;
+}
+
+[data-theme="dark"] details,
+[data-theme="dark"] summary,
+html.dark details,
+html.dark summary {
+  color: #F1F5F9 !important;
+}
+
+/* Neutralizar textos oscuros inline heredados sobre fondos oscuros */
+[data-theme="dark"] [style*="color:#0f172a"],
+[data-theme="dark"] [style*="color: #0f172a"],
+[data-theme="dark"] [style*="color:#0F172A"],
+[data-theme="dark"] [style*="color:#1e293b"],
+[data-theme="dark"] [style*="color: #1e293b"],
+[data-theme="dark"] [style*="color:#334155"],
+[data-theme="dark"] [style*="color: #334155"],
+[data-theme="dark"] [style*="color:#475569"],
+[data-theme="dark"] [style*="color: #475569"],
+[data-theme="dark"] [style*="color:#64748b"],
+[data-theme="dark"] [style*="color: #64748b"],
+[data-theme="dark"] [style*="color:#000"],
+html.dark [style*="color:#0f172a"],
+html.dark [style*="color: #0f172a"],
+html.dark [style*="color:#1e293b"],
+html.dark [style*="color:#334155"],
+html.dark [style*="color:#475569"] {
+  color: #E2E8F0 !important;
+}
+
+/* Neutralizar fondos blancos/claros inline en tarjetas y contenedores */
+[data-theme="dark"] div[style*="background:#ffffff"],
+[data-theme="dark"] div[style*="background: #ffffff"],
+[data-theme="dark"] div[style*="background:#fff;"],
+[data-theme="dark"] div[style*="background:#f8fafc"],
+[data-theme="dark"] div[style*="background: #f8fafc"],
+[data-theme="dark"] div[style*="background:#f1f5f9"],
+[data-theme="dark"] div[style*="background: #f1f5f9"],
+[data-theme="dark"] div[style*="background:#eff6ff"],
+[data-theme="dark"] div[style*="background: #eff6ff"],
+[data-theme="dark"] div[style*="background:#f0f9ff"],
+[data-theme="dark"] div[style*="background: #f0f9ff"],
+[data-theme="dark"] div[style*="background:#f0fdf4"],
+[data-theme="dark"] div[style*="background: #f0fdf4"],
+[data-theme="dark"] div[style*="background:#ecfeff"],
+[data-theme="dark"] div[style*="background: #ecfeff"],
+[data-theme="dark"] div[style*="background:#fffbeb"],
+[data-theme="dark"] div[style*="background: #fffbeb"],
+[data-theme="dark"] div[style*="background:#fff1f2"],
+[data-theme="dark"] div[style*="background: #fff1f2"],
+[data-theme="dark"] div[style*="background-color:#ffffff"],
+[data-theme="dark"] div[style*="background-color: #ffffff"],
+html.dark div[style*="background:#ffffff"],
+html.dark div[style*="background:#f8fafc"],
+html.dark div[style*="background:#eff6ff"],
+html.dark div[style*="background:#f0f9ff"] {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+/* Mantener legibilidad de enlaces/acentos azules y textos verdes/ámbar/rojos en fondos oscuros */
+[data-theme="dark"] [style*="color:#0369a1"],
+[data-theme="dark"] [style*="color: #0369a1"],
+[data-theme="dark"] [style*="color:#0284c7"],
+[data-theme="dark"] [style*="color: #0284c7"],
+[data-theme="dark"] [style*="color:#1e40af"],
+[data-theme="dark"] [style*="color:#1d4ed8"] {
+  color: #38BDF8 !important;
+}
+
+[data-theme="dark"] [style*="color:#15803d"],
+[data-theme="dark"] [style*="color: #15803d"],
+[data-theme="dark"] [style*="color:#166534"],
+[data-theme="dark"] [style*="color: #166534"] {
+  color: #4ADE80 !important;
+}
+
+[data-theme="dark"] [style*="color:#92400e"],
+[data-theme="dark"] [style*="color: #92400e"],
+[data-theme="dark"] [style*="color:#b45309"] {
+  color: #FBBF24 !important;
+}
+
+[data-theme="dark"] [style*="color:#991b1b"],
+[data-theme="dark"] [style*="color: #991b1b"],
+[data-theme="dark"] [style*="color:#b91c1c"],
+[data-theme="dark"] [style*="color:#9f1239"] {
+  color: #FCA5A5 !important;
+}
+
+/* Modales de historial y auditoría en modo nocturno */
+[data-theme="dark"] #modal_historial_flujo_px > div,
+[data-theme="dark"] #modal_audit_logs_susalud > div,
+[data-theme="dark"] .modal-hc-card,
+[data-theme="dark"] .modal-hc-body {
+  background-color: #111827 !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
 }
