@@ -6704,14 +6704,15 @@ function imprimirBrazalete() {
         /* FORMATO DE PULSERA TÉRMICA ESTÁNDAR (28 cm x 2.8 cm simulado) */
         .wristband-strip {
           width: 820px;
-          height: 135px;
+          min-height: 135px;
+          height: auto;
           background: #ffffff;
           border: 2px solid #94a3b8;
           border-radius: 12px;
           box-shadow: 0 8px 24px rgba(0,0,0,0.15);
           display: flex;
           position: relative;
-          overflow: hidden;
+          overflow: visible;
         }
         /* BANDA LATERAL DE TRIAJE */
         .band-triage {
@@ -6771,15 +6772,19 @@ function imprimirBrazalete() {
           margin: 4px 0;
         }
         .patient-name {
-          font-size: 17px;
+          font-size: 16px;
           font-weight: 900;
           color: #0f172a;
-          line-height: 1.1;
+          line-height: 1.2;
           letter-spacing: 0.2px;
+          white-space: normal;
+          word-break: break-word;
+          overflow-wrap: anywhere;
         }
         .patient-details {
           display: flex;
-          gap: 16px;
+          flex-wrap: wrap;
+          gap: 6px 14px;
           font-size: 11px;
           color: #334155;
           margin-top: 4px;
@@ -8281,8 +8286,21 @@ function activarIngresoDirectoQuirofano() {
 }
 
 function asignarQuirofanoEspecifico(num) {
-  const nombreSop = `Quirófano ${num} (SOP ${num} - Emergencia)`;
-  STATE.camaAsignada = nombreSop;
+  const sopId = `SOP-${String(num).padStart(2, "0")}`;
+  const rec = (typeof RECURSOS_HOSPITALARIOS !== "undefined") ? RECURSOS_HOSPITALARIOS[sopId] : null;
+  if (rec && rec.estado === "ocupada") {
+    alert(`⛔ El ${rec.nombre} ya se encuentra ocupado. Libérelo o seleccione otra sala.`);
+    return;
+  }
+  if (rec && typeof asignarPacienteActualARecurso === "function") {
+    asignarPacienteActualARecurso(sopId, null, null, true);
+  } else {
+    STATE.camaAsignada = `Quirófano ${num} (SOP ${num} - Emergencia)`;
+    STATE.camaAsignadaId = sopId;
+    registrarFacturaItem(`Derecho de Sala de Operaciones (SOP ${num})`, 400, "Procedimientos");
+    actualizarFactura();
+  }
+  const nombreSop = rec ? rec.nombre : `Quirófano ${num} (SOP ${num} - Emergencia)`;
 
   const badge = document.getElementById(`badge_sop${num}`);
   if (badge) {
@@ -8291,22 +8309,42 @@ function asignarQuirofanoEspecifico(num) {
     badge.style.color = "#991b1b";
   }
 
-  registrarFacturaItem(`Derecho de Sala de Operaciones (SOP ${num})`, 400, "Procedimientos");
-  alert(`🏥 Paciente ingresado a ${nombreSop}. Procedimiento quirúrgico activo.`);
-  actualizarFactura();
+  alert(`🏥 Paciente ingresado a ${nombreSop}. Sala asignada y descontada del inventario.`);
 }
 
 function asignarCamaURPA() {
-  STATE.camaAsignada = "Cama 1 — Sala URPA (Recuperación Post-Anestésica)";
+  const idsUrpa = ["URPA-01", "URPA-02"];
+  const urpaId = (typeof RECURSOS_HOSPITALARIOS !== "undefined")
+    ? idsUrpa.find(id => RECURSOS_HOSPITALARIOS[id] && RECURSOS_HOSPITALARIOS[id].estado === "disponible")
+    : null;
+  if (typeof RECURSOS_HOSPITALARIOS !== "undefined" && !urpaId) {
+    alert("⛔ No hay camas disponibles en Sala URPA (0/2 libres).");
+    return;
+  }
+  if (urpaId && typeof asignarPacienteActualARecurso === "function") {
+    asignarPacienteActualARecurso(urpaId, null, null, true);
+  } else {
+    STATE.camaAsignada = "Cama URPA-01 (Recuperación Post-Anestésica)";
+    STATE.camaAsignadaId = "URPA-01";
+    registrarFacturaItem("Estancia en Sala de Recuperación Post-Anestésica (URPA)", 120, "Hospitalización");
+    actualizarFactura();
+  }
+  const libresUrpa = (typeof RECURSOS_HOSPITALARIOS !== "undefined")
+    ? idsUrpa.filter(id => RECURSOS_HOSPITALARIOS[id]?.estado === "disponible").length
+    : 1;
   const badge = document.getElementById("badge_urpa");
   if (badge) {
-    badge.textContent = "🟡 1 Cama Ocupada";
-    badge.style.background = "#fef9c3";
-    badge.style.color = "#854d0e";
+    if (libresUrpa === 0) {
+      badge.textContent = "🔴 0/2 Libres (URPA Llena)";
+      badge.style.background = "#fee2e2";
+      badge.style.color = "#991b1b";
+    } else {
+      badge.textContent = `🟡 ${libresUrpa} Cama${libresUrpa === 1 ? "" : "s"} Libre${libresUrpa === 1 ? "" : "s"}`;
+      badge.style.background = "#fef9c3";
+      badge.style.color = "#854d0e";
+    }
   }
-  registrarFacturaItem("Estancia en Sala de Recuperación Post-Anestésica (URPA)", 120, "Clínica");
-  alert("🛌 Paciente trasladado exitosamente a Sala URPA para monitoreo post-quirúrgico.");
-  actualizarFactura();
+  alert(`🛌 Paciente trasladado exitosamente a ${STATE.camaAsignada}. Cama descontada del inventario.`);
 }
 
 function ejecutarOrdenQuirurgicaEmergencia() {
@@ -9544,6 +9582,14 @@ function asignarPacienteActualARecurso(idRecurso, duracionManual = null, motivoM
 
   STATE.camaAsignada = rec.nombre;
   STATE.camaAsignadaId = rec.id;
+  if (typeof pacienteActivoId !== "undefined" && pacienteActivoId && Array.isArray(PACIENTES_COLA)) {
+    const px = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
+    if (px) {
+      px.camaId = rec.id;
+      px.camaNombre = rec.nombre;
+      if (typeof renderizarTableroColaPacientes === "function") renderizarTableroColaPacientes();
+    }
+  }
 
   // Facturar estancia/derecho de sala
   if (rec.tipo === "quirofano") {
@@ -9556,7 +9602,11 @@ function asignarPacienteActualARecurso(idRecurso, duracionManual = null, motivoM
     registrarFacturaItem(`Cama de Observación (${rec.id})`, 150, "Hospitalización");
   }
 
-  // Sincronizar badges y displays
+  // Sincronizar badges, contador navbar y displays inmediatamente
+  if (typeof actualizarTelemetriaDomCronometros === "function") {
+    const _recs = Object.values(RECURSOS_HOSPITALARIOS);
+    actualizarTelemetriaDomCronometros(_recs.filter(r => r.estado === "disponible").length, _recs.filter(r => r.estado === "ocupada").length);
+  }
   renderizarTableroCamasYQuirofanos();
   if (document.getElementById("modalTableroCamasOverlay")?.classList.contains("open")) {
     renderizarTableroCamasYQuirofanos(filtroRecursoActivo, "modal_camas_stock_grid");
@@ -14468,7 +14518,7 @@ function construirHTMLBrazalete(esTemporal = false) {
       <div class="wristband-body" style="flex:1; min-width:0; padding:6px 10px; display:flex; flex-direction:column; justify-content:space-between; border-right:1.5px dashed #cbd5e1; box-sizing:border-box; overflow:visible;">
         
         <!-- HEADER INSTITUCIONAL -->
-        <div class="inst-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:2px; height:18px;">
+        <div class="inst-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px; border-bottom:1px solid #e2e8f0; padding-bottom:3px; min-height:18px; height:auto;">
           <span class="inst-name" style="font-size:10.5px; font-weight:800; color:#0f172a; letter-spacing:0.3px;">HOSPITAL REGIONAL DOCENTE UPP</span>
           <div style="display:flex; align-items:center; gap:6px;">
             ${esRealmenteTemporal ? '<span style="background:#dc2626; color:#ffffff; font-size:8.5px; font-weight:900; padding:1px 5px; border-radius:3px; letter-spacing:0.3px;">🏷️ BRAZALETE TEMPORAL</span>' : '<span style="background:#16a34a; color:#ffffff; font-size:8.5px; font-weight:900; padding:1px 5px; border-radius:3px; letter-spacing:0.3px;">✓ OFICIAL IDENTIFICADO</span>'}
@@ -14478,8 +14528,8 @@ function construirHTMLBrazalete(esTemporal = false) {
 
         <!-- DATOS DEL PACIENTE: NOMBRE Y UBICACIÓN -->
         <div class="patient-main" style="margin:2px 0;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-            <div class="patient-name" style="font-size:14px; font-weight:900; color:#0f172a; line-height:1.2; letter-spacing:0.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:6px;">
+            <div class="patient-name" style="font-size:13.5px; font-weight:900; color:#0f172a; line-height:1.22; letter-spacing:0.2px; white-space:normal; word-break:break-word; overflow-wrap:anywhere; overflow:visible; text-overflow:clip; flex:1; min-width:200px;">
               ${STATE.esNN ? (STATE.esNNInconsciente ? '🚨 ' : '👤 ') : ''}${nombrePaciente}
             </div>
             <div style="font-size:9px; font-weight:800; background:#fef2f2; color:#991b1b; border:1px solid #fecaca; padding:2px 6px; border-radius:4px; white-space:nowrap; flex-shrink:0;">

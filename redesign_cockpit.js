@@ -154,16 +154,15 @@
     `;
     workspaceCenter.appendChild(activeQueueRow);
 
-    // 1.4.1 Mantener el Panel de Pacientes en Curso (Cola por Prioridad) en el centro,
-    // directamente debajo de la botonera táctica y encima del Módulo 1
+    // 1.4.1 Mover y Reubicar el Panel de Pacientes en Curso al Sidebar Izquierdo con scroll propio
     const activePanel = document.getElementById("activePatientsPanel");
     if (activePanel) {
       // Ocultar botones duplicados de la cabecera vieja para dejar solo el carrusel limpio y contador
       const oldBtns = activePanel.querySelector(".active-patients-btn-group");
       if (oldBtns) oldBtns.style.display = "none";
       activePanel.style.display = "block";
-      activePanel.style.margin = "0 0 12px 0";
-      workspaceCenter.appendChild(activePanel);
+      activePanel.style.margin = "0";
+      sidebarLeft.appendChild(activePanel);
     }
 
     // Tarjeta Resumen Sellado de Triaje (Solo visible en Rol MÉDICO)

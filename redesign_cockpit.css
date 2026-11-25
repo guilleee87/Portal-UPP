@@ -1685,9 +1685,11 @@ html.dark .cockpit-px-name {
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important;
-  max-height: 460px !important;
+  max-height: calc(100vh - 240px) !important;
+  min-height: 200px !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+  scrollbar-width: thin !important;
   padding: 2px 4px 2px 2px !important;
 }
 
