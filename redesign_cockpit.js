@@ -409,11 +409,14 @@
         </a>
 
         <div class="cockpit-sector-segment">
-          <button type="button" class="cockpit-sector-btn active" id="btn_sector_publico" onclick="window.COCKPIT.seleccionarSector('publico')">
-            🏛️ Público (MINSA/SIS)
+          <button type="button" class="cockpit-sector-btn active" id="btn_sector_publico" onclick="window.COCKPIT.seleccionarSector('sis')">
+            🏛️ MINSA / SIS (FUA)
+          </button>
+          <button type="button" class="cockpit-sector-btn" id="btn_sector_essalud" onclick="window.COCKPIT.seleccionarSector('essalud')">
+            🏥 EsSalud (ESSI)
           </button>
           <button type="button" class="cockpit-sector-btn" id="btn_sector_privado" onclick="window.COCKPIT.seleccionarSector('privado')">
-            🏥 Privado (EPS)
+            🏢 Privado (EPS)
           </button>
         </div>
       </div>
@@ -1379,21 +1382,17 @@ function refrescarValoresMonitor() {
   }
 
   function seleccionarSector(tipo) {
-    const btnPub = document.getElementById("btn_sector_publico");
+    const btnSis = document.getElementById("btn_sector_publico");
+    const btnEss = document.getElementById("btn_sector_essalud");
     const btnPriv = document.getElementById("btn_sector_privado");
+    const modo = (tipo === "privado") ? "privado" : (tipo === "essalud" ? "essalud" : "sis");
 
-    if (tipo === "publico") {
-      btnPub?.classList.add("active");
-      btnPriv?.classList.remove("active");
-      if (typeof window.cambiarEntornoOperativo === "function") {
-        window.cambiarEntornoOperativo("publico");
-      }
-    } else {
-      btnPriv?.classList.add("active");
-      btnPub?.classList.remove("active");
-      if (typeof window.cambiarEntornoOperativo === "function") {
-        window.cambiarEntornoOperativo("privado");
-      }
+    btnSis?.classList.toggle("active", modo === "sis");
+    btnEss?.classList.toggle("active", modo === "essalud");
+    btnPriv?.classList.toggle("active", modo === "privado");
+
+    if (typeof window.cambiarEntornoOperativo === "function") {
+      window.cambiarEntornoOperativo(modo);
     }
   }
 

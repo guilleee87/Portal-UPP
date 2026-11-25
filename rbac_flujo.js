@@ -2012,11 +2012,11 @@
     const prioCfg = prioridad ? (coloresPrioBadge[prioridad] || { bg:"#f1f5f9", text:"#334155", border:"#cbd5e1", label:`P-${prioridad}` }) : { bg:"#f1f5f9", text:"#64748b", border:"#cbd5e1", label:"Sin categorizar" };
 
     const cama = px.camaNombre || ss.camaAsignada || state.camaAsignada || "Sin Cama / Tópico";
-    const alergias = px.alergias || ss.alergias || state.alergias || "Niega alergias medicamentosas conocidas";
-    const motivo = px.motivo || ss.motivoConsulta || state.motivoConsulta || "Atención de Emergencia";
+    const alergias = px.alergias || ss.alergias || state.alergias || "— (Por indagar)";
+    const motivo = px.motivo || ss.motivoConsulta || state.motivoConsulta || "—";
     const cie10 = px.diagnosticoCie10 || ss.diagnosticoCie10 || state.diagnosticoCie10 || "Por evaluar por médico";
-    const seguro = px.tipoSeguro || ss.tipoSeguro || state.tipoSeguro || "SIS Gratuito (MINSA)";
-    const docSeguro = px.nroFua || px.nroEssi || ss.nroFua || ss.nroEssi || state.nroFua || state.nroEssi || "FUA-2026-EN_TRAMITE";
+    const seguro = (px.coberturaValidada && (px.tipoSeguro || ss.tipoSeguro || state.tipoSeguro)) ? (px.tipoSeguro || ss.tipoSeguro || state.tipoSeguro) : (px.esNN ? "Paciente NN — Sin seguro acreditado" : "Pendiente de acreditación");
+    const docSeguro = px.nroFua || px.nroEssi || ss.nroFua || ss.nroEssi || state.nroFua || state.nroEssi || "Pendiente";
 
     // 2. Signos Vitales ingresados hasta el momento
     const spo2 = px.spo2 ?? ss.spo2 ?? state.spo2 ?? "—";
@@ -2032,26 +2032,28 @@
 
     // 3. Fechas y Horas de cada paso de trazabilidad
     const tLlegada = formatearDiaHora(px.timestamp || px.fechaLlegada || ss.fechaLlegada);
-    const tTriaje = f.triaje?.fecha ? formatearDiaHora(f.triaje.fecha) : (prioridad ? formatearDiaHora(px.timestamp || new Date()) : null);
+    const tTriaje = f.triaje?.fecha ? formatearDiaHora(f.triaje.fecha) : null;
     const tAdmision = f.admision?.fecha ? formatearDiaHora(f.admision.fecha) : (px.coberturaValidada ? formatearDiaHora(px.timestamp || new Date()) : null);
     const tMedico = f.medico?.fecha ? formatearDiaHora(f.medico.fecha) : (px.estadoFlujo === "PENDIENTE_CAJA" || px.estadoFlujo === "CERRADO_FACTURADO" ? formatearDiaHora(px.timestamp || new Date()) : null);
     const tCaja = f.caja?.fecha ? formatearDiaHora(f.caja.fecha) : (px.estadoFlujo === "CERRADO_FACTURADO" ? formatearDiaHora(px.timestamp || new Date()) : null);
+    const hizoTriajeReal = Boolean(f.triaje);
+    const esAtencionRapida = Boolean(px.ingresoDirectoCritico || px.panicoShockTrauma);
 
-    // 4. Bloques de Información de Trazabilidad
+    // 4. Bloques de Información de Trazabilidad (solo datos reales validados, sin inventar firmas/pasos)
     // PASO 1: TRIAJE
-    const paso1Html = (esAuditor || rolActivo === "TRIAJE" || prioridad) ? `
+    const paso1Html = (esAuditor || rolActivo === "TRIAJE" || hizoTriajeReal) ? `
       <div style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9; padding-bottom:6px; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
           <strong style="color:#0f172a; font-size:0.84rem; display:flex; align-items:center; gap:6px;">
             <span>👩‍⚕️ Paso 1: Triaje Fisiológico &amp; Categorización (NTS N° 042-MINSA)</span>
-            ${prioridad ? `<span style="background:#16a34a; color:#fff; font-size:0.68rem; padding:1px 6px; border-radius:4px;">✓ Sellado</span>` : `<span style="background:#fef3c7; color:#92400e; font-size:0.68rem; padding:1px 6px; border-radius:4px;">⏳ En Evaluación</span>`}
+            ${hizoTriajeReal ? `<span style="background:#16a34a; color:#fff; font-size:0.68rem; padding:1px 6px; border-radius:4px;">✓ Sellado</span>` : (esAtencionRapida ? `<span style="background:#fee2e2; color:#991b1b; font-size:0.68rem; padding:1px 6px; border-radius:4px;">⚡ Atención Rápida (Sin paso por Triaje)</span>` : `<span style="background:#fef3c7; color:#92400e; font-size:0.68rem; padding:1px 6px; border-radius:4px;">⏳ Pendiente de Triaje</span>`)}
           </strong>
           <div style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:#0284c7; font-weight:700;">
-            📅 ${tTriaje ? tTriaje.dia : tLlegada.dia} · 🕒 ${tTriaje ? tTriaje.hora : tLlegada.hora}
+            📅 ${tTriaje ? tTriaje.dia : "--/--/----"} · 🕒 ${tTriaje ? tTriaje.hora : "Pendiente"}
           </div>
         </div>
         <div style="font-size:0.78rem; color:#334155; line-height:1.45;">
-          <div><strong>Responsable:</strong> ${f.triaje?.usuario || "Lic. Ana Torres"} (${f.triaje?.colegiatura || "CEP 92410"})</div>
+          <div><strong>Responsable:</strong> ${f.triaje?.usuario ? `${f.triaje.usuario} (${f.triaje.colegiatura || "CEP"})` : "— (Sin intervención de triaje aún)"}</div>
           <div><strong>Categorización:</strong> <span style="background:${prioCfg.bg}; color:${prioCfg.text}; font-weight:900; padding:1px 6px; border-radius:4px;">${prioCfg.label}</span> · <strong>Recurso:</strong> ${cama}</div>
           <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:6px 10px; border-radius:6px; margin:6px 0; font-family:'JetBrains Mono', monospace; font-size:0.75rem; display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:4px;">
             <div>SpO2: <strong>${spo2}%</strong></div>
@@ -2086,7 +2088,7 @@
           </div>
         </div>
         <div style="font-size:0.78rem; color:#334155; line-height:1.45;">
-          <div><strong>Operador de Admisión:</strong> ${f.admision?.usuario || "Srta. Sofía Quispe (ADM-042)"}</div>
+          <div><strong>Operador de Admisión:</strong> ${f.admision?.usuario || (px.coberturaValidada ? "Admisión SUSALUD" : "— (Pendiente de admisión)")}</div>
           <div><strong>Régimen de Financiamiento:</strong> <strong style="color:#0369a1;">${seguro}</strong></div>
           <div><strong>Trámite / Póliza / FUA:</strong> <span style="font-family:'JetBrains Mono', monospace; font-weight:700;">${docSeguro}</span></div>
           <div style="color:#15803d; font-weight:700; margin-top:2px;">✓ Acreditación PIDE-SUSALUD validada sin condicionar la atención médica vital (Ley N° 27604).</div>
@@ -2112,7 +2114,7 @@
           </div>
         </div>
         <div style="font-size:0.78rem; color:#334155; line-height:1.45;">
-          <div><strong>Médico Tratante:</strong> ${f.medico?.usuario || "Dr. Carlos Vega"} (${f.medico?.colegiatura || "CMP 58321"})</div>
+          <div><strong>Médico Tratante:</strong> ${f.medico?.usuario ? `${f.medico.usuario} (${f.medico.colegiatura || "CMP"})` : "— (Pendiente de evaluación médica)"}</div>
           <div><strong>Diagnóstico Definitivo / Presuntivo (CIE-10):</strong> <strong style="color:#0284c7;">${cie10}</strong></div>
           <div><strong>Destino de Egreso:</strong> ${px.destino || ss.destinoAlta || "Alta Médica a Domicilio con Indicaciones"}</div>
           <div style="color:#15803d; font-weight:700; margin-top:2px;">✓ Criterios de estabilización clínica y epicrisis conformes según NTS N° 042-MINSA.</div>
@@ -2140,7 +2142,7 @@
           </div>
         </div>
         <div style="font-size:0.78rem; color:#334155; line-height:1.45;">
-          <div><strong>Cajero / Liquidador:</strong> ${f.caja?.usuario || "Sr. Luis Paredes (Caja Central)"}</div>
+          <div><strong>Cajero / Liquidador:</strong> ${f.caja?.usuario || (tCaja ? "Caja Central UPP" : "— (Pendiente de liquidación)")}</div>
           <div style="display:flex; gap:16px; margin:4px 0; background:#f8fafc; border:1px solid #e2e8f0; padding:6px 10px; border-radius:6px; font-family:'JetBrains Mono', monospace; font-size:0.8rem;">
             <div>Total Liquidado: <strong style="color:#0f172a;">${String(totalLiq).startsWith('S/') ? totalLiq : 'S/ ' + Number(totalLiq).toFixed(2)}</strong></div>
             <div>Copago Paciente: <strong style="color:#15803d;">S/ ${Number(copago).toFixed(2)}</strong></div>

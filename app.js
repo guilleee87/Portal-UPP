@@ -13745,6 +13745,13 @@ function cambiarEntornoOperativo(modo) {
     el.style.boxShadow = "none";
   };
 
+  const _topSis = document.getElementById("btn_sector_publico");
+  const _topEss = document.getElementById("btn_sector_essalud");
+  const _topPriv = document.getElementById("btn_sector_privado");
+  _topSis?.classList.toggle("active", nuevoModo === "publico" && STATE.tipoIpressPublica !== "ESSALUD");
+  _topEss?.classList.toggle("active", nuevoModo === "publico" && STATE.tipoIpressPublica === "ESSALUD");
+  _topPriv?.classList.toggle("active", nuevoModo === "privado");
+
   if (nuevoModo === "publico") {
     const esEssalud = (STATE.tipoIpressPublica === "ESSALUD");
     desactivarTab(btnPriv);
