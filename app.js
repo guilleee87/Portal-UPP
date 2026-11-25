@@ -7108,6 +7108,23 @@ async function grabarAtencionCompleta() {
   // Liberar cama asignada al concluir la atención médica completa y actualizar todos los indicadores
   liberarCamaTotalPaciente(pacienteActivoId, "Atención Médica Grabada y Concluida");
 
+  // Marcar paciente como Alta / Cerrado para que desaparezca del Tablero y de Pacientes en Atención Activa
+  STATE.estadoFlujo = "CERRADO_FACTURADO";
+  STATE.altaClinicaConcluida = true;
+  if (typeof pacienteActivoId !== "undefined" && pacienteActivoId && Array.isArray(PACIENTES_COLA)) {
+    const pxFin = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
+    if (pxFin) {
+      pxFin.estadoFlujo = "CERRADO_FACTURADO";
+      pxFin.estadoAtencion = "Alta";
+      pxFin.altaClinicaConcluida = true;
+      pxFin.horaAlta = new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
+  }
+  if (typeof guardarColaCompartidaEnStorage === "function") guardarColaCompartidaEnStorage();
+  if (typeof renderizarTableroColaPacientes === "function") renderizarTableroColaPacientes();
+  if (typeof renderizarTrackBoardLista === "function") renderizarTrackBoardLista();
+  if (typeof renderizarBandejaPosta === "function") renderizarBandejaPosta();
+
   if (STATE.nroFua) STATE.estadoFua = "CERRADO_LIQUIDADO";
   if (STATE.nroEssi) STATE.estadoEssi = "CERRADO_LIQUIDADO";
   if (typeof actualizarIndicadoresFuaEssi === "function") actualizarIndicadoresFuaEssi();
@@ -14506,7 +14523,8 @@ function abrirPortalFacturacion(event) {
   const hc = STATE.historiaClinica || '';
   const prio = STATE.prioridad || '';
   const url = `facturacion.html?dni=${encodeURIComponent(dni)}&hc=${encodeURIComponent(hc)}&prio=${encodeURIComponent(prio)}&t=${Date.now()}`;
-  window.open(url, '_blank');
+  const winFact = window.open(url, '_blank');
+  if (!winFact || winFact.closed) { window.location.href = url; }
   return false;
 }
 window.abrirPortalFacturacion = abrirPortalFacturacion;
@@ -16899,13 +16917,27 @@ window.seleccionarDestinoPostTopico = function(destino) {
 };
 
 const orig_grabarAtencionCompleta = window.grabarAtencionCompleta;
-window.grabarAtencionCompleta = function() {
+window.grabarAtencionCompleta = async function() {
   if (STATE.camaAsignadaId && typeof liberarCamaRecurso === 'function') {
     liberarCamaRecurso(STATE.camaAsignadaId);
   }
   if (typeof orig_grabarAtencionCompleta === 'function') {
-    orig_grabarAtencionCompleta();
+    await orig_grabarAtencionCompleta();
   }
+  STATE.estadoFlujo = "CERRADO_FACTURADO";
+  STATE.altaClinicaConcluida = true;
+  if (typeof pacienteActivoId !== "undefined" && pacienteActivoId && Array.isArray(PACIENTES_COLA)) {
+    const pxFin = PACIENTES_COLA.find(x => x.id === pacienteActivoId);
+    if (pxFin) {
+      pxFin.estadoFlujo = "CERRADO_FACTURADO";
+      pxFin.estadoAtencion = "Alta";
+      pxFin.altaClinicaConcluida = true;
+    }
+  }
+  if (typeof guardarColaCompartidaEnStorage === "function") guardarColaCompartidaEnStorage();
+  if (typeof renderizarTableroColaPacientes === "function") renderizarTableroColaPacientes();
+  if (typeof renderizarTrackBoardLista === "function") renderizarTrackBoardLista();
+  if (typeof renderizarBandejaPosta === "function") renderizarBandejaPosta();
   if (typeof actualizarWidgetFlotanteCamas === 'function') actualizarWidgetFlotanteCamas();
 
   // Bloqueo de Historia Clínica Cerrada e Inmutable (NTS N° 139-MINSA)

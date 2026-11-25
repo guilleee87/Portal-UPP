@@ -971,15 +971,15 @@
   function validarPacienteYDatosParaFlujo(accionRequerida = "TRIAJE") {
     const cola = (typeof window.PACIENTES_COLA !== "undefined" && Array.isArray(window.PACIENTES_COLA)) ? window.PACIENTES_COLA : [];
     
-    // 1. REGLA: Debe haber pacientes en la cola
-    if (cola.length === 0) {
+    // 1. REGLA: Debe haber pacientes en la cola o en STATE activo
+    if (cola.length === 0 && !(window.STATE && (window.STATE.numDni || window.STATE.nombreReniec || window.STATE.esNN || window.STATE.prioridad))) {
       const msg = "⚠️ ACCIÓN DENEGADA: No hay ningún paciente asignado ni en cola de atención. Registre o asigne un paciente antes de continuar.";
       if (typeof window.mostrarToast === "function") window.mostrarToast("warning", "Sin Pacientes", msg);
       else alert(msg);
       return { valido: false, px: null };
     }
 
-    // 2. REGLA: Debe haber un paciente activo seleccionado
+    // 2. REGLA: Debe haber un paciente activo seleccionado (o STATE activo)
     let px = null;
     if (window.pacienteActivoId) {
       px = cola.find(x => x.id === window.pacienteActivoId);
@@ -987,6 +987,9 @@
     if (!px && cola.length === 1) {
       px = cola[0];
       window.pacienteActivoId = px.id;
+    }
+    if (!px && window.STATE && (window.STATE.numDni || window.STATE.nombreReniec || window.STATE.esNN || window.STATE.prioridad)) {
+      px = window.STATE;
     }
 
     if (!px) {
@@ -1072,7 +1075,7 @@
         return { valido: false, px: px };
       }
       const estadoFlujo = px.estadoFlujo || window.STATE?.estadoFlujo || "";
-      if (estadoFlujo === "PENDIENTE_TRIAJE" && !esNN) {
+      if (estadoFlujo === "PENDIENTE_TRIAJE" && !esNN && !tienePrioridad) {
         const msg = "⚠️ FACTURACIÓN DENEGADA: El paciente aún se encuentra en Triaje y no ha recibido atención médica. No se puede facturar.";
         if (typeof window.mostrarToast === "function") window.mostrarToast("danger", "Atención Pendiente", msg);
         else alert(msg);
