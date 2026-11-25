@@ -5777,6 +5777,24 @@ function registrarFacturaItem(servicio, costo, categoria = "General") {
 // ---------------------------------------------------------------------------
 // 15. LIQUIDACIÓN Y FACTURACIÓN HOSPITALARIA CON REGLAS DE COBERTURA (SUSALUD / SITEDS)
 // ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
+// DETERMINACIÓN DE EMERGENCIA VITAL (Ley N° 27604 / D.S. N° 016-2002-SA)
+// Emergencia = P-I / P-II, ingreso crítico directo, Shock Trauma, Quirófano SOP,
+// UCI, URPA post-quirúrgica o reanimación (cualquier evento que atente contra la vida).
+// El copago fijo / coaseguro EPS solo aplica cuando se determina URGENCIA (P-III a P-V).
+// ------------------------------------------------------------------------------
+function esEventoEmergenciaVital(st) {
+  st = st || STATE;
+  const prio = String(st.prioridad || "").replace("P-", "").toUpperCase();
+  if (prio === "I" || prio === "II") return true;
+  if (st.ingresoDirectoCritico) return true;
+  const cama = String(st.camaAsignadaId || "").toUpperCase();
+  if (/^(ST|SOP|UCI|URPA)-/.test(cama)) return true;
+  const items = Array.isArray(st.items_factura) ? st.items_factura : [];
+  return items.some(i => /shock trauma|quir[oó]fano|\bUCI\b|cuidados intensivos|URPA|reanimaci[oó]n/i.test(String(i.nombre || i.servicio || "")));
+}
+window.esEventoEmergenciaVital = esEventoEmergenciaVital;
+
 function calcularLiquidacionSeguro() {
   const entorno = STATE.entornoOperativo || "publico"; // "publico" | "privado"
   const padron = STATE.padronSusalud;
@@ -5787,7 +5805,7 @@ function calcularLiquidacionSeguro() {
     .filter(i => (i.categoria || "").toLowerCase().includes("farmacia"))
     .reduce((s, i) => s + (parseFloat(i.costo) || 0), 0);
   const subtotalServicios = Math.max(0, totalBruto - subtotalFarmacia);
-  const esEmergencia = (STATE.prioridad === "I" || STATE.prioridad === "II");
+  const esEmergencia = esEventoEmergenciaVital();
   const esUrgencia = !esEmergencia;
 
   let lugarAtencion = "";
@@ -6067,7 +6085,7 @@ function calcularLiquidacionSeguro() {
     }
 
     // REGLA C: Ley de Emergencia - Prioridad I y II (Vital)
-    else if (esEmergencia && !STATE.forzarLiquidacionPlanEps) {
+    else if (esEmergencia) {
       etiquetaRegimen = `${priv.iafas_eps} · Emergencia Médica Vital (P-${STATE.prioridad} · Ley N° 27604)`;
       condicionSusalud = `${priv.iafas_eps} · ${priv.plan_salud} (Emergencia Vital P-${STATE.prioridad})`;
       coberturaSector = "100% Cobertura Ley de Emergencia N° 27604 (Pago S/ 0.00)";
@@ -6079,7 +6097,7 @@ function calcularLiquidacionSeguro() {
       motivoLiquidacion = `EMERGENCIA VITAL CUBIERTA AL 100% POR LEY N° 27604 (P-${STATE.prioridad} ${STATE.prioridad === 'I' ? 'ROJO' : 'NARANJA'}). Paciente en riesgo inminente de vida con póliza ${priv.iafas_eps} activa (SITEDS: ${priv.siteds_codigo || 'AUTORIZADO'}). Procedimientos críticos, shock trauma, exámenes, estancia y farmacia cubiertos al 100% por la aseguradora. Pago del paciente: S/. 0.00.`;
     }
 
-    // REGLA D: Urgencia / Observación - Prioridades III, IV y V (o Liquidación según Plan EPS contratado)
+    // REGLA D: Urgencia / Observación - Prioridades III, IV y V (sin riesgo vital)
     else {
       const planSel = STATE.planPrivado || (document.getElementById("select_plan_privado")?.value) || "base_80_20";
       if (planSel === "integral_90_10") {
@@ -6102,17 +6120,11 @@ function calcularLiquidacionSeguro() {
         coberturaSeguro = Math.max(0, totalBruto - totalPaciente);
       }
 
-      etiquetaRegimen = STATE.forzarLiquidacionPlanEps
-        ? `${priv.iafas_eps} · Plan Base EPS 80/20 (P-${STATE.prioridad || 'I'} · Trauma Shock → SOP → UCI → URPA → Alta)`
-        : `${priv.iafas_eps} · Atención de Urgencia (P-${STATE.prioridad || 'III'})`;
+      etiquetaRegimen = `${priv.iafas_eps} · Atención de Urgencia (P-${STATE.prioridad || 'III'})`;
       condicionSusalud = `${priv.iafas_eps} · ${priv.plan_salud} (SITEDS: ${priv.siteds_codigo || 'AUTORIZADO'})`;
       coberturaSector = `Copago Fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% Coaseguro (${((1 - pctCoaseguro) * 100).toFixed(0)}% Cubierto por EPS)`;
-      alertaSector = STATE.forzarLiquidacionPlanEps
-        ? `✅ Liquidación Integral según Plan Base EPS (80/20): Aseguradora cubre el 80% (S/. ${coberturaSeguro.toFixed(2)}) y paciente asume Copago Fijo S/. ${copagoFijo.toFixed(2)} + 20% Coaseguro (S/. ${coaseguroMonto.toFixed(2)}) = S/. ${totalPaciente.toFixed(2)}.`
-        : `Atención de Urgencia/Ambulatoria EPS: Paciente abona copago fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% coaseguro (S/. ${coaseguroMonto.toFixed(2)}). Saldo facturado a la EPS.`;
-      motivoLiquidacion = STATE.forzarLiquidacionPlanEps
-        ? `LIQUIDACIÓN HOSPITALARIA SEGÚN PLAN BASE EPS (80% / 20%) — P-${STATE.prioridad || 'I'} (${STATE.rutaIntrahospitalariaTexto || 'Trauma Shock → Quirófano → UCI → Recuperación → Alta'}). Póliza ${priv.iafas_eps} activa (${priv.plan_salud}). Se liquida conforme a condiciones del Plan Base: Copago fijo de S/. ${copagoFijo.toFixed(2)} más coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% sobre servicios, quirófano, UCI, recuperación, imágenes, laboratorio y Kardex (S/. ${coaseguroMonto.toFixed(2)}). Total a pagar por el paciente: S/. ${totalPaciente.toFixed(2)}. Cobertura asumida por la EPS: S/. ${coberturaSeguro.toFixed(2)}.`
-        : `ATENCIÓN DE URGENCIA / CONSULTORIO EPS (P-${STATE.prioridad || 'III'}). Póliza ${priv.iafas_eps} activa (${priv.plan_salud}). Se liquida copago fijo de S/. ${copagoFijo.toFixed(2)} más coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% sobre farmacia y procedimientos (S/. ${coaseguroMonto.toFixed(2)}). Total a cargo del paciente: S/. ${totalPaciente.toFixed(2)}. Saldo de S/. ${coberturaSeguro.toFixed(2)} derivado electrónicamente a la IAFAS EPS vía SITEDS.`;
+      alertaSector = `Atención de Urgencia/Ambulatoria EPS: Paciente abona copago fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% coaseguro (S/. ${coaseguroMonto.toFixed(2)}). Saldo facturado a la EPS.`;
+      motivoLiquidacion = `ATENCIÓN DE URGENCIA / CONSULTORIO EPS (P-${STATE.prioridad || 'III'}). Póliza ${priv.iafas_eps} activa (${priv.plan_salud}). Se liquida copago fijo de S/. ${copagoFijo.toFixed(2)} más coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% sobre farmacia y procedimientos (S/. ${coaseguroMonto.toFixed(2)}). Total a cargo del paciente: S/. ${totalPaciente.toFixed(2)}. Saldo de S/. ${coberturaSeguro.toFixed(2)} derivado electrónicamente a la IAFAS EPS vía SITEDS.`;
     }
   }
 
@@ -14127,7 +14139,7 @@ function renderizarBoxAcreditacionSusalud(padron) {
             </strong>
             ${exclusionActiva
               ? `<span style="color:#b91c1c;font-weight:700;">🚨 SINIESTRO RECHAZADO: Se aplicó causal de exclusión contractual. La aseguradora anula la cobertura. El paciente asume el 100% de la liquidación monetaria.</span>`
-              : `• <strong>Prioridad I y II (Emergencia Vital):</strong> Ley N° 27604 -> 100% cubierto por aseguradora EPS (Pago S/. 0.00).<br>
+              : `• <strong>Emergencia Vital (P-I/P-II, Trauma Shock, Quirófano, UCI o cualquier riesgo de vida):</strong> Ley N° 27604 -> 100% cubierto por aseguradora EPS (Pago S/. 0.00, sin copago).<br>
                  • <strong>Prioridad III, IV y V (Urgencias):</strong> Paciente asume Copago Fijo de <strong>S/. ${copago.toFixed(2)}</strong> + <strong>${coasPct}% de Coaseguro</strong> en medicamentos y farmacia.`
             }
           </div>
@@ -17101,7 +17113,7 @@ window.calcularLiquidacionSeguro = function() {
     ? STATE.items_factura.filter(i => (i.categoria || "").toLowerCase().includes("farmacia")).reduce((s, i) => s + (parseFloat(i.costo) || 0), 0)
     : 0;
   const subtotalServicios = Math.max(0, totalBruto - subtotalFarmacia);
-  const esEmergencia = (STATE.prioridad === "I" || STATE.prioridad === "II");
+  const esEmergencia = esEventoEmergenciaVital();
 
   let lugarAtencion = "";
   let coberturaSeguro = 0;
@@ -17321,19 +17333,19 @@ window.calcularLiquidacionSeguro = function() {
     totalPaciente = totalBruto;
     alertaSector = "🚨 Siniestro Rechazado por Exclusión Contractual de Póliza EPS. El paciente asume el 100% de la cuenta hospitalaria (incluso en P-I y P-II).";
     motivoLiquidacion = "SINIESTRO RECHAZADO POR IAFAS EPS. Por causal de exclusión contractual (ej. intoxicación, falta de carencia o riesgo excluido), la aseguradora anula la cobertura. Paciente asume el 100% de la totalidad facturada.";
-  } else if (STATE.prioridad === "I" && !STATE.forzarLiquidacionPlanEps) {
-    // LEY DE EMERGENCIA N° 27604 SOLO EN PRIORIDAD I (RIESGO VITAL INMINENTE)
-    etiquetaRegimen = `${priv.iafas_eps} · Emergencia Vital Inminente (P-I · Ley N° 27604)`;
-    condicionSusalud = `${priv.iafas_eps} · ${priv.plan_salud || 'Plan Preferente'} (Emergencia Vital P-I)`;
+  } else if (esEmergencia) {
+    // LEY DE EMERGENCIA N° 27604: EMERGENCIA VITAL (P-I/P-II, SHOCK TRAUMA, SOP, UCI) — SIN COPAGO NI COASEGURO
+    etiquetaRegimen = `${priv.iafas_eps} · Emergencia Vital (P-${STATE.prioridad || 'I'} · Ley N° 27604)`;
+    condicionSusalud = `${priv.iafas_eps} · ${priv.plan_salud || 'Plan Preferente'} (Emergencia Vital P-${STATE.prioridad || 'I'})`;
     coberturaSector = "100% Cobertura Ley de Emergencia N° 27604 (Pago S/ 0.00)";
     copagoFijo = 0.00;
     pctCoaseguro = 0;
     coberturaSeguro = totalBruto;
     totalPaciente = 0.00;
-    alertaSector = "✅ Ley N° 27604: Emergencia vital inmediata (P-I) cubierta al 100% por IAFAS EPS (Pago S/ 0.00).";
-    motivoLiquidacion = `EMERGENCIA VITAL P-I CUBIERTA AL 100% POR LEY N° 27604. Póliza ${priv.iafas_eps} activa. Pago del paciente: S/. 0.00.`;
+    alertaSector = "✅ Ley N° 27604: Emergencia vital (riesgo de vida: Shock Trauma / SOP / UCI / P-I-II) cubierta al 100% por IAFAS EPS. Copago fijo S/ 80 NO aplica (Pago S/ 0.00).";
+    motivoLiquidacion = `EMERGENCIA VITAL (P-${STATE.prioridad || 'I'}) CUBIERTA AL 100% POR LEY N° 27604. Póliza ${priv.iafas_eps} (${priv.plan_salud || 'Plan Activo'}) activa. El copago fijo y coaseguro solo aplican en urgencias; en emergencia vital el pago del paciente es S/. 0.00.`;
   } else {
-    // ATENCIÓN EPS (P-II a P-V, o Liquidación según Plan Base EPS contratado): Aplica copago fijo + coaseguro según plan/aseguradora
+    // ATENCIÓN EPS DE URGENCIA (P-III a P-V, sin riesgo vital): Aplica copago fijo + coaseguro según plan/aseguradora
     const planSel = STATE.planPrivado || (document.getElementById("select_plan_privado")?.value) || "";
     if (planSel === "vip_100") {
       copagoFijo = 0.00;
@@ -17359,17 +17371,11 @@ window.calcularLiquidacionSeguro = function() {
       coberturaSeguro = Math.max(0, totalBruto - totalPaciente);
     }
 
-    etiquetaRegimen = STATE.forzarLiquidacionPlanEps
-      ? `${priv.iafas_eps} · Plan Base EPS 80/20 (P-${STATE.prioridad || 'I'} · Trauma Shock → SOP → UCI → URPA → Alta)`
-      : `${priv.iafas_eps} · Cobertura EPS (P-${STATE.prioridad || 'III'})`;
+    etiquetaRegimen = `${priv.iafas_eps} · Cobertura EPS (P-${STATE.prioridad || 'III'})`;
     condicionSusalud = `${priv.iafas_eps} · ${priv.plan_salud || 'Plan Activo'} (SITEDS: AUTORIZADO)`;
     coberturaSector = `Copago Fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% Coaseguro (${((1 - pctCoaseguro) * 100).toFixed(0)}% Cubierto por EPS)`;
-    alertaSector = STATE.forzarLiquidacionPlanEps
-      ? `✅ Liquidación según Plan Base EPS (${priv.iafas_eps} · 80/20): Aseguradora cubre el 80% (-S/. ${coberturaSeguro.toFixed(2)}) y paciente abona Copago Fijo S/. ${copagoFijo.toFixed(2)} + 20% Coaseguro (S/. ${coaseguroMonto.toFixed(2)}) = S/. ${totalPaciente.toFixed(2)}.`
-      : `Cobertura EPS (${priv.iafas_eps}): Paciente abona copago fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% coaseguro (S/. ${coaseguroMonto.toFixed(2)}). Total paciente: S/. ${totalPaciente.toFixed(2)}.`;
-    motivoLiquidacion = STATE.forzarLiquidacionPlanEps
-      ? `LIQUIDACIÓN HOSPITALARIA SEGÚN PLAN BASE EPS (${priv.iafas_eps}, 80% / 20% — P-${STATE.prioridad || 'I'}). Circuito intrahospitalario completado: ${STATE.rutaIntrahospitalariaTexto || 'Trauma Shock (ST-01) → Quirófano (SOP-01) → UCI (UCI-01) → Recuperación (URPA-01) → Alta Médica'}. Se aplica Copago Fijo S/. ${copagoFijo.toFixed(2)} + Coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% sobre quirófano, UCI, recuperación, imágenes, laboratorio y Kardex (S/. ${coaseguroMonto.toFixed(2)}). Total a cargo del paciente: S/. ${totalPaciente.toFixed(2)}. Cubierto por EPS (80%): S/. ${coberturaSeguro.toFixed(2)}.`
-      : `COBERTURA EPS (${priv.iafas_eps}, P-${STATE.prioridad || 'III'}). Copago fijo S/. ${copagoFijo.toFixed(2)} + coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% (S/. ${coaseguroMonto.toFixed(2)}). Total a cargo del paciente: S/. ${totalPaciente.toFixed(2)}. Cubierto por EPS: S/. ${coberturaSeguro.toFixed(2)}.`;
+    alertaSector = `Cobertura EPS (${priv.iafas_eps}): Paciente abona copago fijo S/. ${copagoFijo.toFixed(2)} + ${(pctCoaseguro * 100).toFixed(0)}% coaseguro (S/. ${coaseguroMonto.toFixed(2)}). Total paciente: S/. ${totalPaciente.toFixed(2)}.`;
+    motivoLiquidacion = `COBERTURA EPS (${priv.iafas_eps}, P-${STATE.prioridad || 'III'}). Copago fijo S/. ${copagoFijo.toFixed(2)} + coaseguro del ${(pctCoaseguro * 100).toFixed(0)}% (S/. ${coaseguroMonto.toFixed(2)}). Total a cargo del paciente: S/. ${totalPaciente.toFixed(2)}. Cubierto por EPS: S/. ${coberturaSeguro.toFixed(2)}.`;
   }
 
   return {
@@ -19703,13 +19709,13 @@ function abrirModalPruebasSimuladas() {
         <div style="border:1.5px solid #fecaca; background:#f8fafc; border-left:6px solid #dc2626; border-radius:10px; padding:14px 16px; display:flex; flex-direction:column; gap:8px;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
             <div>
-              <span style="background:#fee2e2; color:#991b1b; font-size:0.70rem; font-weight:900; padding:3px 8px; border-radius:999px; border:1px solid #fca5a5;">OPCIÓN 3 · TRAUMA SHOCK P-I · PRIVADA EPS PLAN BASE (80/20)</span>
+              <span style="background:#fee2e2; color:#991b1b; font-size:0.70rem; font-weight:900; padding:3px 8px; border-radius:999px; border:1px solid #fca5a5;">OPCIÓN 3 · TRAUMA SHOCK P-I · PRIVADA · EPS PLAN BASE</span>
               <h4 style="margin:6px 0 2px; font-size:0.95rem; font-weight:900; color:#0f172a;">3. Paciente DNI 48904649 (Consulta RENIEC Real: Robert Francis Prevost) — Trauma Shock → SOP → UCI → Recuperación → Alta</h4>
             </div>
             <span style="font-size:0.72rem; font-weight:800; color:#991b1b; background:#fee2e2; padding:3px 8px; border-radius:6px; border:1px solid #fca5a5;">🏥 Ruta Crítica Completa</span>
           </div>
           <p style="margin:0; font-size:0.78rem; color:#334155; line-height:1.45;">
-            Ejecuta la <strong>consulta RENIEC real</strong> para el DNI <strong>48904649</strong>, lo atiende en <strong>Privada con EPS (Plan Base 80/20)</strong> por <strong>Trauma Shock (Prioridad I)</strong>: registra <strong>6 medicinas diferentes en el Kardex</strong>, <strong>4 servicios de imágenes</strong> (Eco FAST, TEM Cerebral, TEM Toracoabdominal, Rx Portátil), <strong>5 servicios de laboratorio</strong> (AGA+Lactato, Hemograma, Pruebas Cruzadas, Coagulación, Bioquímica), ejecuta el circuito <strong>Trauma Shock (ST-01) → Quirófano (SOP-01) → UCI (UCI-01) → Recuperación (URPA-01) → Alta Médica</strong> y termina en <strong>Facturación según su Plan Base</strong>.
+            Ejecuta la <strong>consulta RENIEC real</strong> para el DNI <strong>48904649</strong>, lo atiende en <strong>Privada con EPS Plan Base</strong> por <strong>Trauma Shock (Prioridad I)</strong>: registra <strong>6 medicinas diferentes en el Kardex</strong>, <strong>4 servicios de imágenes</strong> (Eco FAST, TEM Cerebral, TEM Toracoabdominal, Rx Portátil), <strong>5 servicios de laboratorio</strong> (AGA+Lactato, Hemograma, Pruebas Cruzadas, Coagulación, Bioquímica), ejecuta el circuito <strong>Trauma Shock (ST-01) → Quirófano (SOP-01) → UCI (UCI-01) → Recuperación (URPA-01) → Alta Médica</strong> y termina en <strong>Facturación según su Plan Base</strong>: al ser <strong>emergencia vital</strong>, la EPS cubre el 100% (Ley N° 27604) y el copago fijo S/ 80 no aplica.
           </p>
           <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:2px;">
             <button type="button" id="btn_ejecutar_prueba_3" onclick="ejecutarPruebaSimulada(3)" class="btn-full-primary" style="background:#dc2626; color:#ffffff; font-weight:800; font-size:0.78rem; padding:8px 14px; border-radius:8px; border:none; cursor:pointer;">
@@ -19794,6 +19800,7 @@ async function ejecutarPruebaSimulada(opcion) {
       const enfermeraFull = "Lic. Enf. María Elena Quispe (CEP 64210)";
 
       STATE.forzarLiquidacionPlanEps = false;
+      STATE.ingresoDirectoCritico = false;
       if (window.COCKPIT && typeof window.COCKPIT.seleccionarSector === "function") {
         window.COCKPIT.seleccionarSector("privado");
       } else if (typeof cambiarEntornoOperativo === "function") {
@@ -20106,6 +20113,7 @@ async function ejecutarPruebaSimulada(opcion) {
       const enfermeraFull = "Lic. Enf. Ana Torres Morales (CEP 92410)";
 
       STATE.forzarLiquidacionPlanEps = false;
+      STATE.ingresoDirectoCritico = false;
       if (window.COCKPIT && typeof window.COCKPIT.seleccionarSector === "function") {
         window.COCKPIT.seleccionarSector("sis");
       } else if (typeof cambiarEntornoOperativo === "function") {
@@ -20436,6 +20444,28 @@ async function ejecutarPruebaSimulada(opcion) {
       const cirujanoUci = "Dr. Juan Manuel Paredes Soto (Cirugía Trauma / UCI · CMP 51892 · RNE 27415)";
       const enfermeraFull = "Lic. Enf. María Elena Quispe (CEP 64210)";
 
+      // Registrar previamente la póliza EPS Plan Base para que la acreditación SUSALUD no asigne EsSalud/SIS
+      const padronEpsPre3 = {
+        dni: "48904649",
+        tipo_aseguramiento: "EPS_Y_ESSALUD",
+        condicion_evento: "NORMAL",
+        origen_registro: "BD_HISTORICA",
+        publico: { tiene_seguro: false, entidad: "Sin seguro público", regimen: "No aplica", estado: "INACTIVO", codigo: "" },
+        privado: {
+          tiene_seguro: true,
+          iafas_eps: "EPS Plan Base",
+          plan_salud: "Plan Base (Pacífico EPS) · Copago S/ 80 + 20% solo en Urgencias · Emergencia 100% Ley N° 27604",
+          estado_poliza: "ACTIVA",
+          siteds_codigo: "SITEDS-2026-4649-BASE",
+          copago_fijo: 80.00,
+          coaseguro_pct: 0.20,
+          exclusiones: []
+        }
+      };
+      try { localStorage.setItem("padron_susalud_48904649", JSON.stringify(padronEpsPre3)); localStorage.setItem("seguro_asignado_48904649", "EPS Plan Base"); } catch (e) {}
+      STATE.padronSusalud = JSON.parse(JSON.stringify(padronEpsPre3));
+      STATE.entornoBloqueado = false;
+
       // Ejecutar la consulta RENIEC real implementada en el sistema para el DNI 48904649
       setDomValSim("ident_full", dni);
       setDomValSim("dni_mod1", dni);
@@ -20450,7 +20480,8 @@ async function ejecutarPruebaSimulada(opcion) {
         ? String(STATE.nombreReniec).trim()
         : "ROBERT FRANCIS PREVOST";
 
-      STATE.forzarLiquidacionPlanEps = true;
+      STATE.forzarLiquidacionPlanEps = false;
+      STATE.ingresoDirectoCritico = false;
       STATE.rutaIntrahospitalariaTexto = "1° Shock Trauma (ST-01) → 2° Quirófano (SOP-01) → 3° UCI (UCI-01) → 4° Recuperación (URPA-01) → 5° Alta Médica";
       STATE.rutaIntrahospitalaria = [
         { etapa: 1, unidad: "ST-01", nombre: "Cama ST-01 (Shock Trauma Reanimación 1)", accion: "Reanimación hemodinámica inicial, intubación y control de hemorragia", costo: 350.00 },
@@ -20470,21 +20501,15 @@ async function ejecutarPruebaSimulada(opcion) {
       setDomValSim("select_plan_privado", "base_80_20");
 
       const padronEps3 = {
-        dni: dni,
+        dni: "48904649",
         tipo_aseguramiento: "EPS_Y_ESSALUD",
         condicion_evento: "NORMAL",
         origen_registro: "BD_HISTORICA",
-        publico: {
-          tiene_seguro: true,
-          entidad: "EsSalud",
-          regimen: "EsSalud Regular",
-          estado: "ACTIVO",
-          codigo: "ESS-2026-4649"
-        },
+        publico: { tiene_seguro: false, entidad: "Sin seguro público", regimen: "No aplica", estado: "INACTIVO", codigo: "" },
         privado: {
           tiene_seguro: true,
-          iafas_eps: "Pacífico EPS",
-          plan_salud: "Plan Base 80/20 (Copago Fijo S/ 80.00 + Coaseguro 20% · 80% Cubierto por EPS)",
+          iafas_eps: "EPS Plan Base",
+          plan_salud: "Plan Base (Pacífico EPS) · Copago S/ 80 + 20% solo en Urgencias · Emergencia 100% Ley N° 27604",
           estado_poliza: "ACTIVA",
           siteds_codigo: "SITEDS-2026-4649-BASE",
           copago_fijo: 80.00,
@@ -20504,7 +20529,7 @@ async function ejecutarPruebaSimulada(opcion) {
       STATE.nombreReniec = nombre;
       STATE.numDni = dni;
       STATE.historiaClinica = hc;
-      STATE.estadoRegistrado = "Sí (Trauma Shock P-I · EPS Plan Base 80/20)";
+      STATE.estadoRegistrado = "Sí (Trauma Shock P-I · EPS Plan Base)";
       STATE.accionHc = `Ruta Crítica Completada: Shock Trauma (ST-01) → Quirófano (SOP-01) → UCI (UCI-01) → Recuperación (URPA-01) → Alta`;
       STATE.turno = turno;
       STATE.horaLlegada = horaActual;
@@ -20514,7 +20539,18 @@ async function ejecutarPruebaSimulada(opcion) {
       STATE.grupoSanguineo = "O+";
       STATE.alergias = "Niega alergias medicamentosas conocidas";
       STATE.alergiasConocidas = STATE.alergias;
-      STATE.tipoSeguro = "Pacífico EPS — Plan Base (80% Cobertura EPS / 20% Coaseguro + Copago S/. 80.00)";
+      STATE.tipoSeguro = "EPS Plan Base";
+      STATE.entornoBloqueado = false;
+      if (typeof seleccionarEntornoEstablecimiento === "function") seleccionarEntornoEstablecimiento("clinica_eps", false, true);
+      STATE.entornoOperativo = "privado";
+      STATE.planPrivado = "base_80_20";
+      STATE.padronSusalud = padronEps3;
+      STATE.padronSalud = padronEps3;
+      STATE.tipoSeguro = "EPS Plan Base";
+      if (typeof renderizarBadgesPadronSusalud === "function") renderizarBadgesPadronSusalud(padronEps3);
+      if (typeof renderizarBoxAcreditacionSusalud === "function") renderizarBoxAcreditacionSusalud(padronEps3);
+      const segConsol3 = document.getElementById("seguro_consolidado");
+      if (segConsol3) segConsol3.textContent = "EPS Plan Base (Pacífico EPS) — Emergencia vital cubierta 100% · Ley N° 27604";
       STATE.tipoOrigenEvento = "normal";
       STATE.esAccidenteTransito = false;
       STATE.soatVehiculoFuga = false;
@@ -20697,7 +20733,7 @@ async function ejecutarPruebaSimulada(opcion) {
         mostrarPrioridad("I", {
           tipo: "Prioridad I (Rojo — Trauma Shock Crítico)",
           desc: "Ruta Completa: Trauma Shock (ST-01) → Quirófano (SOP-01) → UCI (UCI-01) → Recuperación (URPA-01) → Alta Médica",
-          destino: "Alta Médica · Liquidación EPS Plan Base (80/20)"
+          destino: "Alta Médica · EPS Plan Base: Emergencia vital cubierta 100% (Ley N° 27604)"
         });
       }
 
@@ -20730,9 +20766,9 @@ async function ejecutarPruebaSimulada(opcion) {
       STATE.estadoFlujo = "CERRADO_FACTURADO";
       STATE.firmas = {
         triaje: { usuario: enfermeraFull, rol: "TRIAJE", accion: "Recepción en Shock Trauma P-I (ST-01) y Activación de Código Trauma", fecha: fechaIso },
-        admision: { usuario: "Srta. Sofía Quispe Méndez (Reg. SUSALUD 08412)", rol: "ADMISION", accion: "Acreditación SITEDS Pacífico EPS — Plan Base (Copago S/ 80 + Coaseguro 20%)", fecha: fechaIso },
+        admision: { usuario: "Srta. Sofía Quispe Méndez (Reg. SUSALUD 08412)", rol: "ADMISION", accion: "Acreditación SITEDS — EPS Plan Base (copago S/ 80 solo aplica en urgencias)", fecha: fechaIso },
         medico: { usuario: `${medicoFull} & ${cirujanoUci}`, rol: "MEDICO", accion: "Acto Quirúrgico en SOP-01, Manejo en UCI-01, Recuperación en URPA-01 y Alta Médica Firmada", fecha: fechaIso },
-        caja: { usuario: "Sr. Luis Paredes Chumpitaz (Matrícula Fin. FACT-882)", rol: "CAJA", accion: "Liquidación Emitida según Plan Base EPS (80% Cubierto por EPS / 20% Coaseguro + Copago Fijo S/ 80)", fecha: fechaIso }
+        caja: { usuario: "Sr. Luis Paredes Chumpitaz (Matrícula Fin. FACT-882)", rol: "CAJA", accion: "Liquidación EPS Plan Base: Emergencia vital (Trauma Shock / SOP / UCI) cubierta 100% por la EPS · Ley N° 27604 · Paciente S/ 0.00", fecha: fechaIso }
       };
 
       const px3 = crearRegistroPaciente({
@@ -20775,7 +20811,7 @@ async function ejecutarPruebaSimulada(opcion) {
         sincronizarDatosPacienteEnTodosLosModulos({ esNN: false, dni: dni, nombre: nombre, hc: hc, sexo: STATE.sexo });
       }
 
-      const liq3 = typeof calcularLiquidacionSeguro === "function" ? calcularLiquidacionSeguro() : { totalBruto: 3465.00, coberturaSeguro: 2692.00, totalPaciente: 773.00 };
+      const liq3 = typeof calcularLiquidacionSeguro === "function" ? calcularLiquidacionSeguro() : { totalBruto: 3695.00, coberturaSeguro: 3695.00, totalPaciente: 0.00 };
       const master3 = obtenerOInicializarPacienteMaster(dni, hc, nombre, STATE.tipoSeguro);
       master3.identificador = dni;
       master3.dni = dni;
@@ -20818,8 +20854,8 @@ async function ejecutarPruebaSimulada(opcion) {
         medicamentos_despachados: STATE.kardexItems.map(k => ({ descripcion: `${k.nombre} (${k.dosis} · ${k.via})` })),
         liquidacion: liq3,
         total_facturado: liq3.totalPaciente,
-        cobertura_info: `Plan Base EPS 80/20: Bruto S/. ${liq3.totalBruto.toFixed(2)} | Cubre EPS (80%): -S/. ${liq3.coberturaSeguro.toFixed(2)} | Paga Paciente (Copago S/ 80 + 20%): S/. ${liq3.totalPaciente.toFixed(2)}`,
-        estado_salida: "Alta Médica Definitiva · Facturado según Plan Base EPS",
+        cobertura_info: `EPS Plan Base · Emergencia vital (Ley N° 27604): Bruto S/. ${liq3.totalBruto.toFixed(2)} | Cubre EPS: -S/. ${liq3.coberturaSeguro.toFixed(2)} | Paga Paciente: S/. ${liq3.totalPaciente.toFixed(2)}`,
+        estado_salida: "Alta Médica Definitiva · EPS Plan Base (Emergencia cubierta 100%)",
         firmante: `${medicoFull} & ${cirujanoUci}`
       });
       const mMap3 = cargarPacientesMaster();
